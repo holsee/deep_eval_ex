@@ -1,4 +1,4 @@
-# Copyright 2024 DeepEvalEx Contributors
+# Copyright 2025 Steven Holdsworth (@holsee)
 # SPDX-License-Identifier: Apache-2.0
 
 defmodule DeepEvalEx.Metrics.FaithfulnessTest do
