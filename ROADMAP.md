@@ -23,10 +23,10 @@ Port DeepEval's core LLM evaluation functionality to idiomatic Elixir, targeting
 | **ExactMatch** | Simple string comparison | Done |
 | **GEval** | Flexible criteria-based evaluation | Done |
 | **Faithfulness** | RAG: claims supported by context | Done |
-| **Hallucination** | Detects unsupported statements | Planned |
-| **AnswerRelevancy** | Response relevance to question | Planned |
-| **ContextualPrecision** | RAG: context ranking quality | Planned |
-| **ContextualRecall** | RAG: coverage of ground truth | Planned |
+| **Hallucination** | Detects unsupported statements | Done |
+| **AnswerRelevancy** | Response relevance to question | Done |
+| **ContextualPrecision** | RAG: context ranking quality | Done |
+| **ContextualRecall** | RAG: coverage of ground truth | Done |
 
 ### Out of MVP Scope
 
@@ -56,27 +56,17 @@ Port DeepEval's core LLM evaluation functionality to idiomatic Elixir, targeting
 
 ## Phase 2: Core Metrics
 
-**Status: In Progress**
+**Status: Complete**
 
-### Completed
+All 7 MVP metrics implemented with comprehensive test suites:
 
 - [x] **ExactMatch** - Simple string comparison, validates structure
 - [x] **GEval** - LLM-as-judge with custom criteria, rubrics, evaluation steps
-- [x] **Faithfulness** - Extract claims/truths, generate verdicts, calculate score
-
-### Remaining
-
-- [ ] **Hallucination** - Similar to Faithfulness with inverse logic
-  - Reference: `deepeval/metrics/hallucination/hallucination.py`
-
-- [ ] **AnswerRelevancy** - Generate statements from answer, score relevance
-  - Reference: `deepeval/metrics/answer_relevancy/answer_relevancy.py`
-
-- [ ] **ContextualPrecision** - RAG retrieval ranking quality
-  - Reference: `deepeval/metrics/contextual_precision/`
-
-- [ ] **ContextualRecall** - RAG coverage of ground truth
-  - Reference: `deepeval/metrics/contextual_recall/`
+- [x] **Faithfulness** - Extract claims/truths, generate verdicts (yes/no/idk)
+- [x] **Hallucination** - Detect contradictions against context (lower score = better)
+- [x] **AnswerRelevancy** - Extract statements, evaluate relevance to input
+- [x] **ContextualPrecision** - Weighted cumulative precision for retrieval ranking
+- [x] **ContextualRecall** - Sentence attribution for retrieval coverage
 
 ---
 
@@ -148,7 +138,14 @@ end
 - [x] Wiki documentation structure
 - [x] Configuration guide
 - [x] Quick start guide
-- [x] Metric documentation (ExactMatch, GEval, Faithfulness)
+- [x] Metric documentation (all 7 metrics)
+  - [x] ExactMatch
+  - [x] GEval
+  - [x] Faithfulness
+  - [x] Hallucination
+  - [x] AnswerRelevancy
+  - [x] ContextualPrecision
+  - [x] ContextualRecall
 - [ ] ExDoc documentation with examples
 - [ ] Hex.pm package preparation
 - [ ] Test coverage > 80%
@@ -174,10 +171,10 @@ lib/
 │   │   ├── exact_match.ex       # Done
 │   │   ├── g_eval.ex            # Done
 │   │   ├── faithfulness.ex      # Done
-│   │   ├── hallucination.ex     # Planned
-│   │   ├── answer_relevancy.ex  # Planned
-│   │   ├── contextual_precision.ex  # Planned
-│   │   └── contextual_recall.ex     # Planned
+│   │   ├── hallucination.ex     # Done
+│   │   ├── answer_relevancy.ex  # Done
+│   │   ├── contextual_precision.ex  # Done
+│   │   └── contextual_recall.ex     # Done
 │   ├── prompts/                 # LLM prompt templates
 │   ├── schemas/                 # Ecto embedded schemas
 │   ├── evaluator.ex             # Concurrent evaluation engine
@@ -204,9 +201,9 @@ lib/
 
 Contributions welcome! Priority areas:
 
-1. **Metrics** - Implement remaining RAG metrics
-2. **Adapters** - Add Anthropic and Ollama support
-3. **Documentation** - Improve guides and examples
-4. **Testing** - Increase test coverage
+1. **Adapters** - Add Anthropic and Ollama support
+2. **Phoenix/LiveView** - Real-time evaluation UI components
+3. **ExUnit Integration** - Assertion macros for CI/CD
+4. **Documentation** - Improve guides and examples
 
 See the [wiki](./wiki) for implementation patterns.
