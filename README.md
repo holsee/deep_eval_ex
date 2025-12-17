@@ -1,5 +1,8 @@
 # DeepEvalEx
 
+[![Hex version badge](https://img.shields.io/hexpm/v/deep_eval_ex.svg)](https://hex.pm/packages/deep_eval_ex)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 LLM evaluation framework for Elixir - a pure Elixir port of [DeepEval](https://github.com/confident-ai/deepeval).
 
 > **Attribution**: This project is a derivative work of [DeepEval](https://github.com/confident-ai/deepeval)
@@ -50,18 +53,34 @@ config :deep_eval_ex,
 
 ## Available Metrics
 
-### Currently Implemented
+| Metric | Purpose |
+|--------|---------|
+| **ExactMatch** | Simple string comparison |
+| **GEval** | Flexible criteria-based evaluation using LLM-as-judge |
+| **Faithfulness** | RAG: claims supported by retrieval context |
+| **Hallucination** | Detects unsupported statements |
+| **AnswerRelevancy** | Response relevance to input question |
+| **ContextualPrecision** | RAG retrieval ranking quality |
+| **ContextualRecall** | RAG coverage of ground truth |
 
-- **ExactMatch** - Simple string comparison metric
+See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation on each metric.
 
-### Planned (MVP)
+## Documentation
 
-- **GEval** - Flexible criteria-based evaluation using LLM-as-judge
-- **Faithfulness** - RAG metric: claims supported by retrieval context
-- **Hallucination** - Detects unsupported statements
-- **AnswerRelevancy** - Response relevance to input question
-- **ContextualPrecision** - RAG retrieval ranking quality
-- **ContextualRecall** - RAG coverage of ground truth
+| Guide | Description |
+|-------|-------------|
+| [Quick Start](wiki/guides/Quick-Start.md) | Get up and running in 5 minutes |
+| [Configuration](wiki/guides/Configuration.md) | LLM provider setup and options |
+| [Metrics Overview](wiki/metrics/Overview.md) | All available metrics explained |
+| [Custom Metrics](wiki/guides/Custom-Metrics.md) | Build your own evaluation metrics |
+| [Telemetry](wiki/guides/Telemetry.md) | Observability and monitoring |
+
+### API Reference
+
+- [TestCase](wiki/api/TestCase.md) - Test case structure
+- [Result](wiki/api/Result.md) - Evaluation results
+- [Evaluator](wiki/api/Evaluator.md) - Batch evaluation
+- [LLM Adapters](wiki/api/LLM-Adapters.md) - Provider adapters
 
 ## LLM Adapters
 
@@ -70,6 +89,8 @@ DeepEvalEx supports multiple LLM providers:
 - **OpenAI** - GPT-4o, GPT-4o-mini, GPT-3.5-turbo
 - **Anthropic** - Claude 3 family (planned)
 - **Ollama** - Local models (planned)
+
+See [LLM Adapters](wiki/api/LLM-Adapters.md) and [Custom LLM Adapters](wiki/guides/Custom-LLM-Adapters.md) for details.
 
 ## Usage with ExUnit
 
@@ -116,6 +137,8 @@ DeepEvalEx emits telemetry events for observability:
   IO.puts("Metric #{metadata.metric} completed with score #{measurements.score}")
 end, nil)
 ```
+
+See [Telemetry Guide](wiki/guides/Telemetry.md) for all events and integration patterns.
 
 ## License
 
