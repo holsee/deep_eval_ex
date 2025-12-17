@@ -157,7 +157,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
       ecto_schema_to_json_schema(schema)
     else
       # Assume it's already a map module with a schema function
-      apply(schema, :json_schema, [])
+      schema.json_schema()
     end
   end
 

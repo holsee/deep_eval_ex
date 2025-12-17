@@ -149,8 +149,7 @@ defmodule DeepEvalEx.Prompts.GEval do
   def format_evaluation_steps(steps) when is_list(steps) do
     steps
     |> Enum.with_index(1)
-    |> Enum.map(fn {step, i} -> "#{i}. #{step}" end)
-    |> Enum.join("\n")
+    |> Enum.map_join("\n", fn {step, i} -> "#{i}. #{step}" end)
   end
 
   def format_evaluation_steps(steps) when is_binary(steps), do: steps
@@ -159,22 +158,18 @@ defmodule DeepEvalEx.Prompts.GEval do
   Formats test case content for the prompt.
   """
   def format_test_case_content(test_case, params) do
-    params
-    |> Enum.map(fn param ->
+    Enum.map_join(params, "\n\n", fn param ->
       value = Map.get(test_case, param)
       formatted_value = format_value(value)
       "#{format_param_name(param)}:\n#{formatted_value}"
     end)
-    |> Enum.join("\n\n")
   end
 
   @doc """
   Formats parameters list as a human-readable string.
   """
   def format_params(params) when is_list(params) do
-    params
-    |> Enum.map(&format_param_name/1)
-    |> Enum.join(", ")
+    Enum.map_join(params, ", ", &format_param_name/1)
   end
 
   defp format_param_name(:input), do: "Input"

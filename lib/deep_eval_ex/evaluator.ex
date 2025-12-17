@@ -33,7 +33,7 @@ defmodule DeepEvalEx.Evaluator do
       ]
   """
 
-  alias DeepEvalEx.{TestCase, Result}
+  alias DeepEvalEx.{Result, TestCase}
 
   @default_concurrency System.schedulers_online() * 2
   @default_timeout 60_000

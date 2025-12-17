@@ -51,7 +51,7 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{Result, LLM.Adapter}
+  alias DeepEvalEx.{LLM.Adapter, Result}
   alias DeepEvalEx.Prompts.Faithfulness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.Faithfulness, as: Schema
 

@@ -62,7 +62,7 @@ defmodule DeepEvalEx do
         max_concurrency: 10
   """
 
-  alias DeepEvalEx.{Evaluator, TestCase, Result}
+  alias DeepEvalEx.{Evaluator, Result, TestCase}
 
   @doc """
   Evaluate a single test case against one or more metrics.

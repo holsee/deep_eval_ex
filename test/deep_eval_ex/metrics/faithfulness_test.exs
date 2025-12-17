@@ -4,9 +4,9 @@
 defmodule DeepEvalEx.Metrics.FaithfulnessTest do
   use ExUnit.Case, async: false
 
+  alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.Faithfulness
   alias DeepEvalEx.TestCase
-  alias DeepEvalEx.LLM.Adapters.Mock
 
   setup do
     Mock.clear_responses()

@@ -42,7 +42,7 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   You can override any of these defaults.
   """
 
-  alias DeepEvalEx.{TestCase, Result}
+  alias DeepEvalEx.{Result, TestCase}
 
   @type test_case :: TestCase.t()
   @type opts :: keyword()
@@ -98,7 +98,7 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
     quote do
       @behaviour DeepEvalEx.Metrics.BaseMetric
 
-      alias DeepEvalEx.{TestCase, Result}
+      alias DeepEvalEx.{Result, TestCase}
 
       @default_threshold unquote(default_threshold)
 

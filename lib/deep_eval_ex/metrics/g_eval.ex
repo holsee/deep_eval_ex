@@ -84,7 +84,7 @@ defmodule DeepEvalEx.Metrics.GEval do
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{Result, LLM.Adapter}
+  alias DeepEvalEx.{LLM.Adapter, Result}
   alias DeepEvalEx.Prompts.GEval, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.GEval, as: Schema
 
@@ -325,7 +325,6 @@ defmodule DeepEvalEx.Metrics.GEval do
   defp format_rubric(rubric) when is_list(rubric) do
     rubric
     |> Enum.sort_by(fn {score, _} -> -score end)
-    |> Enum.map(fn {score, description} -> "- Score #{score}: #{description}" end)
-    |> Enum.join("\n")
+    |> Enum.map_join("\n", fn {score, description} -> "- Score #{score}: #{description}" end)
   end
 end

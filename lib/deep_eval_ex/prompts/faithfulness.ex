@@ -193,8 +193,7 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
   defp format_claims(claims) when is_list(claims) do
     claims
     |> Enum.with_index(1)
-    |> Enum.map(fn {claim, i} -> "#{i}. #{claim}" end)
-    |> Enum.join("\n")
+    |> Enum.map_join("\n", fn {claim, i} -> "#{i}. #{claim}" end)
   end
 
   defp format_contradictions([]), do: "(none)"
@@ -202,7 +201,6 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
   defp format_contradictions(contradictions) when is_list(contradictions) do
     contradictions
     |> Enum.with_index(1)
-    |> Enum.map(fn {c, i} -> "#{i}. #{c}" end)
-    |> Enum.join("\n")
+    |> Enum.map_join("\n", fn {c, i} -> "#{i}. #{c}" end)
   end
 end

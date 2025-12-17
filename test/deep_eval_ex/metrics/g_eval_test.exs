@@ -1,9 +1,9 @@
 defmodule DeepEvalEx.Metrics.GEvalTest do
   use ExUnit.Case, async: true
 
+  alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.GEval
   alias DeepEvalEx.TestCase
-  alias DeepEvalEx.LLM.Adapters.Mock
 
   setup do
     Mock.clear_responses()
