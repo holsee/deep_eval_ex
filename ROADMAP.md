@@ -72,20 +72,27 @@ All 7 MVP metrics implemented with comprehensive test suites:
 
 ## Phase 3: Evaluation Engine
 
-**Status: Partially Complete**
+**Status: Mostly Complete**
 
 - [x] Concurrent evaluator with `Task.async_stream`
 - [x] Configurable concurrency
 - [x] Telemetry events (`[:deep_eval_ex, :metric, :start | :stop | :exception]`)
+- [x] ExUnit assertion macros (`assert_passes`, `assert_fails`, `assert_score`, `assert_evaluation`)
 - [ ] LLM cost tracking per evaluation
 - [ ] Phoenix.LiveDashboard integration
-- [ ] ExUnit assertion macros
 
 ```elixir
-# Planned ExUnit integration
-defmodule DeepEvalEx.ExUnit do
-  defmacro assert_evaluation(test_case, metrics, opts \\ []) do
-    # Custom assertion with detailed failure messages
+# ExUnit integration example
+defmodule MyApp.LLMTest do
+  use ExUnit.Case
+  use DeepEvalEx.ExUnit
+
+  test "response is faithful" do
+    assert_passes(test_case, Faithfulness, threshold: 0.8)
+  end
+
+  test "comprehensive evaluation" do
+    assert_evaluation(test_case, [Faithfulness, AnswerRelevancy])
   end
 end
 ```

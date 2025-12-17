@@ -3,7 +3,7 @@
 [![Hex version badge](https://img.shields.io/hexpm/v/deep_eval_ex.svg)](https://hex.pm/packages/deep_eval_ex)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-LLM evaluation framework for Elixir - a pure Elixir port of [DeepEval](https://github.com/confident-ai/deepeval).
+LLM evaluation framework for Elixir - Idiomatic + Compatible Elixir port of [DeepEval](https://github.com/confident-ai/deepeval).
 
 > **Attribution**: This project is a derivative work of [DeepEval](https://github.com/confident-ai/deepeval)
 > by [Confident AI](https://confident-ai.com), licensed under Apache 2.0. The core evaluation
@@ -72,6 +72,7 @@ See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation 
 | [Quick Start](wiki/guides/Quick-Start.md) | Get up and running in 5 minutes |
 | [Configuration](wiki/guides/Configuration.md) | LLM provider setup and options |
 | [Metrics Overview](wiki/metrics/Overview.md) | All available metrics explained |
+| [ExUnit Integration](wiki/guides/ExUnit-Integration.md) | Test assertions for CI/CD |
 | [Custom Metrics](wiki/guides/Custom-Metrics.md) | Build your own evaluation metrics |
 | [Telemetry](wiki/guides/Telemetry.md) | Observability and monitoring |
 

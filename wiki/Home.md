@@ -25,6 +25,9 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 - [Evaluator](api/Evaluator.md)
 - [LLM Adapters](api/LLM-Adapters.md)
 
+### Testing
+- [ExUnit Integration](guides/ExUnit-Integration.md) - Test assertions for CI/CD
+
 ### Advanced
 - [Custom Metrics](guides/Custom-Metrics.md)
 - [Custom LLM Adapters](guides/Custom-LLM-Adapters.md)
