@@ -1,0 +1,33 @@
+# Dependencies
+/deps/
+
+# Build artifacts
+/_build/
+/cover/
+/doc/
+
+# Generated files
+*.beam
+*.ez
+*.plt
+*.tar.gz
+
+# Editor/IDE
+.elixir_ls/
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+*.secret.exs
+
+# Test artifacts
+/tmp/

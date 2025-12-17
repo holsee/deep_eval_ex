@@ -1,0 +1,40 @@
+DeepEvalEx
+Copyright 2024 DeepEvalEx Contributors
+
+This project is a port/derivative work of DeepEval, originally developed
+by Confident AI.
+
+================================================================================
+
+DeepEval
+Copyright 2023-2024 Confident AI
+
+Licensed under the Apache License, Version 2.0
+https://github.com/confident-ai/deepeval
+
+================================================================================
+
+This Elixir implementation (DeepEvalEx) is based on the algorithms, metrics,
+and evaluation patterns from the original DeepEval Python library. While the
+code has been rewritten in Elixir to be idiomatic to the BEAM ecosystem, the
+core evaluation logic, metric definitions, and prompt templates are derived
+from the original work.
+
+Key components derived from DeepEval:
+- Evaluation metric algorithms (G-Eval, Faithfulness, Hallucination, etc.)
+- Prompt templates for LLM-as-judge evaluation
+- Test case and result data structures
+- Metric scoring and aggregation logic
+
+================================================================================
+
+Third-Party Notices:
+
+This project may include or reference algorithms and techniques from academic
+papers, including but not limited to:
+
+- G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment
+  https://arxiv.org/abs/2303.16634
+
+- RAGAS: Automated Evaluation of Retrieval Augmented Generation
+  https://arxiv.org/abs/2309.15217
