@@ -153,19 +153,39 @@ defmodule DeepEvalEx.TestCase do
 
   @doc """
   Validates that the test case has the required parameters for a given metric.
+
+  Handles aliases:
+  - `:context` and `:retrieval_context` are interchangeable
   """
   @spec validate_params(t(), [atom()]) :: :ok | {:error, {:missing_params, [atom()]}}
   def validate_params(test_case, required_params) do
     missing =
       required_params
       |> Enum.filter(fn param ->
-        value = Map.get(test_case, param)
-        is_nil(value) or value == ""
+        not has_param?(test_case, param)
       end)
 
     case missing do
       [] -> :ok
       params -> {:error, {:missing_params, params}}
     end
+  end
+
+  # Check if param is present, handling aliases
+  defp has_param?(test_case, :context) do
+    has_value?(test_case, :context) or has_value?(test_case, :retrieval_context)
+  end
+
+  defp has_param?(test_case, :retrieval_context) do
+    has_value?(test_case, :retrieval_context) or has_value?(test_case, :context)
+  end
+
+  defp has_param?(test_case, param) do
+    has_value?(test_case, param)
+  end
+
+  defp has_value?(test_case, param) do
+    value = Map.get(test_case, param)
+    not (is_nil(value) or value == "" or value == [])
   end
 end

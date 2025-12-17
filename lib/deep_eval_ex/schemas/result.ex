@@ -80,7 +80,9 @@ defmodule DeepEvalEx.Result do
     metric = Keyword.fetch!(opts, :metric)
     score = Keyword.fetch!(opts, :score)
     threshold = Keyword.get(opts, :threshold, 0.5)
-    success = score >= threshold
+
+    # Allow explicit success override (for metrics where lower is better)
+    success = Keyword.get_lazy(opts, :success, fn -> score >= threshold end)
 
     %__MODULE__{
       metric: metric,
