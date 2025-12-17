@@ -29,6 +29,7 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   use DeepEvalEx.LLM.Adapter
 
   @default_response "This is a mock response."
+  @ets_table :deep_eval_ex_mock_responses
 
   @impl true
   def generate(prompt, opts \\ []) do
@@ -76,8 +77,8 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   """
   @spec set_response(String.t() | Regex.t(), String.t()) :: :ok
   def set_response(pattern, response) do
-    responses = Process.get(:mock_llm_responses, %{})
-    Process.put(:mock_llm_responses, Map.put(responses, pattern, response))
+    ensure_table_exists()
+    :ets.insert(@ets_table, {{:response, pattern}, response})
     :ok
   end
 
@@ -86,8 +87,8 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   """
   @spec set_schema_response(String.t() | Regex.t(), map()) :: :ok
   def set_schema_response(pattern, response) do
-    responses = Process.get(:mock_llm_schema_responses, %{})
-    Process.put(:mock_llm_schema_responses, Map.put(responses, pattern, response))
+    ensure_table_exists()
+    :ets.insert(@ets_table, {{:schema_response, pattern}, response})
     :ok
   end
 
@@ -96,8 +97,8 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   """
   @spec clear_responses() :: :ok
   def clear_responses do
-    Process.delete(:mock_llm_responses)
-    Process.delete(:mock_llm_schema_responses)
+    ensure_table_exists()
+    :ets.delete_all_objects(@ets_table)
     :ok
   end
 
@@ -106,7 +107,12 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   """
   @spec get_recorded_prompts() :: [String.t()]
   def get_recorded_prompts do
-    Process.get(:mock_llm_recorded_prompts, [])
+    ensure_table_exists()
+
+    @ets_table
+    |> :ets.match({{:recorded_prompt, :"$1"}, :"$2"})
+    |> Enum.sort_by(fn [idx, _] -> idx end)
+    |> Enum.map(fn [_, prompt] -> prompt end)
   end
 
   @doc """
@@ -114,32 +120,47 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   """
   @spec clear_recorded_prompts() :: :ok
   def clear_recorded_prompts do
-    Process.delete(:mock_llm_recorded_prompts)
+    ensure_table_exists()
+    :ets.match_delete(@ets_table, {{:recorded_prompt, :_}, :_})
     :ok
   end
 
   # Private helpers
 
+  defp ensure_table_exists do
+    case :ets.whereis(@ets_table) do
+      :undefined ->
+        :ets.new(@ets_table, [:named_table, :public, :set])
+
+      _ref ->
+        :ok
+    end
+  end
+
   defp get_configured_response(prompt) do
     record_prompt(prompt)
+    ensure_table_exists()
 
-    responses = Process.get(:mock_llm_responses, %{})
-    find_matching_response(responses, prompt)
+    @ets_table
+    |> :ets.match({{:response, :"$1"}, :"$2"})
+    |> find_matching_response(prompt)
   end
 
   defp get_configured_schema_response(prompt) do
     record_prompt(prompt)
+    ensure_table_exists()
 
-    responses = Process.get(:mock_llm_schema_responses, %{})
-    find_matching_response(responses, prompt)
+    @ets_table
+    |> :ets.match({{:schema_response, :"$1"}, :"$2"})
+    |> find_matching_response(prompt)
   end
 
-  defp find_matching_response(responses, prompt) do
-    Enum.find_value(responses, fn
-      {%Regex{} = pattern, response} ->
+  defp find_matching_response(entries, prompt) do
+    Enum.find_value(entries, fn
+      [%Regex{} = pattern, response] ->
         if Regex.match?(pattern, prompt), do: response
 
-      {pattern, response} when is_binary(pattern) ->
+      [pattern, response] when is_binary(pattern) ->
         if String.contains?(prompt, pattern), do: response
 
       _ ->
@@ -148,7 +169,8 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   end
 
   defp record_prompt(prompt) do
-    prompts = Process.get(:mock_llm_recorded_prompts, [])
-    Process.put(:mock_llm_recorded_prompts, prompts ++ [prompt])
+    ensure_table_exists()
+    idx = :ets.info(@ets_table, :size)
+    :ets.insert(@ets_table, {{:recorded_prompt, idx}, prompt})
   end
 end
