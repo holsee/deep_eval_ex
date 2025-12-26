@@ -62,17 +62,17 @@ defmodule DeepEvalEx.TestCase do
 
   @primary_key false
   embedded_schema do
-    field :input, :string
-    field :actual_output, :string
-    field :expected_output, :string
-    field :retrieval_context, {:array, :string}
-    field :context, {:array, :string}
-    field :metadata, :map
-    field :name, :string
-    field :tags, {:array, :string}
+    field(:input, :string)
+    field(:actual_output, :string)
+    field(:expected_output, :string)
+    field(:retrieval_context, {:array, :string})
+    field(:context, {:array, :string})
+    field(:metadata, :map)
+    field(:name, :string)
+    field(:tags, {:array, :string})
 
-    embeds_many :tools_called, ToolCall, on_replace: :delete
-    embeds_many :expected_tools, ToolCall, on_replace: :delete
+    embeds_many(:tools_called, ToolCall, on_replace: :delete)
+    embeds_many(:expected_tools, ToolCall, on_replace: :delete)
   end
 
   @doc """
@@ -114,7 +114,16 @@ defmodule DeepEvalEx.TestCase do
     attrs = normalize_attrs(attrs)
 
     test_case
-    |> cast(attrs, [:input, :actual_output, :expected_output, :retrieval_context, :context, :metadata, :name, :tags])
+    |> cast(attrs, [
+      :input,
+      :actual_output,
+      :expected_output,
+      :retrieval_context,
+      :context,
+      :metadata,
+      :name,
+      :tags
+    ])
     |> cast_embed(:tools_called)
     |> cast_embed(:expected_tools)
     |> validate_required([:input])

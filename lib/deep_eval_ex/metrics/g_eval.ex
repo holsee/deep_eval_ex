@@ -209,7 +209,8 @@ defmodule DeepEvalEx.Metrics.GEval do
     if Keyword.has_key?(opts, :name) do
       evaluate(test_case, opts)
     else
-      {:error, {:missing_config, "GEval requires :name, :criteria, and :evaluation_params options"}}
+      {:error,
+       {:missing_config, "GEval requires :name, :criteria, and :evaluation_params options"}}
     end
   end
 

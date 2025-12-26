@@ -35,11 +35,11 @@ defmodule DeepEvalEx.Schemas.ToolCall do
 
   @primary_key false
   embedded_schema do
-    field :name, :string
-    field :description, :string
-    field :reasoning, :string
-    field :input_parameters, :map
-    field :output, :string
+    field(:name, :string)
+    field(:description, :string)
+    field(:reasoning, :string)
+    field(:input_parameters, :map)
+    field(:output, :string)
   end
 
   @doc false

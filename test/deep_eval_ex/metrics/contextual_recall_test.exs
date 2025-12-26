@@ -30,16 +30,27 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
       # Mock verdicts - all sentences attributable
       Mock.set_schema_response(
         ~r/determine whether the sentence can be attributed/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes", "reason" => "Attributed to 1st node: 'Paris is the capital...'"},
-          %{"verdict" => "yes", "reason" => "Attributed to 2nd node: 'Eiffel Tower is located...'"}
-        ]}
+        %{
+          "verdicts" => [
+            %{
+              "verdict" => "yes",
+              "reason" => "Attributed to 1st node: 'Paris is the capital...'"
+            },
+            %{
+              "verdict" => "yes",
+              "reason" => "Attributed to 2nd node: 'Eiffel Tower is located...'"
+            }
+          ]
+        }
       )
 
       # Mock reason generation
       Mock.set_schema_response(
         ~r/summarize a CONCISE reason for the score/i,
-        %{"reason" => "The score is 1.0 because all sentences in the expected output can be attributed to nodes in the retrieval context."}
+        %{
+          "reason" =>
+            "The score is 1.0 because all sentences in the expected output can be attributed to nodes in the retrieval context."
+        }
       )
 
       test_case =
@@ -64,16 +75,21 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
       # Mock verdicts - no sentences attributable
       Mock.set_schema_response(
         ~r/determine whether the sentence can be attributed/i,
-        %{"verdicts" => [
-          %{"verdict" => "no", "reason" => "No context about weather."},
-          %{"verdict" => "no", "reason" => "No context about coffee."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "no", "reason" => "No context about weather."},
+            %{"verdict" => "no", "reason" => "No context about coffee."}
+          ]
+        }
       )
 
       # Mock reason generation
       Mock.set_schema_response(
         ~r/summarize a CONCISE reason for the score/i,
-        %{"reason" => "The score is 0.0 because no sentences can be attributed to the retrieval context."}
+        %{
+          "reason" =>
+            "The score is 0.0 because no sentences can be attributed to the retrieval context."
+        }
       )
 
       test_case =
@@ -88,7 +104,8 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
 
       assert {:ok, result} = ContextualRecall.measure(test_case, adapter: :mock)
       assert result.score == 0.0
-      assert result.success == false  # 0.0 < 0.5 threshold
+      # 0.0 < 0.5 threshold
+      assert result.success == false
     end
   end
 
@@ -97,10 +114,12 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
       # Mock verdicts - one attributable, one not
       Mock.set_schema_response(
         ~r/determine whether the sentence can be attributed/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes", "reason" => "Attributed to 1st node about Paris."},
-          %{"verdict" => "no", "reason" => "No context about population."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes", "reason" => "Attributed to 1st node about Paris."},
+            %{"verdict" => "no", "reason" => "No context about population."}
+          ]
+        }
       )
 
       # Mock reason generation
@@ -120,7 +139,8 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
 
       assert {:ok, result} = ContextualRecall.measure(test_case, adapter: :mock)
       assert result.score == 0.5
-      assert result.success == true  # 0.5 >= 0.5 threshold
+      # 0.5 >= 0.5 threshold
+      assert result.success == true
     end
   end
 
@@ -134,7 +154,7 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
         )
 
       assert {:error, {:missing_params, [:retrieval_context]}} =
-        ContextualRecall.measure(test_case, adapter: :mock)
+               ContextualRecall.measure(test_case, adapter: :mock)
     end
   end
 
@@ -143,11 +163,13 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
       # Mock verdicts - 2 out of 3 attributable
       Mock.set_schema_response(
         ~r/determine whether the sentence can be attributed/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes", "reason" => "Attributable."},
-          %{"verdict" => "yes", "reason" => "Attributable."},
-          %{"verdict" => "no", "reason" => "Not attributable."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes", "reason" => "Attributable."},
+            %{"verdict" => "yes", "reason" => "Attributable."},
+            %{"verdict" => "no", "reason" => "Not attributable."}
+          ]
+        }
       )
 
       # Mock reason
@@ -171,12 +193,17 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
       Mock.clear_responses()
 
       # Re-mock for second test
-      Mock.set_schema_response(~r/determine whether the sentence can be attributed/i, %{"verdicts" => [
-        %{"verdict" => "yes", "reason" => "Attributable."},
-        %{"verdict" => "yes", "reason" => "Attributable."},
-        %{"verdict" => "no", "reason" => "Not attributable."}
-      ]})
-      Mock.set_schema_response(~r/summarize a CONCISE reason for the score/i, %{"reason" => "Score is 0.67."})
+      Mock.set_schema_response(~r/determine whether the sentence can be attributed/i, %{
+        "verdicts" => [
+          %{"verdict" => "yes", "reason" => "Attributable."},
+          %{"verdict" => "yes", "reason" => "Attributable."},
+          %{"verdict" => "no", "reason" => "Not attributable."}
+        ]
+      })
+
+      Mock.set_schema_response(~r/summarize a CONCISE reason for the score/i, %{
+        "reason" => "Score is 0.67."
+      })
 
       # With threshold 0.8, score of ~0.67 should fail
       assert {:ok, result2} = ContextualRecall.measure(test_case, adapter: :mock, threshold: 0.8)
@@ -200,7 +227,9 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
           retrieval_context: ["Context"]
         )
 
-      assert {:ok, result} = ContextualRecall.measure(test_case, adapter: :mock, include_reason: false)
+      assert {:ok, result} =
+               ContextualRecall.measure(test_case, adapter: :mock, include_reason: false)
+
       assert result.score == 1.0
       assert is_nil(result.reason)
     end
@@ -211,10 +240,12 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
       # Mock verdicts
       Mock.set_schema_response(
         ~r/determine whether the sentence can be attributed/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes", "reason" => "Attributed to node 1."},
-          %{"verdict" => "no", "reason" => "Not found in context."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes", "reason" => "Attributed to node 1."},
+            %{"verdict" => "no", "reason" => "Not found in context."}
+          ]
+        }
       )
 
       # Mock reason
@@ -254,11 +285,12 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
       )
 
       # Using context instead of retrieval_context
-      test_case = TestCase.new!(
-        input: "Q",
-        expected_output: "A",
-        context: ["Context via alias"]
-      )
+      test_case =
+        TestCase.new!(
+          input: "Q",
+          expected_output: "A",
+          context: ["Context via alias"]
+        )
 
       assert {:ok, result} = ContextualRecall.measure(test_case, adapter: :mock)
       assert result.score == 1.0
@@ -275,7 +307,7 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
       }
 
       assert {:error, {:missing_params, [:expected_output]}} =
-        ContextualRecall.measure(test_case, adapter: :mock)
+               ContextualRecall.measure(test_case, adapter: :mock)
     end
 
     test "returns error when retrieval_context is missing" do
@@ -286,7 +318,7 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
       }
 
       assert {:error, {:missing_params, [:retrieval_context]}} =
-        ContextualRecall.measure(test_case, adapter: :mock)
+               ContextualRecall.measure(test_case, adapter: :mock)
     end
   end
 end

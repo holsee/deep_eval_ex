@@ -82,7 +82,8 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
 
     with {:ok, verdicts} <- generate_verdicts(expected_output, retrieval_context, opts),
          score = calculate_score(verdicts),
-         {:ok, reason} <- maybe_generate_reason(score, expected_output, verdicts, include_reason, opts) do
+         {:ok, reason} <-
+           maybe_generate_reason(score, expected_output, verdicts, include_reason, opts) do
       {:ok,
        Result.new(
          metric: metric_name(),

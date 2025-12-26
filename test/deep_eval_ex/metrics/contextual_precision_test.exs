@@ -21,7 +21,11 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
 
   describe "required_params/0" do
     test "requires input, retrieval_context, and expected_output" do
-      assert ContextualPrecision.required_params() == [:input, :retrieval_context, :expected_output]
+      assert ContextualPrecision.required_params() == [
+               :input,
+               :retrieval_context,
+               :expected_output
+             ]
     end
   end
 
@@ -94,11 +98,19 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
       # Mock verdicts - relevant nodes first
       Mock.set_schema_response(
         ~r/determine whether each node in the retrieval context was remotely useful/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes", "reason" => "Contains information about Einstein winning Nobel Prize."},
-          %{"verdict" => "yes", "reason" => "Contains information about the photoelectric effect."},
-          %{"verdict" => "no", "reason" => "Cat is not relevant to Nobel Prize question."}
-        ]}
+        %{
+          "verdicts" => [
+            %{
+              "verdict" => "yes",
+              "reason" => "Contains information about Einstein winning Nobel Prize."
+            },
+            %{
+              "verdict" => "yes",
+              "reason" => "Contains information about the photoelectric effect."
+            },
+            %{"verdict" => "no", "reason" => "Cat is not relevant to Nobel Prize question."}
+          ]
+        }
       )
 
       # Mock reason generation
@@ -130,10 +142,12 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
       # Mock verdicts - all irrelevant
       Mock.set_schema_response(
         ~r/determine whether each node in the retrieval context was remotely useful/i,
-        %{"verdicts" => [
-          %{"verdict" => "no", "reason" => "Not related to the question."},
-          %{"verdict" => "no", "reason" => "Off topic."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "no", "reason" => "Not related to the question."},
+            %{"verdict" => "no", "reason" => "Off topic."}
+          ]
+        }
       )
 
       # Mock reason generation
@@ -154,24 +168,29 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
 
       assert {:ok, result} = ContextualPrecision.measure(test_case, adapter: :mock)
       assert result.score == 0.0
-      assert result.success == false  # 0.0 < 0.5 threshold
+      # 0.0 < 0.5 threshold
+      assert result.success == false
     end
 
     test "returns lower score when irrelevant nodes are ranked higher" do
       # Mock verdicts - irrelevant node first
       Mock.set_schema_response(
         ~r/determine whether each node in the retrieval context was remotely useful/i,
-        %{"verdicts" => [
-          %{"verdict" => "no", "reason" => "Cat is not relevant."},
-          %{"verdict" => "yes", "reason" => "Contains Nobel Prize info."},
-          %{"verdict" => "yes", "reason" => "Contains photoelectric effect info."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "no", "reason" => "Cat is not relevant."},
+            %{"verdict" => "yes", "reason" => "Contains Nobel Prize info."},
+            %{"verdict" => "yes", "reason" => "Contains photoelectric effect info."}
+          ]
+        }
       )
 
       # Mock reason generation
       Mock.set_schema_response(
         ~r/provide a CONCISE summary for the score/i,
-        %{"reason" => "The score is lower because an irrelevant node about a cat is ranked first."}
+        %{
+          "reason" => "The score is lower because an irrelevant node about a cat is ranked first."
+        }
       )
 
       test_case =
@@ -187,7 +206,8 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
 
       assert {:ok, result} = ContextualPrecision.measure(test_case, adapter: :mock)
       assert_in_delta result.score, 0.583, 0.01
-      assert result.success == true  # 0.58 >= 0.5 threshold
+      # 0.58 >= 0.5 threshold
+      assert result.success == true
     end
   end
 
@@ -201,7 +221,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
         )
 
       assert {:error, {:missing_params, [:retrieval_context]}} =
-        ContextualPrecision.measure(test_case, adapter: :mock)
+               ContextualPrecision.measure(test_case, adapter: :mock)
     end
   end
 
@@ -210,11 +230,13 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
       # Mock verdicts - partial relevance
       Mock.set_schema_response(
         ~r/determine whether each node in the retrieval context was remotely useful/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes", "reason" => "Relevant."},
-          %{"verdict" => "no", "reason" => "Irrelevant."},
-          %{"verdict" => "yes", "reason" => "Relevant."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes", "reason" => "Relevant."},
+            %{"verdict" => "no", "reason" => "Irrelevant."},
+            %{"verdict" => "yes", "reason" => "Relevant."}
+          ]
+        }
       )
 
       # Mock reason
@@ -231,22 +253,34 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
         )
 
       # With threshold 0.5, score of ~0.83 should pass
-      assert {:ok, result} = ContextualPrecision.measure(test_case, adapter: :mock, threshold: 0.5)
+      assert {:ok, result} =
+               ContextualPrecision.measure(test_case, adapter: :mock, threshold: 0.5)
+
       assert_in_delta result.score, 0.833, 0.01
       assert result.success == true
 
       Mock.clear_responses()
 
       # Re-mock for second test
-      Mock.set_schema_response(~r/determine whether each node in the retrieval context was remotely useful/i, %{"verdicts" => [
-        %{"verdict" => "yes", "reason" => "Relevant."},
-        %{"verdict" => "no", "reason" => "Irrelevant."},
-        %{"verdict" => "yes", "reason" => "Relevant."}
-      ]})
-      Mock.set_schema_response(~r/provide a CONCISE summary for the score/i, %{"reason" => "Score is 0.83."})
+      Mock.set_schema_response(
+        ~r/determine whether each node in the retrieval context was remotely useful/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes", "reason" => "Relevant."},
+            %{"verdict" => "no", "reason" => "Irrelevant."},
+            %{"verdict" => "yes", "reason" => "Relevant."}
+          ]
+        }
+      )
+
+      Mock.set_schema_response(~r/provide a CONCISE summary for the score/i, %{
+        "reason" => "Score is 0.83."
+      })
 
       # With threshold 0.9, score of ~0.83 should fail
-      assert {:ok, result2} = ContextualPrecision.measure(test_case, adapter: :mock, threshold: 0.9)
+      assert {:ok, result2} =
+               ContextualPrecision.measure(test_case, adapter: :mock, threshold: 0.9)
+
       assert_in_delta result2.score, 0.833, 0.01
       assert result2.success == false
     end
@@ -267,7 +301,9 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
           retrieval_context: ["Context"]
         )
 
-      assert {:ok, result} = ContextualPrecision.measure(test_case, adapter: :mock, include_reason: false)
+      assert {:ok, result} =
+               ContextualPrecision.measure(test_case, adapter: :mock, include_reason: false)
+
       assert result.score == 1.0
       assert is_nil(result.reason)
     end
@@ -278,10 +314,12 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
       # Mock verdicts
       Mock.set_schema_response(
         ~r/determine whether each node in the retrieval context was remotely useful/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes", "reason" => "Relevant to question."},
-          %{"verdict" => "no", "reason" => "Not relevant."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes", "reason" => "Relevant to question."},
+            %{"verdict" => "no", "reason" => "Not relevant."}
+          ]
+        }
       )
 
       # Mock reason
@@ -320,11 +358,12 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
       )
 
       # Using context instead of retrieval_context
-      test_case = TestCase.new!(
-        input: "Q",
-        expected_output: "A",
-        context: ["Context via alias"]
-      )
+      test_case =
+        TestCase.new!(
+          input: "Q",
+          expected_output: "A",
+          context: ["Context via alias"]
+        )
 
       assert {:ok, result} = ContextualPrecision.measure(test_case, adapter: :mock)
       assert result.score == 1.0
@@ -341,7 +380,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
       }
 
       assert {:error, {:missing_params, [:expected_output]}} =
-        ContextualPrecision.measure(test_case, adapter: :mock)
+               ContextualPrecision.measure(test_case, adapter: :mock)
     end
 
     test "returns error when retrieval_context is missing" do
@@ -352,7 +391,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
       }
 
       assert {:error, {:missing_params, [:retrieval_context]}} =
-        ContextualPrecision.measure(test_case, adapter: :mock)
+               ContextualPrecision.measure(test_case, adapter: :mock)
     end
   end
 end

@@ -120,7 +120,8 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
         )
 
       assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
-      assert result.score == 0.8  # 8/10 normalized
+      # 8/10 normalized
+      assert result.score == 0.8
       assert result.reason == "The response is helpful and accurate."
       assert result.metric == "Helpfulness [GEval]"
     end
@@ -153,7 +154,11 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
 
       assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
       assert result.score == 0.7
-      assert result.metadata.evaluation_steps == ["Step 1: Check accuracy", "Step 2: Check completeness"]
+
+      assert result.metadata.evaluation_steps == [
+               "Step 1: Check accuracy",
+               "Step 2: Check completeness"
+             ]
     end
 
     test "normalizes score to 0-1 range" do
@@ -173,7 +178,8 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
       test_case = TestCase.new!(input: "Q", actual_output: "A")
 
       assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
-      assert result.score == 0.5  # 5/10 = 0.5
+      # 5/10 = 0.5
+      assert result.score == 0.5
     end
 
     test "handles custom score range" do
@@ -187,7 +193,8 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
           name: "Test",
           evaluation_params: [:input, :actual_output],
           evaluation_steps: ["Check quality"],
-          score_range: {1, 5}  # 1-5 range
+          # 1-5 range
+          score_range: {1, 5}
         )
 
       test_case = TestCase.new!(input: "Q", actual_output: "A")

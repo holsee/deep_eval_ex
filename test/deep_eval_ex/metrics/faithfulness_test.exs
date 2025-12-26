@@ -30,26 +30,32 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       # Mock truths extraction
       Mock.set_schema_response(
         ~r/generate a comprehensive list of.*truths/i,
-        %{"truths" => [
-          "Employees receive 20 days paid time off annually.",
-          "PTO can be carried over up to 5 days."
-        ]}
+        %{
+          "truths" => [
+            "Employees receive 20 days paid time off annually.",
+            "PTO can be carried over up to 5 days."
+          ]
+        }
       )
 
       # Mock claims extraction
       Mock.set_schema_response(
         ~r/extract a comprehensive list of FACTUAL/i,
-        %{"claims" => [
-          "Employees get 20 days of PTO per year."
-        ]}
+        %{
+          "claims" => [
+            "Employees get 20 days of PTO per year."
+          ]
+        }
       )
 
       # Mock verdicts - claim is supported
       Mock.set_schema_response(
         ~r/indicate whether EACH claim contradicts/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes"}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"}
+          ]
+        }
       )
 
       # Mock reason generation
@@ -80,32 +86,41 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       # Mock truths extraction
       Mock.set_schema_response(
         ~r/generate a comprehensive list of.*truths/i,
-        %{"truths" => [
-          "The company was founded in 2010.",
-          "Headquarters are in San Francisco."
-        ]}
+        %{
+          "truths" => [
+            "The company was founded in 2010.",
+            "Headquarters are in San Francisco."
+          ]
+        }
       )
 
       # Mock claims extraction
       Mock.set_schema_response(
         ~r/extract a comprehensive list of FACTUAL/i,
-        %{"claims" => [
-          "The company was founded in 1995."
-        ]}
+        %{
+          "claims" => [
+            "The company was founded in 1995."
+          ]
+        }
       )
 
       # Mock verdicts - claim contradicts context
       Mock.set_schema_response(
         ~r/indicate whether EACH claim contradicts/i,
-        %{"verdicts" => [
-          %{"verdict" => "no", "reason" => "The context says 2010, not 1995."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "no", "reason" => "The context says 2010, not 1995."}
+          ]
+        }
       )
 
       # Mock reason generation
       Mock.set_schema_response(
         ~r/CONCISELY summarize the contradictions/i,
-        %{"reason" => "The score is 0.0 because the claim about founding year contradicts the context."}
+        %{
+          "reason" =>
+            "The score is 0.0 because the claim about founding year contradicts the context."
+        }
       )
 
       test_case =
@@ -120,35 +135,44 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
 
       assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
       assert result.score == 0.0
-      assert result.metadata.verdicts == [%{verdict: :no, reason: "The context says 2010, not 1995."}]
+
+      assert result.metadata.verdicts == [
+               %{verdict: :no, reason: "The context says 2010, not 1995."}
+             ]
     end
 
     test "returns partial score when some claims are supported" do
       # Mock truths extraction
       Mock.set_schema_response(
         ~r/generate a comprehensive list of.*truths/i,
-        %{"truths" => [
-          "Python is a programming language.",
-          "Python was created by Guido van Rossum."
-        ]}
+        %{
+          "truths" => [
+            "Python is a programming language.",
+            "Python was created by Guido van Rossum."
+          ]
+        }
       )
 
       # Mock claims extraction - 2 claims
       Mock.set_schema_response(
         ~r/extract a comprehensive list of FACTUAL/i,
-        %{"claims" => [
-          "Python is a programming language.",
-          "Python was created in 2020."
-        ]}
+        %{
+          "claims" => [
+            "Python is a programming language.",
+            "Python was created in 2020."
+          ]
+        }
       )
 
       # Mock verdicts - first supported, second not
       Mock.set_schema_response(
         ~r/indicate whether EACH claim contradicts/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes"},
-          %{"verdict" => "no", "reason" => "Context says Guido created it, no mention of 2020."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{"verdict" => "no", "reason" => "Context says Guido created it, no mention of 2020."}
+          ]
+        }
       )
 
       # Mock reason generation
@@ -168,7 +192,8 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
         )
 
       assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
-      assert result.score == 0.5  # 1 supported out of 2
+      # 1 supported out of 2
+      assert result.score == 0.5
     end
   end
 
@@ -177,33 +202,42 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       # Mock truths extraction
       Mock.set_schema_response(
         ~r/generate a comprehensive list of.*truths/i,
-        %{"truths" => [
-          "The API supports JSON responses."
-        ]}
+        %{
+          "truths" => [
+            "The API supports JSON responses."
+          ]
+        }
       )
 
       # Mock claims extraction
       Mock.set_schema_response(
         ~r/extract a comprehensive list of FACTUAL/i,
-        %{"claims" => [
-          "The API supports JSON responses.",
-          "The API also supports XML."
-        ]}
+        %{
+          "claims" => [
+            "The API supports JSON responses.",
+            "The API also supports XML."
+          ]
+        }
       )
 
       # Mock verdicts - first yes, second idk (not mentioned)
       Mock.set_schema_response(
         ~r/indicate whether EACH claim contradicts/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes"},
-          %{"verdict" => "idk", "reason" => "XML support is not mentioned in the context."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{"verdict" => "idk", "reason" => "XML support is not mentioned in the context."}
+          ]
+        }
       )
 
       # Mock reason generation
       Mock.set_schema_response(
         ~r/CONCISELY summarize the contradictions/i,
-        %{"reason" => "The score is 1.0. One claim is supported, and another cannot be verified but doesn't contradict."}
+        %{
+          "reason" =>
+            "The score is 1.0. One claim is supported, and another cannot be verified but doesn't contradict."
+        }
       )
 
       test_case =
@@ -226,9 +260,11 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       # Mock truths extraction
       Mock.set_schema_response(
         ~r/generate a comprehensive list of.*truths/i,
-        %{"truths" => [
-          "Some fact from context."
-        ]}
+        %{
+          "truths" => [
+            "Some fact from context."
+          ]
+        }
       )
 
       # Mock claims extraction - no claims
@@ -246,12 +282,14 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       test_case =
         TestCase.new!(
           input: "Hello",
-          actual_output: "Hi there!",  # No factual claims
+          # No factual claims
+          actual_output: "Hi there!",
           retrieval_context: ["Some fact from context."]
         )
 
       assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
-      assert result.score == 1.0  # No claims = perfectly faithful
+      # No claims = perfectly faithful
+      assert result.score == 1.0
     end
   end
 
@@ -272,10 +310,12 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       # Mock verdicts - 1 supported, 1 contradicted
       Mock.set_schema_response(
         ~r/indicate whether EACH claim contradicts/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes"},
-          %{"verdict" => "no", "reason" => "Contradicts context."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{"verdict" => "no", "reason" => "Contradicts context."}
+          ]
+        }
       )
 
       # Mock reason generation
@@ -299,13 +339,24 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       Mock.clear_responses()
 
       # Re-mock everything for second assertion
-      Mock.set_schema_response(~r/generate a comprehensive list of.*truths/i, %{"truths" => ["Fact 1"]})
-      Mock.set_schema_response(~r/extract a comprehensive list of FACTUAL/i, %{"claims" => ["Claim 1", "Claim 2"]})
-      Mock.set_schema_response(~r/indicate whether EACH claim contradicts/i, %{"verdicts" => [
-        %{"verdict" => "yes"},
-        %{"verdict" => "no", "reason" => "Contradicts context."}
-      ]})
-      Mock.set_schema_response(~r/CONCISELY summarize the contradictions/i, %{"reason" => "Score is 0.5."})
+      Mock.set_schema_response(~r/generate a comprehensive list of.*truths/i, %{
+        "truths" => ["Fact 1"]
+      })
+
+      Mock.set_schema_response(~r/extract a comprehensive list of FACTUAL/i, %{
+        "claims" => ["Claim 1", "Claim 2"]
+      })
+
+      Mock.set_schema_response(~r/indicate whether EACH claim contradicts/i, %{
+        "verdicts" => [
+          %{"verdict" => "yes"},
+          %{"verdict" => "no", "reason" => "Contradicts context."}
+        ]
+      })
+
+      Mock.set_schema_response(~r/CONCISELY summarize the contradictions/i, %{
+        "reason" => "Score is 0.5."
+      })
 
       # With threshold 0.7, score of 0.5 should fail
       assert {:ok, result2} = Faithfulness.measure(test_case, adapter: :mock, threshold: 0.7)
@@ -341,7 +392,9 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
           retrieval_context: ["Context"]
         )
 
-      assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock, include_reason: false)
+      assert {:ok, result} =
+               Faithfulness.measure(test_case, adapter: :mock, include_reason: false)
+
       assert result.score == 1.0
       assert is_nil(result.reason)
     end
@@ -420,10 +473,11 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
           retrieval_context: ["Lots of context here."]
         )
 
-      assert {:ok, result} = Faithfulness.measure(test_case,
-        adapter: :mock,
-        truths_extraction_limit: 5
-      )
+      assert {:ok, result} =
+               Faithfulness.measure(test_case,
+                 adapter: :mock,
+                 truths_extraction_limit: 5
+               )
 
       assert result.metadata.truths_extraction_limit == 5
     end
@@ -431,14 +485,15 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
 
   describe "measure/2 validation" do
     test "returns error when retrieval_context is missing" do
-      test_case = TestCase.new!(
-        input: "Q",
-        actual_output: "A"
-        # No retrieval_context
-      )
+      test_case =
+        TestCase.new!(
+          input: "Q",
+          actual_output: "A"
+          # No retrieval_context
+        )
 
       assert {:error, {:missing_params, [:retrieval_context]}} =
-        Faithfulness.measure(test_case, adapter: :mock)
+               Faithfulness.measure(test_case, adapter: :mock)
     end
   end
 
@@ -469,11 +524,12 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       )
 
       # Using context instead of retrieval_context
-      test_case = TestCase.new!(
-        input: "Q",
-        actual_output: "A",
-        context: ["Context via alias"]
-      )
+      test_case =
+        TestCase.new!(
+          input: "Q",
+          actual_output: "A",
+          context: ["Context via alias"]
+        )
 
       assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
       assert result.score == 1.0

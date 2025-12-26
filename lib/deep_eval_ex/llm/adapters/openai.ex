@@ -189,7 +189,10 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   defp ecto_type_to_json_type(:integer), do: %{"type" => "integer"}
   defp ecto_type_to_json_type(:float), do: %{"type" => "number"}
   defp ecto_type_to_json_type(:boolean), do: %{"type" => "boolean"}
-  defp ecto_type_to_json_type({:array, inner}), do: %{"type" => "array", "items" => ecto_type_to_json_type(inner)}
+
+  defp ecto_type_to_json_type({:array, inner}),
+    do: %{"type" => "array", "items" => ecto_type_to_json_type(inner)}
+
   defp ecto_type_to_json_type(:map), do: %{"type" => "object"}
   defp ecto_type_to_json_type(_), do: %{"type" => "string"}
 

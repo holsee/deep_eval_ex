@@ -30,10 +30,18 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
       # Mock verdicts - all agree
       Mock.set_schema_response(
         ~r/indicate whether the given 'actual output' agrees/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes", "reason" => "The output agrees with context about Einstein's Nobel Prize."},
-          %{"verdict" => "yes", "reason" => "The output correctly states the photoelectric effect."}
-        ]}
+        %{
+          "verdicts" => [
+            %{
+              "verdict" => "yes",
+              "reason" => "The output agrees with context about Einstein's Nobel Prize."
+            },
+            %{
+              "verdict" => "yes",
+              "reason" => "The output correctly states the photoelectric effect."
+            }
+          ]
+        }
       )
 
       # Mock reason generation
@@ -64,10 +72,12 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
       # Mock verdicts - all contradict
       Mock.set_schema_response(
         ~r/indicate whether the given 'actual output' agrees/i,
-        %{"verdicts" => [
-          %{"verdict" => "no", "reason" => "The output says 1969, but context says 1921."},
-          %{"verdict" => "no", "reason" => "The output contradicts the context."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "no", "reason" => "The output says 1969, but context says 1921."},
+            %{"verdict" => "no", "reason" => "The output contradicts the context."}
+          ]
+        }
       )
 
       # Mock reason generation
@@ -88,17 +98,23 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
 
       assert {:ok, result} = Hallucination.measure(test_case, adapter: :mock)
       assert result.score == 1.0
-      assert result.success == false  # 1.0 > 0.5 threshold
+      # 1.0 > 0.5 threshold
+      assert result.success == false
     end
 
     test "returns partial score when some contexts contradict" do
       # Mock verdicts - one agrees, one contradicts
       Mock.set_schema_response(
         ~r/indicate whether the given 'actual output' agrees/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes", "reason" => "The output correctly mentions the photoelectric effect."},
-          %{"verdict" => "no", "reason" => "The output says 1969, but context says 1921."}
-        ]}
+        %{
+          "verdicts" => [
+            %{
+              "verdict" => "yes",
+              "reason" => "The output correctly mentions the photoelectric effect."
+            },
+            %{"verdict" => "no", "reason" => "The output says 1969, but context says 1921."}
+          ]
+        }
       )
 
       # Mock reason generation
@@ -119,7 +135,8 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
 
       assert {:ok, result} = Hallucination.measure(test_case, adapter: :mock)
       assert result.score == 0.5
-      assert result.success == true  # 0.5 <= 0.5 threshold
+      # 0.5 <= 0.5 threshold
+      assert result.success == true
     end
   end
 
@@ -143,10 +160,12 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
       # Mock verdicts - partial hallucination
       Mock.set_schema_response(
         ~r/indicate whether the given 'actual output' agrees/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes", "reason" => "Agrees."},
-          %{"verdict" => "no", "reason" => "Contradicts."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes", "reason" => "Agrees."},
+            %{"verdict" => "no", "reason" => "Contradicts."}
+          ]
+        }
       )
 
       # Mock reason generation
@@ -170,11 +189,16 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
       Mock.clear_responses()
 
       # Re-mock for second test
-      Mock.set_schema_response(~r/indicate whether the given 'actual output' agrees/i, %{"verdicts" => [
-        %{"verdict" => "yes", "reason" => "Agrees."},
-        %{"verdict" => "no", "reason" => "Contradicts."}
-      ]})
-      Mock.set_schema_response(~r/provide a reason for the hallucination score/i, %{"reason" => "Score is 0.5."})
+      Mock.set_schema_response(~r/indicate whether the given 'actual output' agrees/i, %{
+        "verdicts" => [
+          %{"verdict" => "yes", "reason" => "Agrees."},
+          %{"verdict" => "no", "reason" => "Contradicts."}
+        ]
+      })
+
+      Mock.set_schema_response(~r/provide a reason for the hallucination score/i, %{
+        "reason" => "Score is 0.5."
+      })
 
       # With threshold 0.3, score of 0.5 should fail (0.5 > 0.3)
       assert {:ok, result2} = Hallucination.measure(test_case, adapter: :mock, threshold: 0.3)
@@ -198,7 +222,9 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
           context: ["Context"]
         )
 
-      assert {:ok, result} = Hallucination.measure(test_case, adapter: :mock, include_reason: false)
+      assert {:ok, result} =
+               Hallucination.measure(test_case, adapter: :mock, include_reason: false)
+
       assert result.score == 0.0
       assert is_nil(result.reason)
     end
@@ -209,10 +235,12 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
       # Mock verdicts
       Mock.set_schema_response(
         ~r/indicate whether the given 'actual output' agrees/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes", "reason" => "Agrees with first context."},
-          %{"verdict" => "no", "reason" => "Contradicts second context."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes", "reason" => "Agrees with first context."},
+            %{"verdict" => "no", "reason" => "Contradicts second context."}
+          ]
+        }
       )
 
       # Mock reason
@@ -251,11 +279,12 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
       )
 
       # Using retrieval_context instead of context
-      test_case = TestCase.new!(
-        input: "Q",
-        actual_output: "A",
-        retrieval_context: ["Context via retrieval_context"]
-      )
+      test_case =
+        TestCase.new!(
+          input: "Q",
+          actual_output: "A",
+          retrieval_context: ["Context via retrieval_context"]
+        )
 
       assert {:ok, result} = Hallucination.measure(test_case, adapter: :mock)
       assert result.score == 0.0
@@ -264,14 +293,15 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
 
   describe "measure/2 validation" do
     test "returns error when context is missing" do
-      test_case = TestCase.new!(
-        input: "Q",
-        actual_output: "A"
-        # No context
-      )
+      test_case =
+        TestCase.new!(
+          input: "Q",
+          actual_output: "A"
+          # No context
+        )
 
       assert {:error, {:missing_params, [:context]}} =
-        Hallucination.measure(test_case, adapter: :mock)
+               Hallucination.measure(test_case, adapter: :mock)
     end
   end
 end

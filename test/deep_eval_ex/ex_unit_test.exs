@@ -61,14 +61,17 @@ defmodule DeepEvalEx.ExUnitTest do
         ~r/generate a comprehensive list of.*truths/i,
         %{"truths" => ["Truth 1"]}
       )
+
       Mock.set_schema_response(
         ~r/extract a comprehensive list of FACTUAL/i,
         %{"claims" => ["Claim 1", "Claim 2"]}
       )
+
       Mock.set_schema_response(
         ~r/indicate whether EACH claim contradicts/i,
         %{"verdicts" => [%{"verdict" => "yes"}, %{"verdict" => "no"}]}
       )
+
       Mock.set_schema_response(
         ~r/CONCISELY summarize the contradictions/i,
         %{"reason" => "Partial support."}
@@ -92,14 +95,17 @@ defmodule DeepEvalEx.ExUnitTest do
         ~r/generate a comprehensive list of.*truths/i,
         %{"truths" => ["Truth 1"]}
       )
+
       Mock.set_schema_response(
         ~r/extract a comprehensive list of FACTUAL/i,
         %{"claims" => ["Claim 1", "Claim 2"]}
       )
+
       Mock.set_schema_response(
         ~r/indicate whether EACH claim contradicts/i,
         %{"verdicts" => [%{"verdict" => "yes"}, %{"verdict" => "no"}]}
       )
+
       Mock.set_schema_response(
         ~r/CONCISELY summarize the contradictions/i,
         %{"reason" => "Partial support."}
@@ -226,14 +232,17 @@ defmodule DeepEvalEx.ExUnitTest do
         ~r/generate a comprehensive list of.*truths/i,
         %{"truths" => ["Truth 1"]}
       )
+
       Mock.set_schema_response(
         ~r/extract a comprehensive list of FACTUAL/i,
         %{"claims" => ["Claim 1", "Claim 2"]}
       )
+
       Mock.set_schema_response(
         ~r/indicate whether EACH claim contradicts/i,
         %{"verdicts" => [%{"verdict" => "yes"}, %{"verdict" => "no"}]}
       )
+
       Mock.set_schema_response(
         ~r/CONCISELY summarize the contradictions/i,
         %{"reason" => "Partial."}
@@ -258,14 +267,17 @@ defmodule DeepEvalEx.ExUnitTest do
         ~r/generate a comprehensive list of.*truths/i,
         %{"truths" => ["Truth 1"]}
       )
+
       Mock.set_schema_response(
         ~r/extract a comprehensive list of FACTUAL/i,
         %{"claims" => ["Claim 1", "Claim 2"]}
       )
+
       Mock.set_schema_response(
         ~r/indicate whether EACH claim contradicts/i,
         %{"verdicts" => [%{"verdict" => "yes"}, %{"verdict" => "no"}]}
       )
+
       Mock.set_schema_response(
         ~r/CONCISELY summarize the contradictions/i,
         %{"reason" => "Partial."}

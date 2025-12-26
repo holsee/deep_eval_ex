@@ -30,25 +30,32 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
       # Mock statements extraction
       Mock.set_schema_response(
         ~r/breakdown and generate a list of statements/i,
-        %{"statements" => [
-          "The laptop has a Retina display.",
-          "It has a 12-hour battery life."
-        ]}
+        %{
+          "statements" => [
+            "The laptop has a Retina display.",
+            "It has a 12-hour battery life."
+          ]
+        }
       )
 
       # Mock verdicts - all relevant
       Mock.set_schema_response(
         ~r/determine whether each statement is relevant/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes"},
-          %{"verdict" => "yes"}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{"verdict" => "yes"}
+          ]
+        }
       )
 
       # Mock reason generation
       Mock.set_schema_response(
         ~r/provide a CONCISE reason for the score/i,
-        %{"reason" => "The score is 1.0 because all statements directly address the question about laptop features."}
+        %{
+          "reason" =>
+            "The score is 1.0 because all statements directly address the question about laptop features."
+        }
       )
 
       test_case =
@@ -69,25 +76,35 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
       # Mock statements extraction
       Mock.set_schema_response(
         ~r/breakdown and generate a list of statements/i,
-        %{"statements" => [
-          "The weather is nice today.",
-          "I like coffee."
-        ]}
+        %{
+          "statements" => [
+            "The weather is nice today.",
+            "I like coffee."
+          ]
+        }
       )
 
       # Mock verdicts - all irrelevant
       Mock.set_schema_response(
         ~r/determine whether each statement is relevant/i,
-        %{"verdicts" => [
-          %{"verdict" => "no", "reason" => "Weather has nothing to do with laptop features."},
-          %{"verdict" => "no", "reason" => "Personal preferences are not relevant to the question."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "no", "reason" => "Weather has nothing to do with laptop features."},
+            %{
+              "verdict" => "no",
+              "reason" => "Personal preferences are not relevant to the question."
+            }
+          ]
+        }
       )
 
       # Mock reason generation
       Mock.set_schema_response(
         ~r/provide a CONCISE reason for the score/i,
-        %{"reason" => "The score is 0.0 because none of the statements address the question about laptop features."}
+        %{
+          "reason" =>
+            "The score is 0.0 because none of the statements address the question about laptop features."
+        }
       )
 
       test_case =
@@ -98,26 +115,31 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
 
       assert {:ok, result} = AnswerRelevancy.measure(test_case, adapter: :mock)
       assert result.score == 0.0
-      assert result.success == false  # 0.0 < 0.5 threshold
+      # 0.0 < 0.5 threshold
+      assert result.success == false
     end
 
     test "returns partial score when some statements are irrelevant" do
       # Mock statements extraction
       Mock.set_schema_response(
         ~r/breakdown and generate a list of statements/i,
-        %{"statements" => [
-          "The laptop has a Retina display.",
-          "The weather is nice today."
-        ]}
+        %{
+          "statements" => [
+            "The laptop has a Retina display.",
+            "The weather is nice today."
+          ]
+        }
       )
 
       # Mock verdicts - one relevant, one irrelevant
       Mock.set_schema_response(
         ~r/determine whether each statement is relevant/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes"},
-          %{"verdict" => "no", "reason" => "Weather has nothing to do with laptop features."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{"verdict" => "no", "reason" => "Weather has nothing to do with laptop features."}
+          ]
+        }
       )
 
       # Mock reason generation
@@ -134,7 +156,8 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
 
       assert {:ok, result} = AnswerRelevancy.measure(test_case, adapter: :mock)
       assert result.score == 0.5
-      assert result.success == true  # 0.5 >= 0.5 threshold
+      # 0.5 >= 0.5 threshold
+      assert result.success == true
     end
   end
 
@@ -143,25 +166,32 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
       # Mock statements extraction
       Mock.set_schema_response(
         ~r/breakdown and generate a list of statements/i,
-        %{"statements" => [
-          "The laptop has a Retina display.",
-          "Our company was founded in 2010."
-        ]}
+        %{
+          "statements" => [
+            "The laptop has a Retina display.",
+            "Our company was founded in 2010."
+          ]
+        }
       )
 
       # Mock verdicts - one yes, one idk
       Mock.set_schema_response(
         ~r/determine whether each statement is relevant/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes"},
-          %{"verdict" => "idk", "reason" => "Company history is tangentially related."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{"verdict" => "idk", "reason" => "Company history is tangentially related."}
+          ]
+        }
       )
 
       # Mock reason generation
       Mock.set_schema_response(
         ~r/provide a CONCISE reason for the score/i,
-        %{"reason" => "The score is 1.0 because all statements provide relevant or supporting information."}
+        %{
+          "reason" =>
+            "The score is 1.0 because all statements provide relevant or supporting information."
+        }
       )
 
       test_case =
@@ -171,7 +201,8 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
         )
 
       assert {:ok, result} = AnswerRelevancy.measure(test_case, adapter: :mock)
-      assert result.score == 1.0  # idk counts as relevant
+      # idk counts as relevant
+      assert result.score == 1.0
       assert result.success == true
     end
   end
@@ -213,12 +244,14 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
       # Mock verdicts - 3 relevant, 1 irrelevant = 0.75
       Mock.set_schema_response(
         ~r/determine whether each statement is relevant/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes"},
-          %{"verdict" => "yes"},
-          %{"verdict" => "yes"},
-          %{"verdict" => "no", "reason" => "Irrelevant."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{"verdict" => "yes"},
+            %{"verdict" => "yes"},
+            %{"verdict" => "no", "reason" => "Irrelevant."}
+          ]
+        }
       )
 
       # Mock reason
@@ -241,14 +274,22 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
       Mock.clear_responses()
 
       # Re-mock for second test
-      Mock.set_schema_response(~r/breakdown and generate a list of statements/i, %{"statements" => ["S1", "S2", "S3", "S4"]})
-      Mock.set_schema_response(~r/determine whether each statement is relevant/i, %{"verdicts" => [
-        %{"verdict" => "yes"},
-        %{"verdict" => "yes"},
-        %{"verdict" => "yes"},
-        %{"verdict" => "no", "reason" => "Irrelevant."}
-      ]})
-      Mock.set_schema_response(~r/provide a CONCISE reason for the score/i, %{"reason" => "Score is 0.75."})
+      Mock.set_schema_response(~r/breakdown and generate a list of statements/i, %{
+        "statements" => ["S1", "S2", "S3", "S4"]
+      })
+
+      Mock.set_schema_response(~r/determine whether each statement is relevant/i, %{
+        "verdicts" => [
+          %{"verdict" => "yes"},
+          %{"verdict" => "yes"},
+          %{"verdict" => "yes"},
+          %{"verdict" => "no", "reason" => "Irrelevant."}
+        ]
+      })
+
+      Mock.set_schema_response(~r/provide a CONCISE reason for the score/i, %{
+        "reason" => "Score is 0.75."
+      })
 
       # With threshold 0.8, score of 0.75 should fail
       assert {:ok, result2} = AnswerRelevancy.measure(test_case, adapter: :mock, threshold: 0.8)
@@ -277,7 +318,9 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
           actual_output: "The laptop has a Retina display."
         )
 
-      assert {:ok, result} = AnswerRelevancy.measure(test_case, adapter: :mock, include_reason: false)
+      assert {:ok, result} =
+               AnswerRelevancy.measure(test_case, adapter: :mock, include_reason: false)
+
       assert result.score == 1.0
       assert is_nil(result.reason)
     end
@@ -294,10 +337,12 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
       # Mock verdicts
       Mock.set_schema_response(
         ~r/determine whether each statement is relevant/i,
-        %{"verdicts" => [
-          %{"verdict" => "yes"},
-          %{"verdict" => "no", "reason" => "Irrelevant to input."}
-        ]}
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{"verdict" => "no", "reason" => "Irrelevant to input."}
+          ]
+        }
       )
 
       # Mock reason
@@ -330,7 +375,7 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
       }
 
       assert {:error, {:missing_params, [:actual_output]}} =
-        AnswerRelevancy.measure(test_case, adapter: :mock)
+               AnswerRelevancy.measure(test_case, adapter: :mock)
     end
 
     test "returns error when actual_output is empty string" do
@@ -341,7 +386,7 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
       }
 
       assert {:error, {:missing_params, [:actual_output]}} =
-        AnswerRelevancy.measure(test_case, adapter: :mock)
+               AnswerRelevancy.measure(test_case, adapter: :mock)
     end
   end
 end
