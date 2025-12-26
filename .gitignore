@@ -23,6 +23,11 @@
 # OS
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
+
+# Claude Code
+CLAUDE.md
+.claude/
 
 # Environment
 .env

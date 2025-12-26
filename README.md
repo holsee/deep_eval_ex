@@ -1,7 +1,15 @@
-# DeepEvalEx
+<p align="center">
+  <img src="deepevalex.png" alt="DeepEvalEx Logo" width="400">
+</p>
 
-[![Hex version badge](https://img.shields.io/hexpm/v/deep_eval_ex.svg)](https://hex.pm/packages/deep_eval_ex)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+<p align="center">
+  <a href="https://github.com/holsee/deep_eval_ex/actions/workflows/ci.yml"><img src="https://github.com/holsee/deep_eval_ex/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://hex.pm/packages/deep_eval_ex"><img src="https://img.shields.io/hexpm/v/deep_eval_ex.svg" alt="Hex.pm"></a>
+  <a href="https://hexdocs.pm/deep_eval_ex"><img src="https://img.shields.io/badge/hex-docs-blue.svg" alt="Documentation"></a>
+  <a href="https://github.com/holsee/deep_eval_ex/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-blue.svg" alt="License"></a>
+</p>
+
+# DeepEvalEx
 
 LLM evaluation framework for Elixir - Idiomatic + Compatible Elixir port of [DeepEval](https://github.com/confident-ai/deepeval).
 
@@ -82,6 +90,10 @@ See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation 
 - [Result](wiki/api/Result.md) - Evaluation results
 - [Evaluator](wiki/api/Evaluator.md) - Batch evaluation
 - [LLM Adapters](wiki/api/LLM-Adapters.md) - Provider adapters
+
+### Architecture
+
+- [Architecture Decision Records](docs/adr/README.md) - Design decisions and rationale
 
 ## LLM Adapters
 
