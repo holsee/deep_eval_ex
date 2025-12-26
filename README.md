@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="deepevalex.png" alt="DeepEvalEx Logo" width="400">
+  <img src="deepevalex_text.png" alt="DeepEvalEx Logo" width="400">
 </p>
 
 <p align="center">
