@@ -11,6 +11,7 @@
 *.ez
 *.plt
 *.tar.gz
+erl_crash.dump
 
 # Editor/IDE
 .elixir_ls/
