@@ -75,7 +75,7 @@ defmodule DeepEvalEx.LLM.Adapter do
   ## Parameters
 
   - `prompt` - The prompt to send to the LLM
-  - `schema` - An Ecto schema module or JSON schema map
+  - `schema` - A schema module (exporting json_schema/0) or JSON schema map
   - `opts` - Same options as `generate/2`
 
   ## Returns

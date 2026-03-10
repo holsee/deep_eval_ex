@@ -2,7 +2,7 @@ defmodule DeepEvalEx.Schemas.ToolCall do
   @moduledoc """
   Represents a tool call made by an LLM.
 
-  Used for evaluating agentic LLM behaviors where the model
+  Used for evaluating agentic LLM behaviours where the model
   invokes external tools or functions.
 
   ## Fields
@@ -22,8 +22,7 @@ defmodule DeepEvalEx.Schemas.ToolCall do
       }
   """
 
-  use Ecto.Schema
-  import Ecto.Changeset
+  import Peri
 
   @type t :: %__MODULE__{
           name: String.t(),
@@ -33,19 +32,45 @@ defmodule DeepEvalEx.Schemas.ToolCall do
           output: any()
         }
 
-  @primary_key false
-  embedded_schema do
-    field(:name, :string)
-    field(:description, :string)
-    field(:reasoning, :string)
-    field(:input_parameters, :map)
-    field(:output, :string)
+  defstruct [:name, :description, :reasoning, :input_parameters, :output]
+
+  defschema(:tool_call_schema, %{
+    name: {:required, :string},
+    description: :string,
+    reasoning: :string,
+    input_parameters: :map,
+    output: :string
+  })
+
+  @doc false
+  def new(attrs) do
+    case tool_call_schema(to_map(attrs)) do
+      {:ok, validated} -> {:ok, struct(__MODULE__, validated)}
+      {:error, _} = err -> err
+    end
   end
 
   @doc false
-  def changeset(tool_call, attrs) do
-    tool_call
-    |> cast(attrs, [:name, :description, :reasoning, :input_parameters, :output])
-    |> validate_required([:name])
+  def changeset(attrs), do: tool_call_schema(to_map(attrs))
+
+  @doc """
+  Returns the JSON schema representation for structured output requests.
+  """
+  def json_schema do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "name" => %{"type" => "string"},
+        "description" => %{"type" => "string"},
+        "reasoning" => %{"type" => "string"},
+        "input_parameters" => %{"type" => "object"},
+        "output" => %{"type" => "string"}
+      },
+      "required" => ["name", "description", "reasoning", "input_parameters", "output"],
+      "additionalProperties" => false
+    }
   end
+
+  defp to_map(attrs) when is_list(attrs), do: Map.new(attrs)
+  defp to_map(attrs) when is_map(attrs), do: attrs
 end

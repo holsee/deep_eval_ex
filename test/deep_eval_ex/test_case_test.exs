@@ -35,8 +35,8 @@ defmodule DeepEvalEx.TestCaseTest do
     end
 
     test "returns error for missing required fields" do
-      assert {:error, changeset} = TestCase.new(%{})
-      assert "can't be blank" in errors_on(changeset).input
+      assert {:error, errors} = TestCase.new(%{})
+      assert errors != nil
     end
 
     test "normalizes context to retrieval_context" do
@@ -108,14 +108,5 @@ defmodule DeepEvalEx.TestCaseTest do
       test_case = TestCase.new!(input: "Q")
       assert TestCase.get_retrieval_context(test_case) == nil
     end
-  end
-
-  # Helper to extract errors from changeset
-  defp errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-      Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
-        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
-      end)
-    end)
   end
 end

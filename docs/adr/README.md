@@ -11,12 +11,13 @@ An ADR is a document that captures an important architectural decision made alon
 | ID | Title | Status | Date |
 |----|-------|--------|------|
 | [ADR-0001](0001-behaviour-based-plugin-architecture.md) | Behaviour-Based Plugin Architecture | Accepted | 2024-12-25 |
-| [ADR-0002](0002-ecto-schemas-without-database.md) | Ecto Embedded Schemas Without Database | Accepted | 2024-12-25 |
+| [ADR-0002](0002-ecto-schemas-without-database.md) | Ecto Embedded Schemas Without Database | Superseded by [ADR-0008](0008-peri-schema-validation-replacing-ecto.md) | 2024-12-25 |
 | [ADR-0003](0003-telemetry-first-observability.md) | Telemetry-First Observability | Accepted | 2024-12-25 |
 | [ADR-0004](0004-concurrent-evaluation-with-task-async-stream.md) | Concurrent Evaluation with Task.async_stream | Accepted | 2024-12-25 |
 | [ADR-0005](0005-multi-step-prompting-for-rag-metrics.md) | Multi-Step Prompting for RAG Metrics | Accepted | 2024-12-25 |
 | [ADR-0006](0006-json-schema-for-structured-outputs.md) | JSON Schema Mode for Structured LLM Outputs | Accepted | 2024-12-25 |
 | [ADR-0007](0007-basemetric-macro-for-instrumentation.md) | BaseMetric Macro for Automatic Instrumentation | Accepted | 2024-12-25 |
+| [ADR-0008](0008-peri-schema-validation-replacing-ecto.md) | Peri Schema Validation Replacing Ecto | Accepted | 2026-03-10 |
 
 ## ADR Template
 

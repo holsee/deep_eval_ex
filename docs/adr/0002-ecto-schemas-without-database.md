@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-0008](0008-peri-schema-validation-replacing-ecto.md) (2026-03-10)
 
 ## Date
 

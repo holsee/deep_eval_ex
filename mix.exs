@@ -52,8 +52,8 @@ defmodule DeepEvalEx.MixProject do
       # JSON
       {:jason, "~> 1.4"},
 
-      # Schema validation (embedded, no DB)
-      {:ecto, "~> 3.11"},
+      # Schema validation
+      {:peri, "~> 0.3"},
 
       # Option validation
       {:nimble_options, "~> 1.0"},
@@ -125,6 +125,7 @@ defmodule DeepEvalEx.MixProject do
         "docs/adr/0005-multi-step-prompting-for-rag-metrics.md",
         "docs/adr/0006-json-schema-for-structured-outputs.md",
         "docs/adr/0007-basemetric-macro-for-instrumentation.md",
+        "docs/adr/0008-peri-schema-validation-replacing-ecto.md",
         {"docs/adr/template.md", [title: "ADR Template"]}
       ],
       groups_for_extras: [
