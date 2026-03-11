@@ -152,49 +152,8 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   defp schema_to_json_schema(schema) when is_map(schema), do: schema
 
   defp schema_to_json_schema(schema) when is_atom(schema) do
-    # Convert Ecto schema to JSON schema
-    if function_exported?(schema, :__schema__, 1) do
-      ecto_schema_to_json_schema(schema)
-    else
-      # Assume it's already a map module with a schema function
-      schema.json_schema()
-    end
+    schema.json_schema()
   end
-
-  defp ecto_schema_to_json_schema(schema) do
-    fields = schema.__schema__(:fields)
-    types = schema.__schema__(:types)
-
-    properties =
-      fields
-      |> Enum.map(fn field ->
-        type = Map.get(types, field)
-        {Atom.to_string(field), ecto_type_to_json_type(type)}
-      end)
-      |> Map.new()
-
-    required =
-      fields
-      |> Enum.map(&Atom.to_string/1)
-
-    %{
-      "type" => "object",
-      "properties" => properties,
-      "required" => required,
-      "additionalProperties" => false
-    }
-  end
-
-  defp ecto_type_to_json_type(:string), do: %{"type" => "string"}
-  defp ecto_type_to_json_type(:integer), do: %{"type" => "integer"}
-  defp ecto_type_to_json_type(:float), do: %{"type" => "number"}
-  defp ecto_type_to_json_type(:boolean), do: %{"type" => "boolean"}
-
-  defp ecto_type_to_json_type({:array, inner}),
-    do: %{"type" => "array", "items" => ecto_type_to_json_type(inner)}
-
-  defp ecto_type_to_json_type(:map), do: %{"type" => "object"}
-  defp ecto_type_to_json_type(_), do: %{"type" => "string"}
 
   defp parse_json_response(content, _schema) do
     case Jason.decode(content) do

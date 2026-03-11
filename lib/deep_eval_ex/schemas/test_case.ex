@@ -36,14 +36,13 @@ defmodule DeepEvalEx.TestCase do
 
       # With expected output
       test_case = %DeepEvalEx.TestCase{
-        input: "Summarize: The quick brown fox jumps over the lazy dog.",
+        input: "Summarise: The quick brown fox jumps over the lazy dog.",
         actual_output: "A fox jumped over a dog.",
         expected_output: "A fox leaps over a resting dog."
       }
   """
 
-  use Ecto.Schema
-  import Ecto.Changeset
+  import Peri
 
   alias DeepEvalEx.Schemas.ToolCall
 
@@ -53,27 +52,46 @@ defmodule DeepEvalEx.TestCase do
           expected_output: String.t() | nil,
           retrieval_context: [String.t()] | nil,
           context: [String.t()] | nil,
-          tools_called: [ToolCall.t()] | nil,
-          expected_tools: [ToolCall.t()] | nil,
+          tools_called: [ToolCall.t()],
+          expected_tools: [ToolCall.t()],
           metadata: map() | nil,
           name: String.t() | nil,
           tags: [String.t()] | nil
         }
 
-  @primary_key false
-  embedded_schema do
-    field(:input, :string)
-    field(:actual_output, :string)
-    field(:expected_output, :string)
-    field(:retrieval_context, {:array, :string})
-    field(:context, {:array, :string})
-    field(:metadata, :map)
-    field(:name, :string)
-    field(:tags, {:array, :string})
+  defstruct [
+    :input,
+    :actual_output,
+    :expected_output,
+    :retrieval_context,
+    :context,
+    :metadata,
+    :name,
+    :tags,
+    tools_called: [],
+    expected_tools: []
+  ]
 
-    embeds_many(:tools_called, ToolCall, on_replace: :delete)
-    embeds_many(:expected_tools, ToolCall, on_replace: :delete)
-  end
+  @tool_call_schema %{
+    name: {:required, :string},
+    description: :string,
+    reasoning: :string,
+    input_parameters: :map,
+    output: :string
+  }
+
+  defschema(:test_case_schema, %{
+    input: {:required, :string},
+    actual_output: :string,
+    expected_output: :string,
+    retrieval_context: {:list, :string},
+    context: {:list, :string},
+    tools_called: {:list, @tool_call_schema},
+    expected_tools: {:list, @tool_call_schema},
+    metadata: :map,
+    name: :string,
+    tags: {:list, :string}
+  })
 
   @doc """
   Creates a new test case struct.
@@ -89,13 +107,21 @@ defmodule DeepEvalEx.TestCase do
   - `:expected_tools` - Expected tool calls
   - `:metadata` - Additional metadata map
   """
-  @spec new(keyword() | map()) :: {:ok, t()} | {:error, Ecto.Changeset.t()}
+  @spec new(keyword() | map()) :: {:ok, t()} | {:error, term()}
   def new(attrs) when is_list(attrs), do: new(Map.new(attrs))
 
   def new(attrs) when is_map(attrs) do
-    %__MODULE__{}
-    |> changeset(attrs)
-    |> apply_action(:insert)
+    attrs = normalize_attrs(attrs)
+
+    case test_case_schema(attrs) do
+      {:ok, validated} ->
+        validated = normalize_context(validated)
+        validated = convert_tool_calls(validated)
+        {:ok, struct(__MODULE__, validated)}
+
+      {:error, _} = err ->
+        err
+    end
   end
 
   @doc """
@@ -105,52 +131,33 @@ defmodule DeepEvalEx.TestCase do
   def new!(attrs) do
     case new(attrs) do
       {:ok, test_case} -> test_case
-      {:error, changeset} -> raise "Invalid test case: #{inspect(changeset.errors)}"
+      {:error, errors} -> raise "Invalid test case: #{inspect(errors)}"
     end
   end
 
-  @doc false
-  def changeset(test_case, attrs) do
-    attrs = normalize_attrs(attrs)
+  @doc """
+  Returns the JSON schema representation for structured output requests.
+  """
+  def json_schema do
+    tool_call_schema = ToolCall.json_schema()
 
-    test_case
-    |> cast(attrs, [
-      :input,
-      :actual_output,
-      :expected_output,
-      :retrieval_context,
-      :context,
-      :metadata,
-      :name,
-      :tags
-    ])
-    |> cast_embed(:tools_called)
-    |> cast_embed(:expected_tools)
-    |> validate_required([:input])
-    |> normalize_context()
-  end
-
-  # Normalize string keys to atoms and handle aliases
-  defp normalize_attrs(attrs) when is_map(attrs) do
-    attrs
-    |> Enum.map(fn
-      {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
-      {k, v} -> {k, v}
-    end)
-    |> Map.new()
-  rescue
-    ArgumentError -> attrs
-  end
-
-  # If context is provided but retrieval_context is not, use context as retrieval_context
-  defp normalize_context(changeset) do
-    case {get_field(changeset, :retrieval_context), get_field(changeset, :context)} do
-      {nil, context} when not is_nil(context) ->
-        put_change(changeset, :retrieval_context, context)
-
-      _ ->
-        changeset
-    end
+    %{
+      "type" => "object",
+      "properties" => %{
+        "input" => %{"type" => "string"},
+        "actual_output" => %{"type" => "string"},
+        "expected_output" => %{"type" => "string"},
+        "retrieval_context" => %{"type" => "array", "items" => %{"type" => "string"}},
+        "context" => %{"type" => "array", "items" => %{"type" => "string"}},
+        "tools_called" => %{"type" => "array", "items" => tool_call_schema},
+        "expected_tools" => %{"type" => "array", "items" => tool_call_schema},
+        "metadata" => %{"type" => "object"},
+        "name" => %{"type" => "string"},
+        "tags" => %{"type" => "array", "items" => %{"type" => "string"}}
+      },
+      "required" => ["input"],
+      "additionalProperties" => false
+    }
   end
 
   @doc """
@@ -177,6 +184,43 @@ defmodule DeepEvalEx.TestCase do
     case missing do
       [] -> :ok
       params -> {:error, {:missing_params, params}}
+    end
+  end
+
+  # Normalize string keys to atoms and handle aliases
+  defp normalize_attrs(attrs) when is_map(attrs) do
+    attrs
+    |> Enum.map(fn
+      {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
+      {k, v} -> {k, v}
+    end)
+    |> Map.new()
+  rescue
+    ArgumentError -> attrs
+  end
+
+  # If context is provided but retrieval_context is not, use context as retrieval_context
+  defp normalize_context(validated) do
+    case {Map.get(validated, :retrieval_context), Map.get(validated, :context)} do
+      {nil, context} when not is_nil(context) ->
+        Map.put(validated, :retrieval_context, context)
+
+      _ ->
+        validated
+    end
+  end
+
+  # Convert nested tool call maps to ToolCall structs
+  defp convert_tool_calls(validated) do
+    validated
+    |> maybe_convert_tools(:tools_called)
+    |> maybe_convert_tools(:expected_tools)
+  end
+
+  defp maybe_convert_tools(validated, key) do
+    case Map.get(validated, key) do
+      nil -> validated
+      tools -> Map.put(validated, key, Enum.map(tools, &struct(ToolCall, &1)))
     end
   end
 
