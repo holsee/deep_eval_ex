@@ -545,6 +545,7 @@ defmodule DeepEvalEx.Prompts.Python do
 
   defp input_parameters_field(nil), do: nil
   defp input_parameters_field(params) when params == %{}, do: nil
+  defp input_parameters_field(%Jason.OrderedObject{values: []}), do: nil
   defp input_parameters_field(params), do: json_field("input_parameters", params)
 
   defp output_field(nil), do: nil

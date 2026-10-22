@@ -1,0 +1,64 @@
+[
+  {
+    "score": 0.7875,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.35.\n1. Every goal the user states in `turns` is fully and correctly achieved in the assistant turns that follow it, as seen by the user. -> likely holds (P(yes)=0.70, confidence=0.40, weight=2)\n2. Across `turns`, how fully and correctly do the assistant's visible replies achieve the goals the user states? -> \"Partially achieved\", leaning \"Mostly achieved\" (expected level=0.75 of 1.00, confidence=0.35)\n3. Across `turns`, how clear and complete is the assistant's plan (including its `tools_called`) for each user goal, and how closely does it follow that plan? -> \"Complete plan, fully followed\" (expected level=1.00 of 1.00, confidence=0.55)\nScore: 0.79 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every goal the user states in `turns` is fully and correctly achieved in the assistant turns that follow it, as seen by the user.\n   value=0.700 applicable=True probabilities={'true': 0.7, 'false': 0.3} confidence=0.400\n2. [score, weight=1] Across `turns`, how fully and correctly do the assistant's visible replies achieve the goals the user states?\n   value=0.750 applicable=True probabilities={'Not achieved': 0.05, 'Weak attempt': 0.15, 'Partially achieved': 0.4, 'Mostly achieved': 0.3, 'Fully achieved': 0.1} confidence=0.350\n3. [score, weight=1] Across `turns`, how clear and complete is the assistant's plan (including its `tools_called`) for each user goal, and how closely does it follow that plan?\n   value=1.000 applicable=True probabilities={'No plan': 0.0, 'Weak or fragmented plan, rarely followed': 0.05, 'Partial plan, partly followed': 0.1, 'Clear plan, mostly followed': 0.25, 'Complete plan, fully followed': 0.6} confidence=0.550",
+    "confidence": 0.35,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every goal the user states in `turns` is fully and correctly achieved in the assistant turns that follow it, as seen by the user.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.7,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.7,
+          "false": 0.30000000000000004
+        },
+        "confidence": 0.3999999999999999,
+        "passed": null
+      },
+      {
+        "question": "Across `turns`, how fully and correctly do the assistant's visible replies achieve the goals the user states?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.75,
+        "applicable": true,
+        "probabilities": {
+          "Not achieved": 0.05,
+          "Weak attempt": 0.15,
+          "Partially achieved": 0.4,
+          "Mostly achieved": 0.3,
+          "Fully achieved": 0.1
+        },
+        "confidence": 0.35,
+        "passed": null
+      },
+      {
+        "question": "Across `turns`, how clear and complete is the assistant's plan (including its `tools_called`) for each user goal, and how closely does it follow that plan?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 1.0,
+        "applicable": true,
+        "probabilities": {
+          "No plan": 0.0,
+          "Weak or fragmented plan, rarely followed": 0.05,
+          "Partial plan, partly followed": 0.1,
+          "Clear plan, mostly followed": 0.25,
+          "Complete plan, fully followed": 0.6
+        },
+        "confidence": 0.55,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

@@ -1,0 +1,45 @@
+[
+  {
+    "score": 0.625,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.20.\n1. In every assistant turn of `turns`, the tools in `tools_called` are the most suitable of `available_tools` for what the user asked: no call is unnecessary, redundant or unrelated to the user's goal, and no better-suited tool in `available_tools` was ignored when one was needed. -> clearly holds (P(yes)=0.85, confidence=0.70)\n2. Every tool call in the `tools_called` of the assistant turns in `turns` passes arguments that are correct, specific and complete for what the user asked and for that tool's definition in `available_tools`, with no missing, malformed, generic or unrelated argument. -> unclear (P(yes)=0.40, confidence=0.20)\nScore: 0.62 (weighted mean of 2 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=1] In every assistant turn of `turns`, the tools in `tools_called` are the most suitable of `available_tools` for what the user asked: no call is unnecessary, redundant or unrelated to the user's goal, and no better-suited tool in `available_tools` was ignored when one was needed.\n   value=0.850 applicable=True probabilities={'true': 0.85, 'false': 0.15} confidence=0.700\n2. [noul, weight=1] Every tool call in the `tools_called` of the assistant turns in `turns` passes arguments that are correct, specific and complete for what the user asked and for that tool's definition in `available_tools`, with no missing, malformed, generic or unrelated argument.\n   value=0.400 applicable=True probabilities={'true': 0.4, 'false': 0.6} confidence=0.200",
+    "confidence": 0.19999999999999996,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "In every assistant turn of `turns`, the tools in `tools_called` are the most suitable of `available_tools` for what the user asked: no call is unnecessary, redundant or unrelated to the user's goal, and no better-suited tool in `available_tools` was ignored when one was needed.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.85,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.85,
+          "false": 0.15000000000000002
+        },
+        "confidence": 0.7,
+        "passed": null
+      },
+      {
+        "question": "Every tool call in the `tools_called` of the assistant turns in `turns` passes arguments that are correct, specific and complete for what the user asked and for that tool's definition in `available_tools`, with no missing, malformed, generic or unrelated argument.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.4,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.4,
+          "false": 0.6
+        },
+        "confidence": 0.19999999999999996,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

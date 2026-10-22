@@ -398,6 +398,9 @@ defmodule DeepEvalEx.Evaluator do
 
     case Task.yield(task, min_timeout(metric_timeout, remaining)) ||
            Task.shutdown(task, :brutal_kill) do
+      {:ok, {:ok, result}} ->
+        {:ok, put_success(result)}
+
       {:ok, outcome} ->
         outcome
 
@@ -472,6 +475,11 @@ defmodule DeepEvalEx.Evaluator do
   That is with `ignore_errors: true`. By default the error is raised, and
   `skip_on_missing_params: true` skips a metric missing test case params
   instead (see "Errors" in the module documentation).
+
+  The result is the metric's as its `measure()` left it: a
+  `DeepEvalEx.Metrics.ToolUse` result keeps `success: nil`, which
+  `evaluate/3` sets to `score >= threshold`, as deepeval's evaluation asks
+  every metric `is_successful()`.
   """
   @spec evaluate_metric(TestCase.t(), module() | struct(), keyword()) :: Result.t()
   def evaluate_metric(test_case, metric, opts) do
@@ -532,6 +540,18 @@ defmodule DeepEvalEx.Evaluator do
         error_outcome(exception, metric, opts, usages, stacktrace)
     end
   end
+
+  # deepeval's create_metric_data asks every metric is_successful(), which
+  # sets the success a metric's measure() left None (ToolUse's): score >=
+  # threshold, or False for an errored metric. evaluate_metric/3 reports
+  # the metric as measure() left it.
+  defp put_success(%Result{success: nil, threshold: threshold} = result)
+       when is_number(threshold) do
+    success = not Result.errored?(result) and Result.successful?(result.score, threshold)
+    %{result | success: success}
+  end
+
+  defp put_success(result), do: result
 
   # deepeval's _execute_metric and safe_a_measure: a metric missing params
   # is skipped with skip_on_missing_params; otherwise its error is stored

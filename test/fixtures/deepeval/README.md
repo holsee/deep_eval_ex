@@ -7,7 +7,7 @@ Fixtures written by **deepeval 4.3.1**, in six sets:
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
-  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's twenty-seven
+  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's twenty-nine
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
 - [prompt goldens](#prompt-goldens) (`prompts/`), used by
@@ -142,8 +142,9 @@ calling an LLM. A script holds:
   `summarization`, `argument_correctness`, `json_correctness`, `tool_correctness`,
   `pattern_match`, `tool_permission`, `conversational_g_eval`, `turn_relevancy`,
   `conversation_completeness`, `knowledge_retention`, `role_adherence`,
-  `turn_faithfulness`, `turn_contextual_precision`, `turn_contextual_recall` or
-  `turn_contextual_relevancy`) and the metric's constructor
+  `turn_faithfulness`, `turn_contextual_precision`, `turn_contextual_recall`,
+  `turn_contextual_relevancy`, `goal_accuracy` or `tool_use`) and the metric's
+  constructor
   `params`. JsonCorrectness's `expected_schema` is a pydantic model's
   `model_json_schema()`: the generator rebuilds the model from it
   (`build_expected_schema`) and fails unless the model's own schema is the
@@ -205,6 +206,8 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | TurnFaithfulness | `turn_faithfulness_pass` (two windows of one and two unit interactions, a borderline claim passing), `turn_faithfulness_fail` (`window_size` 1, `penalize_ambiguous_claims`, `truths_extraction_limit` 2; two user turns in one window; a raw-text verdict list in a code fence, `"No, it takes 5"` read as `no` and `maybe` dropped; a window without retrieval context or claims, `<no claims to verify>`), `turn_faithfulness_strict` (a contradicted window clamped to `0.0`, the mean `0.5` kept; no reasons), `turn_faithfulness_no_windows` (a leading assistant turn and an unanswered user turn: the integer score `1`). A window's reason prompt prints its score to two decimals, the final one unformatted |
 | TurnContextualPrecision | `turn_contextual_precision_pass`, `turn_contextual_precision_fail` (`window_size` 1; a `RetrievedContextData` node printed as its repr; a window without retrieval context, explained without the judge; a raw-text verdict out of vocabulary dropped), `turn_contextual_precision_strict` (a window's `0`, its reason prompt `0.00`), `turn_contextual_precision_no_windows` (no reason) |
 | TurnContextualRecall | `turn_contextual_recall_pass`, `turn_contextual_recall_fail` (`window_size` 1; a `RetrievedContextData` node; a window without retrieval context; a raw-text verdict out of vocabulary dropped), `turn_contextual_recall_strict` (no reasons), `turn_contextual_recall_no_windows` |
+| GoalAccuracy | `goal_accuracy_pass` (a unit with two assistant turns, its steps accumulating, the first with its tool calls as `print_tools_called` prints them; an integer judge score read as `1.0`), `goal_accuracy_fail` (an opening assistant turn joins the first unit, whose goal then has no user message; a unit with two user turns), `goal_accuracy_strict` (the integer `0`, `Final Score: 0` and `Threshold: 1` in the reason prompt), `goal_accuracy_no_units` (no unit interaction: the score `0.0`, and a reason all the same). Goals are all scored before plans; the reason is plain text (step `text`), written whatever `include_reason` says, its goal evaluations concatenated without a separator and its verbose logs keeping deepeval's stray `c` |
+| ToolUse | `tool_use_pass` (one unit calls a tool, one does not, so one argument score), `tool_use_fail` (two user and two assistant turns in one unit, their calls joined with commas; a call with empty `input_parameters`, left out of its `ToolCall.__repr__`), `tool_use_strict` (the integer `0`), `tool_use_no_tools` (no call: no argument score, so the score is `0.0`). Both reasons use `get_tool_selection_final_reason`, as deepeval does. deepeval's `measure()` never sets ToolUse's success, so `measure.json` has `success: null` while the test run, from `is_successful()`, has the boolean |
 | TurnContextualRelevancy | `turn_contextual_relevancy_pass` (one request per node), `turn_contextual_relevancy_fail` (`window_size` 1; an irrelevant statement without a reason, `: None` in the reason prompt; a raw-text verdict out of vocabulary dropped), `turn_contextual_relevancy_strict`, `turn_contextual_relevancy_no_windows`. deepeval 4.3.1 raises on a `RetrievedContextData` node, so no scenario has one |
 | Faithfulness | `faithfulness_pass`, `faithfulness_fail`, `faithfulness_borderline`, `faithfulness_penalize_ambiguous` (`penalize_ambiguous_claims`: the borderline verdict fails and is an `(Ambiguous)` contradiction), `faithfulness_no_claims` (empty list), `faithfulness_strict` |
 | Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_no_verdicts` (empty list), `hallucination_strict`, `hallucination_messy_json` (raw-text answers: prose, a code fence and trailing commas around the verdicts, a reason missing its closing brace), `hallucination_invalid_json` (a raw-text answer with no JSON: the metric errors) |
@@ -253,7 +256,7 @@ scenarios, why it fails and its tag.
 ## Prompt goldens
 
 `prompts/<case>/` holds one prompt deepeval 4.3.1 renders for one of the
-twenty-four LLM-judged metrics, for fixed inputs:
+twenty-six LLM-judged metrics, for fixed inputs:
 
 - `input.json` - `template`, deepeval's template class key and method (e.g.
   `FaithfulnessMetric.generate_truths`, from
@@ -388,6 +391,13 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.TurnContextualRelevancy.generate_reason/1` | `TurnContextualRelevancyMetric.generate_reason` (`turn_contextual_relevancy/templates/generate_reason.txt`) | `score` (`format(score, ".2f")`), `input`, `irrelevant_statements` (`"<statement>: <reason>"`), `relevant_statements`, `multimodal` | `turn_contextual_relevancy_generate_reason`, `_multimodal` |
 | `Prompts.TurnContextualRelevancy.generate_final_reason/1` | `TurnContextualRelevancyMetric.generate_final_reason` | as TurnFaithfulness's | `turn_contextual_relevancy_generate_final_reason` |
 | `Prompts.TurnContextualRelevancy.system_one_questions/0`, `system_one_verdict/0` | `TurnContextualRelevancyMetric._experimental_system_one_questions`, `_experimental_system_one_verdict` | none | `turn_contextual_relevancy_experimental_system_one_questions`, `_verdict` |
+| `Prompts.GoalAccuracy.get_accuracy_score/1` | `GoalAccuracyMetric.get_accuracy_score` (`goal_accuracy/templates/get_accuracy_score.txt`) | `task`, `steps_taken` (joined with newlines), `multimodal` (the rules included when `true`) | `goal_accuracy_get_accuracy_score`, `_multimodal` |
+| `Prompts.GoalAccuracy.get_plan_evaluation_score/1` | `GoalAccuracyMetric.get_plan_evaluation_score` (`goal_accuracy/templates/get_plan_evaluation_score.txt`) | as above | `goal_accuracy_get_plan_evaluation_score`, `_multimodal` |
+| `Prompts.GoalAccuracy.get_final_reason/1` | `GoalAccuracyMetric.get_final_reason` (`goal_accuracy/templates/get_final_reason.txt`) | `final_score`, `threshold` (unformatted; `PASS` or `FAIL`), `goal_evaluations`, `plan_evalautions` (deepeval's spelling), `multimodal` | `goal_accuracy_get_final_reason`, `_strict_multimodal` |
+| `Prompts.GoalAccuracy.system_one_goal_score/0`, `system_one_plan_score/0`, `system_one_questions/0` | `GoalAccuracyMetric._experimental_system_one_goal_score`, `_plan_score`, `_questions` | none | `goal_accuracy_experimental_system_one_goal_score`, `_plan_score`, `_questions` |
+| `Prompts.ToolUse.get_tool_selection_score/1`, `get_argument_correctness_score/1` | `ToolUseMetric.get_tool_selection_score`, `get_argument_correctness_score` (`tool_use/templates/`) | `user_input`, `assistant_messages`, `tools_called` and `available_tools` (each `ToolCall.__repr__`, joined with commas) | `tool_use_get_tool_selection_score`, `tool_use_get_argument_correctness_score` |
+| `Prompts.ToolUse.get_tool_selection_final_reason/1`, `get_tool_argument_final_reason/1` | `ToolUseMetric.get_tool_selection_final_reason`, `get_tool_argument_final_reason` (which deepeval never renders) | `all_scores_and_reasons`, `final_score`, `threshold` (unformatted) | `tool_use_get_tool_selection_final_reason`, `_strict`, `tool_use_get_tool_argument_final_reason` |
+| `Prompts.ToolUse.system_one_tool_selection_score/0`, `system_one_argument_correctness_score/0`, `system_one_questions/0` | `ToolUseMetric._experimental_system_one_tool_selection_score`, `_argument_correctness_score`, `_questions` | none | `tool_use_experimental_system_one_tool_selection_score`, `_argument_correctness_score`, `_questions` |
 | `Prompts.ToolCorrectness.system_one_tool_selection_score/0` | `ToolCorrectnessMetric._experimental_system_one_tool_selection_score` (`tool_correctness/templates/_experimental_system_one_tool_selection_score.txt`) | none | `tool_correctness_experimental_system_one_tool_selection_score` |
 
 Templates of these metrics without a DeepEvalEx counterpart, so without a
@@ -597,6 +607,10 @@ Each `system_one/<scenario>/` holds:
 | `turn_faithfulness_hybrid`, `turn_contextual_precision_hybrid`, `turn_contextual_recall_hybrid`, `turn_contextual_relevancy_hybrid` | `hybrid` over two sliding windows: one request per window about its claims (`claim_<i>`, the truths as `reference_context`), nodes (`node_<i>`, with `user_message` and `assistant_output`) or the expected outcome's sentences (`sentence_<i>`, with the window's `retrieval_context`); TurnContextualRelevancy one request per node of each window (`statement_<i>`, with `user_message`). The LLM extracts and writes each window's and the final reason |
 | `turn_faithfulness_hybrid_fallback`, `turn_contextual_precision_hybrid_fallback`, `turn_contextual_recall_hybrid_fallback`, `turn_contextual_relevancy_hybrid_fallback` | The same with Jev down: each window (node) falls back to the LLM, the reasons joined in `system_one_fallback_reason` |
 | `batch_system_one_turn_rag` | The four Turn RAG metrics batched into one request by `evaluate()`, the state holding the turns and the `expected_outcome` |
+| `goal_accuracy_system_one`, `goal_accuracy_system_one_strict`, `tool_use_system_one` | The whole-metric request of GoalAccuracy (a weighted Noul and two five-level Scores) and ToolUse (two Nouls, the `available_tools` under their own key), about the turns with their `role`, `content` and `tools_called` |
+| `goal_accuracy_hybrid`, `tool_use_hybrid` | `hybrid` with a `SystemOneScoreSpec` per score: GoalAccuracy one request per unit's goal, then per plan, about its `task` and `steps_taken`; ToolUse one per unit's tool selection, then per unit that called a tool for its arguments, about its `user_messages`, `assistant_messages`, `tools_called` and `available_tools` (the prompt's texts). The LLM writes the reasons |
+| `goal_accuracy_hybrid_fallback`, `tool_use_hybrid_fallback` | The same with Jev down: each score falls back to the LLM, the reasons joined in `system_one_fallback_reason` |
+| `batch_system_one_goal_tool` | GoalAccuracy and ToolUse batched into one request by `evaluate()`, the state holding the turns with their tools and the `available_tools` |
 | `batch_system_one_retention_role` | KnowledgeRetention and RoleAdherence batched into one request by `evaluate()`, the state holding the turns and the `chatbot_role` |
 | `batch_system_one_down` | Two batched metrics with Jev down: no fallback, `measure()` raises and `evaluate()` records the error on each metric |
 | `refusal_classifier_system_one` | `RefusalClassifier` on Jev: one Choice over its labels, deterministic reason |

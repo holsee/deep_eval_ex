@@ -1713,6 +1713,49 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `conversational_jev_eval_down`) check its request, measured state,
   verbose logs and exported `conversationalTestCases` byte for byte against
   deepeval's.
+- **`DeepEvalEx.Metrics.GoalAccuracy`**, deepeval 4.3.1's
+  `GoalAccuracyMetric`: for each unit interaction of a
+  `DeepEvalEx.ConversationalTestCase`, the judge scores how fully the
+  assistant achieved the user's goal and how good and well followed its plan
+  was, from the unit's user messages and its accumulating assistant steps
+  (tool calls included); the score is `(mean goal score + mean plan score) /
+  2`, each mean `0.0` without unit interactions. As in deepeval, the final
+  reason is plain text, always written (`:include_reason` is not read).
+  Results are named `"Goal Accuracy"`; its prompts are
+  `DeepEvalEx.Prompts.GoalAccuracy`.
+- **`DeepEvalEx.Metrics.ToolUse`**, deepeval 4.3.1's `ToolUseMetric`, which
+  requires `:available_tools` (`ToolUse.new/1` builds it as a configured
+  metric, as deepeval's constructor argument): for each unit interaction the
+  judge scores the tools selected and, when the unit called any, their
+  arguments; the score is the lower of the two means, each `0.0` without
+  scores, so a conversation without tool calls scores `0.0`, as in deepeval.
+  Both reasons use deepeval's `get_tool_selection_final_reason` template,
+  as deepeval does, and are joined with a newline; `:include_reason` is not
+  read. As deepeval's `measure()` never sets it, `measure/2`'s result has
+  `success: nil`, while `DeepEvalEx.evaluate/3` and the exported test run
+  report `score >= threshold`. Results are named `"Tool Use"`; its prompts
+  are `DeepEvalEx.Prompts.ToolUse`.
+- **System One for both** (ADR-0009), as deepeval's:
+  - `:hybrid` asks one five-level `DeepEvalEx.SystemOne.Spec.Score` per
+    score through `DeepEvalEx.SystemOne.Decision.score/2`: GoalAccuracy's
+    about the unit's `task` and `steps_taken`, ToolUse's about its
+    `user_messages`, `assistant_messages`, `tools_called` and
+    `available_tools`, with the reason `"Decided by <model>: goal accuracy
+    0.75."`; each falls back to the LLM on its own. The LLM writes the
+    reasons.
+  - `:system_one` answers the whole metric from one request about the turns
+    with their `role`, `content` and `tools_called` (GoalAccuracy a weighted
+    Noul and two five-level Scores; ToolUse two Nouls, with the
+    `available_tools` in the state); both batch with the test case's other
+    `system_one` conversational metrics.
+  - A multimodal conversation has no System One form.
+- New prompt goldens for every template of both metrics (their System One
+  templates and ToolUse's unused `get_tool_argument_final_reason`
+  included), eight scripted-judge scenarios and eight System One scenarios
+  (`system_one`, `hybrid` and `hybrid` fallback for each, a strict
+  GoalAccuracy and a batched pair) check their prompts, decisions, scores,
+  verbose logs and exported `conversationalTestCases` byte for byte against
+  deepeval's.
 
 ### Changed
 
@@ -2036,6 +2079,11 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Fixed
 
+- `DeepEvalEx.Prompts.Python.repr/1` printed a tool call's empty
+  `input_parameters` as `input_parameters={}` when they were an empty
+  `Jason.OrderedObject` (as loaded from JSON with ordered objects); it now
+  leaves them out, as deepeval's `ToolCall.__repr__` leaves out an empty
+  dict.
 - `DeepEvalEx.Prompts.Python.format_fixed/2` printed `-0.0` without its
   sign (`"0.00"`); it now prints `"-0.00"`, as Python's `format(-0.0, ".2f")`
   does.

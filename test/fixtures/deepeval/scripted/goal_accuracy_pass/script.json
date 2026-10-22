@@ -1,0 +1,70 @@
+{
+  "description": "GoalAccuracy: two unit interactions, the first with two assistant turns (steps accumulating, the first calling a tool); an integer score read as a float",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "goal_accuracy",
+    "params": {}
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Book a table for two at \"Café Odéon\" on Saturday."
+      },
+      {
+        "role": "assistant",
+        "content": "Let me check Saturday's availability.",
+        "tools_called": [
+          {
+            "name": "check_availability",
+            "input_parameters": {
+              "day": "Saturday"
+            },
+            "output": {
+              "free": [
+                "19:00"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": "Booked: Café Odéon, Saturday at 19:00, for two."
+      },
+      {
+        "role": "user",
+        "content": "Thanks! What's the address?"
+      },
+      {
+        "role": "assistant",
+        "content": "12 Rue de l'Odéon, Paris."
+      }
+    ]
+  },
+  "responses": {
+    "goal_accuracy": {
+      "reason,score": [
+        {
+          "score": 1,
+          "reason": "The table was booked as asked."
+        },
+        {
+          "score": 1.0,
+          "reason": "The address was given."
+        },
+        {
+          "score": 0.75,
+          "reason": "The agent checked availability, then booked."
+        },
+        {
+          "score": 1.0,
+          "reason": "A direct answer."
+        }
+      ],
+      "text": [
+        "The agent passed with 0.9375: both goals were met and its plans were clear."
+      ]
+    }
+  }
+}

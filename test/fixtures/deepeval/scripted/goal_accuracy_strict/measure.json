@@ -1,0 +1,12 @@
+{
+  "score": 0,
+  "success": false,
+  "reason": "The agent failed: 0 is below the threshold of 1.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Goals and steps taken: \nUser messages: \nTranslate 'good night' into French.\n \nc[\n    \"Assistant messages: \nBonne nuit. \n\"\n] \n\n \n \n \nGoal evaluations: [\n    {\n        \"score\": 0.75,\n        \"reason\": \"Correct, but terse.\"\n    }\n] \n\nPlan evaluations: [\n    {\n        \"score\": 0.5,\n        \"reason\": \"No visible plan.\"\n    }\n] \n\nFinal Score: 0"
+}

@@ -1,0 +1,23 @@
+{
+  "description": "GoalAccuracy without an answered user turn: no unit interaction, the score 0.0, and a reason all the same",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "goal_accuracy",
+    "params": {}
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Hello?"
+      }
+    ]
+  },
+  "responses": {
+    "goal_accuracy": {
+      "text": [
+        "There was nothing to evaluate."
+      ]
+    }
+  }
+}

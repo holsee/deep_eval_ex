@@ -1,0 +1,10 @@
+{
+  "template": "GoalAccuracyMetric.get_accuracy_score",
+  "inputs": {
+    "task": "User messages: \nBook a table for two at \"Café Odéon\" on Saturday.\n",
+    "steps_taken": [
+      "Assistant messages: \nLet me check Saturday's availability. \n",
+      "Assistant messages: \nLet me check Saturday's availability. \nBooked: Café Odéon, Saturday at 19:00, for two. \nTools called: \n[\n  {\n      \"name\": \"book_table\"\n  }\n] \n"
+    ]
+  }
+}

@@ -128,6 +128,8 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/ConversationCompleteness.md",
         "wiki/metrics/KnowledgeRetention.md",
         "wiki/metrics/RoleAdherence.md",
+        "wiki/metrics/GoalAccuracy.md",
+        "wiki/metrics/ToolUse.md",
         "wiki/metrics/TurnFaithfulness.md",
         "wiki/metrics/TurnContextualPrecision.md",
         "wiki/metrics/TurnContextualRecall.md",

@@ -1,0 +1,18 @@
+[
+  {
+    "score": 1.0,
+    "success": null,
+    "reason": "The score is 0.5 because book_table was well chosen.\nThe score is 0.5 because the party size is missing.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 3000,
+    "output_tokens": 0,
+    "verbose_logs": "Tool Selection Scores: [\n    {\n        \"score\": 1.0,\n        \"reason\": \"Decided by fake-jev: tool selection 1.00, confidence 0.55.\"\n    },\n    {\n        \"score\": 1.0,\n        \"reason\": \"Decided by fake-jev: tool selection 1.00, confidence 0.55.\"\n    }\n] \n \n \nArgument Correctness Scores: [\n    {\n        \"score\": 1.0,\n        \"reason\": \"Decided by fake-jev: argument correctness 1.00, confidence 0.55.\"\n    }\n] \n \n \nFinal Score: 1.0",
+    "confidence": 0.55,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

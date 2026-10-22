@@ -111,6 +111,13 @@ defmodule DeepEvalEx.Prompts.PythonTest do
                )\
                """
     end
+
+    test "leaves out empty input parameters, an empty ordered object included, as Python's falsy dict" do
+      for params <- [%{}, Jason.OrderedObject.new([])] do
+        assert Python.repr(%ToolCall{name: "get_weather", input_parameters: params}) ==
+                 "ToolCall(\n    name=\"get_weather\",\n    type=\"FUNCTION\"\n)"
+      end
+    end
   end
 
   # Expected strings are what Jinja 3's `{{ x | tojson }}` renders.

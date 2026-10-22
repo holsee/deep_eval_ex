@@ -72,6 +72,8 @@ config :deep_eval_ex,
 | **ConversationCompleteness** | Whether the assistant satisfies every intention the user expresses in a conversation |
 | **KnowledgeRetention** | Whether the assistant remembers the facts the user gave earlier in a conversation |
 | **RoleAdherence** | Whether the assistant stays in the character of the conversation's `chatbot_role` |
+| **GoalAccuracy** | Whether the assistant achieves each goal the user sets in a conversation, with a sound plan it follows |
+| **ToolUse** | Whether the assistant of a conversation picks the right available tools and calls them with correct arguments |
 | **Faithfulness** | RAG: claims supported by retrieval context |
 | **Hallucination** | Detects unsupported statements |
 | **AnswerRelevancy** | Response relevance to input question |

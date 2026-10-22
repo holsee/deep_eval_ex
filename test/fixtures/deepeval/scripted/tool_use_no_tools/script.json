@@ -1,0 +1,49 @@
+{
+  "description": "ToolUse without any tool call: no argument score, so its mean is 0.0 and, as in deepeval, so is the score",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "tool_use",
+    "params": {
+      "available_tools": [
+        {
+          "name": "get_weather",
+          "description": "Fetch current weather for a city"
+        },
+        {
+          "name": "search_web",
+          "description": "Search the web"
+        }
+      ]
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Hi!"
+      },
+      {
+        "role": "assistant",
+        "content": "Hello! How can I help?"
+      }
+    ]
+  },
+  "responses": {
+    "tool_use": {
+      "reason,score": [
+        {
+          "score": 1.0,
+          "reason": "No tool was needed."
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.0 because no tool was called."
+        },
+        {
+          "reason": "The score is 0.0 because there were no arguments."
+        }
+      ]
+    }
+  }
+}

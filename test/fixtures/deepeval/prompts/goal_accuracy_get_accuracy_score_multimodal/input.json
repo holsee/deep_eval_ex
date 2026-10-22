@@ -1,0 +1,10 @@
+{
+  "template": "GoalAccuracyMetric.get_accuracy_score",
+  "inputs": {
+    "multimodal": true,
+    "task": "User messages: \nWhat breed is the dog in this photo?\n",
+    "steps_taken": [
+      "Assistant messages: \nIt looks like a beagle. \n"
+    ]
+  }
+}

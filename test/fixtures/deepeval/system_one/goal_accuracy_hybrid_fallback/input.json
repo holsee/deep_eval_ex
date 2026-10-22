@@ -1,0 +1,75 @@
+{
+  "description": "GoalAccuracy in hybrid mode with Jev down: the LLM scores every goal and plan",
+  "metrics": [
+    {
+      "kind": "goal_accuracy",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Book a table for two at Café Odéon on Saturday."
+      },
+      {
+        "role": "assistant",
+        "content": "Booked: Saturday at 19:00, for two.",
+        "tools_called": [
+          {
+            "name": "book_table",
+            "input_parameters": {
+              "day": "Saturday",
+              "restaurant": "Café Odéon"
+            },
+            "output": "Booked for Saturday at 19:00"
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "What's the address?"
+      },
+      {
+        "role": "assistant",
+        "content": "12 Rue de l'Odéon, Paris."
+      }
+    ]
+  },
+  "system_one": {
+    "model": "exploding-jev",
+    "raises": {
+      "type": "ConnectionError",
+      "message": "Jev is down"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "goal_accuracy": {
+      "reason,score": [
+        {
+          "score": 1.0,
+          "reason": "The table was booked as asked."
+        },
+        {
+          "score": 0.5,
+          "reason": "The address lacks the postcode."
+        },
+        {
+          "score": 0.75,
+          "reason": "Booked straight away with the right tool."
+        },
+        {
+          "score": 1,
+          "reason": "A direct answer."
+        }
+      ],
+      "text": [
+        "The agent passed: both goals were met and its plans were clear."
+      ]
+    }
+  }
+}

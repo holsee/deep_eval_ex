@@ -47,7 +47,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the twenty-four LLM-judged metrics, the way the metric itself renders it
+uses for the twenty-six LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -125,6 +125,7 @@ from deepeval.metrics import (  # noqa: E402
     ExactMatchMetric,
     FaithfulnessMetric,
     GEval,
+    GoalAccuracyMetric,
     HallucinationMetric,
     KnowledgeRetentionMetric,
     JsonCorrectnessMetric,
@@ -135,6 +136,7 @@ from deepeval.metrics import (  # noqa: E402
     SummarizationMetric,
     ToolCorrectnessMetric,
     ToolPermissionMetric,
+    ToolUseMetric,
     ToxicityMetric,
     TurnContextualPrecisionMetric,
     TurnContextualRecallMetric,
@@ -753,6 +755,8 @@ SCRIPTED_METRICS = {
     "turn_contextual_precision": TurnContextualPrecisionMetric,
     "turn_contextual_recall": TurnContextualRecallMetric,
     "turn_contextual_relevancy": TurnContextualRelevancyMetric,
+    "goal_accuracy": GoalAccuracyMetric,
+    "tool_use": ToolUseMetric,
 }
 
 # Metrics that call no LLM and take no `model`.
@@ -770,11 +774,10 @@ def build_scripted_metric(script):
         params["evaluation_params"] = [MultiTurnParams(p) for p in params["evaluation_params"]]
     if kind in ("g_eval", "conversational_g_eval") and "rubric" in params:
         params["rubric"] = [Rubric(**rubric) for rubric in params["rubric"]]
-    if kind == "tool_correctness":
-        if "evaluation_params" in params:
-            params["evaluation_params"] = [ToolCallParams(p) for p in params["evaluation_params"]]
-        if "available_tools" in params:
-            params["available_tools"] = [ToolCall(**tool) for tool in params["available_tools"]]
+    if kind == "tool_correctness" and "evaluation_params" in params:
+        params["evaluation_params"] = [ToolCallParams(p) for p in params["evaluation_params"]]
+    if kind in ("tool_correctness", "tool_use") and "available_tools" in params:
+        params["available_tools"] = [ToolCall(**tool) for tool in params["available_tools"]]
     if kind == "json_correctness":
         params["expected_schema"] = build_expected_schema(params["expected_schema"])
     if kind in JUDGELESS_METRICS:
@@ -952,6 +955,56 @@ def _role_adherence(method, **kwargs):
     # RoleAdherenceMetric passes no multimodal flag; its LLM templates print
     # the multimodal rules regardless.
     return RoleAdherenceMetric(model=_prompt_judge())._get_prompt(method, **kwargs)
+
+
+def _goal_accuracy(method, inputs, **kwargs):
+    # GoalAccuracyMetric passes the test case's multimodal flag.
+    return GoalAccuracyMetric(model=_prompt_judge())._get_prompt(
+        method, multimodal=inputs.get("multimodal", False), **kwargs
+    )
+
+
+def _goal_accuracy_evaluations(scores, suffix):
+    # GoalAccuracyMetric._generate_reason: each score and reason, the plan's
+    # followed by " \n", the goal's by nothing.
+    return "".join(f"Score: {s['score']}, Reason: {s['reason']}{suffix}" for s in scores)
+
+
+def _tool_use(method, **kwargs):
+    # ToolUseMetric passes the test case's multimodal flag, which none of
+    # its templates reads.
+    return ToolUseMetric(available_tools=[], model=_prompt_judge())._get_prompt(
+        method, multimodal=False, **kwargs
+    )
+
+
+def _tool_reprs(tools):
+    # ToolUseMetric joins its tools' ToolCall.__repr__ with commas.
+    return ",".join(repr(ToolCall(**t)) for t in tools)
+
+
+def _tool_use_scores_and_reasons(scores):
+    # ToolUseMetric's reason prompts: each sub-score and its reason.
+    return "".join(f"\nScore: {s['score']} \nReason: {s['reason']} \n" for s in scores)
+
+
+def _tool_use_score(method, i):
+    return _tool_use(
+        method,
+        user_input=i["user_messages"],
+        assistant_messages=i["assistant_messages"],
+        tools_called=_tool_reprs(i["tools_called"]),
+        available_tools=_tool_reprs(i["available_tools"]),
+    )
+
+
+def _tool_use_reason(method, i):
+    return _tool_use(
+        method,
+        all_scores_and_reasons=_tool_use_scores_and_reasons(i["scores"]),
+        final_score=i["final_score"],
+        threshold=i["threshold"],
+    )
 
 
 def _turn_rag(metric_cls, method, inputs, **kwargs):
@@ -1449,6 +1502,53 @@ PROMPT_RENDERERS = {
     "TurnContextualRelevancyMetric._experimental_system_one_verdict": lambda i: _prompt(
         TurnContextualRelevancyMetric, "_experimental_system_one_verdict",
     ),
+    # GoalAccuracy joins a unit's steps with newlines, and prints the final
+    # score and threshold unformatted, as the metric passes them.
+    "GoalAccuracyMetric.get_accuracy_score": lambda i: _goal_accuracy(
+        "get_accuracy_score", i, task=i["task"], steps_taken="\n".join(i["steps_taken"]),
+    ),
+    "GoalAccuracyMetric.get_plan_evaluation_score": lambda i: _goal_accuracy(
+        "get_plan_evaluation_score", i, task=i["task"], steps_taken="\n".join(i["steps_taken"]),
+    ),
+    "GoalAccuracyMetric.get_final_reason": lambda i: _goal_accuracy(
+        "get_final_reason", i,
+        final_score=i["final_score"],
+        threshold=i["threshold"],
+        goal_evaluations=_goal_accuracy_evaluations(i["goal_scores"], ""),
+        plan_evalautions=_goal_accuracy_evaluations(i["plan_scores"], " \n"),
+    ),
+    "GoalAccuracyMetric._experimental_system_one_goal_score": lambda i: _prompt(
+        GoalAccuracyMetric, "_experimental_system_one_goal_score",
+    ),
+    "GoalAccuracyMetric._experimental_system_one_plan_score": lambda i: _prompt(
+        GoalAccuracyMetric, "_experimental_system_one_plan_score",
+    ),
+    "GoalAccuracyMetric._experimental_system_one_questions": lambda i: _prompt(
+        GoalAccuracyMetric, "_experimental_system_one_questions",
+    ),
+    # ToolUse explains both of its scores with get_tool_selection_final_reason;
+    # get_tool_argument_final_reason is bundled but never rendered by deepeval.
+    "ToolUseMetric.get_tool_selection_score": lambda i: _tool_use_score(
+        "get_tool_selection_score", i,
+    ),
+    "ToolUseMetric.get_argument_correctness_score": lambda i: _tool_use_score(
+        "get_argument_correctness_score", i,
+    ),
+    "ToolUseMetric.get_tool_selection_final_reason": lambda i: _tool_use_reason(
+        "get_tool_selection_final_reason", i,
+    ),
+    "ToolUseMetric.get_tool_argument_final_reason": lambda i: _tool_use_reason(
+        "get_tool_argument_final_reason", i,
+    ),
+    "ToolUseMetric._experimental_system_one_tool_selection_score": lambda i: _tool_use(
+        "_experimental_system_one_tool_selection_score",
+    ),
+    "ToolUseMetric._experimental_system_one_argument_correctness_score": lambda i: _tool_use(
+        "_experimental_system_one_argument_correctness_score",
+    ),
+    "ToolUseMetric._experimental_system_one_questions": lambda i: _tool_use(
+        "_experimental_system_one_questions",
+    ),
     "ToolCorrectnessMetric._experimental_system_one_tool_selection_score": lambda i: _prompt(
         ToolCorrectnessMetric, "_experimental_system_one_tool_selection_score",
     ),
@@ -1801,6 +1901,138 @@ PROMPT_CASES = {
     },
     "role_adherence_experimental_system_one_verdict": {
         "template": "RoleAdherenceMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "goal_accuracy_get_accuracy_score": {
+        "template": "GoalAccuracyMetric.get_accuracy_score",
+        "inputs": {
+            "task": "User messages: \nBook a table for two at \"Café Odéon\" on Saturday.\n",
+            "steps_taken": [
+                "Assistant messages: \nLet me check Saturday's availability. \n",
+                "Assistant messages: \nLet me check Saturday's availability. \n"
+                "Booked: Café Odéon, Saturday at 19:00, for two. \nTools called: \n[\n"
+                "  {\n      \"name\": \"book_table\"\n  }\n] \n",
+            ],
+        },
+    },
+    "goal_accuracy_get_accuracy_score_multimodal": {
+        "template": "GoalAccuracyMetric.get_accuracy_score",
+        "inputs": {
+            "multimodal": True,
+            "task": "User messages: \nWhat breed is the dog in this photo?\n",
+            "steps_taken": ["Assistant messages: \nIt looks like a beagle. \n"],
+        },
+    },
+    "goal_accuracy_get_plan_evaluation_score": {
+        "template": "GoalAccuracyMetric.get_plan_evaluation_score",
+        "inputs": {
+            "task": "User messages: \nPlan my trip to Lisbon: flight, hotel and an agenda.\n",
+            "steps_taken": [
+                "Assistant messages: \nFirst the flight, then the hotel, then the agenda. \n",
+            ],
+        },
+    },
+    "goal_accuracy_get_plan_evaluation_score_multimodal": {
+        "template": "GoalAccuracyMetric.get_plan_evaluation_score",
+        "inputs": {"multimodal": True, "task": "User messages: \n", "steps_taken": []},
+    },
+    "goal_accuracy_get_final_reason": {
+        "template": "GoalAccuracyMetric.get_final_reason",
+        "inputs": {
+            "final_score": 0.625,
+            "threshold": 0.5,
+            "goal_scores": [
+                {"score": 1.0, "reason": "The table was booked."},
+                {"score": 0.5, "reason": "The user's agenda is missing."},
+            ],
+            "plan_scores": [
+                {"score": 0.75, "reason": "A clear plan."},
+                {"score": 0.25, "reason": "No plan for the agenda."},
+            ],
+        },
+    },
+    "goal_accuracy_get_final_reason_strict_multimodal": {
+        "template": "GoalAccuracyMetric.get_final_reason",
+        "inputs": {
+            "multimodal": True,
+            "final_score": 0,
+            "threshold": 1,
+            "goal_scores": [{"score": 0.25, "reason": "Weak."}],
+            "plan_scores": [],
+        },
+    },
+    "goal_accuracy_experimental_system_one_goal_score": {
+        "template": "GoalAccuracyMetric._experimental_system_one_goal_score",
+        "inputs": {},
+    },
+    "goal_accuracy_experimental_system_one_plan_score": {
+        "template": "GoalAccuracyMetric._experimental_system_one_plan_score",
+        "inputs": {},
+    },
+    "goal_accuracy_experimental_system_one_questions": {
+        "template": "GoalAccuracyMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "tool_use_get_tool_selection_score": {
+        "template": "ToolUseMetric.get_tool_selection_score",
+        "inputs": {
+            "user_messages": "What's the weather in Paris? \nAnd in Zürich? \n",
+            "assistant_messages": "It is 18°C in Paris. \nIt is 12°C in Zürich. \n",
+            "tools_called": [
+                {"name": "get_weather", "input_parameters": {"city": "Paris"},
+                 "output": {"temp_c": 18}},
+                {"name": "search_web", "input_parameters": {"query": "Zürich weather"}},
+            ],
+            "available_tools": GOLDEN_TOOLS,
+        },
+    },
+    "tool_use_get_argument_correctness_score": {
+        "template": "ToolUseMetric.get_argument_correctness_score",
+        "inputs": {
+            "user_messages": "Book a table at \"Café Odéon\" on Saturday. \n",
+            "assistant_messages": "Booked for Saturday at 19:00. \n",
+            "tools_called": [
+                {"name": "book_table",
+                 "input_parameters": {"day": "Saturday", "restaurant": "Café Odéon"}},
+            ],
+            "available_tools": [
+                {"name": "book_table", "description": "Book a restaurant table"},
+            ],
+        },
+    },
+    "tool_use_get_tool_selection_final_reason": {
+        "template": "ToolUseMetric.get_tool_selection_final_reason",
+        "inputs": {
+            "final_score": 0.75,
+            "threshold": 0.5,
+            "scores": [
+                {"score": 1.0, "reason": "get_weather was the right tool."},
+                {"score": 0.5, "reason": "search_web was used where get_weather fits."},
+            ],
+        },
+    },
+    "tool_use_get_tool_selection_final_reason_strict": {
+        "template": "ToolUseMetric.get_tool_selection_final_reason",
+        "inputs": {"final_score": 0, "threshold": 1, "scores": []},
+    },
+    "tool_use_get_tool_argument_final_reason": {
+        "template": "ToolUseMetric.get_tool_argument_final_reason",
+        "inputs": {
+            "final_score": 0.5,
+            "threshold": 0.5,
+            "scores": [{"score": 0.5, "reason": "The 'day' argument is right, the time missing."}],
+        },
+    },
+    "tool_use_experimental_system_one_tool_selection_score": {
+        "template": "ToolUseMetric._experimental_system_one_tool_selection_score",
+        "inputs": {},
+    },
+    "tool_use_experimental_system_one_argument_correctness_score": {
+        "template": "ToolUseMetric._experimental_system_one_argument_correctness_score",
+        "inputs": {},
+    },
+    "tool_use_experimental_system_one_questions": {
+        "template": "ToolUseMetric._experimental_system_one_questions",
         "inputs": {},
     },
     "turn_faithfulness_generate_truths": {
@@ -2490,7 +2722,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the twenty-four metrics is rendered
+    """Fails unless every bundled template of the twenty-six metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()

@@ -1,0 +1,352 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "task": "User messages: \nBook a table for two at Café Odéon on Saturday.\n",
+          "steps_taken": [
+            "Assistant messages: \nBooked: Saturday at 19:00, for two. \nTools called: \n[\n  {\n      \"name\": \"book_table\",\n      \"type\": \"FUNCTION\",\n      \"description\": null,\n      \"reasoning\": null,\n      \"output\": \"Booked for Saturday at 19:00\",\n      \"input_parameters\": {\n          \"day\": \"Saturday\",\n          \"restaurant\": \"Caf\\u00e9 Od\\u00e9on\"\n      }\n  }\n] \n"
+          ]
+        },
+        "questions": {
+          "verdict": {
+            "type": "score",
+            "instructions": "How fully and correctly do the assistant messages the user saw in `steps_taken` achieve the goal in `task`? Judge only what was visible to the user; a missing, vague or incorrect part of the goal lowers the level.",
+            "criteria": [
+              "Not achieved",
+              "Weak attempt",
+              "Partially achieved",
+              "Mostly achieved",
+              "Fully achieved"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {},
+          "scores": {
+            "verdict": {
+              "score": 3.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.15,
+                "2": 0.4,
+                "3": 0.3,
+                "4": 0.1
+              },
+              "confidence": 0.35
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "task": "User messages: \nWhat's the address?\n",
+          "steps_taken": [
+            "Assistant messages: \n12 Rue de l'Odéon, Paris. \n"
+          ]
+        },
+        "questions": {
+          "verdict": {
+            "type": "score",
+            "instructions": "How fully and correctly do the assistant messages the user saw in `steps_taken` achieve the goal in `task`? Judge only what was visible to the user; a missing, vague or incorrect part of the goal lowers the level.",
+            "criteria": [
+              "Not achieved",
+              "Weak attempt",
+              "Partially achieved",
+              "Mostly achieved",
+              "Fully achieved"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {},
+          "scores": {
+            "verdict": {
+              "score": 3.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.15,
+                "2": 0.4,
+                "3": 0.3,
+                "4": 0.1
+              },
+              "confidence": 0.35
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "task": "User messages: \nBook a table for two at Café Odéon on Saturday.\n",
+          "steps_taken": [
+            "Assistant messages: \nBooked: Saturday at 19:00, for two. \nTools called: \n[\n  {\n      \"name\": \"book_table\",\n      \"type\": \"FUNCTION\",\n      \"description\": null,\n      \"reasoning\": null,\n      \"output\": \"Booked for Saturday at 19:00\",\n      \"input_parameters\": {\n          \"day\": \"Saturday\",\n          \"restaurant\": \"Caf\\u00e9 Od\\u00e9on\"\n      }\n  }\n] \n"
+          ]
+        },
+        "questions": {
+          "verdict": {
+            "type": "score",
+            "instructions": "How clear, complete and logically ordered is the assistant's plan (stated or implied) in `steps_taken` for achieving `task`, and how closely does its execution follow that plan?",
+            "criteria": [
+              "No plan",
+              "Weak or fragmented plan, rarely followed",
+              "Partial plan, partly followed",
+              "Clear plan, mostly followed",
+              "Complete plan, fully followed"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {},
+          "scores": {
+            "verdict": {
+              "score": 3.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.15,
+                "2": 0.4,
+                "3": 0.3,
+                "4": 0.1
+              },
+              "confidence": 0.35
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "task": "User messages: \nWhat's the address?\n",
+          "steps_taken": [
+            "Assistant messages: \n12 Rue de l'Odéon, Paris. \n"
+          ]
+        },
+        "questions": {
+          "verdict": {
+            "type": "score",
+            "instructions": "How clear, complete and logically ordered is the assistant's plan (stated or implied) in `steps_taken` for achieving `task`, and how closely does its execution follow that plan?",
+            "criteria": [
+              "No plan",
+              "Weak or fragmented plan, rarely followed",
+              "Partial plan, partly followed",
+              "Clear plan, mostly followed",
+              "Complete plan, fully followed"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {},
+          "scores": {
+            "verdict": {
+              "score": 3.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.15,
+                "2": 0.4,
+                "3": 0.3,
+                "4": 0.1
+              },
+              "confidence": 0.35
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "task": "User messages: \nBook a table for two at Café Odéon on Saturday.\n",
+        "steps_taken": [
+          "Assistant messages: \nBooked: Saturday at 19:00, for two. \nTools called: \n[\n  {\n      \"name\": \"book_table\",\n      \"type\": \"FUNCTION\",\n      \"description\": null,\n      \"reasoning\": null,\n      \"output\": \"Booked for Saturday at 19:00\",\n      \"input_parameters\": {\n          \"day\": \"Saturday\",\n          \"restaurant\": \"Caf\\u00e9 Od\\u00e9on\"\n      }\n  }\n] \n"
+        ]
+      },
+      "questions": {
+        "verdict": {
+          "type": "score",
+          "instructions": "How fully and correctly do the assistant messages the user saw in `steps_taken` achieve the goal in `task`? Judge only what was visible to the user; a missing, vague or incorrect part of the goal lowers the level.",
+          "criteria": [
+            "Not achieved",
+            "Weak attempt",
+            "Partially achieved",
+            "Mostly achieved",
+            "Fully achieved"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {},
+        "scores": {
+          "verdict": {
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.15,
+              "2": 0.4,
+              "3": 0.3,
+              "4": 0.1
+            },
+            "confidence": 0.35
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "task": "User messages: \nWhat's the address?\n",
+        "steps_taken": [
+          "Assistant messages: \n12 Rue de l'Odéon, Paris. \n"
+        ]
+      },
+      "questions": {
+        "verdict": {
+          "type": "score",
+          "instructions": "How fully and correctly do the assistant messages the user saw in `steps_taken` achieve the goal in `task`? Judge only what was visible to the user; a missing, vague or incorrect part of the goal lowers the level.",
+          "criteria": [
+            "Not achieved",
+            "Weak attempt",
+            "Partially achieved",
+            "Mostly achieved",
+            "Fully achieved"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {},
+        "scores": {
+          "verdict": {
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.15,
+              "2": 0.4,
+              "3": 0.3,
+              "4": 0.1
+            },
+            "confidence": 0.35
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "task": "User messages: \nBook a table for two at Café Odéon on Saturday.\n",
+        "steps_taken": [
+          "Assistant messages: \nBooked: Saturday at 19:00, for two. \nTools called: \n[\n  {\n      \"name\": \"book_table\",\n      \"type\": \"FUNCTION\",\n      \"description\": null,\n      \"reasoning\": null,\n      \"output\": \"Booked for Saturday at 19:00\",\n      \"input_parameters\": {\n          \"day\": \"Saturday\",\n          \"restaurant\": \"Caf\\u00e9 Od\\u00e9on\"\n      }\n  }\n] \n"
+        ]
+      },
+      "questions": {
+        "verdict": {
+          "type": "score",
+          "instructions": "How clear, complete and logically ordered is the assistant's plan (stated or implied) in `steps_taken` for achieving `task`, and how closely does its execution follow that plan?",
+          "criteria": [
+            "No plan",
+            "Weak or fragmented plan, rarely followed",
+            "Partial plan, partly followed",
+            "Clear plan, mostly followed",
+            "Complete plan, fully followed"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {},
+        "scores": {
+          "verdict": {
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.15,
+              "2": 0.4,
+              "3": 0.3,
+              "4": 0.1
+            },
+            "confidence": 0.35
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "task": "User messages: \nWhat's the address?\n",
+        "steps_taken": [
+          "Assistant messages: \n12 Rue de l'Odéon, Paris. \n"
+        ]
+      },
+      "questions": {
+        "verdict": {
+          "type": "score",
+          "instructions": "How clear, complete and logically ordered is the assistant's plan (stated or implied) in `steps_taken` for achieving `task`, and how closely does its execution follow that plan?",
+          "criteria": [
+            "No plan",
+            "Weak or fragmented plan, rarely followed",
+            "Partial plan, partly followed",
+            "Clear plan, mostly followed",
+            "Complete plan, fully followed"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {},
+        "scores": {
+          "verdict": {
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.15,
+              "2": 0.4,
+              "3": 0.3,
+              "4": 0.1
+            },
+            "confidence": 0.35
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

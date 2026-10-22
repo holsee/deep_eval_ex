@@ -32,6 +32,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     ConversationalJevEval,
     ConversationCompleteness,
     Faithfulness,
+    GoalAccuracy,
     Hallucination,
     JevEval,
     JsonCorrectness,
@@ -41,6 +42,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     RoleAdherence,
     Summarization,
     ToolCorrectness,
+    ToolUse,
     Toxicity,
     TurnContextualPrecision,
     TurnContextualRecall,
@@ -79,7 +81,9 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     "turn_faithfulness" => TurnFaithfulness,
     "turn_contextual_precision" => TurnContextualPrecision,
     "turn_contextual_recall" => TurnContextualRecall,
-    "turn_contextual_relevancy" => TurnContextualRelevancy
+    "turn_contextual_relevancy" => TurnContextualRelevancy,
+    "goal_accuracy" => GoalAccuracy,
+    "tool_use" => ToolUse
   }
 
   @eval_modes %{"llm" => :llm, "hybrid" => :hybrid, "system_one" => :system_one}
@@ -287,6 +291,12 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   defp configured(JsonCorrectness, opts) do
     {schema, opts} = Keyword.pop!(opts, :expected_schema)
     {JsonCorrectness.new(expected_schema: schema), opts}
+  end
+
+  # ToolUse's available tools are its own, as deepeval's constructor param.
+  defp configured(ToolUse, opts) do
+    {tools, opts} = Keyword.pop!(opts, :available_tools)
+    {ToolUse.new(available_tools: tools), opts}
   end
 
   defp configured(module, opts), do: {module, opts}

@@ -118,6 +118,7 @@ from deepeval.metrics import (  # noqa: E402
     ConversationCompletenessMetric,
     ConversationalJevEval,
     FaithfulnessMetric,
+    GoalAccuracyMetric,
     HallucinationMetric,
     JevEval,
     KnowledgeRetentionMetric,
@@ -127,6 +128,7 @@ from deepeval.metrics import (  # noqa: E402
     RoleAdherenceMetric,
     SummarizationMetric,
     ToolCorrectnessMetric,
+    ToolUseMetric,
     ToxicityMetric,
     TurnContextualPrecisionMetric,
     TurnContextualRecallMetric,
@@ -180,6 +182,8 @@ METRICS = {
     "turn_contextual_precision": TurnContextualPrecisionMetric,
     "turn_contextual_recall": TurnContextualRecallMetric,
     "turn_contextual_relevancy": TurnContextualRelevancyMetric,
+    "goal_accuracy": GoalAccuracyMetric,
+    "tool_use": ToolUseMetric,
 }
 
 # Metrics that follow their eval mode but never build a System One model, so
@@ -740,6 +744,58 @@ ROLE_VERDICTS = {
         {"index": 1, "reason": "A cheerful agent would not forget the destination."},
     ]}],
 }
+
+# An agent conversation for GoalAccuracy and ToolUse: two unit
+# interactions, the first calling a tool (its parameters in key order, as
+# test/support/system_one_parity.ex reads them into maps), and the tools
+# the agent had.
+AGENT_CHAT = {
+    "turns": [
+        {"role": "user", "content": "Book a table for two at Café Odéon on Saturday."},
+        {"role": "assistant", "content": "Booked: Saturday at 19:00, for two.",
+         "tools_called": [{"name": "book_table",
+                           "input_parameters": {"day": "Saturday", "restaurant": "Café Odéon"},
+                           "output": "Booked for Saturday at 19:00"}]},
+        {"role": "user", "content": "What's the address?"},
+        {"role": "assistant", "content": "12 Rue de l'Odéon, Paris."},
+    ],
+}
+AGENT_TOOLS = [
+    {"name": "book_table", "description": "Book a restaurant table"},
+    {"name": "search_web", "description": "Search the web"},
+]
+FIVE_LEVELS_HIGH = {"0": 0.0, "1": 0.05, "2": 0.1, "3": 0.25, "4": 0.6}
+FIVE_LEVELS_MID = {"0": 0.05, "1": 0.15, "2": 0.4, "3": 0.3, "4": 0.1}
+
+GOAL_ACCURACY_LLM = {
+    "reason,score": [
+        {"score": 1.0, "reason": "The table was booked as asked."},
+        {"score": 0.5, "reason": "The address lacks the postcode."},
+        {"score": 0.75, "reason": "Booked straight away with the right tool."},
+        {"score": 1, "reason": "A direct answer."},
+    ],
+}
+GOAL_ACCURACY_REASON = {
+    "text": ["The agent passed: both goals were met and its plans were clear."],
+}
+TOOL_USE_LLM = {
+    "reason,score": [
+        {"score": 1.0, "reason": "book_table was the right tool."},
+        {"score": 0.75, "reason": "No tool was needed for the address."},
+        {"score": 0.5, "reason": "The party size is missing."},
+    ],
+}
+TOOL_USE_REASONS = {
+    "reason": [
+        {"reason": "The score is 0.5 because book_table was well chosen."},
+        {"reason": "The score is 0.5 because the party size is missing."},
+    ],
+}
+
+
+def tool_use(eval_mode, **params):
+    return metric("tool_use", eval_mode, available_tools=AGENT_TOOLS, **params)
+
 
 # A RAG conversation for the Turn RAG metrics: two unit interactions, so two
 # sliding windows (the first interaction, then both), each assistant turn
@@ -1452,6 +1508,70 @@ SCENARIOS = {
         "judge_model": JUDGE,
         "responses": {"role_adherence": {**ROLE_VERDICTS, **ROLE_REASON}},
     },
+    # GoalAccuracy
+    "goal_accuracy_system_one": {
+        "description": "GoalAccuracy decided by Jev in one request about the turns and their tools",
+        "metrics": [metric("goal_accuracy", "system_one")],
+        "test_case": AGENT_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"q_0": noul(0.7)},
+                                   "scores": {"q_1": score(3, FIVE_LEVELS_MID, 0.35),
+                                              "q_2": score(4, FIVE_LEVELS_HIGH, 0.55)}}},
+    },
+    "goal_accuracy_system_one_strict": {
+        "description": "GoalAccuracy decided by Jev in strict mode",
+        "metrics": [metric("goal_accuracy", "system_one", strict_mode=True)],
+        "test_case": AGENT_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"q_0": noul(0.9)},
+                                   "scores": {"q_1": score(4, FIVE_LEVELS_HIGH, 0.55),
+                                              "q_2": score(2, FIVE_LEVELS_MID, 0.3)}}},
+    },
+    "goal_accuracy_hybrid": {
+        "description": "GoalAccuracy in hybrid mode: Jev scores each unit's goal, then each plan, one "
+                       "Score request each; the LLM writes the reason",
+        "metrics": [metric("goal_accuracy", "hybrid")],
+        "test_case": AGENT_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"scores": {"verdict": score(3, FIVE_LEVELS_MID, 0.35)}}},
+        "judge_model": JUDGE,
+        "responses": {"goal_accuracy": GOAL_ACCURACY_REASON},
+    },
+    "goal_accuracy_hybrid_fallback": {
+        "description": "GoalAccuracy in hybrid mode with Jev down: the LLM scores every goal and plan",
+        "metrics": [metric("goal_accuracy", "hybrid")],
+        "test_case": AGENT_CHAT,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"goal_accuracy": {**GOAL_ACCURACY_LLM, **GOAL_ACCURACY_REASON}},
+    },
+    # ToolUse
+    "tool_use_system_one": {
+        "description": "ToolUse decided by Jev in one request about the turns, their tools and the "
+                       "available tools",
+        "metrics": [tool_use("system_one")],
+        "test_case": AGENT_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"q_0": noul(0.85), "q_1": noul(0.4)}}},
+    },
+    "tool_use_hybrid": {
+        "description": "ToolUse in hybrid mode: Jev scores each unit's tool selection, then the "
+                       "arguments of each unit that called a tool; the LLM writes the reasons",
+        "metrics": [tool_use("hybrid")],
+        "test_case": AGENT_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"scores": {"verdict": score(4, FIVE_LEVELS_HIGH, 0.55)}}},
+        "judge_model": JUDGE,
+        "responses": {"tool_use": TOOL_USE_REASONS},
+    },
+    "tool_use_hybrid_fallback": {
+        "description": "ToolUse in hybrid mode with Jev down: the LLM takes every score",
+        "metrics": [tool_use("hybrid")],
+        "test_case": AGENT_CHAT,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"tool_use": {**TOOL_USE_LLM, **TOOL_USE_REASONS}},
+    },
     # TurnFaithfulness
     "turn_faithfulness_system_one": {
         "description": "TurnFaithfulness decided by Jev in one request about the turns and their "
@@ -1824,6 +1944,19 @@ SCENARIOS = {
                                      "m1.q_0": noul(0.88), "m1.q_1": noul(0.9)},
                            "scores": {"m0.q_2": score(1, {"0": 0.1, "1": 0.5, "2": 0.3, "3": 0.1}, 0.4),
                                       "m1.q_2": score(3, FOUR_LEVELS_HIGH, 0.8)},
+                       }},
+    },
+    "batch_system_one_goal_tool": {
+        "description": "GoalAccuracy and ToolUse batched into one request by evaluate(), the state "
+                       "holding the turns with their tools and the available tools",
+        "batched": True,
+        "metrics": [metric("goal_accuracy", "system_one"), tool_use("system_one")],
+        "test_case": AGENT_CHAT,
+        "system_one": {"model": JEV, "cost": {"value": 0.000084, "input_tokens": 2001, "output_tokens": 0},
+                       "answers": {
+                           "nouls": {"m0.q_0": noul(0.6), "m1.q_0": noul(0.9), "m1.q_1": noul(0.3)},
+                           "scores": {"m0.q_1": score(3, FIVE_LEVELS_MID, 0.35),
+                                      "m0.q_2": score(4, FIVE_LEVELS_HIGH, 0.55)},
                        }},
     },
     "batch_system_one_turn_rag": {

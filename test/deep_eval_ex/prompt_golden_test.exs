@@ -212,7 +212,29 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "TurnContextualRelevancyMetric._experimental_system_one_questions" =>
       {Prompts.TurnContextualRelevancy, :system_one_questions},
     "TurnContextualRelevancyMetric._experimental_system_one_verdict" =>
-      {Prompts.TurnContextualRelevancy, :system_one_verdict}
+      {Prompts.TurnContextualRelevancy, :system_one_verdict},
+    "GoalAccuracyMetric.get_accuracy_score" => {Prompts.GoalAccuracy, :get_accuracy_score},
+    "GoalAccuracyMetric.get_plan_evaluation_score" =>
+      {Prompts.GoalAccuracy, :get_plan_evaluation_score},
+    "GoalAccuracyMetric.get_final_reason" => {Prompts.GoalAccuracy, :get_final_reason},
+    "GoalAccuracyMetric._experimental_system_one_goal_score" =>
+      {Prompts.GoalAccuracy, :system_one_goal_score},
+    "GoalAccuracyMetric._experimental_system_one_plan_score" =>
+      {Prompts.GoalAccuracy, :system_one_plan_score},
+    "GoalAccuracyMetric._experimental_system_one_questions" =>
+      {Prompts.GoalAccuracy, :system_one_questions},
+    "ToolUseMetric.get_tool_selection_score" => {Prompts.ToolUse, :get_tool_selection_score},
+    "ToolUseMetric.get_argument_correctness_score" =>
+      {Prompts.ToolUse, :get_argument_correctness_score},
+    "ToolUseMetric.get_tool_selection_final_reason" =>
+      {Prompts.ToolUse, :get_tool_selection_final_reason},
+    "ToolUseMetric.get_tool_argument_final_reason" =>
+      {Prompts.ToolUse, :get_tool_argument_final_reason},
+    "ToolUseMetric._experimental_system_one_tool_selection_score" =>
+      {Prompts.ToolUse, :system_one_tool_selection_score},
+    "ToolUseMetric._experimental_system_one_argument_correctness_score" =>
+      {Prompts.ToolUse, :system_one_argument_correctness_score},
+    "ToolUseMetric._experimental_system_one_questions" => {Prompts.ToolUse, :system_one_questions}
   }
 
   # {the ROADMAP unit that removes the tag, cases}. The fixtures' README
@@ -229,7 +251,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the twenty-four LLM metrics" do
+  test "covers every template of the twenty-six LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -248,6 +270,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.ConversationCompleteness,
             Prompts.Faithfulness,
             Prompts.GEval,
+            Prompts.GoalAccuracy,
             Prompts.Hallucination,
             Prompts.JsonCorrectness,
             Prompts.KnowledgeRetention,
@@ -256,6 +279,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.RoleAdherence,
             Prompts.Summarization,
             Prompts.ToolCorrectness,
+            Prompts.ToolUse,
             Prompts.Toxicity,
             Prompts.TurnContextualPrecision,
             Prompts.TurnContextualRecall,
@@ -723,6 +747,59 @@ defmodule DeepEvalEx.PromptGoldenTest do
         inputs["available_tools"] |> tool_calls() |> Prompts.ToolCorrectness.format_tools()
     ]
   end
+
+  # GoalAccuracy joins a unit's steps with newlines and builds its
+  # evaluations as GoalAccuracy._generate_reason does.
+  defp options("GoalAccuracyMetric." <> method, inputs)
+       when method in ["get_accuracy_score", "get_plan_evaluation_score"] do
+    [
+      task: inputs["task"],
+      steps_taken: Enum.join(inputs["steps_taken"], "\n"),
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options("GoalAccuracyMetric.get_final_reason", inputs) do
+    [
+      final_score: inputs["final_score"],
+      threshold: inputs["threshold"],
+      goal_evaluations: evaluations(inputs["goal_scores"], ""),
+      plan_evalautions: evaluations(inputs["plan_scores"], " \n"),
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  # ToolUse joins its tools' ToolCall.__repr__ with commas.
+  defp options("ToolUseMetric." <> method, inputs)
+       when method in ["get_tool_selection_score", "get_argument_correctness_score"] do
+    [
+      user_input: inputs["user_messages"],
+      assistant_messages: inputs["assistant_messages"],
+      tools_called: tool_reprs(inputs["tools_called"]),
+      available_tools: tool_reprs(inputs["available_tools"])
+    ]
+  end
+
+  defp options("ToolUseMetric." <> method, inputs)
+       when method in ["get_tool_selection_final_reason", "get_tool_argument_final_reason"] do
+    [
+      all_scores_and_reasons:
+        Enum.map_join(inputs["scores"], fn %{"score" => score, "reason" => reason} ->
+          "\nScore: #{Prompts.Python.repr(score)} \nReason: #{reason} \n"
+        end),
+      final_score: inputs["final_score"],
+      threshold: inputs["threshold"]
+    ]
+  end
+
+  defp evaluations(scores, suffix) do
+    Enum.map_join(scores, fn %{"score" => score, "reason" => reason} ->
+      "Score: #{Prompts.Python.repr(score)}, Reason: #{reason}#{suffix}"
+    end)
+  end
+
+  defp tool_reprs(tools),
+    do: tools |> tool_calls() |> Enum.map_join(",", &Prompts.Python.repr/1)
 
   defp turn_dicts(turns),
     do: Enum.map(turns, &(&1 |> DeepEvalEx.Turn.new!() |> Turns.convert_turn_to_dict()))

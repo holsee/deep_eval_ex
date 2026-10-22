@@ -25,6 +25,8 @@ Use an LLM to evaluate outputs based on criteria:
 | [ConversationCompleteness](ConversationCompleteness.md) | The assistant satisfies every user intention | Multi-turn chatbots that leave requests unmet |
 | [KnowledgeRetention](KnowledgeRetention.md) | The assistant remembers what the user told it | Multi-turn chatbots that ask for the same thing twice |
 | [RoleAdherence](RoleAdherence.md) | The assistant stays in the character of its `chatbot_role` | Persona and role-play chatbots |
+| [GoalAccuracy](GoalAccuracy.md) | The assistant achieves each user goal with a sound, followed plan | Multi-turn agents that must finish tasks |
+| [ToolUse](ToolUse.md) | The assistant picks the right tools and calls them with the right arguments | Multi-turn tool-calling agents |
 
 ### System One Metrics
 Your own questions, answered by a System One model (Jev) with calibrated probabilities; no LLM is called:

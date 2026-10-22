@@ -1,0 +1,15 @@
+{
+  "template": "GoalAccuracyMetric.get_final_reason",
+  "inputs": {
+    "multimodal": true,
+    "final_score": 0,
+    "threshold": 1,
+    "goal_scores": [
+      {
+        "score": 0.25,
+        "reason": "Weak."
+      }
+    ],
+    "plan_scores": []
+  }
+}

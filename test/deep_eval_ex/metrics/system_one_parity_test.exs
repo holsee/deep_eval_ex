@@ -64,13 +64,16 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
     turn_contextual_recall_hybrid_fallback
     turn_contextual_relevancy_system_one turn_contextual_relevancy_hybrid
     turn_contextual_relevancy_hybrid_fallback
+    goal_accuracy_system_one goal_accuracy_system_one_strict goal_accuracy_hybrid
+    goal_accuracy_hybrid_fallback
+    tool_use_system_one tool_use_hybrid tool_use_hybrid_fallback
   )
 
   @batched_scenarios ~w(
     batch_system_one batch_system_one_retrieval batch_system_one_safety
     batch_system_one_pii_alignment batch_system_one_agent batch_system_one_json
     batch_system_one_summarization batch_system_one_conversational
-    batch_system_one_retention_role batch_system_one_turn_rag
+    batch_system_one_retention_role batch_system_one_turn_rag batch_system_one_goal_tool
     batch_system_one_down
   )
 

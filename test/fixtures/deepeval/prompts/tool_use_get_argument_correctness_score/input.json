@@ -1,0 +1,22 @@
+{
+  "template": "ToolUseMetric.get_argument_correctness_score",
+  "inputs": {
+    "user_messages": "Book a table at \"Café Odéon\" on Saturday. \n",
+    "assistant_messages": "Booked for Saturday at 19:00. \n",
+    "tools_called": [
+      {
+        "name": "book_table",
+        "input_parameters": {
+          "day": "Saturday",
+          "restaurant": "Café Odéon"
+        }
+      }
+    ],
+    "available_tools": [
+      {
+        "name": "book_table",
+        "description": "Book a restaurant table"
+      }
+    ]
+  }
+}
