@@ -100,6 +100,36 @@ ContextualPrecision reads `retrieval_context` only. As in deepeval 4.3.1,
 with `'retrieval_context' cannot be None for the 'Contextual Precision'
 metric`.
 
+## Sources: RetrievedContextData
+
+A retrieval context may mix strings with
+`DeepEvalEx.Schemas.RetrievedContextData`, chunks that name their source.
+As deepeval 4.3.1's `_group_retrieval_contexts` does, the metric judges and
+ranks one document per source: the chunks of a source become
+`"Source: <source>\n"` followed by their contexts joined with
+`"\n---\n"`, at the position of the source's first chunk, and each string
+stays a document of its own.
+
+```elixir
+alias DeepEvalEx.Schemas.RetrievedContextData
+
+test_case = TestCase.new!(
+  input: "Tell me about Paris.",
+  expected_output: "Paris is the capital of France.",
+  retrieval_context: [
+    %RetrievedContextData{context: "Paris is the capital of France.", source: "wiki"},
+    "Rome is the capital of Italy.",
+    %RetrievedContextData{context: "Paris hosts the government.", source: "wiki"}
+  ]
+)
+
+ContextualPrecision.group_retrieval_contexts(test_case.retrieval_context)
+# => ["Source: wiki\nParis is the capital of France.\n---\nParis hosts the government.",
+#     "Rome is the capital of Italy."]
+```
+
+The judge sees two documents, so it returns two verdicts.
+
 ## Skipping Reason Generation
 
 For faster evaluation, skip reason generation:

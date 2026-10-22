@@ -1247,6 +1247,34 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     Summarization always extracts claims and truths with the Faithfulness
     prompts.
   - The metrics overview has a Custom Prompts section.
+- **`RetrievedContextData` in `retrieval_context`**, a port of deepeval
+  4.3.1's `RetrievedContextData`: `DeepEvalEx.Schemas.RetrievedContextData`
+  is a retrieved chunk with its `:context` and `:source`, and a test case's
+  `:retrieval_context` may mix them with strings. `TestCase.new/1` also
+  builds one from a map with `context` and `source` keys and rejects any
+  other item; `:context` stays strings only. Each place treats one as
+  deepeval does:
+  - the test run export and `DeepEvalEx.TestResult` keep only its
+    `:context`, so `retrievalContext` stays a list of strings
+  - ContextualPrecision groups the chunks of one source into a single
+    `"Source: <source>"` document at the source's first position
+    (`ContextualPrecision.group_retrieval_contexts/1`), and judges and ranks
+    those documents
+  - ContextualRecall's verdicts prompt and GEval's test case content print
+    it as its pydantic repr, `RetrievedContextData(context='...',
+    source='...')` (`DeepEvalEx.Prompts.Python.repr/1`), and ContextualRecall
+    sends it to System One under `:hybrid` as pydantic's `str()`
+    (the new `DeepEvalEx.Prompts.Python.str/1`)
+  - a System One state of the whole test case sends it as its serialised
+    `"source: context"`, its `to_string/1`
+  - deepeval 4.3.1's Faithfulness and ContextualRelevancy raise a
+    `TypeError` on one; DeepEvalEx renders it as `"source: context"` there
+    instead
+  - JevEval's multimodal check reads its `:context`
+  - three scripted-judge parity scenarios written by deepeval
+    (`contextual_precision_`, `contextual_recall_` and
+    `g_eval_retrieved_context_data`) check the prompts, results and exports
+    byte for byte
 
 ### Changed
 

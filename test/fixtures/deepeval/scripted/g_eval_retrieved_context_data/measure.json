@@ -1,0 +1,12 @@
+{
+  "score": 0.9,
+  "success": true,
+  "reason": "The claim is supported by the first document.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Criteria:\nNone \n \nEvaluation Steps:\n[\n    \"Check whether every claim in the actual output is supported by the retrieval context.\"\n] \n \nRubric:\nNone \n \nScore: 0.9"
+}

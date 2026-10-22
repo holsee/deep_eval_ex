@@ -290,6 +290,14 @@ defmodule DeepEvalEx.Test.ScriptedParity do
       {key, tool_calls} when key in ["tools_called", "expected_tools"] ->
         {key, Enum.map(tool_calls, &Map.new(&1.values))}
 
+      # {"context", "source"} objects are RetrievedContextData
+      {"retrieval_context", items} ->
+        {"retrieval_context",
+         Enum.map(items, fn
+           %OrderedObject{values: values} -> Map.new(values)
+           text -> text
+         end)}
+
       pair ->
         pair
     end)

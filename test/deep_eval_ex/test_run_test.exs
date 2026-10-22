@@ -3,7 +3,7 @@ defmodule DeepEvalEx.TestRunTest do
 
   alias DeepEvalEx.Metrics.ArgumentCorrectness
   alias DeepEvalEx.{Result, TestCase, TestRun}
-  alias DeepEvalEx.Schemas.ToolCall
+  alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
   alias DeepEvalEx.TestRun.JSON
 
   defp ok(metric, score, opts \\ []) do
@@ -344,6 +344,20 @@ defmodule DeepEvalEx.TestRunTest do
 
       assert "context" in keys
       refute "retrievalContext" in keys
+    end
+
+    test "exports only the context of RetrievedContextData, as deepeval's create_api_test_case" do
+      data = %RetrievedContextData{context: "Paris is in France.", source: "wiki"}
+      test_case = %TestCase{input: "a", retrieval_context: [data, "plain chunk"]}
+      test_run = TestRun.from_results([test_case], [[ok("M", 1.0)]])
+
+      assert encode(test_run) =~ ~s("retrievalContext": ["Paris is in France.", "plain chunk"])
+
+      assert {[%{retrieval_context: ["Paris is in France.", "plain chunk"]}], _results} =
+               TestRun.to_results(test_run)
+
+      assert %{retrieval_context: ["Paris is in France.", "plain chunk"]} =
+               DeepEvalEx.TestResult.new(test_case, [ok("M", 1.0)], 0)
     end
 
     test "keeps an empty tool call list and omits unset ones, as deepeval's exclude_none" do

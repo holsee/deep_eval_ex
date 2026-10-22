@@ -21,7 +21,9 @@ defmodule DeepEvalEx.TestResult do
   - `:index` - The test case's position in the evaluated list (deepeval's
     `order`)
   - `:input`, `:actual_output`, `:expected_output`, `:context`,
-    `:retrieval_context`, `:metadata` - The test case's own fields
+    `:retrieval_context`, `:metadata` - The test case's own fields; of a
+    `DeepEvalEx.Schemas.RetrievedContextData` in `:retrieval_context` only
+    its `:context` is kept, as deepeval does
   - `:classifications` - Classifier results, maps with a `:success` of
     `true`, `false` or `nil`; `[]` where deepeval has `None`. DeepEvalEx has
     no classifiers yet, so `DeepEvalEx.evaluate/3` always leaves this empty
@@ -30,6 +32,7 @@ defmodule DeepEvalEx.TestResult do
   """
 
   alias DeepEvalEx.{Result, TestCase}
+  alias DeepEvalEx.Schemas.RetrievedContextData
 
   @type classification :: %{required(:success) => boolean() | nil, optional(atom()) => term()}
 
@@ -89,11 +92,17 @@ defmodule DeepEvalEx.TestResult do
       actual_output: test_case.actual_output,
       expected_output: test_case.expected_output,
       context: test_case.context,
-      retrieval_context: test_case.retrieval_context,
+      retrieval_context: contexts(test_case.retrieval_context),
       metadata: test_case.metadata,
       classifications: classifications
     }
   end
+
+  # deepeval's create_api_test_case keeps only a RetrievedContextData's context
+  defp contexts(nil), do: nil
+
+  defp contexts(retrieval_context),
+    do: Enum.map(retrieval_context, &RetrievedContextData.context/1)
 
   # deepeval's LLMApiTestCase starts with success=True; update_metric_data
   # sets it to False when a non-flaky metric's success is False.

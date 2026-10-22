@@ -405,4 +405,62 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
       assert Enum.map(questions, &elem(&1, 0)) == ["sentence_0", "sentence_1"]
     end
   end
+
+  describe "measure/2 with RetrievedContextData" do
+    alias DeepEvalEx.Schemas.RetrievedContextData
+
+    @data %RetrievedContextData{
+      context: "Employees receive 20 days of paid time off.",
+      source: "handbook"
+    }
+
+    test "prints the retrieval context as Python's str(list), deepeval's repr of the model" do
+      Mock.script(%{
+        "verdicts" => [%{"verdicts" => [%{"verdict" => "yes", "reason" => "Node 1 says so."}]}],
+        "reason" => [%{"reason" => "The score is 1.00 because the sentence is supported."}]
+      })
+
+      test_case =
+        TestCase.new!(
+          input: "What is the vacation policy?",
+          expected_output: "Employees get 20 days.",
+          retrieval_context: [@data, "plain chunk"]
+        )
+
+      assert {:ok, _result} = ContextualRecall.measure(test_case, adapter: :mock)
+
+      [prompt | _] =
+        for %{step: "verdicts", prompt: prompt} <- Mock.scripted_prompts(), do: prompt
+
+      assert prompt =~
+               ~s{[RetrievedContextData(context='Employees receive 20 days of paid time off.', source='handbook'), 'plain chunk']}
+    end
+
+    test "sends the retrieval context to System One as Python's str() of each item, as deepeval's _jsonable" do
+      Mock.set_schema_response(~r/summarize a CONCISE reason for the score/i, %{
+        "reason" => "The score is 1.00 because the sentence is supported."
+      })
+
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.9))
+
+      test_case =
+        TestCase.new!(
+          input: "What is the vacation policy?",
+          expected_output: "Employees get 20 days.",
+          retrieval_context: [@data, "plain chunk"]
+        )
+
+      assert {:ok, _result} =
+               ContextualRecall.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one
+               )
+
+      assert [%SystemOneMock.Call{state: state}] = SystemOneMock.calls(system_one)
+
+      assert Jason.encode!(state) =~
+               ~s{"retrieval_context":["context='Employees receive 20 days of paid time off.' source='handbook'","plain chunk"]}
+    end
+  end
 end

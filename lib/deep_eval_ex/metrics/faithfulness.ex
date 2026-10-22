@@ -190,6 +190,8 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
     end
   end
 
+  # A RetrievedContextData joins as its "source: context" text (deepeval
+  # 4.3.1 raises on it).
   defp generate_truths(retrieval_context, limit, opts) do
     context_text = Enum.join(retrieval_context, "\n\n")
 

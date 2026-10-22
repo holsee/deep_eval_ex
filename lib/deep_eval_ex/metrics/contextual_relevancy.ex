@@ -174,9 +174,11 @@ defmodule DeepEvalEx.Metrics.ContextualRelevancy do
 
   # One list of verdicts per node, in order. deepeval gathers the nodes
   # concurrently; they are judged one after the other here so a scripted
-  # judge answers them in the same order.
+  # judge answers them in the same order. A RetrievedContextData node is
+  # judged as its "source: context" text (deepeval 4.3.1 raises on it).
   defp generate_verdicts_list(input, retrieval_context, opts) do
     retrieval_context
+    |> Enum.map(&to_string/1)
     |> Enum.reduce_while({:ok, []}, fn context, {:ok, acc} ->
       case generate_verdicts(input, context, opts) do
         {:ok, verdicts} -> {:cont, {:ok, [verdicts | acc]}}

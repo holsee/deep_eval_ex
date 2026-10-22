@@ -12,7 +12,9 @@ defmodule DeepEvalEx.TestCase do
   - `:expected_output` - The expected/ground truth output (optional)
   - `:retrieval_context` - List of context chunks your retriever returned at
     run time, for RAG metrics (Faithfulness, ContextualPrecision,
-    ContextualRecall, ContextualRelevancy)
+    ContextualRecall, ContextualRelevancy): strings, or
+    `DeepEvalEx.Schemas.RetrievedContextData` structs naming each chunk's
+    source, in any mix
   - `:context` - List of ideal, ground-truth context for the input, for
     Hallucination
   - `:tools_called` - List of tool calls made by the LLM. `nil` (deepeval's
@@ -54,7 +56,9 @@ defmodule DeepEvalEx.TestCase do
 
   As in deepeval 4.3.1, `:context` and `:retrieval_context` are separate
   fields: neither stands in for the other, and each is exported only when
-  set (`context` and `retrievalContext`).
+  set (`context` and `retrievalContext`). `:context` holds strings only;
+  `:retrieval_context` also takes `DeepEvalEx.Schemas.RetrievedContextData`,
+  of which the export keeps only the `:context`, as deepeval's does.
 
   ## Examples
 
@@ -84,13 +88,13 @@ defmodule DeepEvalEx.TestCase do
 
   import Peri
 
-  alias DeepEvalEx.Schemas.ToolCall
+  alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
 
   @type t :: %__MODULE__{
           input: String.t(),
           actual_output: String.t() | nil,
           expected_output: String.t() | nil,
-          retrieval_context: [String.t()] | nil,
+          retrieval_context: [String.t() | RetrievedContextData.t()] | nil,
           context: [String.t()] | nil,
           tools_called: [ToolCall.t()] | nil,
           expected_tools: [ToolCall.t()] | nil,
@@ -161,7 +165,7 @@ defmodule DeepEvalEx.TestCase do
     input: {:required, :string},
     actual_output: :string,
     expected_output: :string,
-    retrieval_context: {:list, :string},
+    retrieval_context: {:list, {:custom, {RetrievedContextData, :cast_item}}},
     context: {:list, :string},
     tools_called: {:list, @tool_call_schema},
     expected_tools: {:list, @tool_call_schema},
@@ -186,7 +190,9 @@ defmodule DeepEvalEx.TestCase do
   - `:input` - The input prompt (required)
   - `:actual_output` - The LLM's response
   - `:expected_output` - Expected output for comparison
-  - `:retrieval_context` - List of retrieved context strings
+  - `:retrieval_context` - List of retrieved context strings or
+    `DeepEvalEx.Schemas.RetrievedContextData` structs (or maps with
+    `context` and `source` keys, which are built into them)
   - `:context` - List of ground-truth context strings
   - `:tools_called` - List of tool calls made
   - `:expected_tools` - Expected tool calls

@@ -12,7 +12,9 @@ defmodule DeepEvalEx.Prompts.Python do
   formats these values the way Python does:
 
   - `repr/1` - Python's `repr()` of strings, lists, dicts, numbers, `None`,
-    booleans and deepeval `ToolCall`s
+    booleans and deepeval `ToolCall`s and `RetrievedContextData`
+  - `str/1` - Python's `str()` of a string or a deepeval
+    `RetrievedContextData`
   - `format_fixed/2` - Python's `format(number, ".<n>f")`
   - `format_g/1` - Python's `format(number, "g")`, as in deepeval's
     `f"weight={weight:g}"`
@@ -25,7 +27,7 @@ defmodule DeepEvalEx.Prompts.Python do
   decimal, so `repr/1` of the result prints what Python prints.
   """
 
-  alias DeepEvalEx.Schemas.ToolCall
+  alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
   alias DeepEvalEx.TestRun.JSON
 
   # Python's default precision for the "g" format.
@@ -90,6 +92,8 @@ defmodule DeepEvalEx.Prompts.Python do
   - lists as `[a, b]`; maps and `Jason.OrderedObject`s as `{k: v}`, in
     iteration order
   - `DeepEvalEx.Schemas.ToolCall`s as deepeval's `ToolCall.__repr__`
+  - `DeepEvalEx.Schemas.RetrievedContextData` as pydantic's `__repr__`,
+    `RetrievedContextData(context='...', source='...')`
   - `DeepEvalEx.Prompts.Python.EnumMember`s as `<Class.NAME: value>`
 
   ## Examples
@@ -102,6 +106,25 @@ defmodule DeepEvalEx.Prompts.Python do
   """
   @spec repr(term()) :: String.t()
   def repr(term), do: term |> do_repr() |> IO.iodata_to_binary()
+
+  @doc """
+  Formats `term` like Python's `str(term)`, for what deepeval passes
+  through `str()`: a string as it is, and a
+  `DeepEvalEx.Schemas.RetrievedContextData` as pydantic's `__str__`, its
+  fields as `name=repr(value)` joined with spaces (not deepeval's
+  `model_serializer`, which only `model_dump` uses).
+
+  ## Examples
+
+      iex> alias DeepEvalEx.Schemas.RetrievedContextData
+      iex> DeepEvalEx.Prompts.Python.str(%RetrievedContextData{context: "It's here.", source: "wiki"})
+      ~S(context="It's here." source='wiki')
+  """
+  @spec str(String.t() | RetrievedContextData.t()) :: String.t()
+  def str(binary) when is_binary(binary), do: binary
+
+  def str(%RetrievedContextData{context: context, source: source}),
+    do: IO.iodata_to_binary(["context=", string(context), " source=", string(source)])
 
   @doc """
   Formats `string` like Jinja's `tojson` filter, which deepeval's templates
@@ -425,6 +448,9 @@ defmodule DeepEvalEx.Prompts.Python do
   defp do_repr(float) when is_float(float), do: JSON.float_repr(float)
   defp do_repr(list) when is_list(list), do: [?[, list |> Enum.map(&do_repr/1) |> join(), ?]]
   defp do_repr(%ToolCall{} = tool_call), do: tool_call(tool_call)
+
+  defp do_repr(%RetrievedContextData{context: context, source: source}),
+    do: ["RetrievedContextData(context=", string(context), ", source=", string(source), ?)]
 
   defp do_repr(%EnumMember{class: class, name: name, value: value}),
     do: [?<, class, ?., name, ": ", do_repr(value), ?>]

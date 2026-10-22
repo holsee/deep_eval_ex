@@ -112,6 +112,7 @@ defmodule DeepEvalEx.Metrics.JevEval do
   alias DeepEvalEx.LLM.Usage
   alias DeepEvalEx.Metrics.BaseMetric
   alias DeepEvalEx.Metrics.Utils.Verbose
+  alias DeepEvalEx.Schemas.RetrievedContextData
   alias DeepEvalEx.SystemOne.{Context, Model, Scored, Scoring, State}
 
   @enforce_keys [:name, :questions, :system_one_model]
@@ -307,7 +308,8 @@ defmodule DeepEvalEx.Metrics.JevEval do
   defp multimodal?(%TestCase{} = test_case) do
     texts =
       [test_case.input, test_case.actual_output, test_case.expected_output] ++
-        List.wrap(test_case.retrieval_context) ++ List.wrap(test_case.context)
+        Enum.map(List.wrap(test_case.retrieval_context), &RetrievedContextData.context/1) ++
+        List.wrap(test_case.context)
 
     Enum.any?(texts, &(is_binary(&1) and Regex.match?(@multimodal, &1)))
   end

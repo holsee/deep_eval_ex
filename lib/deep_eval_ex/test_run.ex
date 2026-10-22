@@ -81,7 +81,7 @@ defmodule DeepEvalEx.TestRun do
   """
 
   alias DeepEvalEx.{Result, TestRun}
-  alias DeepEvalEx.Schemas.ToolCall
+  alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
   alias DeepEvalEx.TestCase, as: EvalTestCase
   alias DeepEvalEx.TestRun.JSON
   alias Jason.OrderedObject
@@ -610,7 +610,7 @@ defmodule DeepEvalEx.TestRun do
       actual_output: test_case.actual_output,
       expected_output: test_case.expected_output,
       context: test_case.context,
-      retrieval_context: non_empty(test_case.retrieval_context),
+      retrieval_context: test_case.retrieval_context |> contexts() |> non_empty(),
       tools_called: test_case.tools_called,
       expected_tools: test_case.expected_tools,
       token_cost: test_case.token_cost,
@@ -1015,6 +1015,12 @@ defmodule DeepEvalEx.TestRun do
   defp invalid!(path, expected, value) do
     throw({:invalid_test_run, "#{path}: #{expected}, got #{inspect(value)}"})
   end
+
+  # deepeval's create_api_test_case keeps only a RetrievedContextData's context
+  defp contexts(nil), do: nil
+
+  defp contexts(retrieval_context),
+    do: Enum.map(retrieval_context, &RetrievedContextData.context/1)
 
   defp non_empty([]), do: nil
   defp non_empty(list), do: list

@@ -1,7 +1,7 @@
 defmodule DeepEvalEx.TestCaseTest do
   use ExUnit.Case, async: true
 
-  alias DeepEvalEx.Schemas.ToolCall
+  alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
   alias DeepEvalEx.TestCase
 
   doctest DeepEvalEx.TestCase
@@ -52,6 +52,44 @@ defmodule DeepEvalEx.TestCaseTest do
 
       assert test_case.retrieval_context == ["chunk 1"]
       assert test_case.context == nil
+    end
+  end
+
+  describe "new/1 with RetrievedContextData" do
+    test "accepts RetrievedContextData structs mixed with strings, in order" do
+      data = %RetrievedContextData{context: "Paris is in France.", source: "wiki"}
+
+      assert {:ok, test_case} =
+               TestCase.new(input: "Q", retrieval_context: [data, "plain chunk"])
+
+      assert test_case.retrieval_context == [data, "plain chunk"]
+    end
+
+    test "builds RetrievedContextData from maps with context and source" do
+      assert {:ok, test_case} =
+               TestCase.new(%{
+                 "input" => "Q",
+                 "retrievalContext" => [
+                   %{"context" => "Paris is in France.", "source" => "wiki"},
+                   %{context: "Lyon too.", source: "atlas"}
+                 ]
+               })
+
+      assert test_case.retrieval_context == [
+               %RetrievedContextData{context: "Paris is in France.", source: "wiki"},
+               %RetrievedContextData{context: "Lyon too.", source: "atlas"}
+             ]
+    end
+
+    test "rejects other items, as deepeval's validate_input" do
+      assert {:error, _} = TestCase.new(input: "Q", retrieval_context: [1])
+      assert {:error, _} = TestCase.new(input: "Q", retrieval_context: [%{context: "no source"}])
+    end
+
+    test "keeps context a list of strings only" do
+      data = %RetrievedContextData{context: "Paris is in France.", source: "wiki"}
+
+      assert {:error, _} = TestCase.new(input: "Q", context: [data])
     end
   end
 

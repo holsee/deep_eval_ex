@@ -774,4 +774,36 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       assert SystemOneMock.calls(system_one) == []
     end
   end
+
+  describe "measure/2 with RetrievedContextData" do
+    # deepeval 4.3.1 raises a TypeError joining RetrievedContextData into the
+    # truths prompt; DeepEvalEx renders each as its serialised form instead.
+    test "renders each RetrievedContextData as 'source: context' in the truths prompt" do
+      Mock.script(%{
+        "truths" => [%{"truths" => ["Paris is in France."]}],
+        "claims" => [%{"claims" => []}],
+        "reason" => [%{"reason" => "The score is 1.00 because there are no claims."}]
+      })
+
+      test_case =
+        TestCase.new!(
+          input: "Where is Paris?",
+          actual_output: "In France.",
+          retrieval_context: [
+            %DeepEvalEx.Schemas.RetrievedContextData{
+              context: "Paris is in France.",
+              source: "wiki"
+            },
+            "Lyon is in France."
+          ]
+        )
+
+      assert {:ok, _result} = Faithfulness.measure(test_case, adapter: :mock)
+
+      [truths_prompt] =
+        for %{step: "truths", prompt: prompt} <- Mock.scripted_prompts(), do: prompt
+
+      assert truths_prompt =~ "wiki: Paris is in France.\n\nLyon is in France."
+    end
+  end
 end

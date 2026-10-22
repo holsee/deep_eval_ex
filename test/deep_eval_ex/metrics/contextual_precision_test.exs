@@ -10,6 +10,8 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
   alias DeepEvalEx.SystemOne.{EvalSpec, Scored}
   alias DeepEvalEx.TestCase
 
+  doctest DeepEvalEx.Metrics.ContextualPrecision, only: [group_retrieval_contexts: 1]
+
   setup do
     Mock.clear_responses()
     :ok
@@ -469,6 +471,49 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
 
       assert [%SystemOneMock.Call{questions: questions}] = SystemOneMock.calls(system_one)
       assert Enum.map(questions, &elem(&1, 0)) == ["node_0", "node_1"]
+    end
+  end
+
+  describe "measure/2 with RetrievedContextData" do
+    alias DeepEvalEx.Schemas.RetrievedContextData
+
+    test "groups contexts by source at the source's first position, as deepeval's _group_retrieval_contexts" do
+      Mock.script(%{
+        "verdicts" => [
+          %{
+            "verdicts" => [
+              %{"verdict" => "yes", "reason" => "It names the capital."},
+              %{"verdict" => "no", "reason" => "Rome is irrelevant."},
+              %{"verdict" => "yes", "reason" => "It names the tower."}
+            ]
+          }
+        ],
+        "reason" => [%{"reason" => "The score is 0.83 because a relevant node is ranked last."}]
+      })
+
+      test_case =
+        TestCase.new!(
+          input: "Tell me about Paris.",
+          expected_output: "Paris is the capital of France.",
+          retrieval_context: [
+            %RetrievedContextData{context: "Paris is the capital of France.", source: "wiki"},
+            "Rome is the capital of Italy.",
+            %RetrievedContextData{context: "The Eiffel Tower is in Paris.", source: "atlas"},
+            %RetrievedContextData{context: "Paris has 2 million people.", source: "wiki"}
+          ]
+        )
+
+      assert {:ok, result} = ContextualPrecision.measure(test_case, adapter: :mock)
+      assert result.metadata.context_count == 3
+
+      [prompt | _] =
+        for %{step: "verdicts", prompt: prompt} <- Mock.scripted_prompts(), do: prompt
+
+      assert prompt =~
+               ~S"""
+               Retrieval Context  (3 documents):
+               ['Source: wiki\nParis is the capital of France.\n---\nParis has 2 million people.', 'Rome is the capital of Italy.', 'Source: atlas\nThe Eiffel Tower is in Paris.']
+               """
     end
   end
 end

@@ -85,7 +85,7 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
   alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Metrics.QAG, Result}
   alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.ContextualRecall, as: Template
-  alias DeepEvalEx.Prompts.EvaluationTemplate
+  alias DeepEvalEx.Prompts.{EvaluationTemplate, Python}
   alias DeepEvalEx.Schemas.MetricOutputs.ContextualRecall, as: Schema
   alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
 
@@ -184,7 +184,9 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
       instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
       items: Decision.split_sentences(expected_output),
       item_key: "sentence",
-      state: [retrieval_context: retrieval_context]
+      # deepeval's _jsonable sends each item as str(item), so a
+      # RetrievedContextData as pydantic's str, not its serialised form
+      state: [retrieval_context: Enum.map(retrieval_context, &Python.str/1)]
     }
 
     decision_opts = Keyword.put_new(opts, :metric_name, metric_name())

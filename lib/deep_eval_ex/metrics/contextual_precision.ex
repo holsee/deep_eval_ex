@@ -93,6 +93,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   alias DeepEvalEx.Prompts.ContextualPrecision, as: Template
   alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Schemas.MetricOutputs.ContextualPrecision, as: Schema
+  alias DeepEvalEx.Schemas.RetrievedContextData
   alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
 
   @impl true
@@ -144,7 +145,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
 
     input = test_case.input
     expected_output = test_case.expected_output
-    retrieval_context = test_case.retrieval_context
+    retrieval_context = group_retrieval_contexts(test_case.retrieval_context)
 
     with {:ok, verdicts} <- generate_verdicts(input, expected_output, retrieval_context, opts),
          score =
@@ -212,6 +213,50 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
       {:ok, response} -> Schema.parse_verdicts(response)
       {:error, _} = error -> error
     end
+  end
+
+  @doc """
+  Groups a retrieval context's `DeepEvalEx.Schemas.RetrievedContextData`
+  by source, as deepeval's `_group_retrieval_contexts`: the contexts of one
+  source become one document, `"Source: <source>\\n"` followed by them
+  joined with `"\\n---\\n"`, at the position of the source's first
+  context. Strings stay documents of their own, in place. The metric
+  judges and ranks these documents.
+
+  ## Examples
+
+      iex> alias DeepEvalEx.Schemas.RetrievedContextData
+      iex> DeepEvalEx.Metrics.ContextualPrecision.group_retrieval_contexts([
+      ...>   %RetrievedContextData{context: "Paris is in France.", source: "wiki"},
+      ...>   "Rome is in Italy.",
+      ...>   %RetrievedContextData{context: "Lyon is in France.", source: "wiki"}
+      ...> ])
+      ["Source: wiki\\nParis is in France.\\n---\\nLyon is in France.", "Rome is in Italy."]
+  """
+  @spec group_retrieval_contexts([String.t() | RetrievedContextData.t()]) :: [String.t()]
+  def group_retrieval_contexts(retrieval_context) do
+    {order, groups} =
+      Enum.reduce(retrieval_context, {[], %{}}, fn
+        %RetrievedContextData{source: source, context: context}, {order, groups} ->
+          case groups do
+            %{^source => contexts} -> {order, %{groups | source => [context | contexts]}}
+            _ -> {[{:grouped, source} | order], Map.put(groups, source, [context])}
+          end
+
+        text, {order, groups} when is_binary(text) ->
+          {[{:standalone, text} | order], groups}
+      end)
+
+    order
+    |> Enum.reverse()
+    |> Enum.map(fn
+      {:grouped, source} ->
+        "Source: #{source}\n" <>
+          (groups |> Map.fetch!(source) |> Enum.reverse() |> Enum.join("\n---\n"))
+
+      {:standalone, text} ->
+        text
+    end)
   end
 
   @doc """

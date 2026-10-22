@@ -1,0 +1,45 @@
+{
+  "description": "ContextualRecall: RetrievedContextData printed as its pydantic repr in the retrieval context list",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "contextual_recall",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "Tell me about Paris.",
+    "actual_output": "Paris is the capital of France. It has the Eiffel Tower.",
+    "expected_output": "Paris is the capital of France and is home to the Eiffel Tower.",
+    "retrieval_context": [
+      {
+        "context": "Paris is the capital and largest city of France.",
+        "source": "wiki/Paris"
+      },
+      "Rome is the capital of Italy.",
+      {
+        "context": "The Eiffel Tower's height is 330 m.",
+        "source": "atlas"
+      }
+    ]
+  },
+  "responses": {
+    "contextual_recall": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes",
+              "reason": "Node 1 states Paris is the capital of France."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1.00 because the sentence is supported by the retrieval context."
+        }
+      ]
+    }
+  }
+}

@@ -152,6 +152,7 @@ from deepeval.prompt import Prompt, PromptMessage  # noqa: E402
 from deepeval.templates import iter_base_template_methods  # noqa: E402
 from deepeval.test_case import (  # noqa: E402
     LLMTestCase,
+    RetrievedContextData,
     SingleTurnParams,
     ToolCall,
     ToolCallParams,
@@ -308,6 +309,13 @@ def build_test_case(spec):
     for key in ("tools_called", "expected_tools"):
         if key in spec:
             spec[key] = [ToolCall(**tool_call) for tool_call in spec[key]]
+    # A retrieval_context item written as {"context", "source"} is a
+    # RetrievedContextData; strings stay strings.
+    if "retrieval_context" in spec:
+        spec["retrieval_context"] = [
+            RetrievedContextData(**item) if isinstance(item, dict) else item
+            for item in spec["retrieval_context"]
+        ]
     return LLMTestCase(**spec)
 
 

@@ -135,7 +135,9 @@ calling an LLM. A script holds:
   `model_json_schema()`: the generator rebuilds the model from it
   (`build_expected_schema`) and fails unless the model's own schema is the
   same, key order included; DeepEvalEx takes the schema as it is
-- `test_case` - keyword arguments of deepeval's `LLMTestCase`
+- `test_case` - keyword arguments of deepeval's `LLMTestCase`; a
+  `retrieval_context` item written as a `{"context", "source"}` object is a
+  `RetrievedContextData` (`DeepEvalEx.Schemas.RetrievedContextData`)
 - `judge_model` - the name the judge reports as the evaluation model
 - `responses` - the judge's answers, keyed by metric kind, then by step, then
   listed by call index. An answer is an object the judge returns as the
@@ -180,12 +182,12 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | Metric | Scenarios |
 | --- | --- |
 | ExactMatch | `exact_match_pass`, `exact_match_fail` |
-| GEval | `g_eval_criteria_pass` (steps generated from criteria), `g_eval_steps_fail` (given steps), `g_eval_strict`, `g_eval_logprobs` (a raw response with logprobs: the score weighted by the final score token's top logprobs, the same number earlier in the reason ignored, a 1% and a non-decimal token dropped, `"08"` summed with `"8"`), `g_eval_logprobs_missing` (a raw response without logprobs: the raw score kept) |
+| GEval | `g_eval_criteria_pass` (steps generated from criteria), `g_eval_steps_fail` (given steps), `g_eval_strict`, `g_eval_logprobs` (a raw response with logprobs: the score weighted by the final score token's top logprobs, the same number earlier in the reason ignored, a 1% and a non-decimal token dropped, `"08"` summed with `"8"`), `g_eval_logprobs_missing` (a raw response without logprobs: the raw score kept), `g_eval_retrieved_context_data` (`retrieval_context` holding a `RetrievedContextData`, printed as its pydantic repr) |
 | Faithfulness | `faithfulness_pass`, `faithfulness_fail`, `faithfulness_borderline`, `faithfulness_penalize_ambiguous` (`penalize_ambiguous_claims`: the borderline verdict fails and is an `(Ambiguous)` contradiction), `faithfulness_no_claims` (empty list), `faithfulness_strict` |
 | Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_no_verdicts` (empty list), `hallucination_strict`, `hallucination_messy_json` (raw-text answers: prose, a code fence and trailing commas around the verdicts, a reason missing its closing brace), `hallucination_invalid_json` (a raw-text answer with no JSON: the metric errors) |
 | AnswerRelevancy | `answer_relevancy_pass`, `answer_relevancy_fail`, `answer_relevancy_no_statements` (empty list), `answer_relevancy_strict` |
-| ContextualPrecision | `contextual_precision_pass`, `contextual_precision_fail`, `contextual_precision_strict` |
-| ContextualRecall | `contextual_recall_pass`, `contextual_recall_fail`, `contextual_recall_strict` |
+| ContextualPrecision | `contextual_precision_pass`, `contextual_precision_fail`, `contextual_precision_strict`, `contextual_precision_retrieved_context_data` (`RetrievedContextData` of one source grouped into one `Source: ...` document at the source's first position, a string between them; the export keeps only each `context`) |
+| ContextualRecall | `contextual_recall_pass`, `contextual_recall_fail`, `contextual_recall_strict`, `contextual_recall_retrieved_context_data` (`RetrievedContextData` printed as its pydantic repr in the retrieval context list) |
 | ContextualRelevancy | `contextual_relevancy_pass`, `contextual_relevancy_fail` (a `no` verdict without a reason, listed as `None` in the reason prompt), `contextual_relevancy_no_statements` (an empty list for every node: the integer `0`), `contextual_relevancy_strict`; one `verdicts` call per retrieval context node, in order |
 | Bias | `bias_pass`, `bias_fail` (a `yes` verdict without a reason, listed as `None` in the reason prompt), `bias_no_opinions` (no opinions: no `verdicts` call, the integer `1`), `bias_strict` |
 | Toxicity | `toxicity_pass`, `toxicity_fail` (a `yes` verdict without a reason, listed as `None` in the reason prompt), `toxicity_no_opinions` (no opinions: no `verdicts` call, the integer `1`), `toxicity_strict` |

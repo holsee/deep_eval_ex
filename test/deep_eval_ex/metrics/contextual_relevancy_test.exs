@@ -250,4 +250,39 @@ defmodule DeepEvalEx.Metrics.ContextualRelevancyTest do
                result.metadata.verdicts
     end
   end
+
+  describe "measure/2 with RetrievedContextData" do
+    # deepeval 4.3.1 raises a TypeError splitting a RetrievedContextData into
+    # sentences; DeepEvalEx judges its serialised form instead.
+    test "judges each RetrievedContextData as 'source: context'" do
+      Mock.script(%{
+        "verdicts" => [
+          %{"verdicts" => [%{"statement" => "Paris is in France.", "verdict" => "yes"}]},
+          %{"verdicts" => [%{"statement" => "Lyon is in France.", "verdict" => "yes"}]}
+        ],
+        "reason" => [%{"reason" => "The score is 1.00 because every statement is relevant."}]
+      })
+
+      test_case =
+        TestCase.new!(
+          input: "Where is Paris?",
+          retrieval_context: [
+            %DeepEvalEx.Schemas.RetrievedContextData{
+              context: "Paris is in France.",
+              source: "wiki"
+            },
+            "Lyon is in France."
+          ]
+        )
+
+      assert {:ok, result} = ContextualRelevancy.measure(test_case, adapter: :mock)
+      assert result.score == 1.0
+
+      assert [first, second] =
+               for(%{step: "verdicts", prompt: prompt} <- Mock.scripted_prompts(), do: prompt)
+
+      assert first =~ "Context:\nwiki: Paris is in France."
+      assert second =~ "Context:\nLyon is in France."
+    end
+  end
 end
