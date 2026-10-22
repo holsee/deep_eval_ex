@@ -1,0 +1,35 @@
+{
+  "test_cases": [
+    {
+      "input": "What is the capital of Italy?",
+      "actual_output": "",
+      "expected_output": "Rome",
+      "name": "empty-output"
+    },
+    {
+      "input": "Who wrote Hamlet?",
+      "actual_output": "William Shakespeare",
+      "expected_output": "William Shakespeare",
+      "name": "no-retrieval-context"
+    },
+    {
+      "input": "What is the boiling point of water?",
+      "name": "input-only"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "exact_match"
+    },
+    {
+      "kind": "faithfulness",
+      "judge_model": "mock-model"
+    }
+  ],
+  "identifier": null,
+  "hyperparameters": null,
+  "error_config": {
+    "ignore_errors": false,
+    "skip_on_missing_params": true
+  }
+}

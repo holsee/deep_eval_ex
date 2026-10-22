@@ -16,7 +16,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
 
   import ExUnit.Assertions
 
-  alias DeepEvalEx.Evaluator
+  alias DeepEvalEx.{Evaluator, MetricError}
   alias DeepEvalEx.LLM.Adapters.Mock
 
   alias DeepEvalEx.Metrics.{
@@ -72,6 +72,10 @@ defmodule DeepEvalEx.Test.ScriptedParity do
   Measures the scenario's test case with its metric, as deepeval's
   `measure()` did, under the scenario's script.
 
+  Like `measure()`, a metric that errors raises (`ignore_errors: false`);
+  the state it leaves is the raised `DeepEvalEx.MetricError`'s `:result`,
+  whose `success` is `nil` as deepeval's metric is left with `None`.
+
   Returns `{measured, prompts}`: the result as `measure.json`'s fields (see
   `measured/1`) and the prompts the metric sent, as
   `DeepEvalEx.LLM.Adapters.Mock.scripted_prompts/0` lists them.
@@ -82,14 +86,20 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     {metric, opts} = metric(script)
     load_script(script)
 
-    result = Evaluator.evaluate_metric(test_case(script), metric, opts)
+    result =
+      try do
+        Evaluator.evaluate_metric(test_case(script), metric, [ignore_errors: false] ++ opts)
+      rescue
+        error in [MetricError] -> error.result
+      end
+
     {measured(result), Mock.scripted_prompts()}
   end
 
   @doc """
   Evaluates the scenario with `DeepEvalEx.evaluate_run/3`, as deepeval's
-  `evaluate()` did, writing the test run to `results_folder`. Returns the
-  file's contents.
+  `evaluate()` did with `ignore_errors=True`, writing the test run to
+  `results_folder`. Returns the file's contents.
   """
   @spec test_run(String.t(), Path.t()) :: binary()
   def test_run(scenario, results_folder) do
@@ -102,7 +112,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
         DeepEvalEx.evaluate_run(
           [test_case(script)],
           [metric],
-          [results_folder: results_folder] ++ opts
+          [results_folder: results_folder, ignore_errors: true] ++ opts
         )
       end)
       |> elem(0)

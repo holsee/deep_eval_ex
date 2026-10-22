@@ -36,5 +36,9 @@
     "streaming": false,
     "prompt_version": "v3",
     "seed": null
+  },
+  "error_config": {
+    "ignore_errors": true,
+    "skip_on_missing_params": false
   }
 }

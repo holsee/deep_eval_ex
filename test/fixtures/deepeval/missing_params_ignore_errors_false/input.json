@@ -1,0 +1,19 @@
+{
+  "test_cases": [
+    {
+      "input": "What is the boiling point of water?",
+      "actual_output": "100 degrees Celsius."
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "exact_match"
+    }
+  ],
+  "identifier": null,
+  "hyperparameters": null,
+  "error_config": {
+    "ignore_errors": false,
+    "skip_on_missing_params": false
+  }
+}

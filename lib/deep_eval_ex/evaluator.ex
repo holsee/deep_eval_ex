@@ -32,6 +32,10 @@ defmodule DeepEvalEx.Evaluator do
   - `:flaky` - Default flakiness for all metrics
   - `:model` - Default LLM model for LLM-based metrics
   - `:adapter` - Default LLM adapter
+  - `:ignore_errors` - Record a metric's error on its result instead of
+    raising it (default: `false`), see "Errors"
+  - `:skip_on_missing_params` - Skip a metric whose test case lacks its
+    required params instead of erroring (default: `false`), see "Errors"
 
   Run-level options are defaults only: when a metric is passed as a struct,
   any non-nil field on that struct overrides the run-level option of the
@@ -49,7 +53,36 @@ defmodule DeepEvalEx.Evaluator do
   short grace period), so a slow metric errors on its own instead of taking
   down the whole test case. If the test case still exceeds its timeout (for
   example with `metric_timeout: :infinity`), every metric of that test case
-  is reported as errored with `"Evaluation timed out"`.
+  errors with `"Evaluation timed out"`. Timed-out metrics error like any
+  other (see "Errors").
+
+  ## Errors
+
+  These are deepeval's `ErrorConfig(ignore_errors=..., skip_on_missing_params=...)`,
+  with its defaults: like deepeval's `evaluate()`, they are not read from the
+  `IGNORE_DEEPEVAL_ERRORS` and `SKIP_DEEPEVAL_MISSING_PARAMS` settings,
+  which only `DeepEvalEx.ExUnit`'s assertions read, as deepeval's
+  `assert_test` does.
+
+  A metric *errors* when it raises, returns `{:error, reason}`, times out or
+  crashes. With `ignore_errors: false` the evaluation raises, as deepeval
+  re-raises the metric's exception: an exception the metric raised is
+  re-raised as it is, any other error raises `DeepEvalEx.MetricError`, or
+  `DeepEvalEx.MissingTestCaseParamsError` for missing test case params. The
+  first erroring metric, in `test_cases` then `metrics` order, raises;
+  metrics still running are stopped and no results are returned.
+
+  With `ignore_errors: true` the error is recorded on the metric's result
+  as an errored `DeepEvalEx.Result` (see `DeepEvalEx.Result.error/3`), with
+  the error message (`str(exception)`, as deepeval's asynchronous executor
+  records it) and `success: false` (`nil` for a score-only metric), and the
+  other metrics are unaffected.
+
+  With `skip_on_missing_params: true` a metric whose test case lacks its
+  required params is skipped whatever `:ignore_errors` is: its result is
+  `DeepEvalEx.Result.skipped/2`, which `DeepEvalEx.TestRun` leaves out of
+  `metricsData` and `metricsScores`, and a test case left with no measured
+  metric is left out of the test run.
 
   ## Results
 
@@ -61,8 +94,8 @@ defmodule DeepEvalEx.Evaluator do
       ]
   """
 
+  alias DeepEvalEx.{MetricError, MissingTestCaseParamsError, Result, TestCase}
   alias DeepEvalEx.Metrics.BaseMetric
-  alias DeepEvalEx.{Result, TestCase}
 
   @default_concurrency System.schedulers_online() * 2
   @default_timeout 60_000
@@ -82,7 +115,8 @@ defmodule DeepEvalEx.Evaluator do
 
   ## Returns
 
-  List of result lists, one per test case.
+  List of result lists, one per test case. Raises the first metric error
+  unless `:ignore_errors` is set (see "Errors" in the module documentation).
   """
   @spec evaluate([TestCase.t()], [module() | struct()], keyword()) :: [[Result.t()]]
   def evaluate(test_cases, metrics, opts \\ []) do
@@ -119,23 +153,30 @@ defmodule DeepEvalEx.Evaluator do
       |> Task.async_stream(
         fn test_case ->
           started = System.monotonic_time()
-          results = evaluate_single(test_case, metrics, opts)
-          {results, seconds_since(started)}
+          outcome = run_single(test_case, metrics, opts)
+          {outcome, seconds_since(started)}
         end,
         max_concurrency: concurrency,
         timeout: timeout,
         on_timeout: :kill_task
       )
-      |> Enum.map(fn
-        {:ok, timed_results} ->
-          timed_results
+      |> Enum.reduce_while([], fn
+        {:ok, {outcome, seconds}}, acc ->
+          collect(timed(outcome, seconds), acc)
 
-        {:exit, :timeout} ->
-          {error_results("Evaluation timed out", metrics, opts), timeout / 1000}
+        {:exit, :timeout}, acc ->
+          "Evaluation timed out"
+          |> error_outcomes(metrics, opts)
+          |> timed(timeout / 1000)
+          |> collect(acc)
 
-        {:exit, reason} ->
-          {error_results("Evaluation failed: #{inspect(reason)}", metrics, opts), 0.0}
+        {:exit, reason}, acc ->
+          "Evaluation failed: #{inspect(reason)}"
+          |> error_outcomes(metrics, opts)
+          |> timed(0.0)
+          |> collect(acc)
       end)
+      |> unwrap!()
       |> Enum.unzip()
 
     duration = System.monotonic_time(:millisecond) - start_time
@@ -154,15 +195,23 @@ defmodule DeepEvalEx.Evaluator do
 
   Metrics run concurrently (bounded by `:metric_concurrency`) and the
   results are returned in the same order as `metrics`. A metric that runs
-  longer than `:metric_timeout` (default: `:timeout`) is killed and yields
-  an errored `DeepEvalEx.Result` without affecting the other metrics.
+  longer than `:metric_timeout` (default: `:timeout`) is killed and errors
+  with `"Metric timed out"` without affecting the other metrics: with
+  `ignore_errors: true` it yields an errored `DeepEvalEx.Result`, otherwise
+  it raises (see "Errors" in the module documentation).
   """
   @spec evaluate_single(TestCase.t(), [module() | struct()], keyword()) :: [Result.t()]
   def evaluate_single(test_case, metrics, opts \\ []) do
-    results =
+    test_case |> run_single(metrics, opts) |> unwrap!()
+  end
+
+  # {:ok, results}, or the first metric error to raise in metrics order;
+  # halting the stream stops the metrics still running.
+  defp run_single(test_case, metrics, opts) do
+    outcomes =
       Task.async_stream(
         metrics,
-        &evaluate_metric(test_case, &1, opts),
+        &measure_metric(test_case, &1, opts),
         ordered: true,
         max_concurrency: metric_concurrency(metrics, opts),
         timeout: metric_timeout(opts),
@@ -170,12 +219,18 @@ defmodule DeepEvalEx.Evaluator do
       )
 
     metrics
-    |> Enum.zip(results)
-    |> Enum.map(fn
-      {_metric, {:ok, result}} -> result
-      {metric, {:exit, :timeout}} -> error_result("Metric timed out", metric, opts)
-      {metric, {:exit, reason}} -> error_result("Metric failed: #{inspect(reason)}", metric, opts)
+    |> Stream.zip(outcomes)
+    |> Enum.reduce_while([], fn
+      {_metric, {:ok, outcome}}, acc ->
+        collect(outcome, acc)
+
+      {metric, {:exit, :timeout}}, acc ->
+        collect(error_outcome("Metric timed out", metric, opts), acc)
+
+      {metric, {:exit, reason}}, acc ->
+        collect(error_outcome("Metric failed: #{inspect(reason)}", metric, opts), acc)
     end)
+    |> collected()
   end
 
   @doc """
@@ -194,9 +249,17 @@ defmodule DeepEvalEx.Evaluator do
   An exception raised by the metric is reported the same way, with the
   exception's message (`Exception.message/1`) as the error, as deepeval's
   evaluation records `str(exception)`. It does not affect the other metrics.
+
+  That is with `ignore_errors: true`. By default the error is raised, and
+  `skip_on_missing_params: true` skips a metric missing test case params
+  instead (see "Errors" in the module documentation).
   """
   @spec evaluate_metric(TestCase.t(), module() | struct(), keyword()) :: Result.t()
   def evaluate_metric(test_case, metric, opts) do
+    test_case |> measure_metric(metric, opts) |> unwrap!()
+  end
+
+  defp measure_metric(test_case, metric, opts) do
     # Run-level options are defaults; a metric's own configuration wins.
     module = metric_module(metric)
     merged_opts = BaseMetric.strict_opts(metric_opts(metric, opts), default_threshold(module))
@@ -206,10 +269,85 @@ defmodule DeepEvalEx.Evaluator do
 
     case outcome do
       # Also covers metrics that implement the behaviour without `use`.
-      {:ok, result} -> BaseMetric.apply_metric_semantics(result, merged_opts)
-      {:error, reason} -> error_result(reason, metric, opts, usages)
-      {:raised, exception, _stacktrace} -> error_result(exception, metric, opts, usages)
+      {:ok, result} ->
+        {:ok, BaseMetric.apply_metric_semantics(result, merged_opts)}
+
+      {:error, reason} ->
+        error_outcome(reason, metric, opts, usages)
+
+      {:raised, exception, stacktrace} ->
+        error_outcome(exception, metric, opts, usages, stacktrace)
     end
+  end
+
+  # deepeval's _execute_metric and safe_a_measure: a metric missing params
+  # is skipped with skip_on_missing_params; otherwise its error is stored
+  # with ignore_errors, else raised. `{:raise, exception, stacktrace}`
+  # re-raises an exception the metric raised; a nil stacktrace raises anew.
+  defp error_outcome(reason, metric, opts, usages \\ [], stacktrace \\ nil) do
+    cond do
+      missing_params?(reason) and Keyword.get(opts, :skip_on_missing_params, false) ->
+        {:ok, skipped_result(metric, opts)}
+
+      Keyword.get(opts, :ignore_errors, false) ->
+        {:ok, error_result(reason, metric, opts, usages)}
+
+      stacktrace != nil ->
+        {:raise, reason, stacktrace}
+
+      true ->
+        {:raise, metric_error(reason, metric, opts, usages), nil}
+    end
+  end
+
+  # Every metric of a killed test case errors with `reason`.
+  defp error_outcomes(reason, metrics, opts) do
+    metrics
+    |> Enum.reduce_while([], &collect(error_outcome(reason, &1, opts), &2))
+    |> collected()
+  end
+
+  # An Enum.reduce_while/3 step: accumulates results, in reverse, until an
+  # outcome raises; collected/1 then gives {:ok, results} or that outcome.
+  defp collect({:ok, result}, acc), do: {:cont, [result | acc]}
+  defp collect(raise, _acc), do: {:halt, raise}
+
+  defp collected(results) when is_list(results), do: {:ok, Enum.reverse(results)}
+  defp collected(raise), do: raise
+
+  defp timed({:ok, results}, seconds), do: {:ok, {results, seconds}}
+  defp timed(raise, _seconds), do: raise
+
+  defp unwrap!(results) when is_list(results), do: unwrap!(collected(results))
+  defp unwrap!({:ok, result}), do: result
+  defp unwrap!({:raise, exception, nil}), do: raise(exception)
+  defp unwrap!({:raise, exception, stacktrace}), do: reraise(exception, stacktrace)
+
+  defp missing_params?({:missing_params, params}) when is_list(params), do: true
+  defp missing_params?({:empty_param, param}) when is_atom(param), do: true
+  defp missing_params?(%MissingTestCaseParamsError{}), do: true
+  defp missing_params?(_reason), do: false
+
+  # Raised with the metric's state when it errored, as deepeval's metric is
+  # left after measure() raises: only ignore_errors sets success to false.
+  defp metric_error(reason, metric, opts, usages) do
+    result = %{error_result(reason, metric, opts, usages) | success: nil}
+    module = if missing_params?(reason), do: MissingTestCaseParamsError, else: MetricError
+    struct!(module, message: result.error, metric: result.metric, reason: reason, result: result)
+  end
+
+  defp skipped_result(metric, opts) do
+    module = metric_module(metric)
+    merged_opts = metric_opts(metric, opts)
+
+    Result.skipped(
+      metric_name(metric),
+      threshold_opts(module, merged_opts) ++
+        [
+          strict_mode: Keyword.get(merged_opts, :strict_mode, false),
+          flaky: Keyword.get(merged_opts, :flaky, false)
+        ]
+    )
   end
 
   @doc """
@@ -299,13 +437,9 @@ defmodule DeepEvalEx.Evaluator do
     |> Enum.reject(fn {key, value} -> is_nil(value) and key != :threshold end)
   end
 
-  defp error_results(reason, metrics, opts) do
-    Enum.map(metrics, &error_result(reason, &1, opts))
-  end
-
   # Errored results carry the metric's judge model even when the metric was
   # killed or made no call, and the usage of the calls it made before erroring.
-  defp error_result(reason, metric, opts, usages \\ []) do
+  defp error_result(reason, metric, opts, usages) do
     module = metric_module(metric)
     merged_opts = metric_opts(metric, opts)
     usage_fields = BaseMetric.usage_fields(module, merged_opts, usages)

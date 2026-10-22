@@ -93,9 +93,16 @@ defmodule DeepEvalEx do
   Returns `{:ok, %DeepEvalEx.EvaluationResult{}}` holding one
   `DeepEvalEx.TestResult` per test case, in the order of `test_cases`. Each
   carries the test case's fields, its metrics' `DeepEvalEx.Result`s as
-  `:metrics_data` and whether it passed (`:success`). Evaluation errors do
-  not make it return an error: an errored metric is an errored result (see
-  `DeepEvalEx.Result.error/3`), as in deepeval.
+  `:metrics_data` and whether it passed (`:success`).
+
+  As deepeval's `evaluate()` with its default `ErrorConfig()`, a metric that
+  errors raises: the exception the metric raised, or
+  `DeepEvalEx.MetricError` (`DeepEvalEx.MissingTestCaseParamsError` for
+  missing test case params) when it returned `{:error, reason}`, and no run
+  is saved. With `ignore_errors: true` an errored metric is an errored
+  result instead (see `DeepEvalEx.Result.error/3`), and with
+  `skip_on_missing_params: true` a metric missing params is skipped (see
+  "Errors" in `DeepEvalEx.Evaluator`). It never returns an error tuple.
 
   Test cases are evaluated concurrently, and so are the metrics of each test
   case (see `DeepEvalEx.Evaluator`). With `:results_folder` (or
@@ -119,8 +126,12 @@ defmodule DeepEvalEx do
   - `:timeout` - Timeout in milliseconds (default: 60_000); the default for
     `:metric_timeout` and the minimum per-test-case timeout
   - `:metric_timeout` - Timeout per metric in milliseconds (default: the
-    `:timeout` value). A slow metric yields an errored result while the
-    test case's other metrics still complete
+    `:timeout` value). A slow metric errors while the test case's other
+    metrics still complete
+  - `:ignore_errors` - Record metric errors as errored results instead of
+    raising them (default: `false`)
+  - `:skip_on_missing_params` - Skip metrics whose test case lacks their
+    required params (default: `false`)
   - `:results_folder`, `:results_subfolder`, `:identifier`,
     `:hyperparameters` - Save the run in deepeval's format, see
     `evaluate_run/3`

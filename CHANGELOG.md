@@ -12,6 +12,12 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Added
 
+- **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
+  `format_error_text`: `"<type>: <message>"` with the exception's unqualified
+  module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in
+  verbose mode or the formatted stack trace with `with_stack: true`. It is
+  the error text of deepeval's synchronous executor; the evaluator records
+  the message alone, as deepeval's default asynchronous executor does.
 - **`DeepEvalEx.EvaluationResult` and `DeepEvalEx.TestResult`**, ports of
   deepeval 4.3.1's `EvaluationResult` and `TestResult`. A `TestResult` is built
   as deepeval's `create_test_result` builds one: the test case's name (or
@@ -35,10 +41,13 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `DeepEvalEx.TestCase` data and `%DeepEvalEx.Result{}` entries. Every fixture
   round-trips byte for byte.
 - **Golden parity fixtures.** `scripts/parity/generate_fixtures.py` runs real
-  deepeval 4.3.1 over six scenarios (exact match, LLM-style metrics, an
+  deepeval 4.3.1 over nine scenarios (exact match, LLM-style metrics, an
   erroring metric, RAG with tool calls, hyperparameters, missing test case
-  params); the parity suite
-  compares DeepEvalEx's export against them key for key and byte for byte.
+  params, `ignore_errors=False` with a raising metric and with missing
+  params, `skip_on_missing_params=True`); the parity suite
+  compares DeepEvalEx's export against them key for key and byte for byte,
+  and checks that DeepEvalEx raises the same exception with the same
+  message where deepeval raised (`raised.json`).
 - **Scripted-judge parity fixtures for every metric.** The fixture generator
   also runs deepeval 4.3.1's real ExactMatch, GEval, Faithfulness,
   Hallucination, AnswerRelevancy, ContextualPrecision, ContextualRecall and
@@ -292,6 +301,37 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   deepeval's `generate_raw_response`.
 
 ### Changed
+
+- **BREAKING: metric errors raise by default, as deepeval's `ErrorConfig()`.**
+  `DeepEvalEx.evaluate/3`, `evaluate_run/3` and `DeepEvalEx.Evaluator` take
+  deepeval's `ErrorConfig` as `:ignore_errors` and `:skip_on_missing_params`,
+  both `false` by default. A metric that raises, returns `{:error, reason}`,
+  times out or crashes now makes the evaluation raise, as deepeval's
+  `evaluate()` re-raises the metric's exception: the exception the metric
+  raised, or the new `DeepEvalEx.MetricError` (`DeepEvalEx.MissingTestCaseParamsError`
+  for missing test case params, with deepeval's message) carrying the
+  metric's name, its `reason` and its state as `:result` (`success: nil`, as
+  deepeval's `measure()` leaves it). Nothing is saved for the run. It used to
+  be recorded as an errored result: pass `ignore_errors: true` to keep that,
+  with deepeval's semantics (the error message, `str(exception)`, on the
+  result and in `MetricData`'s `error`, and `success: false`, `nil` for a
+  score-only metric). `skip_on_missing_params: true` skips a metric missing
+  its params instead, whatever `:ignore_errors`: its `DeepEvalEx.Result.skipped/2`
+  result is left out of `metricsData` and `metricsScores`, and a test case
+  with no metric left is left out of the run. As in deepeval, `evaluate()`
+  does not read the `IGNORE_DEEPEVAL_ERRORS` and `SKIP_DEEPEVAL_MISSING_PARAMS`
+  settings.
+- **BREAKING: `DeepEvalEx.ExUnit` assertions raise metric errors unless
+  `IGNORE_DEEPEVAL_ERRORS` is set**, as deepeval's `assert_test` reads its
+  `ErrorConfig` from the `:ignore_errors` and `:skip_on_missing_params`
+  settings (`config :deep_eval_ex` or `IGNORE_DEEPEVAL_ERRORS` and
+  `SKIP_DEEPEVAL_MISSING_PARAMS`, see `DeepEvalEx.Config`); an
+  `ignore_errors:` or `skip_on_missing_params:` option wins over both. With
+  `:ignore_errors` an errored metric flunks with `"metric errored: ..."` as
+  before. A skipped metric passes `assert_passes` and `assert_evaluation`,
+  which return its skipped result, and flunks `assert_fails` and
+  `assert_score`, which have no score to check. The assertions now measure
+  through `DeepEvalEx.Evaluator.evaluate_metric/3`.
 
 - **BREAKING: `DeepEvalEx.evaluate/3` takes a list of test cases and returns
   `{:ok, %DeepEvalEx.EvaluationResult{}}`**, with one `DeepEvalEx.TestResult`

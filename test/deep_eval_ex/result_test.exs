@@ -3,7 +3,7 @@ defmodule DeepEvalEx.ResultTest do
 
   alias DeepEvalEx.Result
 
-  doctest Result, only: [successful?: 2]
+  doctest Result, only: [successful?: 2, format_error_text: 2]
 
   describe "new/1" do
     test "builds a scored result that is not errored" do
@@ -193,6 +193,39 @@ defmodule DeepEvalEx.ResultTest do
 
       assert inspected =~ ~s(status: "PASS")
       refute inspected =~ "error:"
+    end
+  end
+
+  describe "format_error_text/2" do
+    # deepeval's utils.format_error_text: "<type name>: <message>".
+    test "prefixes the message with the exception's unqualified type name" do
+      assert Result.format_error_text(%RuntimeError{message: "boom"}, verbose_mode: false) ==
+               "RuntimeError: boom"
+
+      assert Result.format_error_text(%DeepEvalEx.LLM.InvalidJSONError{}, verbose_mode: false) ==
+               "InvalidJSONError: Evaluation LLM outputted an invalid JSON. " <>
+                 "Please use a better evaluation model."
+    end
+
+    test "hints at the stack trace in verbose mode, as DEEPEVAL_VERBOSE_MODE does" do
+      assert Result.format_error_text(%RuntimeError{message: "boom"}, verbose_mode: true) ==
+               "RuntimeError: boom (Run with LOG_LEVEL=DEBUG for stack trace.)"
+    end
+
+    test "appends the formatted stack trace with :with_stack, before any verbose hint" do
+      {exception, stacktrace} =
+        try do
+          raise ArgumentError, "bad"
+        rescue
+          e -> {e, __STACKTRACE__}
+        end
+
+      assert Result.format_error_text(exception,
+               with_stack: true,
+               stacktrace: stacktrace,
+               verbose_mode: true
+             ) ==
+               "ArgumentError: bad\n" <> Exception.format(:error, exception, stacktrace)
     end
   end
 end

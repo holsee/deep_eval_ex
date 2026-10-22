@@ -238,6 +238,50 @@ defmodule DeepEvalEx.Result do
   end
 
   @doc """
+  Formats an exception as deepeval's `format_error_text`:
+  `"<type>: <message>"`, the exception's unqualified module name (Python's
+  `type(exc).__name__`) and its message, e.g. `"RuntimeError: boom"`.
+
+  deepeval's synchronous executor (`AsyncConfig(run_async=False)`) records
+  this text as an ignored metric error. Its default asynchronous executor,
+  which `DeepEvalEx.Evaluator` matches, records only the message
+  (`str(exception)`), as `error/3` does.
+
+  ## Options
+
+  - `:with_stack` - Append a newline and the formatted exception with its
+    stack trace (default: `false`). deepeval appends its traceback when its
+    `deepeval` logger is at `DEBUG` (its `LOG_LEVEL` setting), which has no
+    DeepEvalEx counterpart
+  - `:stacktrace` - The stack trace to format (default: `[]`)
+  - `:verbose_mode` - Without `:with_stack`, append
+    `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` (default: the
+    `:verbose_mode` setting, see `DeepEvalEx.Config`)
+
+  ## Examples
+
+      iex> DeepEvalEx.Result.format_error_text(%RuntimeError{message: "boom"}, verbose_mode: false)
+      "RuntimeError: boom"
+  """
+  @spec format_error_text(Exception.t(), keyword()) :: String.t()
+  def format_error_text(exception, opts \\ []) when is_exception(exception) do
+    text = "#{type_name(exception)}: #{Exception.message(exception)}"
+
+    cond do
+      Keyword.get(opts, :with_stack, false) ->
+        text <> "\n" <> Exception.format(:error, exception, Keyword.get(opts, :stacktrace, []))
+
+      Keyword.get_lazy(opts, :verbose_mode, fn -> DeepEvalEx.Config.get(:verbose_mode) end) ->
+        text <> " (Run with LOG_LEVEL=DEBUG for stack trace.)"
+
+      true ->
+        text
+    end
+  end
+
+  defp type_name(%module{}), do: module |> Module.split() |> List.last()
+
+  @doc """
   Creates a skipped result, for a metric that was not measured.
 
   deepeval skips a metric whose test case lacks its required parameters

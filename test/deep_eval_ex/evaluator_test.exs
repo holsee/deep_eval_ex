@@ -1,7 +1,7 @@
 defmodule DeepEvalEx.EvaluatorTest do
   use ExUnit.Case, async: true
 
-  alias DeepEvalEx.{Evaluator, Result, TestCase}
+  alias DeepEvalEx.{Evaluator, MetricError, MissingTestCaseParamsError, Result, TestCase}
   alias DeepEvalEx.LLM.Usage
   alias DeepEvalEx.Metrics.{ExactMatch, Faithfulness, GEval, ToolCorrectness}
   alias DeepEvalEx.Schemas.ToolCall
@@ -127,6 +127,25 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
   end
 
+  defmodule ScoredMetric do
+    @moduledoc false
+
+    use DeepEvalEx.Metrics.BaseMetric
+
+    defstruct []
+
+    @impl true
+    def metric_name, do: "Scored"
+
+    @impl true
+    def required_params, do: [:input]
+
+    def do_measure(_test_case, opts) do
+      {:ok,
+       Result.new(metric: metric_name(), score: 1.0, threshold: Keyword.get(opts, :threshold))}
+    end
+  end
+
   def forward_metric_stop(_event, _measurements, metadata, {parent, name}) do
     if metadata.test_case_id == name, do: send(parent, {:metric_stop, metadata.metric})
   end
@@ -189,7 +208,8 @@ defmodule DeepEvalEx.EvaluatorTest do
       assert {[[%Result{error: "Evaluation timed out"}]], [0.02]} =
                Evaluator.evaluate_with_durations([test_case()], [SlowMetric],
                  timeout: 20,
-                 metric_timeout: :infinity
+                 metric_timeout: :infinity,
+                 ignore_errors: true
                )
     end
   end
@@ -205,7 +225,8 @@ defmodule DeepEvalEx.EvaluatorTest do
       assert [results] =
                Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch],
                  timeout: 20,
-                 metric_timeout: :infinity
+                 metric_timeout: :infinity,
+                 ignore_errors: true
                )
 
       assert [%Result{metric: "SlowMetric"}, %Result{metric: "Exact Match"}] = results
@@ -223,7 +244,8 @@ defmodule DeepEvalEx.EvaluatorTest do
       assert [[slow, exact]] =
                Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch],
                  timeout: 20,
-                 metric_timeout: :infinity
+                 metric_timeout: :infinity,
+                 ignore_errors: true
                )
 
       # SlowMetric exposes no default threshold, so none is known.
@@ -273,7 +295,10 @@ defmodule DeepEvalEx.EvaluatorTest do
       metrics = [%SleepMetric{sleep: 2_000, label: "slow"}, ExactMatch]
 
       assert [slow, exact] =
-               Evaluator.evaluate_single(test_case(), metrics, metric_timeout: 50)
+               Evaluator.evaluate_single(test_case(), metrics,
+                 metric_timeout: 50,
+                 ignore_errors: true
+               )
 
       assert Result.errored?(slow)
       assert slow.metric == "SleepMetric"
@@ -284,7 +309,10 @@ defmodule DeepEvalEx.EvaluatorTest do
 
     test "per-metric timeout defaults to :timeout and fires before the test case's" do
       assert [[slow, exact]] =
-               Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch], timeout: 50)
+               Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch],
+                 timeout: 50,
+                 ignore_errors: true
+               )
 
       assert slow.error == "Metric timed out"
       assert exact.success
@@ -322,9 +350,9 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
   end
 
-  describe "evaluate_metric/3 errors" do
+  describe "evaluate_metric/3 errors with ignore_errors: true" do
     test "a metric returning {:error, reason} yields an errored result, not a failure" do
-      result = Evaluator.evaluate_metric(test_case(), FailingMetric, [])
+      result = Evaluator.evaluate_metric(test_case(), FailingMetric, ignore_errors: true)
 
       assert %Result{
                metric: "FailingMetric",
@@ -346,12 +374,15 @@ defmodule DeepEvalEx.EvaluatorTest do
                success: false,
                error: "'actual_output' cannot be None for the 'Exact Match' metric",
                threshold: 1
-             } = Evaluator.evaluate_metric(incomplete, ExactMatch, [])
+             } = Evaluator.evaluate_metric(incomplete, ExactMatch, ignore_errors: true)
     end
 
     test "errored results use the run-level threshold over the metric default" do
       assert %Result{threshold: 0.3} =
-               Evaluator.evaluate_metric(test_case(), FailingMetric, threshold: 0.3)
+               Evaluator.evaluate_metric(test_case(), FailingMetric,
+                 threshold: 0.3,
+                 ignore_errors: true
+               )
     end
 
     test "errored GEval results carry the configured [GEval] name" do
@@ -366,7 +397,7 @@ defmodule DeepEvalEx.EvaluatorTest do
       incomplete = %TestCase{input: "Q", actual_output: "A", expected_output: nil}
 
       assert %Result{metric: "Correctness [GEval]", threshold: 0.6, score: nil} =
-               result = Evaluator.evaluate_metric(incomplete, metric, [])
+               result = Evaluator.evaluate_metric(incomplete, metric, ignore_errors: true)
 
       assert Result.errored?(result)
     end
@@ -382,7 +413,8 @@ defmodule DeepEvalEx.EvaluatorTest do
 
       incomplete = %TestCase{input: "Q", actual_output: "A", expected_output: nil}
 
-      assert %Result{metric: "Correctness"} = Evaluator.evaluate_metric(incomplete, metric, [])
+      assert %Result{metric: "Correctness"} =
+               Evaluator.evaluate_metric(incomplete, metric, ignore_errors: true)
     end
 
     test "errored results carry the forced strict threshold, strict mode and flakiness" do
@@ -390,18 +422,24 @@ defmodule DeepEvalEx.EvaluatorTest do
                Evaluator.evaluate([test_case()], [FailingMetric],
                  strict_mode: true,
                  flaky: true,
-                 threshold: 0.3
+                 threshold: 0.3,
+                 ignore_errors: true
                )
     end
 
     test "errored score-only results have no success, as deepeval's is_successful" do
       assert [[%Result{threshold: nil, success: nil, error: "{:api_error, 500}"}]] =
-               Evaluator.evaluate([test_case()], [%FailingMetric{threshold: nil}])
+               Evaluator.evaluate([test_case()], [%FailingMetric{threshold: nil}],
+                 ignore_errors: true
+               )
     end
 
     test "errored results use a metric struct's own threshold" do
       assert [[%Result{threshold: 0.9, error: "{:api_error, 500}"}]] =
-               Evaluator.evaluate([test_case()], [%FailingMetric{threshold: 0.9}], threshold: 0.3)
+               Evaluator.evaluate([test_case()], [%FailingMetric{threshold: 0.9}],
+                 threshold: 0.3,
+                 ignore_errors: true
+               )
     end
   end
 
@@ -437,7 +475,7 @@ defmodule DeepEvalEx.EvaluatorTest do
 
   describe "evaluate_metric/3 usage on errored results" do
     test "an errored result keeps the model, tokens and cost of the judge calls made" do
-      result = Evaluator.evaluate_metric(test_case(), JudgeThenFailMetric, [])
+      result = Evaluator.evaluate_metric(test_case(), JudgeThenFailMetric, ignore_errors: true)
 
       assert %Result{
                error: "judge returned invalid JSON",
@@ -454,14 +492,19 @@ defmodule DeepEvalEx.EvaluatorTest do
       incomplete = %TestCase{input: "Q", actual_output: "A"}
 
       assert %Result{evaluation_model: "mock-model", input_tokens: nil, evaluation_cost: nil} =
-               result = Evaluator.evaluate_metric(incomplete, Faithfulness, adapter: :mock)
+               result =
+               Evaluator.evaluate_metric(incomplete, Faithfulness,
+                 adapter: :mock,
+                 ignore_errors: true
+               )
 
       assert Result.errored?(result)
 
       assert %Result{evaluation_model: "gpt-4o"} =
                Evaluator.evaluate_metric(incomplete, Faithfulness,
                  adapter: :openai,
-                 model: "gpt-4o"
+                 model: "gpt-4o",
+                 ignore_errors: true
                )
     end
 
@@ -477,14 +520,17 @@ defmodule DeepEvalEx.EvaluatorTest do
       incomplete = %TestCase{input: "Q", actual_output: "A"}
 
       assert %Result{evaluation_model: "gpt-4.1"} =
-               Evaluator.evaluate_metric(incomplete, metric, adapter: :mock)
+               Evaluator.evaluate_metric(incomplete, metric, adapter: :mock, ignore_errors: true)
     end
 
     test "metrics that call no LLM report no judge model" do
       incomplete = %TestCase{input: "Q", actual_output: nil, expected_output: "A"}
 
       assert %Result{evaluation_model: nil} =
-               Evaluator.evaluate_metric(incomplete, ExactMatch, adapter: :mock)
+               Evaluator.evaluate_metric(incomplete, ExactMatch,
+                 adapter: :mock,
+                 ignore_errors: true
+               )
     end
 
     test "ToolCorrectness reports its judge model with or without available_tools" do
@@ -494,7 +540,11 @@ defmodule DeepEvalEx.EvaluatorTest do
       for opts <- [[], [available_tools: tools]] do
         assert %Result{evaluation_model: "mock-model"} =
                  result =
-                 Evaluator.evaluate_metric(incomplete, ToolCorrectness, [adapter: :mock] ++ opts)
+                 Evaluator.evaluate_metric(
+                   incomplete,
+                   ToolCorrectness,
+                   [adapter: :mock, ignore_errors: true] ++ opts
+                 )
 
         assert Result.errored?(result)
       end
@@ -504,14 +554,16 @@ defmodule DeepEvalEx.EvaluatorTest do
       assert [%Result{error: "Metric timed out", evaluation_model: "mock-model"}] =
                Evaluator.evaluate_single(test_case(), [SlowJudge],
                  adapter: :mock,
-                 metric_timeout: 50
+                 metric_timeout: 50,
+                 ignore_errors: true
                )
     end
   end
 
-  describe "evaluate_metric/3 with a metric that raises" do
+  describe "evaluate_metric/3 with a metric that raises, with ignore_errors: true" do
     test "records the exception's message as the error, as deepeval records str(e)" do
-      result = Evaluator.evaluate_metric(test_case(), RaisingJudge, threshold: 0.6)
+      result =
+        Evaluator.evaluate_metric(test_case(), RaisingJudge, threshold: 0.6, ignore_errors: true)
 
       assert %Result{
                metric: "RaisingJudge",
@@ -524,12 +576,140 @@ defmodule DeepEvalEx.EvaluatorTest do
 
     test "keeps the usage of the judge calls made before the exception" do
       assert %Result{evaluation_model: "gpt-4o-mini", input_tokens: 1_000, output_tokens: 200} =
-               Evaluator.evaluate_metric(test_case(), RaisingJudge, [])
+               Evaluator.evaluate_metric(test_case(), RaisingJudge, ignore_errors: true)
     end
 
     test "errors only the raising metric of a test case" do
       assert [[%Result{error: "judge returned invalid JSON"}, %Result{score: 1.0}]] =
-               Evaluator.evaluate([test_case()], [RaisingJudge, ExactMatch])
+               Evaluator.evaluate([test_case()], [RaisingJudge, ExactMatch], ignore_errors: true)
+    end
+  end
+
+  describe "ignore_errors: false (the default, as deepeval's ErrorConfig)" do
+    test "raises a MetricError for a metric returning {:error, reason}" do
+      error =
+        assert_raise MetricError, "{:api_error, 500}", fn ->
+          Evaluator.evaluate_metric(test_case(), FailingMetric, [])
+        end
+
+      assert %MetricError{metric: "FailingMetric", reason: {:api_error, 500}} = error
+    end
+
+    test "the MetricError carries the metric's state, with success nil as measure() leaves it" do
+      error =
+        assert_raise MetricError, fn ->
+          Evaluator.evaluate_metric(test_case(), JudgeThenFailMetric, threshold: 0.6)
+        end
+
+      assert %Result{
+               metric: "JudgeThenFail",
+               score: nil,
+               success: nil,
+               threshold: 0.6,
+               error: "judge returned invalid JSON",
+               evaluation_model: "gpt-4o-mini",
+               input_tokens: 1_500,
+               output_tokens: 300
+             } = error.result
+    end
+
+    test "re-raises the exception a metric raised" do
+      assert_raise ArgumentError, "judge returned invalid JSON", fn ->
+        Evaluator.evaluate_metric(test_case(), RaisingJudge, [])
+      end
+    end
+
+    test "raises deepeval's MissingTestCaseParamsError for missing params" do
+      incomplete = %TestCase{input: "Q", actual_output: nil, expected_output: "A"}
+
+      error =
+        assert_raise MissingTestCaseParamsError,
+                     "'actual_output' cannot be None for the 'Exact Match' metric",
+                     fn -> Evaluator.evaluate_metric(incomplete, ExactMatch, []) end
+
+      assert %MissingTestCaseParamsError{
+               metric: "Exact Match",
+               reason: {:missing_params, [:actual_output]},
+               result: %Result{success: nil, threshold: 1}
+             } = error
+    end
+
+    test "propagates out of evaluate/3 from a concurrently run metric" do
+      assert_raise ArgumentError, "judge returned invalid JSON", fn ->
+        Evaluator.evaluate([test_case(), test_case()], [ExactMatch, RaisingJudge])
+      end
+    end
+
+    test "raises the first erroring metric's error, in metrics order" do
+      assert_raise MetricError, "{:api_error, 500}", fn ->
+        Evaluator.evaluate_single(test_case(), [ExactMatch, FailingMetric, RaisingJudge])
+      end
+    end
+
+    test "raises for a metric that timed out" do
+      assert_raise MetricError, "Metric timed out", fn ->
+        Evaluator.evaluate_single(test_case(), [SlowJudge], adapter: :mock, metric_timeout: 50)
+      end
+    end
+
+    @tag :tmp_dir
+    test "raises from DeepEvalEx.evaluate_run/3 without writing a test run",
+         %{tmp_dir: tmp_dir} do
+      assert_raise MetricError, fn ->
+        DeepEvalEx.evaluate_run([test_case()], [ExactMatch, FailingMetric],
+          results_folder: tmp_dir
+        )
+      end
+
+      assert File.ls!(tmp_dir) == []
+    end
+  end
+
+  describe "ignore_errors: true" do
+    test "stores the error on the result and fails it, as deepeval overrides success" do
+      assert %Result{score: nil, success: false, error: "{:api_error, 500}", threshold: 0.7} =
+               Evaluator.evaluate_metric(test_case(), FailingMetric, ignore_errors: true)
+    end
+
+    test "reports missing params as an error unless skip_on_missing_params is set" do
+      incomplete = %TestCase{input: "Q", actual_output: nil, expected_output: "A"}
+
+      assert %Result{success: false, skipped: false, error: "'actual_output' cannot be None" <> _} =
+               Evaluator.evaluate_metric(incomplete, ExactMatch, ignore_errors: true)
+    end
+  end
+
+  describe "skip_on_missing_params: true" do
+    test "skips a metric whose test case lacks its params, whatever ignore_errors" do
+      incomplete = %TestCase{input: "Q", actual_output: "", expected_output: "A"}
+
+      for ignore_errors <- [false, true] do
+        assert %Result{metric: "Exact Match", skipped: true, score: nil, success: nil, error: nil} =
+                 Evaluator.evaluate_metric(incomplete, ExactMatch,
+                   skip_on_missing_params: true,
+                   ignore_errors: ignore_errors
+                 )
+      end
+    end
+
+    test "still raises other errors" do
+      assert_raise MetricError, fn ->
+        Evaluator.evaluate_metric(test_case(), FailingMetric, skip_on_missing_params: true)
+      end
+    end
+
+    test "leaves the skipped metric out of the test run's metricsData and metricsScores" do
+      no_expected = TestCase.new!(input: "Q", actual_output: "A")
+
+      {[[skipped, measured]], test_run, nil} =
+        DeepEvalEx.evaluate_run([no_expected], [ExactMatch, %ScoredMetric{}],
+          skip_on_missing_params: true
+        )
+
+      assert %Result{skipped: true} = skipped
+      assert %Result{metric: "Scored", score: 1.0} = measured
+      assert [%{metrics_data: [%{name: "Scored"}]}] = test_run.test_cases
+      assert [%{metric: "Scored"}] = test_run.metrics_scores
     end
   end
 end

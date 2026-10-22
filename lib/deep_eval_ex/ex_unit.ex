@@ -37,10 +37,22 @@ defmodule DeepEvalEx.ExUnit do
   ## Errored Metrics
 
   A metric that cannot produce a score (missing test case parameters, LLM
-  errors, ...) is *errored*, not failed. Every assertion flunks on an
-  errored metric, including `assert_fails/2,3`, with a message of the form
-  `"<Metric> metric errored: <message>"` so errors are never mistaken for a
-  low score.
+  errors, ...) is *errored*, not failed. As in deepeval's `assert_test`, the
+  error is raised unless the `:ignore_errors` setting is on: `config
+  :deep_eval_ex, ignore_errors: true` or, when that is not set, the
+  `IGNORE_DEEPEVAL_ERRORS` environment variable (see `DeepEvalEx.Config`
+  and "Errors" in `DeepEvalEx.Evaluator`). With it, every assertion flunks
+  on an errored metric, including `assert_fails/2,3`, with a message of the
+  form `"<Metric> metric errored: <message>"` so errors are never mistaken
+  for a low score.
+
+  With the `:skip_on_missing_params` setting (`SKIP_DEEPEVAL_MISSING_PARAMS`)
+  a metric whose test case lacks its required params is skipped instead: it
+  neither passes nor fails `assert_passes/2,3` and `assert_evaluation/2,3`,
+  which return its skipped result, while `assert_fails/2,3` and
+  `assert_score/3,4` flunk as there is no score to check. An explicit
+  `ignore_errors:` or `skip_on_missing_params:` option wins over both
+  settings.
 
   ## Verbose mode
 
@@ -53,7 +65,10 @@ defmodule DeepEvalEx.ExUnit do
   option wins over both.
   """
 
-  alias DeepEvalEx.{Config, Evaluator, Metrics.BaseMetric, Result}
+  alias DeepEvalEx.{Config, Evaluator, Result}
+
+  # Settings the assertions read, as deepeval's assert_test.
+  @settings [:verbose_mode, :ignore_errors, :skip_on_missing_params]
 
   @doc """
   Imports DeepEvalEx.ExUnit macros into your test module.
@@ -151,7 +166,8 @@ defmodule DeepEvalEx.ExUnit do
 
   # Internal implementation functions
   #
-  # Every assertion first normalises the metric outcome into a `Result`: an
+  # Every assertion first normalises the metric outcome into a `Result`
+  # through `DeepEvalEx.Evaluator.evaluate_metric/3`: with ignore_errors an
   # `{:error, reason}` from `measure/2` becomes an errored result, so errors
   # are reported as errors ("metric errored: ...") by every assertion instead
   # of being mistaken for a low score or an expected failure.
@@ -162,6 +178,7 @@ defmodule DeepEvalEx.ExUnit do
 
     cond do
       Result.errored?(result) -> flunk!(format_errored_message(result))
+      result.skipped -> result
       is_nil(result.success) -> flunk!(format_score_only_message(result))
       not result.success -> flunk!(format_failure_message(result, :expected_pass))
       true -> result
@@ -174,6 +191,7 @@ defmodule DeepEvalEx.ExUnit do
 
     cond do
       Result.errored?(result) -> flunk!(format_errored_message(result))
+      result.skipped -> flunk!(format_skipped_message(result))
       is_nil(result.success) -> flunk!(format_score_only_message(result))
       result.success -> flunk!(format_failure_message(result, :expected_fail))
       true -> result
@@ -184,37 +202,25 @@ defmodule DeepEvalEx.ExUnit do
   def __assert_score__(test_case, metric, score_opts, opts) do
     result = run_metric(test_case, metric, opts)
 
-    if Result.errored?(result) do
-      flunk!(format_errored_message(result))
+    cond do
+      Result.errored?(result) -> flunk!(format_errored_message(result))
+      result.skipped -> flunk!(format_skipped_message(result))
+      true -> :ok
     end
 
     validate_score!(result, score_opts)
     result
   end
 
+  # deepeval's assert_test reads its ErrorConfig and verbose mode from the
+  # settings; an explicit option wins.
   defp run_metric(test_case, metric, opts) do
-    opts = Keyword.put_new_lazy(opts, :verbose_mode, fn -> Config.get(:verbose_mode) end)
+    opts =
+      Enum.reduce(@settings, opts, fn key, opts ->
+        Keyword.put_new_lazy(opts, key, fn -> Config.get(key) end)
+      end)
 
-    case metric.measure(test_case, opts) do
-      {:ok, result} ->
-        result
-
-      {:error, reason} ->
-        Result.error(metric_name(metric), reason, threshold: resolve_threshold(metric, opts))
-    end
-  end
-
-  defp metric_name(metric) do
-    if function_exported?(metric, :metric_name, 0) do
-      metric.metric_name()
-    else
-      inspect(metric)
-    end
-  end
-
-  defp resolve_threshold(metric, opts) do
-    default = if function_exported?(metric, :default_threshold, 0), do: metric.default_threshold()
-    BaseMetric.threshold(opts, default)
+    Evaluator.evaluate_metric(test_case, metric, opts)
   end
 
   defp validate_score!(result, score_opts) do
@@ -279,6 +285,16 @@ defmodule DeepEvalEx.ExUnit do
     end
 
     results
+  end
+
+  defp format_skipped_message(result) do
+    """
+
+    #{result.metric} was skipped: the test case lacks params it requires.
+
+    Metric:    #{result.metric}
+    Status:    SKIPPED (skip_on_missing_params)
+    """
   end
 
   # Raises ExUnit.AssertionError with the given message

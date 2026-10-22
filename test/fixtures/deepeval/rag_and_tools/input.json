@@ -78,5 +78,9 @@
     }
   ],
   "identifier": null,
-  "hyperparameters": null
+  "hyperparameters": null,
+  "error_config": {
+    "ignore_errors": true,
+    "skip_on_missing_params": false
+  }
 }

@@ -66,11 +66,7 @@ checked byte for byte against golden fixtures from deepeval 4.3.1.
 
 ### Known divergences from 4.3.1 today
 
-This one is fixed in [P2](#p2-evaluation-engine-and-output-parity) (P2.2):
-
-- **Errored metric success.** A metric that errors is measured with `success`
-  `false`, as deepeval's `evaluate()` records it with `ignore_errors`;
-  deepeval's `measure()` raises instead and leaves `success` as `None`.
+None known: the parity suites run with no `known_divergence` tag.
 
 ---
 

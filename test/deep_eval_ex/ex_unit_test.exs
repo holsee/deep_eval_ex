@@ -7,7 +7,7 @@ defmodule DeepEvalEx.ExUnitTest do
 
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.{AnswerRelevancy, ExactMatch, Faithfulness}
-  alias DeepEvalEx.{Result, TestCase}
+  alias DeepEvalEx.{MissingTestCaseParamsError, Result, TestCase}
 
   # A metric that reports its own failure as an errored result.
   defmodule ErroredMetric do
@@ -77,7 +77,7 @@ defmodule DeepEvalEx.ExUnitTest do
 
       error =
         assert_raise ExUnit.AssertionError, fn ->
-          assert_passes(test_case, ExactMatch)
+          assert_passes(test_case, ExactMatch, ignore_errors: true)
         end
 
       assert error.message =~ "'actual_output' cannot be None for the 'Exact Match' metric"
@@ -89,7 +89,7 @@ defmodule DeepEvalEx.ExUnitTest do
 
       error =
         assert_raise ExUnit.AssertionError, fn ->
-          assert_passes(test_case, ExactMatch)
+          assert_passes(test_case, ExactMatch, ignore_errors: true)
         end
 
       assert error.message =~ "'actual_output' cannot be empty for the 'Exact Match' metric"
@@ -387,7 +387,7 @@ defmodule DeepEvalEx.ExUnitTest do
       }
 
       assert_raise ExUnit.AssertionError, ~r/Multiple metric evaluations failed/i, fn ->
-        assert_evaluation(test_case, [ExactMatch])
+        assert_evaluation(test_case, [ExactMatch], ignore_errors: true)
       end
     end
   end
@@ -494,7 +494,7 @@ defmodule DeepEvalEx.ExUnitTest do
     test "assert_passes reports the error rather than a low score" do
       error =
         assert_raise ExUnit.AssertionError, fn ->
-          assert_passes(missing_output_case(), ExactMatch)
+          assert_passes(missing_output_case(), ExactMatch, ignore_errors: true)
         end
 
       assert error.message =~
@@ -525,7 +525,7 @@ defmodule DeepEvalEx.ExUnitTest do
     test "assert_fails reports an error from measure distinctly" do
       error =
         assert_raise ExUnit.AssertionError, fn ->
-          assert_fails(missing_output_case(), ExactMatch)
+          assert_fails(missing_output_case(), ExactMatch, ignore_errors: true)
         end
 
       assert error.message =~ "metric errored: 'actual_output' cannot be None"
@@ -543,13 +543,84 @@ defmodule DeepEvalEx.ExUnitTest do
     test "assert_evaluation lists errored metrics distinctly" do
       error =
         assert_raise ExUnit.AssertionError, fn ->
-          assert_evaluation(missing_output_case(), [ExactMatch, ErroredMetric])
+          assert_evaluation(missing_output_case(), [ExactMatch, ErroredMetric],
+            ignore_errors: true
+          )
         end
 
       assert error.message =~
                "metric errored: 'actual_output' cannot be None for the 'Exact Match' metric"
 
       assert error.message =~ "metric errored: LLM returned invalid JSON"
+    end
+  end
+
+  describe "IGNORE_DEEPEVAL_ERRORS and SKIP_DEEPEVAL_MISSING_PARAMS" do
+    setup do
+      vars = ~w(IGNORE_DEEPEVAL_ERRORS SKIP_DEEPEVAL_MISSING_PARAMS)
+      keys = [:ignore_errors, :skip_on_missing_params]
+      previous = Map.new(vars, &{&1, System.get_env(&1)})
+      previous_config = Map.new(keys, &{&1, Application.fetch_env(:deep_eval_ex, &1)})
+      Enum.each(vars, &System.delete_env/1)
+      Enum.each(keys, &Application.delete_env(:deep_eval_ex, &1))
+
+      on_exit(fn ->
+        for {var, value} <- previous,
+            do: if(value, do: System.put_env(var, value), else: System.delete_env(var))
+
+        for {key, value} <- previous_config do
+          case value do
+            {:ok, value} -> Application.put_env(:deep_eval_ex, key, value)
+            :error -> Application.delete_env(:deep_eval_ex, key)
+          end
+        end
+      end)
+    end
+
+    test "unset, an erroring metric raises its error, as deepeval's assert_test" do
+      assert_raise MissingTestCaseParamsError,
+                   "'actual_output' cannot be None for the 'Exact Match' metric",
+                   fn -> assert_passes(missing_output_case(), ExactMatch) end
+    end
+
+    test "IGNORE_DEEPEVAL_ERRORS reports the error as a failed assertion instead" do
+      System.put_env("IGNORE_DEEPEVAL_ERRORS", "true")
+
+      assert_raise ExUnit.AssertionError,
+                   ~r/metric errored: 'actual_output' cannot be None/,
+                   fn ->
+                     assert_passes(missing_output_case(), ExactMatch)
+                   end
+    end
+
+    test "config :deep_eval_ex, :ignore_errors is read first and the option wins over both" do
+      System.put_env("IGNORE_DEEPEVAL_ERRORS", "true")
+      Application.put_env(:deep_eval_ex, :ignore_errors, false)
+
+      assert_raise MissingTestCaseParamsError, fn ->
+        assert_passes(missing_output_case(), ExactMatch)
+      end
+
+      assert_raise ExUnit.AssertionError, ~r/metric errored/, fn ->
+        assert_passes(missing_output_case(), ExactMatch, ignore_errors: true)
+      end
+    end
+
+    test "SKIP_DEEPEVAL_MISSING_PARAMS skips the metric, which neither passes nor fails" do
+      System.put_env("SKIP_DEEPEVAL_MISSING_PARAMS", "1")
+
+      assert %Result{skipped: true} = assert_passes(missing_output_case(), ExactMatch)
+
+      assert [%Result{skipped: true}, %Result{metric: "ScoreOnly"}] =
+               assert_evaluation(missing_output_case(), [ExactMatch, ScoreOnlyMetric])
+
+      assert_raise ExUnit.AssertionError, ~r/Exact Match was skipped/, fn ->
+        assert_fails(missing_output_case(), ExactMatch)
+      end
+
+      assert_raise ExUnit.AssertionError, ~r/Exact Match was skipped/, fn ->
+        assert_score(missing_output_case(), ExactMatch, min: 0.5)
+      end
     end
   end
 

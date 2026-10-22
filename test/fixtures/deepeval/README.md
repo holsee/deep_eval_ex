@@ -30,6 +30,9 @@ Each directory is one scenario:
 | `llm_metric`      | Two stub metrics emulating LLM judges: reason, evaluation model, cost and token counts         |
 | `metric_error`    | A metric that raises, with `ignore_errors=True`: `error` set, no `score`, counted in `errors`  |
 | `rag_and_tools`   | `retrieval_context`, `context`, `tools_called` / `expected_tools`, `token_cost`, `completion_time` |
+| `ignore_errors_false` | A metric that raises, with deepeval's default `ignore_errors=False`: `evaluate()` re-raises its exception and writes no test run |
+| `missing_params_ignore_errors_false` | A test case missing a param, with `ignore_errors=False`: `evaluate()` raises `MissingTestCaseParamsError` and writes no test run |
+| `skip_on_missing_params` | `skip_on_missing_params=True`: metrics missing params are left out of `metricsData` and `metricsScores`, and test cases left with no metric out of the run, the others keeping their `order` |
 | `missing_params`  | `MissingTestCaseParamsError` messages from ExactMatch, Faithfulness and GEval: `context` not standing in for `retrieval_context` (and a context-only test case exporting no `retrievalContext`), an empty `actual_output`, and two and three missing params |
 | `hyperparameters` | `identifier` and `hyperparameters` (string, float, int, bool and dropped `None` values)        |
 
@@ -37,8 +40,17 @@ and holds:
 
 - `input.json` - the scenario's inputs: `test_cases` (keyword arguments of
   deepeval's `LLMTestCase`), `metrics` (`exact_match`, `stub`, `error`,
-  `faithfulness` or `g_eval` specs), `identifier` and `hyperparameters`
+  `faithfulness` or `g_eval` specs), `identifier`, `hyperparameters` and
+  `error_config` (`ErrorConfig`'s `ignore_errors` and
+  `skip_on_missing_params`; `ignore_errors` is `true` unless the scenario
+  is about it), passed to `DeepEvalEx.evaluate_run/3` as the options of the
+  same names
 - `test_run.json` - the file deepeval wrote for those inputs, unchanged
+- `raised.json` - in place of `test_run.json` when `evaluate()` raised: the
+  exception's Python `type` name and `message`. The parity test expects
+  DeepEvalEx to raise the matching exception (`ArgumentError` for
+  `ValueError`, `DeepEvalEx.MissingTestCaseParamsError` for
+  `MissingTestCaseParamsError`) with the same message, and to write nothing
 
 No LLM is called. The `stub` and `error` metrics are custom deepeval
 `BaseMetric`s returning fixed values or raising; the parity test mirrors them
@@ -127,6 +139,9 @@ a missing or an unused response. Next to each script it writes:
 The generator checks that `measure()` and `evaluate()` sent the same prompts.
 When `measure()` raises after setting the metric's `error` (as
 `trimAndLoadJson` does), `measure.json` records the metric as it was left.
+The Elixir side measures with `ignore_errors: false` likewise and compares
+the `:result` of the `DeepEvalEx.MetricError` raised, whose `success` is
+`nil` as deepeval's is `None`. `evaluate()` runs with `ignore_errors=True`.
 
 The Elixir test loads the same script into the Mock adapter's scripted mode
 (`DeepEvalEx.LLM.Adapters.Mock.script/2`), runs the metric and compares with
@@ -171,9 +186,8 @@ A unit that fixes a divergence removes its tags in
 `@known_divergences` (`test/deep_eval_ex/scripted_parity_test.exs`) and its
 rows here.
 
-| Facet | Scenarios | Fails because | Tag |
-| --- | --- | --- | --- |
-| measure | `hallucination_invalid_json` | An errored result's `success` is `false`, as in deepeval's `evaluate()` with `ignore_errors`, where deepeval's `measure()` raises and leaves it `None` (P2.2) | P2.2 |
+None are tagged today. A tagged comparison is listed here by facet,
+scenarios, why it fails and its tag.
 
 ## Prompt goldens
 

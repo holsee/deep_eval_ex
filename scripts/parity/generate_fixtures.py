@@ -8,9 +8,14 @@ test/fixtures/deepeval/<scenario>/:
 
 - input.json    - the scenario's inputs: `test_cases` (keyword arguments of
                   deepeval's `LLMTestCase`, snake_case), `metrics` (see
-                  `build_metric`), `identifier` and `hyperparameters`
+                  `build_metric`), `identifier`, `hyperparameters` and
+                  `error_config` (`ErrorConfig`'s keyword arguments;
+                  `ignore_errors=True` unless the scenario sets it)
 - test_run.json - the `test_run_<timestamp>.json` deepeval wrote for it,
                   copied byte for byte
+- raised.json   - in place of test_run.json when evaluate() raised (with
+                  `ignore_errors=False`): the exception's `type` name and
+                  its `message`, `str(exception)`
 
 test/deep_eval_ex/parity_test.exs runs the same inputs through DeepEvalEx and
 compares its export with test_run.json.
@@ -382,6 +387,44 @@ SCENARIOS = {
         ],
         "identifier": None,
         "hyperparameters": None,
+    },
+    # ErrorConfig(ignore_errors=False), deepeval's default: the metric's
+    # exception propagates out of evaluate() and no test run is written.
+    "ignore_errors_false": {
+        "test_cases": [{"input": "Hello", "actual_output": "Hi", "expected_output": "Hi"}],
+        "metrics": [
+            {"kind": "exact_match"},
+            {"kind": "error", "name": "Flaky Judge", "threshold": 0.5,
+             "exception": "ValueError", "message": "judge returned invalid JSON"},
+        ],
+        "identifier": None,
+        "hyperparameters": None,
+        "error_config": {"ignore_errors": False, "skip_on_missing_params": False},
+    },
+    "missing_params_ignore_errors_false": {
+        "test_cases": [{"input": "What is the boiling point of water?",
+                        "actual_output": "100 degrees Celsius."}],
+        "metrics": [{"kind": "exact_match"}],
+        "identifier": None,
+        "hyperparameters": None,
+        "error_config": {"ignore_errors": False, "skip_on_missing_params": False},
+    },
+    # ErrorConfig(skip_on_missing_params=True): a metric missing params is
+    # left out of metricsData and metricsScores, and a test case left with no
+    # metric is left out of the run, keeping the others' order.
+    "skip_on_missing_params": {
+        "test_cases": [
+            {"input": "What is the capital of Italy?", "actual_output": "",
+             "expected_output": "Rome", "name": "empty-output"},
+            {"input": "Who wrote Hamlet?", "actual_output": "William Shakespeare",
+             "expected_output": "William Shakespeare", "name": "no-retrieval-context"},
+            {"input": "What is the boiling point of water?", "name": "input-only"},
+        ],
+        "metrics": [{"kind": "exact_match"},
+                    {"kind": "faithfulness", "judge_model": "mock-model"}],
+        "identifier": None,
+        "hyperparameters": None,
+        "error_config": {"ignore_errors": False, "skip_on_missing_params": True},
     },
     "hyperparameters": {
         "test_cases": [
@@ -955,10 +998,15 @@ def run_prompt_case(name, case):
         f.write(prompt)
 
 
+# The ErrorConfig of a scenario that sets none.
+DEFAULT_ERROR_CONFIG = {"ignore_errors": True, "skip_on_missing_params": False}
+
+
 def run_scenario(name, scenario):
     out_dir = os.path.join(FIXTURES, name)
     os.makedirs(out_dir, exist_ok=True)
     results_folder = tempfile.mkdtemp(prefix=f"{name}_", dir=WORK_DIR)
+    scenario = {**scenario, "error_config": scenario.get("error_config", DEFAULT_ERROR_CONFIG)}
 
     kwargs = {}
     if scenario["identifier"] is not None:
@@ -966,23 +1014,32 @@ def run_scenario(name, scenario):
     if scenario["hyperparameters"] is not None:
         kwargs["hyperparameters"] = scenario["hyperparameters"]
 
-    evaluate(
-        test_cases=[build_test_case(spec) for spec in scenario["test_cases"]],
-        metrics=[build_metric(spec) for spec in scenario["metrics"]],
-        async_config=AsyncConfig(run_async=True),
-        display_config=DisplayConfig(
-            show_indicator=False,
-            print_results=False,
-            inspect_after_run=False,
-            results_folder=results_folder,
-        ),
-        cache_config=CacheConfig(write_cache=False, use_cache=False),
-        error_config=ErrorConfig(ignore_errors=True),
-        **kwargs,
-    )
-
-    [path] = glob.glob(os.path.join(results_folder, "test_run_*.json"))
-    shutil.copyfile(path, os.path.join(out_dir, "test_run.json"))
+    try:
+        evaluate(
+            test_cases=[build_test_case(spec) for spec in scenario["test_cases"]],
+            metrics=[build_metric(spec) for spec in scenario["metrics"]],
+            async_config=AsyncConfig(run_async=True),
+            display_config=DisplayConfig(
+                show_indicator=False,
+                print_results=False,
+                inspect_after_run=False,
+                results_folder=results_folder,
+            ),
+            cache_config=CacheConfig(write_cache=False, use_cache=False),
+            error_config=ErrorConfig(**scenario["error_config"]),
+            **kwargs,
+        )
+    except Exception as e:
+        if scenario["error_config"]["ignore_errors"]:
+            raise
+        # The exception evaluate() raised, in place of a test run.
+        if glob.glob(os.path.join(results_folder, "*")):
+            raise RuntimeError(f"{name}: deepeval raised and wrote a test run")
+        write_json(os.path.join(out_dir, "raised.json"),
+                   {"type": type(e).__name__, "message": str(e)})
+    else:
+        [path] = glob.glob(os.path.join(results_folder, "test_run_*.json"))
+        shutil.copyfile(path, os.path.join(out_dir, "test_run.json"))
 
     write_json(os.path.join(out_dir, "input.json"), scenario)
 
