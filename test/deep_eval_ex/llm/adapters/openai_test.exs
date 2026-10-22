@@ -292,6 +292,80 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
     end
   end
 
+  describe "generate_raw_response/2" do
+    defp stub_raw_completion(completion) do
+      test_pid = self()
+
+      Req.Test.stub(@stub, fn conn ->
+        {:ok, raw, conn} = Plug.Conn.read_body(conn)
+        send(test_pid, {:request, conn, Jason.decode!(raw)})
+        Req.Test.json(conn, completion)
+      end)
+    end
+
+    @raw %{
+      "choices" => [
+        %{
+          "message" => %{"role" => "assistant", "content" => ~s({"score": 7})},
+          "logprobs" => %{
+            "content" => [%{"token" => "7", "logprob" => -0.1, "top_logprobs" => []}]
+          }
+        }
+      ],
+      "usage" => %{"prompt_tokens" => 10, "completion_tokens" => 5}
+    }
+
+    test "asks for logprobs and returns the whole chat completion" do
+      stub_raw_completion(@raw)
+
+      assert {:ok, @raw} =
+               OpenAI.generate_raw_response("Score it", [{:top_logprobs, 20} | @base_opts])
+
+      assert_received {:request, _conn, body}
+      assert body["logprobs"] == true
+      assert body["top_logprobs"] == 20
+      assert body["messages"] == [%{"role" => "user", "content" => "Score it"}]
+      assert body["temperature"] == 0.0
+      refute Map.has_key?(body, "response_format")
+    end
+
+    test "asks for 5 top logprobs by default, as deepeval's generate_raw_response" do
+      stub_raw_completion(@raw)
+
+      assert {:ok, _} = OpenAI.generate_raw_response("Score it", @base_opts)
+      assert_received {:request, _conn, %{"top_logprobs" => 5}}
+    end
+
+    test "caps top logprobs at the model's maximum" do
+      stub_raw_completion(@raw)
+      opts = [model: "gpt-5.4", top_logprobs: 20] ++ @base_opts
+
+      assert {:ok, _} = OpenAI.generate_raw_response("Score it", opts)
+      assert_received {:request, _conn, %{"top_logprobs" => 5}}
+    end
+
+    test "records the completion's usage" do
+      stub_raw_completion(@raw)
+
+      assert {{:ok, _}, [%Usage{input_tokens: 10, output_tokens: 5}]} =
+               Usage.track(fn -> OpenAI.generate_raw_response("Score it", @base_opts) end)
+    end
+
+    test "refuses models without logprobs, as deepeval raises for them" do
+      opts = [{:model, "o3-mini"} | @base_opts]
+
+      assert OpenAI.generate_raw_response("Score it", opts) ==
+               {:error, {:log_probs_unsupported, "o3-mini"}}
+    end
+
+    test "returns unexpected_response when choices are missing" do
+      stub_raw_completion(%{"object" => "chat.completion"})
+
+      assert {:error, {:unexpected_response, %{"object" => "chat.completion"}}} =
+               OpenAI.generate_raw_response("Score it", @base_opts)
+    end
+  end
+
   describe "errors" do
     test "treats a blank OPENAI_API_KEY as unset" do
       System.put_env("OPENAI_API_KEY", "")
@@ -381,6 +455,20 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
       assert OpenAI.supports_temperature?([])
       refute OpenAI.supports_temperature?(model: "o3-mini")
       refute OpenAI.supports_temperature?(model: "aws-bedrock-runtime/openai/gpt-5@global")
+    end
+
+    test "supports logprobs for the models deepeval's registry says do" do
+      for model <- ~w(gpt-4o gpt-4o-mini gpt-4.1 gpt-3.5-turbo gpt-5.4) do
+        assert OpenAI.supports_log_probs?(model: model), model
+      end
+
+      assert OpenAI.supports_log_probs?([])
+      assert OpenAI.supports_log_probs?(model: "aws-bedrock-runtime/openai/gpt-4.1@global")
+
+      # Reasoning models, and models the registry does not know.
+      for model <- ~w(o1 o3-mini gpt-5 gpt-5.4-mini gpt-4.5-preview gpt-audio my-gateway-model) do
+        refute OpenAI.supports_log_probs?(model: model), model
+      end
     end
   end
 end

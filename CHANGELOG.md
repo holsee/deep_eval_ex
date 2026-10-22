@@ -221,8 +221,37 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - The Mock adapter's scripted mode returns a string response to a schema step
   as the judge's raw text, and the scripted parity fixtures gain
   `hallucination_messy_json` and `hallucination_invalid_json`.
+- **GEval logprob-weighted scoring**, as in deepeval 4.3.1. A judge that
+  returns log probabilities is asked for a raw chat completion instead of the
+  score schema, and its score is replaced by the probability-weighted average
+  of the score tokens it considered: the last token equal to the score, its
+  top logprobs under 1% probability and non-decimal tokens dropped, falling
+  back to the raw score when no token is left or the completion carries no
+  logprobs (`GEval.calculate_weighted_summed_score/2`). Strict mode keeps the
+  judge's score. `GEval.new/1` takes `:top_logprobs` (default `20`). Judges
+  without logprobs (Anthropic, Ollama, Mock, custom adapters) still get the
+  schema call and keep their score.
+- **Raw responses with logprobs from adapters.** The adapter behaviour gains
+  optional `generate_raw_response/2` (deepeval's `generate_raw_response`: the
+  whole chat completion, in OpenAI's shape) and `supports_log_probs?/1` (per
+  model), with `DeepEvalEx.LLM.Adapter.generate_raw_response/2` and
+  `supports_log_probs?/1`. The OpenAI adapter implements both: it sends
+  `logprobs: true` and `top_logprobs` (`:top_logprobs`, default `5`, capped
+  at the model's maximum) for the models deepeval 4.3.1's registry lists with
+  logprobs, and returns `{:error, {:log_probs_unsupported, model}}` for the
+  rest, reasoning models included. The Mock adapter's scripted mode replays
+  a `"raw_response"` step, and offers logprobs only when its script has one.
+  The scripted parity fixtures gain `g_eval_logprobs` and
+  `g_eval_logprobs_missing`, recorded with a scripted judge that answers
+  deepeval's `generate_raw_response`.
 
 ### Changed
+
+- **GEval scores from OpenAI judges are logprob-weighted.** With the default
+  judge (`gpt-4o-mini`) or any OpenAI model deepeval lists with logprobs,
+  GEval scores are now fractional averages (e.g. `0.783` rather than `0.8`),
+  matching deepeval 4.3.1; scores from reasoning models and other providers
+  are unchanged.
 
 - **BREAKING: Hallucination scores aligned contexts, higher is better.** As in
   deepeval 4.3.1 (PR #3102), the score is the fraction of contexts the output

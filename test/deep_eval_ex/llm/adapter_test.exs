@@ -2,7 +2,7 @@ defmodule DeepEvalEx.LLM.AdapterTest do
   # Mutates application and OS environment, so it cannot run concurrently.
   use ExUnit.Case, async: false
 
-  alias DeepEvalEx.LLM.Adapter
+  alias DeepEvalEx.LLM.{Adapter, Usage}
 
   @var "DEEP_EVAL_EX_ADAPTER_TEST"
   @key :adapter_test_value
@@ -162,6 +162,66 @@ defmodule DeepEvalEx.LLM.AdapterTest do
 
       refute Adapter.supports_temperature?(DeepEvalEx.LLM.Adapters.OpenAI, model: "o3-mini")
       assert Adapter.supports_json_mode?(DeepEvalEx.LLM.Adapters.OpenAI)
+    end
+  end
+
+  # A judge with logprobs for every model but "no-logprobs".
+  defmodule LogprobJudge do
+    use DeepEvalEx.LLM.Adapter
+
+    @impl true
+    def generate(_prompt, _opts), do: raise("not called")
+
+    @impl true
+    def generate_with_schema(_prompt, _schema, _opts), do: raise("not called")
+
+    @impl true
+    def generate_raw_response(prompt, opts) do
+      Usage.record(Usage.new("logprob-judge", 1, 2))
+      {:ok, %{"prompt" => prompt, "top_logprobs" => opts[:top_logprobs]}}
+    end
+
+    @impl true
+    def model_name(opts), do: Keyword.get(opts, :model, "logprob-judge")
+
+    @impl true
+    def supports_structured_outputs?, do: true
+
+    @impl true
+    def supports_log_probs?, do: true
+
+    @impl true
+    def supports_log_probs?(opts), do: model_name(opts) != "no-logprobs"
+  end
+
+  describe "logprobs" do
+    test "supports_log_probs?/1 asks the adapter about the model in opts" do
+      assert Adapter.supports_log_probs?(adapter: LogprobJudge)
+      refute Adapter.supports_log_probs?(adapter: LogprobJudge, model: "no-logprobs")
+      assert Adapter.supports_log_probs?(adapter: :openai, model: "gpt-4o")
+      refute Adapter.supports_log_probs?(adapter: :openai, model: "o3-mini")
+    end
+
+    test "supports_log_probs?/1 is false for an adapter without generate_raw_response/2" do
+      refute Adapter.supports_log_probs?(adapter: TextJudge)
+      refute Adapter.supports_log_probs?(adapter: :anthropic)
+      refute Adapter.supports_log_probs?(adapter: :ollama)
+      refute Adapter.supports_log_probs?(adapter: :mock)
+    end
+
+    test "generate_raw_response/2 calls the adapter and records its usage" do
+      {result, usages} =
+        Usage.track(fn ->
+          Adapter.generate_raw_response("Score it", adapter: LogprobJudge, top_logprobs: 20)
+        end)
+
+      assert result == {:ok, %{"prompt" => "Score it", "top_logprobs" => 20}}
+      assert [%Usage{input_tokens: 1, output_tokens: 2}] = usages
+    end
+
+    test "generate_raw_response/2 refuses an adapter without it" do
+      assert Adapter.generate_raw_response("Score it", adapter: TextJudge) ==
+               {:error, {:log_probs_unsupported, "text-judge"}}
     end
   end
 end

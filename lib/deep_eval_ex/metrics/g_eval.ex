@@ -19,6 +19,19 @@ defmodule DeepEvalEx.Metrics.GEval do
   3. **Score the output** - LLM evaluates the test case using the steps
   4. **Get result** - Score (0-1) with reasoning
 
+  ## Logprob-Weighted Scores
+
+  As in deepeval, a judge that returns log probabilities (see
+  `DeepEvalEx.LLM.Adapter.supports_log_probs?/1`; OpenAI's `gpt-4o`,
+  `gpt-4.1`, ... but not its reasoning models) is asked for a raw response
+  instead of a structured one, and the score it gives is replaced by the
+  average of the scores it considered, weighted by their probabilities
+  (`calculate_weighted_summed_score/2`): a judge torn between 7 and 8 scores
+  about 7.5 rather than either. Strict mode keeps the judge's score. Any
+  other judge (Anthropic, Ollama, custom adapters without
+  `generate_raw_response/2`) is asked with the score schema and its score is
+  kept.
+
   ## Usage
 
   ```elixir
@@ -84,6 +97,8 @@ defmodule DeepEvalEx.Metrics.GEval do
   - `:flaky` - Report the result without letting it decide its test case's
     success (default: false)
   - `:model` - LLM model to use for evaluation
+  - `:top_logprobs` - Most likely score tokens a judge with logprobs returns
+    for weighting (default: 20, as in deepeval)
   - `:verbose_mode` - Print the result's `:verbose_logs` (criteria,
     evaluation steps, rubric and score) after measuring (default: false)
   - `:include_g_eval_suffix` - Name results `"<name> [GEval]"` rather than
@@ -93,7 +108,7 @@ defmodule DeepEvalEx.Metrics.GEval do
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
   alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Result, TestCase}
-  alias DeepEvalEx.Metrics.Utils.Verbose
+  alias DeepEvalEx.Metrics.Utils.{Generation, Verbose}
   alias DeepEvalEx.Prompts.GEval, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.GEval, as: Schema
 
@@ -109,6 +124,7 @@ defmodule DeepEvalEx.Metrics.GEval do
     :strict_mode,
     :model,
     :verbose_mode,
+    top_logprobs: 20,
     flaky: false,
     include_g_eval_suffix: true
   ]
@@ -127,6 +143,7 @@ defmodule DeepEvalEx.Metrics.GEval do
           verbose_mode: boolean() | nil,
           flaky: boolean(),
           model: tuple() | nil,
+          top_logprobs: pos_integer(),
           include_g_eval_suffix: boolean()
         }
 
@@ -146,6 +163,8 @@ defmodule DeepEvalEx.Metrics.GEval do
     as deepeval's constructor forces it (default: false)
   - `:flaky` - Never decide a test case's success (default: false)
   - `:model` - LLM model (optional, uses default)
+  - `:top_logprobs` - Score tokens to weight by, for judges with logprobs
+    (default: 20)
   - `:verbose_mode` - Print the verbose logs (default: false)
   - `:include_g_eval_suffix` - Append `" [GEval]"` to the name (default: true)
   """
@@ -174,6 +193,7 @@ defmodule DeepEvalEx.Metrics.GEval do
       flaky: Keyword.get(opts, :flaky, false),
       model: Keyword.get(opts, :model),
       verbose_mode: Keyword.get(opts, :verbose_mode),
+      top_logprobs: Keyword.get(opts, :top_logprobs, 20),
       include_g_eval_suffix: Keyword.get(opts, :include_g_eval_suffix, true)
     }
   end
@@ -371,9 +391,137 @@ defmodule DeepEvalEx.Metrics.GEval do
         )
       end
 
-    case Adapter.generate_with_schema(prompt, Schema.reason_score_schema(), opts) do
-      {:ok, response} -> Schema.parse_reason_score(response)
-      {:error, _} = error -> error
+    rubric_score(metric, prompt, opts)
+  end
+
+  # deepeval's generate_rubric_score: a judge with logprobs answers a raw
+  # response whose score is weighted (except in strict mode); any other is
+  # asked for the score schema, as deepeval falls back on the AttributeError
+  # of a judge without generate_raw_response.
+  defp rubric_score(metric, prompt, opts) do
+    if Adapter.supports_log_probs?(opts) do
+      raw_opts = Keyword.put(opts, :top_logprobs, metric.top_logprobs)
+
+      with {:ok, raw_response} <- Adapter.generate_raw_response(prompt, raw_opts),
+           {:ok, {score, reason}} <- score_from_raw_response(raw_response) do
+        if metric.strict_mode,
+          do: {:ok, {score, reason}},
+          else: {:ok, {calculate_weighted_summed_score(score, raw_response), reason}}
+      end
+    else
+      case Adapter.generate_with_schema(prompt, Schema.reason_score_schema(), opts) do
+        {:ok, response} -> Schema.parse_reason_score(response)
+        {:error, _} = error -> error
+      end
     end
+  end
+
+  # deepeval's _score_from_raw_response: the message is loaded with
+  # trimAndLoadJson whatever the judge's structured output support.
+  defp score_from_raw_response(%{"choices" => [%{"message" => %{"content" => content}} | _]}) do
+    with {:ok, data} <- Generation.trim_and_load_json(content) do
+      Schema.parse_reason_score(data)
+    end
+  end
+
+  defp score_from_raw_response(raw_response),
+    do: {:error, {:unexpected_response, raw_response}}
+
+  # Tokens under 1% probability are dropped.
+  @min_logprob :math.log(0.01)
+
+  @doc """
+  Weights `raw_score` by the log probabilities of the judge's `raw_response`
+  (an OpenAI chat completion, see
+  `DeepEvalEx.LLM.Adapter.c:generate_raw_response/2`), deepeval's
+  `calculate_weighted_summed_score`.
+
+  The score's token is the last one of the completion equal to the raw
+  score (the reasoning may name the same number earlier). Of its top
+  logprobs, tokens under 1% probability and tokens that are not decimal
+  numbers are dropped; the rest, as integer scores (`"08"` counts for 8),
+  are averaged weighted by their probabilities, normalised to sum to 1.
+
+  Returns `raw_score` when no token is left, and where deepeval's caller
+  falls back to the raw score on an error: a completion without logprobs or
+  without a token for the score.
+
+  ## Examples
+
+      iex> top = [%{"token" => "7", "logprob" => -0.1}, %{"token" => "8", "logprob" => -2.5}]
+      iex> raw_response = %{"choices" => [%{"logprobs" => %{"content" => [
+      ...>   %{"token" => "7", "logprob" => -0.1, "top_logprobs" => top}]}}]}
+      iex> DeepEvalEx.Metrics.GEval.calculate_weighted_summed_score(7, raw_response)
+      7.083172696493922
+
+      iex> DeepEvalEx.Metrics.GEval.calculate_weighted_summed_score(7, %{"choices" => []})
+      7
+  """
+  @spec calculate_weighted_summed_score(number(), map()) :: number()
+  def calculate_weighted_summed_score(raw_score, raw_response) do
+    with {:ok, top_logprobs} <- score_top_logprobs(raw_score, raw_response),
+         {:ok, {scores, sum}} <- linear_probabilities(top_logprobs) do
+      weighted_summed_score(scores, sum, raw_score)
+    else
+      :error -> raw_score
+    end
+  end
+
+  # The top logprobs of the last token equal to the score, as Python's
+  # str(raw_score).
+  defp score_top_logprobs(raw_score, %{
+         "choices" => [%{"logprobs" => %{"content" => tokens}} | _]
+       })
+       when is_list(tokens) do
+    token = Verbose.to_str(raw_score)
+
+    case tokens |> Enum.reverse() |> Enum.find(&match?(%{"token" => ^token}, &1)) do
+      %{"top_logprobs" => top_logprobs} when is_list(top_logprobs) -> {:ok, top_logprobs}
+      _ -> :error
+    end
+  end
+
+  defp score_top_logprobs(_raw_score, _raw_response), do: :error
+
+  # Each kept score with its summed linear probability, in first-seen order
+  # as deepeval's dict, and the running sum of every kept probability in
+  # token order, so the floats add up as in deepeval.
+  defp linear_probabilities(top_logprobs) do
+    Enum.reduce_while(top_logprobs, {:ok, {[], 0}}, fn
+      %{"token" => token, "logprob" => logprob}, {:ok, acc}
+      when is_binary(token) and is_number(logprob) ->
+        {:cont, {:ok, add_probability(acc, token, logprob)}}
+
+      _malformed, _acc ->
+        {:halt, :error}
+    end)
+  end
+
+  defp add_probability({scores, sum} = acc, token, logprob) do
+    if logprob < @min_logprob or not decimal?(token) do
+      acc
+    else
+      score = String.to_integer(token)
+      probability = :math.exp(logprob)
+
+      scores =
+        case List.keyfind(scores, score, 0) do
+          nil -> scores ++ [{score, probability}]
+          {^score, prob} -> List.keyreplace(scores, score, 0, {score, prob + probability})
+        end
+
+      {scores, sum + probability}
+    end
+  end
+
+  # Python's str.isdecimal, for ASCII digits.
+  defp decimal?(token), do: token =~ ~r/\A[0-9]+\z/
+
+  # Every token filtered out: the raw score.
+  defp weighted_summed_score([], _sum, raw_score), do: raw_score
+
+  defp weighted_summed_score(scores, sum_linear_probability, _raw_score) do
+    sum_of_weighted_scores = Enum.reduce(scores, 0.0, fn {s, p}, sum -> sum + s * p end)
+    sum_of_weighted_scores / sum_linear_probability
   end
 end

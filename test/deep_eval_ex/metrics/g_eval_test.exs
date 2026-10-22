@@ -5,6 +5,8 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
   alias DeepEvalEx.Metrics.GEval
   alias DeepEvalEx.TestCase
 
+  doctest GEval, only: [calculate_weighted_summed_score: 2]
+
   setup do
     Mock.clear_responses()
     :ok
@@ -415,6 +417,186 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
       test_case = TestCase.new!(input: "Q", actual_output: "A")
 
       assert {:error, {:missing_config, _}} = GEval.do_measure(test_case, [])
+    end
+  end
+
+  # An OpenAI chat completion answering `content`, with `tokens` as its
+  # logprobs: {token, logprob, [{top_token, top_logprob}]}.
+  defp completion(content, tokens) do
+    logprobs =
+      if tokens do
+        %{
+          "content" =>
+            Enum.map(tokens, fn {token, logprob, top} ->
+              %{
+                "token" => token,
+                "logprob" => logprob,
+                "top_logprobs" =>
+                  Enum.map(top, fn {t, lp} -> %{"token" => t, "logprob" => lp} end)
+              }
+            end)
+        }
+      end
+
+    %{
+      "choices" => [
+        %{"message" => %{"role" => "assistant", "content" => content}, "logprobs" => logprobs}
+      ]
+    }
+  end
+
+  @answer ~s({"reason": "Close.", "score": 7})
+
+  # Expected values computed by deepeval 4.3.1's calculate_weighted_summed_score
+  # on the same payloads.
+  describe "calculate_weighted_summed_score/2" do
+    test "weights the score by its token's top logprobs" do
+      raw = completion(@answer, [{"7", -0.1, [{"7", -0.1}, {"8", -2.5}]}])
+
+      assert GEval.calculate_weighted_summed_score(7, raw) == 7.083172696493922
+    end
+
+    test "uses the last token equal to the score, not one in the reasoning" do
+      raw =
+        completion(@answer, [
+          {"7", -0.01, [{"7", -0.01}]},
+          {"7", -0.1, [{"7", -0.1}, {"8", -2.5}]}
+        ])
+
+      assert GEval.calculate_weighted_summed_score(7, raw) == 7.083172696493922
+    end
+
+    test "sums tokens naming the same score and drops non-decimal tokens" do
+      raw =
+        completion(@answer, [
+          {"3", -0.5, [{"3", -0.5}, {"4", -1.0}, {"3", -2.0}, {"x", -0.2}]}
+        ])
+
+      assert GEval.calculate_weighted_summed_score(3, raw) == 3.331498960424092
+    end
+
+    test "drops tokens under 1% probability, keeping the raw score when none is left" do
+      raw = completion(@answer, [{"5", -0.1, [{"five", -0.1}, {"5", -5.0}]}])
+
+      assert GEval.calculate_weighted_summed_score(5, raw) === 5
+    end
+
+    test "keeps the raw score without a token for it or without logprobs" do
+      assert GEval.calculate_weighted_summed_score(5, completion(@answer, [{"6", -0.1, []}])) ===
+               5
+
+      assert GEval.calculate_weighted_summed_score(5, completion(@answer, nil)) === 5
+      assert GEval.calculate_weighted_summed_score(5, %{}) === 5
+    end
+  end
+
+  # A judge with logprobs reporting the top_logprobs it is asked for.
+  defmodule TopLogprobsJudge do
+    use DeepEvalEx.LLM.Adapter
+
+    @impl true
+    def generate(_prompt, _opts), do: raise("not called")
+
+    @impl true
+    def generate_with_schema(_prompt, _schema, _opts), do: raise("not called")
+
+    @impl true
+    def generate_raw_response(_prompt, opts) do
+      send(self(), {:top_logprobs, opts[:top_logprobs]})
+
+      {:ok,
+       %{"choices" => [%{"message" => %{"content" => ~s({"reason": "Close.", "score": 7})}}]}}
+    end
+
+    @impl true
+    def model_name(_opts), do: "top-logprobs-judge"
+
+    @impl true
+    def supports_structured_outputs?, do: true
+
+    @impl true
+    def supports_log_probs?, do: true
+  end
+
+  describe "logprob-weighted scoring" do
+    @steps_metric [
+      name: "Test",
+      evaluation_params: [:input, :actual_output],
+      evaluation_steps: ["Check quality"]
+    ]
+
+    @weighted [{"7", -0.1, [{"7", -0.1}, {"8", -2.5}]}]
+
+    setup do
+      %{test_case: TestCase.new!(input: "Q", actual_output: "A")}
+    end
+
+    test "asks a judge with logprobs for a raw response and weights its score",
+         %{test_case: test_case} do
+      Mock.script(%{"raw_response" => [completion(@answer, @weighted)]})
+
+      assert {:ok, result} = GEval.evaluate(GEval.new(@steps_metric), test_case, adapter: :mock)
+
+      assert result.score == 7.083172696493922 / 10
+      assert result.reason == "Close."
+      assert [%{step: "raw_response", prompt: prompt}] = Mock.scripted_prompts()
+      assert prompt =~ "Check quality"
+    end
+
+    test "asks for the metric's top_logprobs, 20 by default", %{test_case: test_case} do
+      opts = [adapter: TopLogprobsJudge]
+
+      assert {:ok, _} = GEval.evaluate(GEval.new(@steps_metric), test_case, opts)
+      assert_received {:top_logprobs, 20}
+
+      metric = GEval.new([top_logprobs: 5] ++ @steps_metric)
+      assert {:ok, _} = GEval.evaluate(metric, test_case, opts)
+      assert_received {:top_logprobs, 5}
+    end
+
+    test "keeps the raw score of a raw response without logprobs", %{test_case: test_case} do
+      Mock.script(%{"raw_response" => [completion(@answer, nil)]})
+
+      assert {:ok, result} = GEval.evaluate(GEval.new(@steps_metric), test_case, adapter: :mock)
+      assert result.score == 0.7
+    end
+
+    test "loads the raw response's content with trimAndLoadJson", %{test_case: test_case} do
+      content = ~s(Sure:\n```json\n{"reason": "Close.", "score": 7,}\n```)
+      Mock.script(%{"raw_response" => [completion(content, @weighted)]})
+
+      assert {:ok, result} = GEval.evaluate(GEval.new(@steps_metric), test_case, adapter: :mock)
+      assert result.score == 7.083172696493922 / 10
+    end
+
+    test "fails with deepeval's error when the raw response holds no JSON",
+         %{test_case: test_case} do
+      Mock.script(%{"raw_response" => [completion("No.", @weighted)]})
+
+      assert {:error, %DeepEvalEx.LLM.InvalidJSONError{}} =
+               GEval.evaluate(GEval.new(@steps_metric), test_case, adapter: :mock)
+    end
+
+    test "in strict mode, takes the raw response's score unweighted", %{test_case: test_case} do
+      answer = ~s({"reason": "Meets it.", "score": 1})
+
+      Mock.script(%{
+        "raw_response" => [completion(answer, [{"1", -0.5, [{"1", -0.5}, {"0", -1.0}]}])]
+      })
+
+      metric = GEval.new([strict_mode: true] ++ @steps_metric)
+
+      assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
+      assert result.metadata.raw_score === 1
+    end
+
+    test "falls back to the schema call for a judge without logprobs",
+         %{test_case: test_case} do
+      Mock.script(%{"reason,score" => [%{"reason" => "Close.", "score" => 7}]})
+
+      assert {:ok, result} = GEval.evaluate(GEval.new(@steps_metric), test_case, adapter: :mock)
+      assert result.score == 0.7
+      assert [%{step: "reason,score"}] = Mock.scripted_prompts()
     end
   end
 end

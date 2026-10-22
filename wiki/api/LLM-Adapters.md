@@ -55,6 +55,10 @@ All adapters implement the `DeepEvalEx.LLM.Adapter` behaviour:
 @callback supports_structured_outputs?() :: boolean()
 @callback supports_log_probs?() :: boolean()
 @callback supports_multimodal?() :: boolean()
+
+# Optional: logprobs, which GEval weights its score by
+@callback supports_log_probs?(opts) :: boolean()
+@callback generate_raw_response(prompt, opts) :: {:ok, map()} | {:error, term()}
 ```
 
 ## OpenAI Adapter
@@ -125,7 +129,7 @@ end)
 | Feature | Supported |
 |---------|-----------|
 | Structured Outputs | Yes |
-| Log Probabilities | Yes |
+| Log Probabilities | Yes, for the models deepeval lists with them (not reasoning models) |
 | Multimodal | Yes |
 
 ### Usage

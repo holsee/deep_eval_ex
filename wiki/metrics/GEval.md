@@ -75,6 +75,7 @@ result.success # => true (score >= threshold)
 | `:score_range` | tuple | {0, 10} | Min/max score range |
 | `:strict_mode` | boolean | false | Binary 0/1 scoring |
 | `:model` | tuple/string | default | LLM model to use |
+| `:top_logprobs` | integer | 20 | Score tokens a judge with logprobs returns for weighting |
 | `:include_g_eval_suffix` | boolean | true | Name results `"<name> [GEval]"`; when false, just `"<name>"` |
 
 ## Pre-defined Evaluation Steps
@@ -126,6 +127,21 @@ metric = GEval.new(
   strict_mode: true  # Returns only 0 or 1
 )
 ```
+
+## Logprob-Weighted Scores
+
+As in deepeval, when the judge returns log probabilities (OpenAI's `gpt-4o`,
+`gpt-4o-mini`, `gpt-4.1`, ... but not its reasoning models), GEval asks it for
+a raw chat completion with logprobs instead of a structured answer, and
+replaces the score it gives by the average of the scores it considered,
+weighted by their probabilities: a judge torn between 7 and 8 scores about
+7.5. Tokens under 1% probability are ignored. Strict mode keeps the judge's
+score.
+
+Judges without logprobs (Anthropic, Ollama, custom adapters without
+`generate_raw_response/2`) are asked with the score schema and their score
+is kept, as deepeval does. `DeepEvalEx.Metrics.GEval.calculate_weighted_summed_score/2`
+does the weighting.
 
 ## Custom Score Range
 

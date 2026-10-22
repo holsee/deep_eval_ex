@@ -41,6 +41,8 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   - `:base_url` - API base URL, see above
   - `:api_key` - API key (overrides config and `OPENAI_API_KEY`)
   - `:timeout` - receive timeout in milliseconds (default `60_000`)
+  - `:top_logprobs` - for `generate_raw_response/2`, the number of most
+    likely tokens returned at each position (default `5`)
   - `:req_options` - extra `Req` options merged into the request, e.g.
     `[plug: {Req.Test, DeepEvalEx.LLM.Adapters.OpenAI}]` in tests
 
@@ -70,6 +72,22 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   # Models that reject a `temperature` parameter, mirroring the
   # `supports_temperature=False` entries in deepeval's OpenAI model registry.
   @reasoning_model_pattern ~r/^(o\d|gpt-[5-9])/
+
+  # The `supports_log_probs=True` entries of deepeval 4.3.1's OpenAI model
+  # registry (OPENAI_MODELS_DATA); any other model, known or not, has none.
+  @log_prob_models ~w(
+    gpt-3.5-turbo gpt-3.5-turbo-0125 gpt-3.5-turbo-1106
+    gpt-4-0125-preview gpt-4-1106-preview gpt-4-turbo gpt-4-turbo-2024-04-09
+    gpt-4-turbo-preview gpt-4o gpt-4 gpt-4o-2024-05-13 gpt-4o-2024-08-06
+    gpt-4o-2024-11-20 gpt-4o-mini gpt-4o-mini-2024-07-18 gpt-4-32k gpt-4-32k-0613
+    gpt-4.1 gpt-4.1-mini gpt-4.1-nano gpt-5.4 gpt-5.4-2026-03-05
+  )
+
+  # Their `max_log_probs`, where the registry caps `top_logprobs`.
+  @max_log_probs %{"gpt-5.4" => 5, "gpt-5.4-2026-03-05" => 5}
+
+  # deepeval's generate_raw_response default.
+  @default_top_logprobs 5
 
   @impl true
   def generate(prompt, opts \\ []) do
@@ -115,6 +133,40 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
     end
   end
 
+  @doc """
+  Generates a chat completion with logprobs, deepeval's
+  `GPTModel.generate_raw_response`: the request of `generate/2` with
+  `logprobs: true` and `top_logprobs` (the `:top_logprobs` option, default
+  `5`, capped at the model's maximum as deepeval caps it), returning the
+  whole decoded completion.
+
+  Models without logprobs (see `supports_log_probs?/1`) are
+  `{:error, {:log_probs_unsupported, model}}`, where deepeval raises.
+  """
+  @impl true
+  def generate_raw_response(prompt, opts \\ []) do
+    model = model_name(opts)
+
+    if supports_log_probs?(opts) do
+      body =
+        prompt
+        |> base_body(opts)
+        |> Map.merge(%{
+          logprobs: true,
+          top_logprobs:
+            cap_top_logprobs(model, Keyword.get(opts, :top_logprobs, @default_top_logprobs))
+        })
+
+      case chat_completion(body, opts) do
+        {:ok, %{"choices" => [_ | _]} = completion} -> {:ok, completion}
+        {:ok, response} -> {:error, {:unexpected_response, response}}
+        {:error, _} = error -> error
+      end
+    else
+      {:error, {:log_probs_unsupported, model}}
+    end
+  end
+
   @impl true
   def model_name(opts), do: Keyword.get(opts, :model, @default_model)
 
@@ -123,6 +175,11 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
 
   @impl true
   def supports_log_probs?, do: true
+
+  # The `supports_log_probs` entries of deepeval's OpenAI model registry:
+  # only the models it lists with logprobs, so not reasoning models.
+  @impl true
+  def supports_log_probs?(opts), do: base_model(model_name(opts)) in @log_prob_models
 
   @impl true
   def supports_multimodal?, do: true
@@ -166,6 +223,13 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
       Keyword.get_lazy(opts, :temperature, fn ->
         Application.get_env(:deep_eval_ex, :openai_temperature, @default_temperature)
       end)
+    end
+  end
+
+  defp cap_top_logprobs(model, top_logprobs) do
+    case Map.fetch(@max_log_probs, base_model(model)) do
+      {:ok, max} -> min(top_logprobs, max)
+      :error -> top_logprobs
     end
   end
 

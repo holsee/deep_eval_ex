@@ -48,6 +48,16 @@ defmodule DeepEvalEx.LLM.Adapter do
     deepeval's `generate_with_schema_and_extract` loads any answer that is not
     a schema instance
 
+  ## Log Probabilities
+
+  GEval weights its score by the judge's log probabilities, as deepeval
+  does, when the judge offers them: an adapter implementing
+  `c:generate_raw_response/2` whose `c:supports_log_probs?/1` (or, without
+  it, `c:supports_log_probs?/0`) is `true` for the model. See
+  `supports_log_probs?/1`. Any other judge is asked with
+  `generate_with_schema/3` and its score kept, as deepeval falls back for a
+  model without `generate_raw_response`.
+
   ## Reporting Token Usage
 
   Adapters report the token usage of each call with
@@ -128,9 +138,34 @@ defmodule DeepEvalEx.LLM.Adapter do
   @doc """
   Returns whether this adapter supports log probabilities.
 
-  Log probs can be used for more accurate scoring in some metrics.
+  Log probs can be used for more accurate scoring in some metrics. An
+  adapter whose support depends on the model implements
+  `c:supports_log_probs?/1` too, which takes precedence; see "Log
+  Probabilities" above.
   """
   @callback supports_log_probs?() :: boolean()
+
+  @doc """
+  Returns whether the model `opts` name returns log probabilities,
+  deepeval's per-model `supports_log_probs`. Takes precedence over
+  `c:supports_log_probs?/0` when implemented.
+  """
+  @callback supports_log_probs?(opts()) :: boolean()
+
+  @doc """
+  Generates a response with the log probabilities of its tokens, deepeval's
+  `generate_raw_response`: the provider's whole chat completion, decoded
+  from its JSON, in OpenAI's shape:
+
+      %{"choices" => [%{"message" => %{"content" => "..."},
+                        "logprobs" => %{"content" => [%{"token" => "7",
+                                                        "logprob" => -0.1,
+                                                        "top_logprobs" => [...]}]}}]}
+
+  Takes the options of `generate/2`, and `:top_logprobs`, the number of
+  most likely tokens to return at each position.
+  """
+  @callback generate_raw_response(prompt(), opts()) :: {:ok, map()} | error()
 
   @doc """
   Returns whether this adapter supports multimodal inputs (images).
@@ -154,7 +189,13 @@ defmodule DeepEvalEx.LLM.Adapter do
   """
   @callback supports_json_mode?() :: boolean()
 
-  @optional_callbacks [supports_multimodal?: 0, supports_temperature?: 1, supports_json_mode?: 0]
+  @optional_callbacks [
+    supports_multimodal?: 0,
+    supports_temperature?: 1,
+    supports_json_mode?: 0,
+    supports_log_probs?: 1,
+    generate_raw_response: 2
+  ]
 
   # Defaults for the optional capabilities
   defmacro __using__(_opts) do
@@ -332,6 +373,56 @@ defmodule DeepEvalEx.LLM.Adapter do
     do: Generation.trim_and_load_json(answer)
 
   defp load_json(answer), do: {:ok, answer}
+
+  @doc """
+  Whether the judge `opts` resolve to returns log probabilities: its adapter
+  implements `c:generate_raw_response/2` and its `c:supports_log_probs?/1`
+  for the model (or, without it, `c:supports_log_probs?/0`) is `true`.
+
+  deepeval's GEval asks such a judge with `generate_raw_response` and
+  weights the score by the logprobs; any other judge gets the schema call.
+
+  ## Examples
+
+      DeepEvalEx.LLM.Adapter.supports_log_probs?(adapter: :openai, model: "gpt-4o")
+      #=> true
+
+      DeepEvalEx.LLM.Adapter.supports_log_probs?(adapter: :anthropic)
+      #=> false
+  """
+  @spec supports_log_probs?(opts()) :: boolean()
+  def supports_log_probs?(opts \\ []) do
+    {adapter, model} = resolve_adapter(opts)
+    opts = Keyword.put_new(opts, :model, model)
+
+    raw_response?(adapter) and
+      capability(
+        adapter,
+        :supports_log_probs?,
+        [opts],
+        capability(adapter, :supports_log_probs?, [], false)
+      )
+  end
+
+  @doc """
+  Generates a response with the log probabilities of its tokens using the
+  default or specified adapter (see `c:generate_raw_response/2`).
+
+  Records usage like `generate/2`. An adapter without
+  `c:generate_raw_response/2` is `{:error, {:log_probs_unsupported, model}}`.
+  """
+  @spec generate_raw_response(prompt(), opts()) :: {:ok, map()} | error()
+  def generate_raw_response(prompt, opts \\ []) do
+    {adapter, model} = resolve_adapter(opts)
+    opts = Keyword.put_new(opts, :model, model)
+
+    if raw_response?(adapter),
+      do: with_usage(adapter, opts, fn -> adapter.generate_raw_response(prompt, opts) end),
+      else: {:error, {:log_probs_unsupported, adapter.model_name(opts)}}
+  end
+
+  defp raw_response?(adapter),
+    do: Code.ensure_loaded?(adapter) and function_exported?(adapter, :generate_raw_response, 2)
 
   @doc """
   Returns the name of the judge model that `generate/2` and

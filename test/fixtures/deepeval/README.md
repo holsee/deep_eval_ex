@@ -106,7 +106,13 @@ calling an LLM. A script holds:
   `trimAndLoadJson`, and DeepEvalEx with `DeepEvalEx.LLM.Adapter`. A step is the sorted, comma-separated field names of
   the schema the metric asks for (`truths`, `claims`, `verdicts`, `reason`,
   `statements`, `steps`, `reason,score`; `text` for a call without one), so
-  it names the same call in deepeval and DeepEvalEx whatever their prompts say
+  it names the same call in deepeval and DeepEvalEx whatever their prompts say.
+  The `raw_response` step answers GEval's `generate_raw_response`: each
+  answer is an OpenAI chat completion with `logprobs`, which the judge
+  returns as openai's `ChatCompletion` and deepeval weights the score by. A
+  script without that step has the judge raise `AttributeError`, as a judge
+  without logprobs, so GEval asks for `reason,score` instead; the Mock
+  adapter offers logprobs (`supports_log_probs?/1`) under the same condition
 
 Scripts are written by hand and committed; the generator refuses a script with
 a missing or an unused response. Next to each script it writes:
@@ -133,7 +139,7 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | Metric | Scenarios |
 | --- | --- |
 | ExactMatch | `exact_match_pass`, `exact_match_fail` |
-| GEval | `g_eval_criteria_pass` (steps generated from criteria), `g_eval_steps_fail` (given steps), `g_eval_strict` |
+| GEval | `g_eval_criteria_pass` (steps generated from criteria), `g_eval_steps_fail` (given steps), `g_eval_strict`, `g_eval_logprobs` (a raw response with logprobs: the score weighted by the final score token's top logprobs, the same number earlier in the reason ignored, a 1% and a non-decimal token dropped, `"08"` summed with `"8"`), `g_eval_logprobs_missing` (a raw response without logprobs: the raw score kept) |
 | Faithfulness | `faithfulness_pass`, `faithfulness_fail`, `faithfulness_borderline`, `faithfulness_penalize_ambiguous` (`penalize_ambiguous_claims`: the borderline verdict fails and is an `(Ambiguous)` contradiction), `faithfulness_no_claims` (empty list), `faithfulness_strict` |
 | Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_no_verdicts` (empty list), `hallucination_strict`, `hallucination_messy_json` (raw-text answers: prose, a code fence and trailing commas around the verdicts, a reason missing its closing brace), `hallucination_invalid_json` (a raw-text answer with no JSON: the metric errors) |
 | AnswerRelevancy | `answer_relevancy_pass`, `answer_relevancy_fail`, `answer_relevancy_no_statements` (empty list), `answer_relevancy_strict` |
@@ -143,14 +149,8 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 
 ### Not covered
 
-Two cases need fixtures of their own, to be added with the unit that needs
-them:
+One case needs fixtures of its own, to be added with the unit that needs it:
 
-- **GEval logprob weighting (P1.10).** `ScriptedJudge` has no
-  `generate_raw_response`, so deepeval's rubric scoring takes its
-  `AttributeError` fallback and uses the raw `score`, as for any judge without
-  logprobs. Exercising the weighting needs a judge that replays canned
-  logprob payloads, and a matching Mock path.
 - **Schema validation errors.** Only `hallucination_invalid_json` makes a
   metric fail, with `trimAndLoadJson`'s invalid JSON error. A scripted
   response that is valid JSON but fails schema validation is not covered.

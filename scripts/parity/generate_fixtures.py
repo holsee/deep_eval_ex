@@ -135,6 +135,7 @@ from deepeval.test_case import (  # noqa: E402
     ToolCall,
     ToolCallParams,
 )
+from openai.types.chat import ChatCompletion  # noqa: E402
 
 DEEPEVAL_VERSION = "4.3.1"
 
@@ -415,6 +416,13 @@ class ScriptedJudge(DeepEvalBaseLLM):
     returned as the judge's raw text, as a judge without structured outputs
     answers: deepeval then parses it with trimAndLoadJson.
 
+    The "raw_response" step answers `generate_raw_response`, which GEval
+    calls for a logprob-weighted score: each response is an OpenAI chat
+    completion, with `logprobs`, returned as openai's `ChatCompletion`. A
+    script without that step has the judge raise AttributeError, as a judge
+    without the method does, so deepeval falls back to the "reason,score"
+    schema call.
+
     Records every prompt with its step. Raises when a step has no response
     left, so a script missing a response fails the run.
     """
@@ -433,20 +441,32 @@ class ScriptedJudge(DeepEvalBaseLLM):
         return self.model_name
 
     def generate(self, prompt, schema=None):
-        step = step_key(schema)
-        index = self.calls.get(step, 0)
-        self.calls[step] = index + 1
-        self.prompts.append({"step": step, "prompt": prompt})
-        try:
-            response = self.responses[step][index]
-        except (KeyError, IndexError):
-            raise RuntimeError(f"script has no response {index} for step {step!r}") from None
+        response = self._next(step_key(schema), prompt)
         if schema is None or isinstance(response, str):
             return response
         return schema.model_validate(response)
 
+    def _next(self, step, prompt):
+        index = self.calls.get(step, 0)
+        self.calls[step] = index + 1
+        self.prompts.append({"step": step, "prompt": prompt})
+        try:
+            return self.responses[step][index]
+        except (KeyError, IndexError):
+            raise RuntimeError(f"script has no response {index} for step {step!r}") from None
+
     async def a_generate(self, prompt, schema=None):
         return self.generate(prompt, schema)
+
+    def generate_raw_response(self, prompt, top_logprobs=5, **kwargs):
+        if RAW_RESPONSE_STEP not in self.responses:
+            raise AttributeError("script has no raw responses")
+        response = self._next(RAW_RESPONSE_STEP, prompt)
+        # A custom model reports no cost, as generate() does.
+        return ChatCompletion.model_validate(response), None
+
+    async def a_generate_raw_response(self, prompt, top_logprobs=5, **kwargs):
+        return self.generate_raw_response(prompt, top_logprobs, **kwargs)
 
     def assert_exhausted(self):
         for step, responses in self.responses.items():
@@ -455,6 +475,10 @@ class ScriptedJudge(DeepEvalBaseLLM):
                 raise RuntimeError(
                     f"step {step!r} used {used} of {len(responses)} scripted responses"
                 )
+
+
+# The step of generate_raw_response calls, which ask for no schema.
+RAW_RESPONSE_STEP = "raw_response"
 
 
 def step_key(schema):

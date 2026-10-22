@@ -66,6 +66,26 @@ defmodule DeepEvalEx.LLM.Adapters.MockTest do
                Adapter.generate_with_schema("First", @verdicts_schema, adapter: :mock)
     end
 
+    test "replays raw responses for generate_raw_response/2, supporting logprobs then only" do
+      refute Mock.supports_log_probs?([])
+
+      assert Mock.generate_raw_response("Score it", []) ==
+               {:error, {:log_probs_unsupported, "mock-model"}}
+
+      Mock.script(%{"reason,score" => [%{"reason" => "Fine.", "score" => 7}]})
+      refute Mock.supports_log_probs?([])
+
+      completion = %{"choices" => [%{"message" => %{"content" => ~s({"score": 7})}}]}
+      Mock.script(%{"raw_response" => [completion]})
+
+      assert Mock.supports_log_probs?([])
+      assert Mock.generate_raw_response("Score it", top_logprobs: 20) == {:ok, completion}
+      assert Mock.scripted_prompts() == [%{step: "raw_response", prompt: "Score it"}]
+
+      assert Mock.generate_raw_response("Again", []) ==
+               {:error, {:no_scripted_response, "raw_response", 1}}
+    end
+
     test "replays text responses for generate/2" do
       Mock.script(%{"text" => ["Hello."]})
 

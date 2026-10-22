@@ -74,6 +74,9 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   alias DeepEvalEx.LLM.Usage
 
   @default_response "This is a mock response."
+  # The step of generate_raw_response/2 calls, as deepeval's scripted judge
+  # names it.
+  @raw_response_step "raw_response"
   @ets_table :deep_eval_ex_mock_responses
 
   # Registry of the processes that loaded a script, each with its script's
@@ -84,7 +87,7 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   def generate(prompt, opts \\ []) do
     case script_agent() do
       nil -> configured_generate(prompt, opts)
-      agent -> scripted_call(agent, prompt, nil, opts)
+      agent -> scripted_call(agent, prompt, step_key(nil), opts)
     end
   end
 
@@ -92,7 +95,22 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   def generate_with_schema(prompt, schema, opts \\ []) do
     case script_agent() do
       nil -> configured_generate_with_schema(prompt, opts)
-      agent -> scripted_call(agent, prompt, schema, opts)
+      agent -> scripted_call(agent, prompt, step_key(schema), opts)
+    end
+  end
+
+  @doc """
+  Replays the next `"raw_response"` of the calling process's script: a chat
+  completion with logprobs (see `DeepEvalEx.LLM.Adapter.c:generate_raw_response/2`).
+
+  Without a script it is `{:error, {:log_probs_unsupported, model}}`; see
+  `supports_log_probs?/1`.
+  """
+  @impl true
+  def generate_raw_response(prompt, opts \\ []) do
+    case script_agent() do
+      nil -> {:error, {:log_probs_unsupported, model_name(opts)}}
+      agent -> scripted_call(agent, prompt, @raw_response_step, opts)
     end
   end
 
@@ -134,6 +152,19 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
 
   @impl true
   def supports_log_probs?, do: false
+
+  @doc """
+  Whether the calling process's script has a `"raw_response"` step: only
+  then does the Mock judge offer logprobs, as deepeval's scripted judge only
+  answers `generate_raw_response` then.
+  """
+  @impl true
+  def supports_log_probs?(_opts) do
+    case script_agent() do
+      nil -> false
+      agent -> Agent.get(agent, &Map.has_key?(&1.responses, @raw_response_step))
+    end
+  end
 
   # Configuration API
 
@@ -202,8 +233,11 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
 
   `responses` maps a step (see `step_key/1`) to the responses of its
   successive calls: maps for `generate_with_schema/3`, strings for
-  `generate/2` (step `"text"`). A string for a schema step is returned as
-  is, the raw text of a judge without structured outputs, which
+  `generate/2` (step `"text"`), and chat completions with logprobs for
+  `generate_raw_response/2` (step `"raw_response"`, whose presence makes
+  `supports_log_probs?/1` true, so GEval weights its score by them). A
+  string for a schema step is returned as is, the raw text of a judge
+  without structured outputs, which
   `DeepEvalEx.LLM.Adapter.generate_with_schema/3` loads with deepeval's
   `trimAndLoadJson`, as deepeval does with the same script.
 
@@ -312,9 +346,7 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
     properties |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort() |> Enum.join(",")
   end
 
-  defp scripted_call(agent, prompt, schema, opts) do
-    step = step_key(schema)
-
+  defp scripted_call(agent, prompt, step, opts) do
     reply =
       Agent.get_and_update(agent, fn state ->
         index = Map.get(state.calls, step, 0)
