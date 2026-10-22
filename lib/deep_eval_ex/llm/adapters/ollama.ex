@@ -50,6 +50,13 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
   - `:req_options` - extra `Req` options merged into the request, e.g.
     `[plug: {Req.Test, DeepEvalEx.LLM.Adapters.Ollama}]` in tests
 
+  ## Retries
+
+  Transport errors are retried as deepeval retries Ollama calls (see
+  `DeepEvalEx.LLM.Retry`), up to `DEEPEVAL_RETRY_MAX_ATTEMPTS` attempts
+  (default `2`) with exponential backoff and jitter; an HTTP error status is
+  returned at once.
+
   ## Structured Outputs
 
   `generate_with_schema/3` sends the JSON schema as the request's `format`,
@@ -67,7 +74,7 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
 
   use DeepEvalEx.LLM.Adapter
 
-  alias DeepEvalEx.LLM.{Adapter, Usage}
+  alias DeepEvalEx.LLM.{Adapter, Retry, Usage}
 
   @default_base_url "http://localhost:11434"
   @default_port 11_434
@@ -197,13 +204,13 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
 
     req_opts = [
       json: body,
-      receive_timeout: Keyword.get(opts, :timeout, 120_000),
-      retry: :transient,
-      retry_delay: &retry_delay/1,
-      max_retries: 3
+      receive_timeout: Keyword.get(opts, :timeout, 120_000)
     ]
 
-    req_opts = Keyword.merge(req_opts, Keyword.get(opts, :req_options, []))
+    req_opts =
+      req_opts
+      |> Keyword.merge(Retry.req_options(:ollama))
+      |> Keyword.merge(Keyword.get(opts, :req_options, []))
 
     case Req.post(url, req_opts) do
       {:ok, %Req.Response{status: 200, body: body}} ->
@@ -215,11 +222,6 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
       {:error, exception} ->
         {:error, {:request_failed, exception}}
     end
-  end
-
-  # Req passes the retry count starting at 0. Exponential backoff: 1s, 2s, 4s
-  defp retry_delay(retry_count) do
-    :timer.seconds(Integer.pow(2, retry_count))
   end
 
   defp schema_to_json_schema(schema) when is_map(schema), do: schema

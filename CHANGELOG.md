@@ -317,6 +317,25 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Changed
 
+- **The OpenAI, Anthropic and Ollama adapters retry as deepeval's
+  `retry_policy`.** A shared `DeepEvalEx.LLM.Retry`, a port of deepeval
+  4.3.1's `models/retry_policy.py`, now supplies every adapter's `Req` retry
+  options. Calls make `DEEPEVAL_RETRY_MAX_ATTEMPTS` attempts (default `2`,
+  the first call included) instead of 4, and back off as Tenacity's
+  `wait_exponential_jitter` with `DEEPEVAL_RETRY_INITIAL_SECONDS` (`1.0`),
+  `DEEPEVAL_RETRY_EXP_BASE` (`2.0`), `DEEPEVAL_RETRY_JITTER` (`2.0`) and
+  `DEEPEVAL_RETRY_CAP_SECONDS` (`5.0`, where `0` means no sleeps) instead of
+  a fixed 1s, 2s, 4s; each is also a `config :deep_eval_ex` key (`:retry_*`)
+  and is read at call time. What is retried follows deepeval's per-provider
+  policy rather than Req's `:transient` list (`408`, `429`, `500`, `502`,
+  `503`, `504` and three transport errors): OpenAI retries any transport
+  error, `429` unless the quota is exhausted (`insufficient_quota`, by error
+  code or message) and any `5xx`; Anthropic retries any transport error,
+  `429` and any `5xx`, now including `529` Overloaded; Ollama retries
+  transport errors only, no longer any HTTP status. No adapter retries `408`
+  any more; authentication errors (`401`) stay unretried. Retries are logged at
+  `:info`, deepeval's level, rather than `:warning`. `:req_options` still
+  overrides all of this, e.g. `retry: false`.
 - **BREAKING: timeouts follow deepeval's per-task timeout and messages.** The
   default `:timeout` is now deepeval's per-task timeout,
   `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE` (or

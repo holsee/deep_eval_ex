@@ -46,6 +46,13 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   - `:req_options` - extra `Req` options merged into the request, e.g.
     `[plug: {Req.Test, DeepEvalEx.LLM.Adapters.OpenAI}]` in tests
 
+  ## Retries
+
+  Requests are retried as deepeval retries OpenAI calls (see
+  `DeepEvalEx.LLM.Retry`): transport errors, rate limits other than an
+  exhausted quota, and `5xx`, up to `DEEPEVAL_RETRY_MAX_ATTEMPTS` attempts
+  (default `2`) with exponential backoff and jitter.
+
   ## Supported Models
 
   - `gpt-4o` - Latest GPT-4 Omni (recommended)
@@ -62,7 +69,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
 
   use DeepEvalEx.LLM.Adapter
 
-  alias DeepEvalEx.LLM.{Adapter, StrictSchema, Usage}
+  alias DeepEvalEx.LLM.{Adapter, Retry, StrictSchema, Usage}
 
   @default_base_url "https://api.openai.com/v1"
   @default_model "gpt-4o-mini"
@@ -285,13 +292,13 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
     req_opts = [
       json: body,
       headers: headers,
-      receive_timeout: Keyword.get(opts, :timeout, 60_000),
-      retry: :transient,
-      retry_delay: &retry_delay/1,
-      max_retries: 3
+      receive_timeout: Keyword.get(opts, :timeout, 60_000)
     ]
 
-    req_opts = Keyword.merge(req_opts, Keyword.get(opts, :req_options, []))
+    req_opts =
+      req_opts
+      |> Keyword.merge(Retry.req_options(:openai))
+      |> Keyword.merge(Keyword.get(opts, :req_options, []))
 
     case Req.post(url, req_opts) do
       {:ok, %Req.Response{status: 200, body: body}} ->
@@ -310,11 +317,6 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
       Adapter.config(:openai_api_key) ||
       Adapter.env("OPENAI_API_KEY") ||
       raise "OpenAI API key not configured. Set OPENAI_API_KEY env var or :openai_api_key config."
-  end
-
-  # Req passes the retry count starting at 0. Exponential backoff: 1s, 2s, 4s
-  defp retry_delay(retry_count) do
-    :timer.seconds(Integer.pow(2, retry_count))
   end
 
   # strict: true requires closed objects with every property required.

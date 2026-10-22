@@ -5,9 +5,18 @@ defmodule DeepEvalEx.LLM.Adapters.AnthropicTest do
   alias DeepEvalEx.LLM.Adapter
   alias DeepEvalEx.LLM.Adapters.Anthropic
   alias DeepEvalEx.LLM.Usage
+  alias DeepEvalEx.Test.RetryStub
 
   @stub Anthropic
+  @retry_opts [api_key: "sk-ant-test", req_options: [plug: {Req.Test, @stub}]]
+  @ok %{
+    "type" => "message",
+    "role" => "assistant",
+    "content" => [%{"type" => "text", "text" => "hi"}]
+  }
   @base_opts [api_key: "sk-ant-test", req_options: [plug: {Req.Test, @stub}, retry: false]]
+
+  import RetryStub, only: [no_backoff: 1]
 
   setup do
     saved_env = Map.new(~w(ANTHROPIC_BASE_URL ANTHROPIC_API_KEY), &{&1, System.get_env(&1)})
@@ -490,6 +499,40 @@ defmodule DeepEvalEx.LLM.Adapters.AnthropicTest do
 
       assert {:error, {:request_failed, %Req.TransportError{reason: :econnrefused}}} =
                Anthropic.generate("hello", @base_opts)
+    end
+  end
+
+  describe "retries" do
+    @describetag :capture_log
+    setup :no_backoff
+
+    test "retries 529 Overloaded" do
+      overloaded = %{"type" => "error", "error" => %{"type" => "overloaded_error"}}
+      counter = RetryStub.stub_replies(@stub, [{529, overloaded}, {200, @ok}])
+
+      assert {:ok, "hi"} = Anthropic.generate("hello", @retry_opts)
+      assert RetryStub.attempts(counter) == 2
+    end
+
+    test "retries a rate limit" do
+      counter = RetryStub.stub_replies(@stub, [{429, %{}}, {200, @ok}])
+
+      assert {:ok, "hi"} = Anthropic.generate("hello", @retry_opts)
+      assert RetryStub.attempts(counter) == 2
+    end
+
+    test "gives up after DEEPEVAL_RETRY_MAX_ATTEMPTS attempts" do
+      counter = RetryStub.stub_replies(@stub, [{500, %{}}])
+
+      assert {:error, {:api_error, 500, _}} = Anthropic.generate("hello", @retry_opts)
+      assert RetryStub.attempts(counter) == 2
+    end
+
+    test "does not retry an authentication error" do
+      counter = RetryStub.stub_replies(@stub, [{401, %{}}, {200, @ok}])
+
+      assert {:error, {:api_error, 401, _}} = Anthropic.generate("hello", @retry_opts)
+      assert RetryStub.attempts(counter) == 1
     end
   end
 

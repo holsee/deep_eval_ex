@@ -55,6 +55,13 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
   "disabled"}`, as deepeval does when thinking is not switched on; forcing a
   tool, as `generate_with_schema/3` does, is not allowed with thinking.
 
+  ## Retries
+
+  Requests are retried as deepeval retries Anthropic calls (see
+  `DeepEvalEx.LLM.Retry`): transport errors, rate limits and `5xx`, including
+  `529` Overloaded, up to `DEEPEVAL_RETRY_MAX_ATTEMPTS` attempts (default
+  `2`) with exponential backoff and jitter.
+
   ## Structured Outputs
 
   `generate_with_schema/3` offers the model a single `"response"` tool whose
@@ -80,7 +87,7 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
 
   use DeepEvalEx.LLM.Adapter
 
-  alias DeepEvalEx.LLM.{Adapter, Usage}
+  alias DeepEvalEx.LLM.{Adapter, Retry, Usage}
 
   @default_base_url "https://api.anthropic.com"
   @api_version "2023-06-01"
@@ -329,13 +336,13 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
     req_opts = [
       json: body,
       headers: headers,
-      receive_timeout: Keyword.get(opts, :timeout, 60_000),
-      retry: :transient,
-      retry_delay: &retry_delay/1,
-      max_retries: 3
+      receive_timeout: Keyword.get(opts, :timeout, 60_000)
     ]
 
-    req_opts = Keyword.merge(req_opts, Keyword.get(opts, :req_options, []))
+    req_opts =
+      req_opts
+      |> Keyword.merge(Retry.req_options(:anthropic))
+      |> Keyword.merge(Keyword.get(opts, :req_options, []))
 
     case Req.post(url, req_opts) do
       {:ok, %Req.Response{status: 200, body: body}} ->
@@ -355,11 +362,6 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
       Adapter.env("ANTHROPIC_API_KEY") ||
       raise "Anthropic API key not configured. " <>
               "Set ANTHROPIC_API_KEY env var or :anthropic_api_key config."
-  end
-
-  # Req passes the retry count starting at 0. Exponential backoff: 1s, 2s, 4s
-  defp retry_delay(retry_count) do
-    :timer.seconds(Integer.pow(2, retry_count))
   end
 
   defp schema_to_json_schema(schema) when is_map(schema), do: schema

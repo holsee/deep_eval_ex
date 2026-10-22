@@ -4,9 +4,14 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
 
   alias DeepEvalEx.LLM.Adapters.OpenAI
   alias DeepEvalEx.LLM.Usage
+  alias DeepEvalEx.Test.RetryStub
 
   @stub OpenAI
+  @retry_opts [api_key: "sk-test", req_options: [plug: {Req.Test, @stub}]]
+  @ok %{"choices" => [%{"message" => %{"content" => "hi"}}]}
   @base_opts [api_key: "sk-test", req_options: [plug: {Req.Test, @stub}, retry: false]]
+
+  import RetryStub, only: [no_backoff: 1]
 
   setup do
     saved_env = Map.new(~w(OPENAI_BASE_URL OPENAI_API_KEY), &{&1, System.get_env(&1)})
@@ -407,6 +412,56 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
 
       assert {:error, {:request_failed, %Req.TransportError{reason: :econnrefused}}} =
                OpenAI.generate("hello", @base_opts)
+    end
+  end
+
+  describe "retries" do
+    @describetag :capture_log
+    setup :no_backoff
+
+    test "retries a 5xx once by default, deepeval's DEEPEVAL_RETRY_MAX_ATTEMPTS of 2" do
+      counter = RetryStub.stub_replies(@stub, [{503, %{}}, {200, @ok}])
+
+      assert {:ok, "hi"} = OpenAI.generate("hello", @retry_opts)
+      assert RetryStub.attempts(counter) == 2
+    end
+
+    test "gives up after DEEPEVAL_RETRY_MAX_ATTEMPTS attempts" do
+      counter = RetryStub.stub_replies(@stub, [{500, %{"error" => "boom"}}])
+
+      assert {:error, {:api_error, 500, _}} = OpenAI.generate("hello", @retry_opts)
+      assert RetryStub.attempts(counter) == 2
+    end
+
+    test "makes as many attempts as DEEPEVAL_RETRY_MAX_ATTEMPTS says" do
+      System.put_env("DEEPEVAL_RETRY_MAX_ATTEMPTS", "4")
+      on_exit(fn -> System.delete_env("DEEPEVAL_RETRY_MAX_ATTEMPTS") end)
+      counter = RetryStub.stub_replies(@stub, [{429, %{}}])
+
+      assert {:error, {:api_error, 429, _}} = OpenAI.generate("hello", @retry_opts)
+      assert RetryStub.attempts(counter) == 4
+    end
+
+    test "does not retry an exhausted quota" do
+      quota = %{"error" => %{"code" => "insufficient_quota", "message" => "quota"}}
+      counter = RetryStub.stub_replies(@stub, [{429, quota}, {200, @ok}])
+
+      assert {:error, {:api_error, 429, ^quota}} = OpenAI.generate("hello", @retry_opts)
+      assert RetryStub.attempts(counter) == 1
+    end
+
+    test "does not retry an authentication error" do
+      counter = RetryStub.stub_replies(@stub, [{401, %{}}, {200, @ok}])
+
+      assert {:error, {:api_error, 401, _}} = OpenAI.generate("hello", @retry_opts)
+      assert RetryStub.attempts(counter) == 1
+    end
+
+    test "retries a transport error" do
+      counter = RetryStub.stub_replies(@stub, [{:transport_error, :econnrefused}, {200, @ok}])
+
+      assert {:ok, "hi"} = OpenAI.generate("hello", @retry_opts)
+      assert RetryStub.attempts(counter) == 2
     end
   end
 

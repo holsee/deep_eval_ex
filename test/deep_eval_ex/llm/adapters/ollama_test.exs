@@ -5,9 +5,18 @@ defmodule DeepEvalEx.LLM.Adapters.OllamaTest do
   alias DeepEvalEx.LLM.Adapter
   alias DeepEvalEx.LLM.Adapters.Ollama
   alias DeepEvalEx.LLM.Usage
+  alias DeepEvalEx.Test.RetryStub
 
   @stub Ollama
+  @retry_opts [model: "llama3.2", req_options: [plug: {Req.Test, @stub}]]
+  @ok %{
+    "model" => "llama3.2",
+    "message" => %{"role" => "assistant", "content" => "hi"},
+    "done" => true
+  }
   @base_opts [model: "llama3.2", req_options: [plug: {Req.Test, @stub}, retry: false]]
+
+  import RetryStub, only: [no_backoff: 1]
 
   setup do
     saved_env = %{"OLLAMA_HOST" => System.get_env("OLLAMA_HOST")}
@@ -299,6 +308,25 @@ defmodule DeepEvalEx.LLM.Adapters.OllamaTest do
 
       assert {:error, {:request_failed, %Req.TransportError{reason: :econnrefused}}} =
                Ollama.generate("hello", @base_opts)
+    end
+  end
+
+  describe "retries" do
+    @describetag :capture_log
+    setup :no_backoff
+
+    test "retries a transport error" do
+      counter = RetryStub.stub_replies(@stub, [{:transport_error, :econnrefused}, {200, @ok}])
+
+      assert {:ok, "hi"} = Ollama.generate("hello", @retry_opts)
+      assert RetryStub.attempts(counter) == 2
+    end
+
+    test "does not retry an HTTP error status, as deepeval's Ollama policy" do
+      counter = RetryStub.stub_replies(@stub, [{500, %{"error" => "boom"}}, {200, @ok}])
+
+      assert {:error, {:api_error, 500, _}} = Ollama.generate("hello", @retry_opts)
+      assert RetryStub.attempts(counter) == 1
     end
   end
 
