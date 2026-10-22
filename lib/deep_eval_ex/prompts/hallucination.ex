@@ -80,7 +80,7 @@ defmodule DeepEvalEx.Prompts.Hallucination do
     contradictions_formatted = format_list(contradictions)
 
     """
-    Given a list of factual alignments and contradictions, which highlights alignment/contradictions between the `actual output` and `contexts`, use it to provide a reason for the hallucination score CONCISELY. Note that the hallucination score ranges from 0 - 1, and the lower the better.
+    Given a list of factual alignments and contradictions, which highlights alignment/contradictions between the `actual output` and `contexts`, use it to provide a reason for the hallucination score CONCISELY. Note that the hallucination score ranges from 0 - 1 and measures how well the `actual output` aligns with the `contexts`, and the higher the better.
 
     **
     IMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason.

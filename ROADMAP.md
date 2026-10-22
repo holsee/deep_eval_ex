@@ -68,11 +68,6 @@ checked byte for byte against golden fixtures from deepeval 4.3.1.
 
 These are fixed in [P1](#p1-correct-the-existing-metric-surface):
 
-- **Hallucination direction is inverted.** DeepEvalEx scores the fraction of
-  contexts the output contradicts (lower is better, success when
-  `score <= threshold`). deepeval 4.3.1 scores the fraction it agrees with
-  (higher is better, success when `score >= threshold`) since
-  [PR #3102](https://github.com/confident-ai/deepeval/pull/3102).
 - **`idk` instead of `borderline` verdicts.** Faithfulness and AnswerRelevancy
   ask for `yes`/`no`/`idk`; 4.3.1 uses `yes`/`no`/`borderline` with shared
   verdict normalisation that drops unknown verdicts.

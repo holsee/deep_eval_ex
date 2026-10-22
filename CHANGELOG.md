@@ -122,6 +122,15 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Changed
 
+- **BREAKING: Hallucination scores aligned contexts, higher is better.** As in
+  deepeval 4.3.1 (PR #3102), the score is the fraction of contexts the output
+  agrees with (`1.0` when the judge returns no verdicts) and a result passes
+  when `score >= threshold`; it used to be the fraction contradicted, passing
+  when `score <= threshold`. The default threshold stays 0.5. Review any
+  `:threshold` you pass and any code reading `result.score`: a threshold of
+  0.2 that meant "at most 20% contradicted" is now 0.8. The first Hallucination
+  measurement on a node logs a warning saying so, as deepeval warns once per
+  process, and the reason prompt tells the judge that higher is better.
 - **Metric names now match deepeval**, because they key the exported
   `metricsData` and `metricsScores`: `ExactMatch` is reported as
   `"Exact Match"`, and GEval as `"<name> [GEval]"`.

@@ -8,7 +8,7 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   @moduledoc """
   Hallucination metric for detecting unsupported statements.
 
-  Measures whether the actual output contradicts the provided context.
+  Measures how well the actual output aligns with the provided context.
   Unlike Faithfulness which extracts claims and truths separately,
   Hallucination directly compares the output against each context item.
 
@@ -17,8 +17,17 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   1. **Generate verdicts** - For each context, determine if the output:
      - `yes` - Agrees with the context (factual alignment)
      - `no` - Contradicts the context (hallucination)
-  2. **Calculate score** - (contradictions) / (total contexts)
-  3. **Lower score is better** - Success when score ≤ threshold
+  2. **Calculate score** - (aligned contexts) / (total contexts), or `1.0`
+     when the judge returns no verdicts
+  3. **Higher score is better** - Success when score ≥ threshold
+
+  > #### Score direction {: .warning}
+  >
+  > Like deepeval 4.3.1, the score is the fraction of contexts the output
+  > agrees with: 1.0 means no hallucination. Earlier releases scored the
+  > fraction it contradicted and passed when `score <= threshold`; a
+  > threshold of 0.2 that meant "at most 20% contradicted" is now 0.8. The
+  > first measurement on a node logs a warning saying so, as deepeval does.
 
   ## Usage
 
@@ -35,20 +44,20 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   )
 
   {:ok, result} = Hallucination.measure(test_case)
-  result.score   # => 0.5 (1 contradiction out of 2 contexts)
-  result.success # => true (0.5 <= 0.5 threshold)
+  result.score   # => 0.5 (1 aligned context out of 2)
+  result.success # => true (0.5 >= 0.5 threshold)
   ```
 
   ## Options
 
-  - `:threshold` - Pass/fail threshold (default: 0.5, lower is better)
+  - `:threshold` - Minimum passing score (default: 0.5, higher is better)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, Result}
+  alias DeepEvalEx.{LLM.Adapter, Metrics.Utils.ScoreDirection, Result}
   alias DeepEvalEx.Prompts.Hallucination, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.Hallucination, as: Schema
 
@@ -65,16 +74,18 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   defdelegate evaluation_model(opts), to: Adapter, as: :model_name
 
   @doc """
-  Measures hallucination of the actual output against context.
+  Measures how well the actual output aligns with its context.
 
   ## Options
 
-  - `:threshold` - Score threshold for pass/fail (default: 0.5)
+  - `:threshold` - Minimum passing score (default: 0.5)
   - `:include_reason` - Whether to generate a reason (default: true)
   - `:adapter` - LLM adapter to use
   - `:model` - Model name
   """
   def do_measure(test_case, opts) do
+    ScoreDirection.warn_flipped(metric_name())
+
     threshold = Keyword.get(opts, :threshold, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
@@ -89,7 +100,7 @@ defmodule DeepEvalEx.Metrics.Hallucination do
          metric: metric_name(),
          score: score,
          threshold: threshold,
-         success: score <= threshold,
+         success: score >= threshold,
          reason: reason,
          metadata: %{
            verdicts: verdicts,
@@ -104,7 +115,7 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   defp get_contexts(_), do: []
 
   defp generate_verdicts(_actual_output, [], _opts) do
-    # No contexts means no hallucinations possible
+    # No contexts means nothing to contradict
     {:ok, []}
   end
 
@@ -121,17 +132,13 @@ defmodule DeepEvalEx.Metrics.Hallucination do
     end
   end
 
-  defp calculate_score([]), do: 0.0
+  # deepeval 4.3.1 scores the verdicts that pass (`yes`, the output agrees
+  # with the context) over all verdicts, and an empty list as a pass
+  defp calculate_score([]), do: 1.0
 
   defp calculate_score(verdicts) do
-    total = length(verdicts)
-
-    hallucination_count =
-      Enum.count(verdicts, fn %{verdict: v} ->
-        v == :no
-      end)
-
-    hallucination_count / total
+    aligned = Enum.count(verdicts, fn %{verdict: v} -> v == :yes end)
+    aligned / length(verdicts)
   end
 
   defp maybe_generate_reason(_score, _verdicts, false, _opts), do: {:ok, nil}
