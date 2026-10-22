@@ -89,6 +89,7 @@ See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation 
 - [TestCase](wiki/api/TestCase.md) - Test case structure
 - [Result](wiki/api/Result.md) - Evaluation results
 - [Evaluator](wiki/api/Evaluator.md) - Batch evaluation
+- [TestRun](wiki/api/TestRun.md) - deepeval-compatible test run export and import
 - [LLM Adapters](wiki/api/LLM-Adapters.md) - Provider adapters
 
 ### Architecture
@@ -152,6 +153,28 @@ end, nil)
 ```
 
 See [Telemetry Guide](wiki/guides/Telemetry.md) for all events and integration patterns.
+
+## Migrating from deepeval
+
+DeepEvalEx writes and reads deepeval's `test_run_<timestamp>.json` files, so
+existing runs and the tools that read them carry over:
+
+```elixir
+# Read a run saved by deepeval's evaluate() (or by DeepEvalEx)
+{:ok, test_run} = DeepEvalEx.TestRun.load("eval_results/test_run_20261022_101500.json")
+{test_cases, results} = DeepEvalEx.TestRun.to_results(test_run)
+
+# Save new runs in the same format and folder
+DeepEvalEx.evaluate_run(test_cases, [DeepEvalEx.Metrics.ExactMatch],
+  results_folder: "eval_results"
+)
+```
+
+`DEEPEVAL_RESULTS_FOLDER` is honoured as in deepeval. Names map directly:
+`LLMTestCase` is `DeepEvalEx.TestCase` (snake_case fields, same names),
+`MetricData` is `DeepEvalEx.Result` and `evaluate()` is
+`DeepEvalEx.evaluate_run/3`. See [TestRun](wiki/api/TestRun.md) for what is
+kept on import.
 
 ## License
 

@@ -120,6 +120,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/api/TestCase.md",
         "wiki/api/Result.md",
         "wiki/api/Evaluator.md",
+        "wiki/api/TestRun.md",
         "wiki/api/LLM-Adapters.md",
         # Architecture
         {"docs/adr/README.md", [title: "ADR Index", filename: "adr-index"]},

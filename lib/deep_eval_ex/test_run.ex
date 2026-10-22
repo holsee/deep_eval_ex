@@ -35,9 +35,33 @@ defmodule DeepEvalEx.TestRun do
 
   deepeval's conversational test cases and prompts are always empty, and
   `official` is always `false`.
+
+  ## Loading deepeval's files
+
+  `load/1` reads a `test_run_<timestamp>.json` written by deepeval (or by
+  `DeepEvalEx.TestRun.LocalStore`) back into a test run, and `from_map/1`
+  does the same for already decoded JSON. `to_results/1` turns a loaded run
+  into `DeepEvalEx.TestCase`s and `DeepEvalEx.Result`s:
+
+      {:ok, test_run} = DeepEvalEx.TestRun.load("eval_results/test_run_20261022_101500.json")
+      {test_cases, results} = DeepEvalEx.TestRun.to_results(test_run)
+
+  Loading is lossless for every field DeepEvalEx models: `load/1`, then
+  `to_map/1` and `DeepEvalEx.TestRun.JSON.encode!/1` give back deepeval's
+  file byte for byte. Values are kept as they are in the file (an integer
+  test case `runDuration` stays an integer, JSON objects stay
+  `Jason.OrderedObject`s).
+
+  Keys DeepEvalEx does not model (`testFile`, `datasetAlias`, `trace`,
+  `verboseLogs`, ...) are ignored, as deepeval's models ignore extra keys,
+  and are not written back. Conversational test cases and prompts are
+  ignored too, and `official` is read as `false`. Keeping them would need
+  a field holding raw JSON that every other DeepEvalEx function would
+  have to ignore; none of DeepEvalEx's own exports contain them.
   """
 
   alias DeepEvalEx.{Result, TestRun}
+  alias DeepEvalEx.Schemas.ToolCall
   alias DeepEvalEx.TestCase, as: EvalTestCase
   alias DeepEvalEx.TestRun.JSON
   alias Jason.OrderedObject
@@ -74,10 +98,11 @@ defmodule DeepEvalEx.TestRun do
     @moduledoc """
     One metric's result on one test case, as deepeval's `MetricData`.
 
-    Built from a `DeepEvalEx.Result` by `from_result/2`. An errored result
-    keeps its threshold, error and cost but has no score or reason, as in
-    deepeval. DeepEvalEx metrics are never flaky, so `:flaky` is always
-    `false`.
+    Built from a `DeepEvalEx.Result` by `from_result/2`, and turned back
+    into one by `to_result/1`. An errored result keeps its threshold, error
+    and cost but has no score or reason, as in deepeval. DeepEvalEx metrics
+    are never flaky, so `:flaky` is `false` unless the data was loaded from
+    a deepeval file.
     """
 
     @type t :: %__MODULE__{
@@ -133,6 +158,28 @@ defmodule DeepEvalEx.TestRun do
         evaluation_cost: result.evaluation_cost,
         input_tokens: result.input_tokens,
         output_tokens: result.output_tokens
+      }
+    end
+
+    @doc """
+    Converts metric data into a result.
+
+    `:strict_mode` and `:flaky` have no `DeepEvalEx.Result` counterpart and
+    are dropped.
+    """
+    @spec to_result(t()) :: Result.t()
+    def to_result(%__MODULE__{} = data) do
+      %Result{
+        metric: data.name,
+        score: data.score,
+        success: data.success,
+        reason: data.reason,
+        threshold: data.threshold,
+        error: data.error,
+        evaluation_model: data.evaluation_model,
+        evaluation_cost: data.evaluation_cost,
+        input_tokens: data.input_tokens,
+        output_tokens: data.output_tokens
       }
     end
   end
@@ -199,6 +246,36 @@ defmodule DeepEvalEx.TestRun do
       metrics_data: [],
       run_duration: 0
     ]
+
+    @doc """
+    Converts an evaluated test case back into a `DeepEvalEx.TestCase`.
+
+    Keeps the test case's own fields and drops the evaluation (`:success`,
+    `:metrics_data`, `:run_duration`, `:evaluation_cost` and `:order`).
+    Missing tool call lists become empty lists, the `DeepEvalEx.TestCase`
+    default.
+    """
+    @spec to_test_case(t()) :: DeepEvalEx.TestCase.t()
+    def to_test_case(%__MODULE__{} = test_case) do
+      %DeepEvalEx.TestCase{
+        name: test_case.name,
+        input: test_case.input,
+        actual_output: test_case.actual_output,
+        expected_output: test_case.expected_output,
+        context: test_case.context,
+        retrieval_context: test_case.retrieval_context,
+        tools_called: test_case.tools_called || [],
+        expected_tools: test_case.expected_tools || [],
+        token_cost: test_case.token_cost,
+        input_token_count: test_case.input_token_count,
+        output_token_count: test_case.output_token_count,
+        completion_time: test_case.completion_time,
+        tags: test_case.tags,
+        flaky: test_case.flaky,
+        metadata: test_case.metadata,
+        comments: test_case.comments
+      }
+    end
   end
 
   @doc """
@@ -327,6 +404,87 @@ defmodule DeepEvalEx.TestRun do
       evaluationCost: to_float(test_run.evaluation_cost),
       official: false
     )
+  end
+
+  @doc """
+  Reads a deepeval test run file.
+
+  Decodes the file with JSON objects kept in order and passes it to
+  `from_map/1`.
+
+  ## Returns
+
+  - `{:ok, test_run}`
+  - `{:error, posix}` - The file could not be read
+  - `{:error, %Jason.DecodeError{}}` - The file is not JSON
+  - `{:error, {:invalid_test_run, message}}` - See `from_map/1`
+  """
+  @spec load(Path.t()) ::
+          {:ok, t()}
+          | {:error, File.posix() | Jason.DecodeError.t() | {:invalid_test_run, String.t()}}
+  def load(path) do
+    with {:ok, json} <- File.read(path),
+         {:ok, decoded} <- Jason.decode(json, objects: :ordered_objects) do
+      from_map(decoded)
+    end
+  end
+
+  @doc """
+  Builds a test run from decoded deepeval JSON.
+
+  Takes deepeval's camelCase keys, in maps or `Jason.OrderedObject`s (use
+  `Jason.decode(json, objects: :ordered_objects)` to keep the key order of
+  metadata, tool call parameters and hyperparameters for re-encoding).
+  Unknown keys are ignored (see the module documentation).
+
+  Only test case and metric data `name`s and each `metricsScores` entry's
+  `metric` are required. Missing optional keys get deepeval's defaults,
+  with these exceptions where DeepEvalEx needs a value:
+
+  - a test case's `success` is computed from its metric data, as
+    `from_results/3` does, and its `order` is its position in `testCases`
+  - a test case's `runDuration` is `0` and a metric's `success` is `false`
+  - `metricsScores`, `testPassed` and `testFailed` are computed from the
+    test cases
+
+  Returns `{:error, {:invalid_test_run, message}}` when a required key is
+  missing or a value has the wrong shape; the message starts with the path
+  of the value, e.g. `"testCases[1].name: expected a string, got nil"`.
+
+  ## Examples
+
+      iex> {:ok, test_run} =
+      ...>   DeepEvalEx.TestRun.from_map(%{
+      ...>     "testCases" => [%{"name" => "greeting", "input" => "Hi", "metricsData" => []}]
+      ...>   })
+      iex> [%DeepEvalEx.TestRun.TestCase{name: "greeting", success: true}] = test_run.test_cases
+      iex> test_run.test_passed
+      1
+  """
+  @spec from_map(map()) :: {:ok, t()} | {:error, {:invalid_test_run, String.t()}}
+  def from_map(map) do
+    {:ok, parse_test_run(map)}
+  catch
+    {:invalid_test_run, _message} = reason -> {:error, reason}
+  end
+
+  @doc """
+  Converts a test run into the test cases and result lists it was built
+  from, the inverse of `from_results/3`.
+
+  Returns `{test_cases, results}` with one `DeepEvalEx.TestCase` and one
+  list of `DeepEvalEx.Result`s per evaluated test case, in the shape
+  `DeepEvalEx.evaluate_batch/3` returns. See `TestCase.to_test_case/1` and
+  `MetricData.to_result/1` for what is kept.
+  """
+  @spec to_results(t()) :: {[EvalTestCase.t()], [[Result.t()]]}
+  def to_results(%__MODULE__{test_cases: test_cases}) do
+    {
+      Enum.map(test_cases, &TestCase.to_test_case/1),
+      Enum.map(test_cases, fn test_case ->
+        Enum.map(test_case.metrics_data, &MetricData.to_result/1)
+      end)
+    }
   end
 
   defp api_test_case(test_case, results, duration, order, strict_modes) do
@@ -501,6 +659,193 @@ defmodule DeepEvalEx.TestRun do
     |> Enum.reject(fn {_key, value} -> is_nil(value) end)
     |> Enum.map(fn {key, value} -> {Atom.to_string(key), value} end)
     |> OrderedObject.new()
+  end
+
+  # Parsing deepeval JSON. Errors are thrown as {:invalid_test_run, message}
+  # and caught by from_map/1.
+
+  defp parse_test_run(map) do
+    object!(map, "test run")
+
+    test_cases =
+      map
+      |> list!("testCases", "")
+      |> indexed("testCases", fn test_case, path, index ->
+        parse_test_case(test_case, path, index)
+      end)
+
+    metrics_scores =
+      case map["metricsScores"] do
+        nil ->
+          metrics_scores(test_cases)
+
+        scores ->
+          scores |> list_value!("metricsScores") |> indexed("metricsScores", &parse_scores/3)
+      end
+
+    %__MODULE__{
+      test_cases: test_cases,
+      metrics_scores: metrics_scores,
+      identifier: map["identifier"],
+      hyperparameters: parse_hyperparameters(map["hyperparameters"]),
+      test_passed: value(map, "testPassed", Enum.count(test_cases, & &1.success)),
+      test_failed: value(map, "testFailed", Enum.count(test_cases, &(not &1.success))),
+      run_duration: value(map, "runDuration", 0.0),
+      evaluation_cost: map["evaluationCost"]
+    }
+  end
+
+  defp parse_test_case(map, path, index) do
+    object!(map, path)
+
+    metrics_data =
+      map
+      |> list!("metricsData", path)
+      |> indexed(path <> ".metricsData", fn data, data_path, _index ->
+        parse_metric_data(data, data_path)
+      end)
+
+    %TestCase{
+      name: string!(map, "name", path),
+      input: map["input"],
+      actual_output: map["actualOutput"],
+      expected_output: map["expectedOutput"],
+      context: map["context"],
+      retrieval_context: map["retrievalContext"],
+      tools_called: parse_tool_calls(map, "toolsCalled", path),
+      expected_tools: parse_tool_calls(map, "expectedTools", path),
+      token_cost: map["tokenCost"],
+      input_token_count: map["inputTokenCount"],
+      output_token_count: map["outputTokenCount"],
+      completion_time: map["completionTime"],
+      tags: map["tags"],
+      flaky: value(map, "flaky", false),
+      success: value(map, "success", Enum.all?(metrics_data, &(&1.flaky or &1.success))),
+      metrics_data: metrics_data,
+      run_duration: value(map, "runDuration", 0),
+      evaluation_cost: map["evaluationCost"],
+      order: value(map, "order", index),
+      metadata: map["metadata"],
+      comments: map["comments"]
+    }
+  end
+
+  defp parse_metric_data(map, path) do
+    object!(map, path)
+
+    %MetricData{
+      name: string!(map, "name", path),
+      threshold: map["threshold"],
+      success: value(map, "success", false),
+      score: map["score"],
+      reason: map["reason"],
+      strict_mode: value(map, "strictMode", false),
+      flaky: value(map, "flaky", false),
+      evaluation_model: map["evaluationModel"],
+      error: map["error"],
+      evaluation_cost: map["evaluationCost"],
+      input_tokens: map["inputTokenCount"],
+      output_tokens: map["outputTokenCount"]
+    }
+  end
+
+  defp parse_scores(map, path, _index) do
+    object!(map, path)
+
+    %{
+      metric: string!(map, "metric", path),
+      scores: list!(map, "scores", path),
+      passes: value(map, "passes", 0),
+      fails: value(map, "fails", 0),
+      errors: value(map, "errors", 0)
+    }
+  end
+
+  defp parse_tool_calls(map, key, path) do
+    case map[key] do
+      nil ->
+        nil
+
+      tool_calls ->
+        tool_calls
+        |> list_value!(join(path, key))
+        |> indexed(join(path, key), fn tool_call, tool_path, _index ->
+          parse_tool_call(tool_call, tool_path)
+        end)
+    end
+  end
+
+  defp parse_tool_call(map, path) do
+    object!(map, path)
+
+    %ToolCall{
+      name: string!(map, "name", path),
+      type: tool_type(map["type"], path),
+      description: map["description"],
+      reasoning: map["reasoning"],
+      input_parameters: map["inputParameters"],
+      output: map["output"]
+    }
+  end
+
+  defp tool_type(nil, _path), do: :function
+
+  defp tool_type(type, path) when is_binary(type) do
+    case String.upcase(type) do
+      "FUNCTION" -> :function
+      "MCP" -> :mcp
+      _other -> invalid!(path <> ".type", "expected \"FUNCTION\" or \"MCP\"", type)
+    end
+  end
+
+  defp tool_type(type, path), do: invalid!(path <> ".type", "expected a string", type)
+
+  defp parse_hyperparameters(nil), do: nil
+
+  defp parse_hyperparameters(hyperparameters) do
+    object!(hyperparameters, "hyperparameters")
+    Enum.map(hyperparameters, fn {key, value} -> {key, value} end)
+  end
+
+  # Applies fun.(item, "<path>[<index>]", index) to each item.
+  defp indexed(items, path, fun) do
+    items
+    |> Enum.with_index()
+    |> Enum.map(fn {item, index} -> fun.(item, "#{path}[#{index}]", index) end)
+  end
+
+  defp value(map, key, default) do
+    case map[key] do
+      nil -> default
+      value -> value
+    end
+  end
+
+  defp object!(value, _path) when is_map(value), do: value
+  defp object!(value, path), do: invalid!(path, "expected a JSON object", value)
+
+  defp list!(map, key, path) do
+    case map[key] do
+      nil -> []
+      list -> list_value!(list, join(path, key))
+    end
+  end
+
+  defp list_value!(list, _path) when is_list(list), do: list
+  defp list_value!(value, path), do: invalid!(path, "expected a list", value)
+
+  defp string!(map, key, path) do
+    case map[key] do
+      string when is_binary(string) -> string
+      value -> invalid!(join(path, key), "expected a string", value)
+    end
+  end
+
+  defp join("", key), do: key
+  defp join(path, key), do: path <> "." <> key
+
+  defp invalid!(path, expected, value) do
+    throw({:invalid_test_run, "#{path}: #{expected}, got #{inspect(value)}"})
   end
 
   defp non_empty([]), do: nil
