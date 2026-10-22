@@ -31,35 +31,47 @@ defmodule DeepEvalEx do
       )
 
       # Evaluate
-      {:ok, result} = DeepEvalEx.evaluate(test_case, [metric])
+      {:ok, results} = DeepEvalEx.evaluate(test_case, [metric])
 
   ## Metrics
 
-  DeepEvalEx provides several evaluation metrics:
-
+  - `DeepEvalEx.Metrics.ExactMatch` - Simple string comparison
   - `DeepEvalEx.Metrics.GEval` - Flexible criteria-based evaluation
   - `DeepEvalEx.Metrics.Faithfulness` - RAG: claims supported by context
   - `DeepEvalEx.Metrics.Hallucination` - Detects unsupported statements
   - `DeepEvalEx.Metrics.AnswerRelevancy` - Response relevance to question
   - `DeepEvalEx.Metrics.ContextualPrecision` - RAG retrieval ranking quality
   - `DeepEvalEx.Metrics.ContextualRecall` - RAG coverage of ground truth
-  - `DeepEvalEx.Metrics.ExactMatch` - Simple string comparison
+  - `DeepEvalEx.Metrics.ToolCorrectness` - Agent tool calls against the
+    expected tools
 
   ## LLM Providers
 
-  Supports multiple LLM backends:
+  LLM-as-judge metrics call a provider through a `DeepEvalEx.LLM.Adapter`,
+  chosen with the `:adapter` option or the `:default_model` config:
 
-  - OpenAI (gpt-4o, gpt-4o-mini, gpt-3.5-turbo)
-  - Anthropic (claude-opus-5, claude-sonnet-4-6, claude-haiku-4-5, ...)
-  - Ollama (local models: llama3.2, qwen3, mistral, ...)
+  - `DeepEvalEx.LLM.Adapters.OpenAI` (`:openai`) - OpenAI chat completions,
+    or any OpenAI-compatible gateway via `:base_url` / `OPENAI_BASE_URL`
+  - `DeepEvalEx.LLM.Adapters.Anthropic` (`:anthropic`) - Claude models via
+    the Messages API
+  - `DeepEvalEx.LLM.Adapters.Ollama` (`:ollama`) - local models via
+    Ollama's `/api/chat`
+  - `DeepEvalEx.LLM.Adapters.Mock` (`:mock`) - canned responses for tests
+
+  Each records token usage and cost on the results; see
+  `DeepEvalEx.LLM.Usage`.
 
   ## Configuration
 
       config :deep_eval_ex,
-        default_model: :openai,
+        default_model: {:openai, "gpt-4o-mini"},
         openai_api_key: System.get_env("OPENAI_API_KEY"),
-        default_threshold: 0.5,
-        max_concurrency: 10
+        default_threshold: 0.5
+
+  ## deepeval Test Runs
+
+  `evaluate_run/3` saves runs as deepeval's `test_run_<timestamp>.json` and
+  `DeepEvalEx.TestRun.load/1` reads them back; see `DeepEvalEx.TestRun`.
   """
 
   require Logger

@@ -70,6 +70,7 @@ config :deep_eval_ex,
 | **AnswerRelevancy** | Response relevance to input question |
 | **ContextualPrecision** | RAG retrieval ranking quality |
 | **ContextualRecall** | RAG coverage of ground truth |
+| **ToolCorrectness** | Agent tool calls against the expected tools |
 
 See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation on each metric.
 
@@ -100,9 +101,14 @@ See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation 
 
 DeepEvalEx supports multiple LLM providers:
 
-- **OpenAI** - GPT-4o, GPT-4o-mini, GPT-3.5-turbo
-- **Anthropic** - Claude Opus, Sonnet and Haiku via the Messages API
-- **Ollama** - Local models via Ollama's `/api/chat`
+- **OpenAI** (`:openai`) - GPT-4o, GPT-4o-mini, reasoning models; any
+  OpenAI-compatible gateway via `:base_url`, `openai_base_url` config or
+  `OPENAI_BASE_URL`
+- **Anthropic** (`:anthropic`) - Claude Opus, Sonnet and Haiku via the Messages API
+- **Ollama** (`:ollama`) - Local models via Ollama's `/api/chat`
+- **Mock** (`:mock`) - Canned responses for tests, no network
+
+Every adapter records token usage and cost on the results.
 
 See [LLM Adapters](wiki/api/LLM-Adapters.md) and [Custom LLM Adapters](wiki/guides/Custom-LLM-Adapters.md) for details.
 
@@ -175,6 +181,53 @@ DeepEvalEx.evaluate_run(test_cases, [DeepEvalEx.Metrics.ExactMatch],
 `MetricData` is `DeepEvalEx.Result` and `evaluate()` is
 `DeepEvalEx.evaluate_run/3`. See [TestRun](wiki/api/TestRun.md) for what is
 kept on import.
+
+## Development
+
+All tooling runs in the dev container (`.devcontainer/`), which matches the CI
+toolchain and has the reference Python deepeval 4.3.1 installed. With the
+[Dev Container CLI](https://github.com/devcontainers/cli):
+
+```sh
+devcontainer up --workspace-folder .
+devcontainer exec --workspace-folder . mix test
+```
+
+`OPENAI_API_KEY`, `OPENAI_BASE_URL` and `ANTHROPIC_API_KEY` are passed through
+from the host; the test suite itself never calls a real LLM (it uses the Mock
+adapter and `Req.Test` stubs).
+
+### Gate
+
+Every change must pass the same checks as CI, inside the container:
+
+```sh
+devcontainer exec --workspace-folder . mix format --check-formatted
+devcontainer exec --workspace-folder . mix compile --warnings-as-errors
+devcontainer exec --workspace-folder . mix credo --strict
+devcontainer exec --workspace-folder . mix test --warnings-as-errors
+```
+
+CI additionally runs `mix dialyzer`. Build the docs with
+`devcontainer exec --workspace-folder . env MIX_ENV=dev mix docs`.
+
+### deepeval parity fixtures
+
+`test/deep_eval_ex/parity_test.exs` compares DeepEvalEx's test run exports
+with golden files written by deepeval 4.3.1 under `test/fixtures/deepeval`.
+To regenerate them after adding or changing a scenario in
+`scripts/parity/generate_fixtures.py`:
+
+```sh
+devcontainer exec --workspace-folder . \
+  env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_fixtures.py
+devcontainer exec --workspace-folder . mix test test/deep_eval_ex/parity_test.exs
+```
+
+A difference is a bug to fix in DeepEvalEx, not something to normalise away;
+see the [fixtures README](test/fixtures/deepeval/README.md).
+
+See the [Roadmap](ROADMAP.md) for what is shipped and what is planned.
 
 ## License
 

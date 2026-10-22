@@ -161,4 +161,44 @@ defmodule DeepEvalExTest do
       assert File.ls!(dir) == []
     end
   end
+
+  describe "moduledoc" do
+    setup do
+      {:docs_v1, _, :elixir, _, %{"en" => moduledoc}, _, _} = Code.fetch_docs(DeepEvalEx)
+      {:ok, modules} = :application.get_key(:deep_eval_ex, :modules)
+      %{moduledoc: moduledoc, modules: modules}
+    end
+
+    test "lists every shipped metric", %{moduledoc: moduledoc, modules: modules} do
+      metrics =
+        for module <- modules,
+            match?(["DeepEvalEx", "Metrics", _], Module.split(module)),
+            module != DeepEvalEx.Metrics.BaseMetric,
+            do: module
+
+      assert DeepEvalEx.Metrics.ToolCorrectness in metrics
+
+      for metric <- metrics do
+        assert moduledoc =~ "`#{inspect(metric)}`", "#{inspect(metric)} missing from moduledoc"
+      end
+    end
+
+    test "lists every bundled LLM adapter", %{moduledoc: moduledoc, modules: modules} do
+      adapters =
+        for module <- modules,
+            match?(["DeepEvalEx", "LLM", "Adapters", _], Module.split(module)),
+            do: module
+
+      assert DeepEvalEx.LLM.Adapters.Mock in adapters
+
+      for adapter <- adapters do
+        assert moduledoc =~ "`#{inspect(adapter)}`", "#{inspect(adapter)} missing from moduledoc"
+      end
+    end
+
+    test "configures default_model as a {provider, model} tuple", %{moduledoc: moduledoc} do
+      refute moduledoc =~ "default_model: :openai,"
+      assert moduledoc =~ ~s(default_model: {:openai, "gpt-4o-mini"})
+    end
+  end
 end

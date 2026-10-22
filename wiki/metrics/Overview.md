@@ -29,6 +29,13 @@ Evaluate Retrieval-Augmented Generation pipelines:
 | [ContextualPrecision](ContextualPrecision.md) | Retrieval ranking quality | `retrieval_context`, `expected_output` |
 | [ContextualRecall](ContextualRecall.md) | Coverage of ground truth | `retrieval_context`, `expected_output` |
 
+### Agent Metrics
+Evaluate tool-using agents:
+
+| Metric | Purpose | Required Params |
+|--------|---------|-----------------|
+| [ToolCorrectness](ToolCorrectness.md) | Tools called vs. expected tools | `tools_called`, `expected_tools` |
+
 ## Common Parameters
 
 All metrics share these concepts:
@@ -72,6 +79,9 @@ result.success  # true if score >= 0.7
 - **Faithfulness** - Ensure answers are grounded in retrieved context
 - **Hallucination** - Detect fabricated information
 - **ContextualPrecision/Recall** - Evaluate retrieval quality
+
+### For Agents
+- **ToolCorrectness** - Check the agent called the right tools
 
 ### For Exact Matching
 - **ExactMatch** - When output must exactly match expected

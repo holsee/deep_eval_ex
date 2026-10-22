@@ -18,11 +18,13 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 - [AnswerRelevancy](metrics/AnswerRelevancy.md)
 - [ContextualPrecision](metrics/ContextualPrecision.md)
 - [ContextualRecall](metrics/ContextualRecall.md)
+- [ToolCorrectness](metrics/ToolCorrectness.md) - Agent tool call evaluation
 
 ### API Reference
 - [TestCase](api/TestCase.md)
 - [Result](api/Result.md)
 - [Evaluator](api/Evaluator.md)
+- [TestRun](api/TestRun.md) - deepeval-compatible test run export and import
 - [LLM Adapters](api/LLM-Adapters.md)
 
 ### Testing
@@ -32,7 +34,7 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 - [Custom Metrics](guides/Custom-Metrics.md)
 - [Custom LLM Adapters](guides/Custom-LLM-Adapters.md)
 - [Telemetry & Observability](guides/Telemetry.md)
-- [Phoenix LiveView Integration](guides/Phoenix-Integration.md)
+- [Phoenix LiveView Integration](guides/Phoenix-Integration.md) (planned)
 
 ## Attribution
 

@@ -99,6 +99,7 @@ defmodule DeepEvalEx.MixProject do
         {"README.md", [title: "Overview", filename: "overview"]},
         {"LICENSE", [title: "License"]},
         {"NOTICE", [title: "Notice"]},
+        {"ROADMAP.md", [title: "Roadmap"]},
         # Guides
         "wiki/guides/Quick-Start.md",
         "wiki/guides/Configuration.md",
@@ -116,6 +117,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/AnswerRelevancy.md",
         "wiki/metrics/ContextualPrecision.md",
         "wiki/metrics/ContextualRecall.md",
+        "wiki/metrics/ToolCorrectness.md",
         # API
         "wiki/api/TestCase.md",
         "wiki/api/Result.md",
