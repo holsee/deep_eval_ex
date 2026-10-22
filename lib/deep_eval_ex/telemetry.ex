@@ -40,6 +40,28 @@ defmodule DeepEvalEx.Telemetry do
     - Measurements: `%{duration: integer()}`
     - Metadata: `%{adapter: atom(), model: String.t()}`
 
+  ### System One Events
+
+  `DeepEvalEx.SystemOne.decide/3` wraps every System One request in a
+  `:telemetry.span/3`:
+
+  - `[:deep_eval_ex, :system_one, :request, :start]` - Request sent
+    - Measurements: `%{system_time: integer(), monotonic_time: integer()}`
+    - Metadata: `%{model: String.t(), mode: atom() | nil, metrics: [String.t()],
+      question_count: integer(), batched?: boolean()}`
+
+  - `[:deep_eval_ex, :system_one, :request, :stop]` - Request answered, or
+    failed with a System One error
+    - Measurements: `%{duration: integer(), monotonic_time: integer()}`, plus
+      `input_tokens`, `output_tokens` and `cost` when the request reported them
+    - Metadata: the start metadata, plus `error: Exception.t()` for a
+      System One error
+
+  - `[:deep_eval_ex, :system_one, :request, :exception]` - The request raised
+    an error that is not a System One error
+    - Measurements: `%{duration: integer(), monotonic_time: integer()}`
+    - Metadata: the start metadata, plus `kind`, `reason` and `stacktrace`
+
   ## Example: Logging Handler
 
       :telemetry.attach_many(

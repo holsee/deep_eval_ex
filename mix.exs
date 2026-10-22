@@ -159,6 +159,7 @@ defmodule DeepEvalEx.MixProject do
         ],
         Metrics: ~r/DeepEvalEx\.Metrics\..*/,
         "LLM Adapters": ~r/DeepEvalEx\.LLM\..*/,
+        "System One": ~r/DeepEvalEx\.SystemOne(\..*)?$/,
         Schemas: ~r/DeepEvalEx\.Schemas\..*/,
         Telemetry: [DeepEvalEx.Telemetry]
       ]

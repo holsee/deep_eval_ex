@@ -38,11 +38,19 @@ defmodule DeepEvalEx.LLM.Usage do
 
   alias DeepEvalEx.LLM.Pricing
 
+  @typedoc """
+  Where a usage comes from: `:llm` for an LLM judge call (the default), or
+  `:system_one` for a System One request (stamped by
+  `DeepEvalEx.SystemOne.decide/3`).
+  """
+  @type source :: :llm | :system_one
+
   @type t :: %__MODULE__{
           model: String.t() | nil,
           input_tokens: non_neg_integer() | nil,
           output_tokens: non_neg_integer() | nil,
-          cost: float() | nil
+          cost: float() | nil,
+          source: source()
         }
 
   @type summary :: %{
@@ -52,7 +60,7 @@ defmodule DeepEvalEx.LLM.Usage do
           evaluation_cost: float() | nil
         }
 
-  defstruct [:model, :input_tokens, :output_tokens, :cost]
+  defstruct [:model, :input_tokens, :output_tokens, :cost, source: :llm]
 
   @scope_key {__MODULE__, :scope}
 

@@ -12,6 +12,58 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Added
 
+- **System One models: the provider contract and question/answer types**
+  (ADR-0009), ports of deepeval 4.3.1's `DeepEvalBaseSystemOneModel` and
+  `models/system_one/schema.py`. A System One model answers typed questions
+  about a JSON state with probabilities instead of text, as TypeSafe AI's
+  Jev does. No metric asks one yet; the eval modes come in later units.
+  - `DeepEvalEx.SystemOne.Adapter`, the behaviour a provider implements:
+    `decide/3` returns `{:ok, answers, usage | nil}` or
+    `{:error, exception}`, and `model_name/1` names it. The optional
+    `init/1` (check the options before any measure) and `context_budget/1`
+    (token limits, by default Jev's 32,000-token state and 64,000-token
+    request) get defaults from `use DeepEvalEx.SystemOne.Adapter`.
+  - `DeepEvalEx.SystemOne.Model.resolve/1` resolves a model from `nil`
+    (the new `:system_one_model` application config, else TypeSafe), a
+    TypeSafe model name, the aliases `:typesafe`, `:jev` and `:mock`, a
+    module, or `{module, opts}`. `Model.init/1` and `Model.context_budget/1`
+    call the optional callbacks.
+  - `DeepEvalEx.SystemOne.decide/3`, the facade every System One request
+    goes through, plus `noul/3`, `choice/3` and `score/3`, which return the
+    answers of one type. The facade wraps each request in a
+    `[:deep_eval_ex, :system_one, :request]` telemetry span. It returns
+    System One errors as `{:error, exception}`, whether they were returned
+    or raised: `DeepEvalEx.SystemOne.Error`, `DeepEvalEx.DeepEvalError`,
+    `DeepEvalEx.ContextWindowExceededError`, `Req.TransportError` (as a
+    `ConnectionError` or `TimeoutError`) and timeout exits. Any other
+    exception propagates, as deepeval catches only its System One error
+    types. The facade returns the request's usage stamped `source:
+    :system_one` and does not record it.
+  - `DeepEvalEx.SystemOne.Question` (`Noul`, `Choice` and `Score`) with
+    `to_wire/1` and `to_wire_map/1`, which build the TypeSafe SDK's shape
+    (`TypeSafeModel._to_sdk_questions`): a Noul's `criteria` is left out
+    when it has neither `true` nor `false`.
+  - `DeepEvalEx.SystemOne.Answers` (`Noul`, `Choice` and `Score`) with:
+    - `confidence/1`, which is `|2p - 1|` for a Noul;
+    - `normalized/1`, which is the score over the highest level index, as
+      `ScoreAnswer.normalized`;
+    - `min_confidence/1` and `take_prefix/2`;
+    - `to_dump/2` and `from_dump/1`, which write and read the
+      `SystemOneAnswers.model_dump()` shape.
+
+    The questions and answers of every `decide()` call in the System One
+    fixtures round-trip byte for byte.
+  - `DeepEvalEx.SystemOne.Error`, the provider error, with `:reason`,
+    deepeval's class name as `:type`, the token counts of a context limit,
+    and `:permanent?`. `describe/1` gives deepeval's hybrid fallback text
+    (`"context limit (N est. tokens > L)"`, `"timeout (...)"`,
+    `"ConnectionError: Jev is down"`). `format/1` gives
+    `format_error_text`'s `"<type>: <message>"`, and `type_name/1` the
+    deepeval class name.
+  - `DeepEvalEx.DeepEvalError` and `DeepEvalEx.ContextWindowExceededError`,
+    ports of deepeval's exceptions of the same names.
+  - `DeepEvalEx.LLM.Usage` has a new `:source` field, `:llm` (the default)
+    or `:system_one`.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in
