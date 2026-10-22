@@ -24,6 +24,7 @@ defmodule DeepEvalEx.Prompts.GEval do
   `construct_test_case_string` and `format_rubrics` do.
   """
 
+  alias DeepEvalEx.Metrics.GEval.Rubric
   alias DeepEvalEx.Params.SingleTurn
   alias DeepEvalEx.Prompts.Python
 
@@ -228,23 +229,23 @@ defmodule DeepEvalEx.Prompts.GEval do
   end
 
   @doc """
-  Formats a rubric of `{score, description}` entries for the prompt, as
-  deepeval's `format_rubrics` formats its sorted rubrics: one
-  `"<score>: <description>"` line per entry, lowest score first. `nil`
-  stays `nil`.
+  Formats a rubric sorted as `DeepEvalEx.Metrics.GEval.Rubric.validate_and_sort/1`
+  sorts it for the prompt, as deepeval's `format_rubrics`: one
+  `"<start>-<end>: <expected outcome>"` line per entry, or
+  `"<score>: <expected outcome>"` for a single-score range. `nil` stays
+  `nil`. See `DeepEvalEx.Metrics.GEval.Rubric.format/1`.
 
   ## Examples
 
-      iex> DeepEvalEx.Prompts.GEval.format_rubric([{5, "Correct."}, {1, "Wrong."}])
-      "1: Wrong.\\n5: Correct."
+      iex> alias DeepEvalEx.Metrics.GEval.Rubric
+      iex> DeepEvalEx.Prompts.GEval.format_rubric([
+      ...>   Rubric.new!(score_range: {0, 4}, expected_outcome: "Wrong."),
+      ...>   Rubric.new!(score_range: {10, 10}, expected_outcome: "Correct.")
+      ...> ])
+      "0-4: Wrong.\\n10: Correct."
   """
-  def format_rubric(nil), do: nil
-
-  def format_rubric(rubric) when is_list(rubric) do
-    rubric
-    |> Enum.sort_by(fn {score, _} -> score end)
-    |> Enum.map_join("\n", fn {score, description} -> "#{score}: #{description}" end)
-  end
+  @spec format_rubric([Rubric.t()] | nil) :: String.t() | nil
+  defdelegate format_rubric(rubric), to: Rubric, as: :format
 
   # deepeval's G_EVAL_PARAMS names; params it does not name keep a
   # capitalised field name.

@@ -20,6 +20,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
 
   use ExUnit.Case, async: true
 
+  alias DeepEvalEx.Metrics.GEval.Rubric
   alias DeepEvalEx.Prompts
   alias DeepEvalEx.Schemas.ToolCall
   alias DeepEvalEx.TestCase
@@ -130,7 +131,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     rubric = rubric(inputs["rubric"])
 
     options("GEval.generate_strict_evaluation_results", inputs) ++
-      [rubric: Prompts.GEval.format_rubric(rubric), score_range: score_range(rubric)]
+      [rubric: Prompts.GEval.format_rubric(rubric), score_range: Rubric.score_range(rubric)]
   end
 
   defp options("GEval.generate_strict_evaluation_results", inputs) do
@@ -244,22 +245,16 @@ defmodule DeepEvalEx.PromptGoldenTest do
     Enum.map(names, &String.to_existing_atom/1)
   end
 
-  # deepeval's Rubric score ranges, as DeepEvalEx.Metrics.GEval's
-  # {score, description} entries; the cases only use single-score ranges.
+  # deepeval's Rubric entries, validated and sorted as GEval's constructor
+  # does.
   defp rubric(nil), do: nil
 
   defp rubric(entries) do
-    Enum.map(entries, fn %{"score_range" => [score, score], "expected_outcome" => outcome} ->
-      {score, outcome}
+    entries
+    |> Enum.map(fn %{"score_range" => range, "expected_outcome" => outcome} ->
+      Rubric.new!(score_range: range, expected_outcome: outcome)
     end)
-  end
-
-  # deepeval derives the score range from the rubric; 0-10 without one.
-  defp score_range(nil), do: {0, 10}
-
-  defp score_range(rubric) do
-    {scores, _} = Enum.unzip(rubric)
-    Enum.min_max(scores)
+    |> Rubric.validate_and_sort()
   end
 
   defp tool_calls(attrs) do

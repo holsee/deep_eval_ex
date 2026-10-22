@@ -37,9 +37,9 @@ defmodule DeepEvalEx.ScriptedParityTest do
   # fixtures' README lists every reason.
   @known_divergences %{
     prompts: [],
-    measure: [{"P1.11", ~w(g_eval_strict)}, {"P2.2", ~w(hallucination_invalid_json)}],
-    verbose_logs: [{"P1.11", ~w(g_eval_strict)}],
-    test_run: [{"P1.11", ~w(g_eval_strict)}]
+    measure: [{"P2.2", ~w(hallucination_invalid_json)}],
+    verbose_logs: [],
+    test_run: []
   }
 
   known_divergence = fn scenario, facet ->

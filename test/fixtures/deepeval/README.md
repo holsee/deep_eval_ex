@@ -173,9 +173,6 @@ rows here.
 
 | Facet | Scenarios | Fails because | Tag |
 | --- | --- | --- | --- |
-| measure | `g_eval_strict` | Strict score normalised over the 0-10 range (0.1, then clamped to 0), where deepeval takes the judge's 1 as the score (P1.11) | P1.11 |
-| verbose_logs | `g_eval_strict` | The logged score is the strict score above (P1.11) | P1.11 |
-| test_run | `g_eval_strict` | Strict scoring (P1.11) | P1.11 |
 | measure | `hallucination_invalid_json` | An errored result's `success` is `false`, as in deepeval's `evaluate()` with `ignore_errors`, where deepeval's `measure()` raises and leaves it `None` (P2.2) | P2.2 |
 
 ## Prompt goldens

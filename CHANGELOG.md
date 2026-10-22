@@ -201,7 +201,17 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - `DeepEvalEx.TestRun.JSON.encode!/2` takes `:indent` and `:ensure_ascii`,
   formatting like Python's `json.dumps(indent=n, ensure_ascii=...)`.
 - `DeepEvalEx.Prompts.GEval.format_rubric/1`, formatting a rubric as
-  deepeval's `format_rubrics`.
+  deepeval's `format_rubrics` (`"0-3: ..."`, or `"5: ..."` for a single
+  score).
+- **GEval rubric score ranges.** `DeepEvalEx.Metrics.GEval.Rubric` ports
+  deepeval 4.3.1's `Rubric`: `Rubric.new!/1` (and `new/1`) takes a
+  `:score_range` `{start, end}` of integers from 0 to 10 and an
+  `:expected_outcome`, rejecting other ranges with deepeval's messages.
+  `GEval.new/1` sorts its rubric by range start and raises `ArgumentError`
+  on overlapping ranges (`"Overlapping score ranges: (0, 5) and (5, 8)"`) as
+  `validate_and_sort_rubrics` does, and the judge scores in the range the
+  rubric spans (`Rubric.score_range/1`, deepeval's `get_score_range`; 0-10
+  without a rubric), named in the prompt and used to normalise the score.
 - **JSON fallback for judges without structured outputs.**
   `DeepEvalEx.LLM.Adapter.generate_with_schema/3` loads a judge's text answer
   as deepeval's `trimAndLoadJson` does (from the first `{` to the last `}`,
@@ -252,6 +262,22 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   GEval scores are now fractional averages (e.g. `0.783` rather than `0.8`),
   matching deepeval 4.3.1; scores from reasoning models and other providers
   are unchanged.
+- **BREAKING: GEval rubrics are lists of `GEval.Rubric` entries.** A rubric
+  entry is now `%DeepEvalEx.Metrics.GEval.Rubric{score_range: {lo, hi},
+  expected_outcome: ...}` rather than `{score, description}`, ranges may not
+  overlap, and the rubric sets the score range. `{score, description}`
+  entries still work for one release (see Deprecated), as the single-score
+  range `{score, score}`.
+- **BREAKING: GEval strict mode scores the judge's 0 or 1 itself.** As in
+  deepeval 4.3.1 (`int(g_score)`), a strict GEval's score is the judge's
+  score truncated to an integer, so a judge's `1` scores `1` and passes. It
+  used to be normalised over the 0-10 range (`0.1`) and then clamped to `0`,
+  so a strict GEval could never pass. The `g_eval_strict` parity scenario
+  now matches deepeval's score, verbose logs and test run export.
+- **BREAKING: `GEval.new/1` validates as deepeval's constructor.** It raises
+  `ArgumentError` with deepeval's messages for an empty
+  `:evaluation_params` list, a blank `:criteria` and an empty
+  `:evaluation_steps` list.
 
 - **BREAKING: Hallucination scores aligned contexts, higher is better.** As in
   deepeval 4.3.1 (PR #3102), the score is the fraction of contexts the output
@@ -364,6 +390,16 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - Module docs describe only what has shipped. The roadmap sets out the phased
   plan to deepeval 4.3.1 parity, including System One (Jev) support, and links
   to this changelog for shipped work.
+
+### Deprecated
+
+- `{score, description}` GEval rubric entries. `GEval.new/1` converts each to
+  `Rubric.new!(score_range: {score, score}, expected_outcome: description)`
+  and warns; they will be removed in the next release.
+- GEval's `:score_range` option, which deepeval 4.3.1 does not have: give a
+  rubric, whose ranges set the score range. Without a rubric it is still
+  honoured, with a warning, for one release; with a rubric it raises
+  `ArgumentError`.
 
 ### Removed
 

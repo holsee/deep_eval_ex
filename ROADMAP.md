@@ -66,12 +66,6 @@ checked byte for byte against golden fixtures from deepeval 4.3.1.
 
 ### Known divergences from 4.3.1 today
 
-This one is fixed in [P1](#p1-correct-the-existing-metric-surface):
-
-- **GEval strict scoring.** In strict mode GEval normalises the judge's 0/1
-  over its score range before the shared clamp; 4.3.1 takes the 0/1 as the
-  score.
-
 This one is fixed in [P2](#p2-evaluation-engine-and-output-parity) (P2.2):
 
 - **Errored metric success.** A metric that errors is measured with `success`

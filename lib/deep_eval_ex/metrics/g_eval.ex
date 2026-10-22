@@ -32,6 +32,14 @@ defmodule DeepEvalEx.Metrics.GEval do
   `generate_raw_response/2`) is asked with the score schema and its score is
   kept.
 
+  ## Scores
+
+  The judge scores in the metric's score range: the range its rubric spans
+  (see `DeepEvalEx.Metrics.GEval.Rubric.score_range/1`), 0-10 without one.
+  As in deepeval, the score is the judge's score normalised over that range,
+  `(score - min) / (max - min)`, and in strict mode the judge's 0 or 1
+  itself, truncated to an integer as deepeval's `int(g_score)`.
+
   ## Usage
 
   ```elixir
@@ -74,13 +82,22 @@ defmodule DeepEvalEx.Metrics.GEval do
     criteria: "Evaluate overall response quality",
     evaluation_params: [:input, :actual_output],
     rubric: [
-      {10, "Perfect response, comprehensive and accurate"},
-      {7, "Good response with minor issues"},
-      {4, "Acceptable but missing key information"},
-      {1, "Poor response, mostly incorrect or unhelpful"}
+      Rubric.new!(score_range: {0, 2}, expected_outcome: "Poor response, mostly incorrect or unhelpful"),
+      Rubric.new!(score_range: {3, 5}, expected_outcome: "Acceptable but missing key information"),
+      Rubric.new!(score_range: {6, 8}, expected_outcome: "Good response with minor issues"),
+      Rubric.new!(score_range: {9, 10}, expected_outcome: "Perfect response, comprehensive and accurate")
     ]
   )
   ```
+
+  (with `alias DeepEvalEx.Metrics.GEval.Rubric`). Ranges must not overlap,
+  not even at an end, and are sorted by their start; the judge then scores
+  from the first range's start to the last range's end, here 0-10.
+
+  Rubric entries given as `{score, description}`, the shape before
+  deepeval's `Rubric`, are deprecated: each is taken as the single-score
+  range `{score, score}`, with a warning. They will be removed in the next
+  release.
 
   ## Options
 
@@ -88,10 +105,12 @@ defmodule DeepEvalEx.Metrics.GEval do
   - `:criteria` - Evaluation criteria description (required unless evaluation_steps provided)
   - `:evaluation_params` - Test case parameters to evaluate (required)
   - `:evaluation_steps` - Pre-defined evaluation steps (optional)
-  - `:rubric` - Scoring rubric as list of {score, description} (optional)
+  - `:rubric` - Scoring rubric, a list of `DeepEvalEx.Metrics.GEval.Rubric`
+    entries; sets the score range (optional)
   - `:threshold` - Pass/fail threshold (default: 0.5); `nil` for score-only
     evaluation
-  - `:score_range` - Min/max score range (default: {0, 10})
+  - `:score_range` - Deprecated: `{min, max}` score range without a rubric
+    (default: `{0, 10}`); use a rubric
   - `:strict_mode` - Binary 0/1 scoring; forces the threshold to `1`
     (default: false)
   - `:flaky` - Report the result without letting it decide its test case's
@@ -108,6 +127,7 @@ defmodule DeepEvalEx.Metrics.GEval do
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
   alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Result, TestCase}
+  alias DeepEvalEx.Metrics.GEval.Rubric
   alias DeepEvalEx.Metrics.Utils.{Generation, Verbose}
   alias DeepEvalEx.Prompts.GEval, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.GEval, as: Schema
@@ -129,14 +149,12 @@ defmodule DeepEvalEx.Metrics.GEval do
     include_g_eval_suffix: true
   ]
 
-  @type rubric_entry :: {integer(), String.t()}
-
   @type t :: %__MODULE__{
           name: String.t(),
           criteria: String.t() | nil,
           evaluation_params: [atom()],
           evaluation_steps: [String.t()] | nil,
-          rubric: [rubric_entry()] | nil,
+          rubric: [Rubric.t()] | nil,
           threshold: number() | nil,
           score_range: {integer(), integer()},
           strict_mode: boolean(),
@@ -156,9 +174,10 @@ defmodule DeepEvalEx.Metrics.GEval do
   - `:criteria` - Evaluation criteria (required unless evaluation_steps provided)
   - `:evaluation_params` - Parameters to evaluate (required)
   - `:evaluation_steps` - Pre-defined steps (optional)
-  - `:rubric` - Scoring rubric (optional)
+  - `:rubric` - `DeepEvalEx.Metrics.GEval.Rubric` entries (optional); the
+    deprecated `{score, description}` entries are converted with a warning
   - `:threshold` - Pass/fail threshold (default: 0.5); `nil` for score-only
-  - `:score_range` - Score range (default: {0, 10})
+  - `:score_range` - Deprecated, see the moduledoc (default: {0, 10})
   - `:strict_mode` - Binary scoring; the threshold is then the integer `1`,
     as deepeval's constructor forces it (default: false)
   - `:flaky` - Never decide a test case's success (default: false)
@@ -167,6 +186,10 @@ defmodule DeepEvalEx.Metrics.GEval do
     (default: 20)
   - `:verbose_mode` - Print the verbose logs (default: false)
   - `:include_g_eval_suffix` - Append `" [GEval]"` to the name (default: true)
+
+  Raises `ArgumentError`, as deepeval's constructor raises `ValueError`,
+  for an empty `:evaluation_params` list, a blank `:criteria`, an empty
+  `:evaluation_steps` list, or rubric ranges that overlap.
   """
   @spec new(keyword()) :: t()
   def new(opts) do
@@ -175,20 +198,19 @@ defmodule DeepEvalEx.Metrics.GEval do
     criteria = Keyword.get(opts, :criteria)
     evaluation_steps = Keyword.get(opts, :evaluation_steps)
 
-    # Validate: need either criteria or evaluation_steps
-    if is_nil(criteria) and is_nil(evaluation_steps) do
-      raise ArgumentError,
-            "GEval requires either :criteria or :evaluation_steps to be provided"
-    end
+    validate_evaluation_params!(evaluation_params)
+    validate_criteria_and_evaluation_steps!(criteria, evaluation_steps)
+
+    rubric = opts |> Keyword.get(:rubric) |> rubric!()
 
     %__MODULE__{
       name: name,
       criteria: criteria,
       evaluation_params: evaluation_params,
       evaluation_steps: evaluation_steps,
-      rubric: Keyword.get(opts, :rubric),
+      rubric: rubric,
       threshold: BaseMetric.threshold(opts, default_threshold()),
-      score_range: Keyword.get(opts, :score_range, {0, 10}),
+      score_range: score_range!(rubric, opts),
       strict_mode: Keyword.get(opts, :strict_mode, false),
       flaky: Keyword.get(opts, :flaky, false),
       model: Keyword.get(opts, :model),
@@ -196,6 +218,76 @@ defmodule DeepEvalEx.Metrics.GEval do
       top_logprobs: Keyword.get(opts, :top_logprobs, 20),
       include_g_eval_suffix: Keyword.get(opts, :include_g_eval_suffix, true)
     }
+  end
+
+  defp validate_evaluation_params!([]),
+    do: raise(ArgumentError, "evaluation_params cannot be an empty list.")
+
+  defp validate_evaluation_params!(_params), do: :ok
+
+  # deepeval's validate_criteria_and_evaluation_steps.
+  defp validate_criteria_and_evaluation_steps!(nil, nil) do
+    raise ArgumentError, "GEval requires either :criteria or :evaluation_steps to be provided"
+  end
+
+  defp validate_criteria_and_evaluation_steps!(criteria, steps) do
+    if is_binary(criteria) and String.trim(criteria) == "" do
+      raise ArgumentError, "Criteria provided cannot be an empty string."
+    end
+
+    if steps == [] do
+      raise ArgumentError,
+            "'evaluation_steps' must not be an empty list. Either omit evaluation " <>
+              "steps or include a non-empty list of steps."
+    end
+
+    :ok
+  end
+
+  # deepeval's validate_and_sort_rubrics, converting deprecated
+  # {score, description} entries to single-score Rubric ranges.
+  defp rubric!(nil), do: nil
+
+  defp rubric!(entries) when is_list(entries) do
+    if Enum.any?(entries, &match?({_, _}, &1)) do
+      IO.warn(
+        "{score, description} GEval rubric entries are deprecated and will be removed " <>
+          "in the next release; use DeepEvalEx.Metrics.GEval.Rubric entries, " <>
+          "e.g. Rubric.new!(score_range: {score, score}, expected_outcome: description)"
+      )
+    end
+
+    entries
+    |> Enum.map(fn
+      %Rubric{} = rubric -> rubric
+      {score, outcome} -> Rubric.new!(score_range: {score, score}, expected_outcome: outcome)
+      other -> raise ArgumentError, "invalid GEval rubric entry: #{inspect(other)}"
+    end)
+    |> Rubric.validate_and_sort()
+  end
+
+  # deepeval's get_score_range, honouring the deprecated :score_range
+  # without a rubric. A :score_range equal to the derived one is accepted
+  # silently: the evaluator rebuilds a metric from its struct's fields.
+  defp score_range!(rubric, opts) do
+    derived = Rubric.score_range(rubric)
+
+    case {Keyword.get(opts, :score_range, derived), rubric} do
+      {^derived, _rubric} ->
+        derived
+
+      {range, nil} ->
+        IO.warn(
+          "GEval's :score_range option is deprecated and will be removed in the next " <>
+            "release; give a :rubric, whose ranges set the score range, as in deepeval"
+        )
+
+        range
+
+      {_range, _rubric} ->
+        raise ArgumentError,
+              "GEval takes its score range from its :rubric; do not also give :score_range"
+    end
   end
 
   @impl true
@@ -289,17 +381,9 @@ defmodule DeepEvalEx.Metrics.GEval do
       result =
         with {:ok, steps} <- get_or_generate_steps(metric, adapter_opts),
              {:ok, {score, reason}} <- evaluate(metric, test_case, steps, adapter_opts) do
-          # Normalize score to 0-1 range
-          {min_score, max_score} = metric.score_range
-          normalized_score = (score - min_score) / (max_score - min_score)
           strict_opts = Keyword.put_new(opts, :strict_mode, metric.strict_mode || false)
           threshold = BaseMetric.threshold(strict_opts, metric.threshold)
-
-          final_score =
-            BaseMetric.strict_score(normalized_score,
-              strict_mode: strict_opts[:strict_mode],
-              threshold: threshold
-            )
+          final_score = g_eval_score(score, metric)
 
           verbose_logs =
             Verbose.construct_verbose_logs(
@@ -338,6 +422,13 @@ defmodule DeepEvalEx.Metrics.GEval do
       result
     end
   end
+
+  # deepeval's GEval score: the judge's score normalised over the score
+  # range, or in strict mode its int(g_score), the 0 or 1 asked for.
+  defp g_eval_score(score, %{strict_mode: true}), do: trunc(score)
+
+  defp g_eval_score(score, %{score_range: {min_score, max_score}}),
+    do: (score - min_score) / (max_score - min_score)
 
   defp build_adapter_opts(metric, opts), do: adapter_opts(metric.model, opts)
 
