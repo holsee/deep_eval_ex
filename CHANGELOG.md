@@ -1353,6 +1353,27 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     `reconstruct_retrieval_context/1` and `trim_and_load_json/1`.
   - New dependency: `nimble_csv`, for RFC 4180 CSV parsing (quoted cells
     with commas, quotes and newlines), rather than an in-house parser.
+- **`EvaluationDataset.save_as/4`: save datasets as CSV, JSON or JSONL**, a
+  port of deepeval 4.3.1's `save_as`. It writes the goldens, and with
+  `include_test_cases: true` the test cases converted to goldens, to
+  `<directory>/<file_name>.<type>`, creating the directory, and returns the
+  path; without `:file_name` the file is named after the local time
+  (`20261022_142501.json`). The file type is `:csv`, `:json` or `:jsonl`
+  (or deepeval's strings).
+  - deepeval's keys, column order and cell formats: JSON indented by four
+    spaces, JSONL with joined context strings, CSV quoted as Python's `csv`
+    module with CRLF rows, tool calls and expectations dumped as pydantic
+    dumps them, floats as Python writes them, non-ASCII kept. Checked byte
+    for byte against files written by deepeval (a new `save_as_edges`
+    case in `scripts/parity/generate_dataset_fixtures.py`), and deepeval's
+    loaders load DeepEvalEx's files as they load deepeval's own.
+  - As deepeval, a golden's token cost and counts are not written (a test
+    case's are); expected labels are not written.
+  - An unknown file type, or nothing to write, raises `ArgumentError` with
+    deepeval's `ValueError` message.
+  - Difference: map keys (metadata, custom columns, tool call parameters)
+    are written in Elixir map order, sorted for up to 32 keys, rather than
+    insertion order; the files decode and load the same.
 
 ### Changed
 

@@ -74,6 +74,33 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
   JSON's `true`, `false` or `null`); `encoding_type` and the multi-turn
   options other than the scenario's are not ported.
 
+  ## Saving files
+
+  `save_as/4` ports deepeval's `save_as`: it writes the dataset's goldens
+  (and, when asked, its test cases converted to goldens) to a CSV, JSON or
+  JSONL file with deepeval's file name, keys, columns and cell formats, so
+  deepeval loads the file as it loads its own, and the loaders above read it
+  back:
+
+  - JSON is a list of objects indented by four spaces, without a final
+    newline; JSONL one object per line, its context and retrieval context
+    joined into one string as in a CSV cell
+  - CSV has a header row and one row per golden, quoted as Python's `csv`
+    module quotes cells, each row ended by `"\\r\\n"`; tool calls, metadata,
+    custom columns and expectations are JSON cells, `nil` an empty cell
+  - non-ASCII text is written as it is; floats as Python writes them
+    (`1e-05`, `2.0`)
+
+  As deepeval, a golden's token cost and counts are not written (deepeval
+  rebuilds each golden without them first); a test case's are. Expected
+  labels are not written either.
+
+  The one difference from deepeval's bytes: a map's keys (metadata, custom
+  columns, tool call input parameters and output) are written in the order
+  the Elixir map holds them, sorted for maps of up to 32 keys, where
+  deepeval keeps the order they were inserted in. The file decodes and loads
+  the same.
+
   ## Enumerable
 
   A dataset enumerates its goldens, in order, so `Enum` and `Stream`
@@ -93,8 +120,10 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
       [{"What is 2 + 2?", 0}, {"What is 3 + 3?", 1}]
   """
 
-  alias DeepEvalEx.Dataset.{Golden, Loader}
+  alias DeepEvalEx.Dataset.{Golden, Loader, Writer}
   alias DeepEvalEx.TestCase
+
+  require Logger
 
   @type t :: %__MODULE__{
           goldens: [Golden.t()],
@@ -467,6 +496,96 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
     |> Loader.test_cases_from_json!(input_key_name, actual_output_key_name, opts)
     |> Enum.reduce(dataset, &add_test_case(&2, &1))
   end
+
+  ## Saving files
+
+  # deepeval's valid_file_types, in its order
+  @file_types [csv: "csv", json: "json", jsonl: "jsonl"]
+
+  @save_as_opts NimbleOptions.new!(
+                  file_name: [
+                    type: {:or, [:string, nil]},
+                    default: nil,
+                    doc:
+                      "The file name without its extension; `nil` names the file after the " <>
+                        "local time, as `\"20261022_142501\"` (deepeval's `%Y%m%d_%H%M%S`)."
+                  ],
+                  include_test_cases: [
+                    type: :boolean,
+                    default: false,
+                    doc:
+                      "Also writes the test cases, after the goldens, converted as " <>
+                        "`DeepEvalEx.Dataset.Golden.convert_test_cases_to_goldens/1` converts them."
+                  ]
+                )
+
+  @doc """
+  Writes the dataset to a `file_type` file (`:csv`, `:json` or `:jsonl`, or
+  deepeval's `"csv"`, `"json"` or `"jsonl"`) in `directory`, as deepeval's
+  `save_as`, and returns the file's path. See "Saving files" in the module
+  doc.
+
+  `directory` is created, with its parents, when missing, and a file of
+  the same name is overwritten. Logs the path at the info level, as
+  deepeval prints it.
+
+  Raises `ArgumentError`, with deepeval's `ValueError` message, for any
+  other file type, or when there is nothing to write: no goldens (and no
+  test cases with `include_test_cases: true`). Raises `File.Error` when the
+  directory or file cannot be written.
+
+  ## Options
+
+  #{NimbleOptions.docs(@save_as_opts)}
+
+  ## Examples
+
+      dataset = EvaluationDataset.new([Golden.new!(input: "What is 2 + 2?")])
+      EvaluationDataset.save_as(dataset, :json, "datasets", file_name: "arithmetic")
+      #=> "datasets/arithmetic.json"
+  """
+  @spec save_as(t(), :csv | :json | :jsonl | String.t(), Path.t(), keyword()) :: String.t()
+  def save_as(%__MODULE__{} = dataset, file_type, directory, opts \\ []) do
+    opts = NimbleOptions.validate!(opts, @save_as_opts)
+    file_type = file_type!(file_type)
+
+    goldens =
+      Enum.map(dataset.goldens, &without_token_usage/1) ++
+        if opts[:include_test_cases],
+          do: Golden.convert_test_cases_to_goldens(dataset.test_cases),
+          else: []
+
+    if goldens == [] do
+      raise ArgumentError,
+            "No goldens found. Please generate goldens before attempting to save data as " <>
+              Keyword.fetch!(@file_types, file_type)
+    end
+
+    file_name =
+      opts[:file_name] || Calendar.strftime(NaiveDateTime.local_now(), "%Y%m%d_%H%M%S")
+
+    path = Path.join(directory, "#{file_name}.#{file_type}")
+    File.mkdir_p!(directory)
+    Writer.write!(goldens, file_type, path)
+    Logger.info("Evaluation dataset saved at #{path}!")
+    path
+  end
+
+  defp file_type!(file_type) do
+    case Enum.find(@file_types, fn {atom, string} -> file_type in [atom, string] end) do
+      {atom, _string} ->
+        atom
+
+      nil ->
+        raise ArgumentError,
+              "Invalid file type. Available file types to save as: " <>
+                Enum.map_join(@file_types, ", ", &elem(&1, 1))
+    end
+  end
+
+  # deepeval's save_as rebuilds each golden without its token cost and counts
+  defp without_token_usage(%Golden{} = golden),
+    do: %{golden | token_cost: nil, input_token_count: nil, output_token_count: nil}
 
   defp validate_goldens!(goldens) when is_list(goldens) do
     case Enum.find(goldens, &(not is_struct(&1, Golden))) do

@@ -1,0 +1,6 @@
+input,actual_output,expected_output,retrieval_context,context,name,comments,source_file,tools_called,expected_tools,token_cost,input_token_count,output_token_count,additional_metadata,custom_column_key_values,expectations
+"Emoji 🎉, bell , CRand CRLF
+end",, padded; semi ,,,edge,,,,"[{""name"": ""noop"", ""type"": ""FUNCTION"", ""output"": {""a"": null, ""b"": [1, 2.5, true, -0.0], ""c"": 1e+16}, ""inputParameters"": {}}]",,,,{},,"{""model"":null,""eval_mode"":""system_one"",""must"":[],""must_not"":[]}"
+Tabs	and ümläuts  ,,,"deepeval_source=,deepeval_context=",only|piped,,,,"[{""name"": ""t"", ""type"": ""MCP"", ""output"": ""plain""}]",,,,,"{""a"": [], ""b"": {}, ""n"": 1.5e-07}","{""k"": ""vé""}","{""model"":""m"",""eval_mode"":null,""must"":[""Be kind""],""must_not"":[]}"
+Tiny cost,ok,,"deepeval_source=db,deepeval_context=row 1",,,,,,,1e-05,0,1000000,"{""nested"": {""a"": 1, ""b"": ""ü""}}",,"{""model"":null,""eval_mode"":null,""must"":[""Answer""],""must_not"":[]}"
+Whole cost,ok,,,,,,,,,2.0,,,,,

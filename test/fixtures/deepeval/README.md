@@ -25,7 +25,9 @@ Fixtures written by **deepeval 4.3.1**, in six sets:
   structure for now
 - [dataset files](#dataset-files) (`datasets/`), CSV, JSON and JSONL datasets
   (some written by deepeval's `save_as`) and what deepeval's loaders load
-  from them, used by `test/deep_eval_ex/dataset/loader_parity_test.exs`
+  from them, used by `test/deep_eval_ex/dataset/loader_parity_test.exs`,
+  and by `test/deep_eval_ex/dataset/save_as_parity_test.exs` to check that
+  DeepEvalEx's `save_as` writes the same files
 
 ## Export scenarios
 
@@ -374,6 +376,7 @@ field by its DeepEvalEx name), or the exception it raised.
 | Case | What it covers |
 | --- | --- |
 | `saved` | `save_as("csv" / "json" / "jsonl", include_test_cases=True)` of goldens with every field, a minimal golden, a golden of commas, quotes, newlines and non-ASCII text, and a test case with token cost and counts; loaded back by every loader |
+| `save_as_edges` | `save_as` cells in their own formats: empty lists and maps, floats such as `1e-05`, `2.0` and `1e+16`, an emoji, a control character, a carriage return, tool calls without optional fields, expectations with defaults, a golden's token cost (not written); saved with (`saved.*`) and without (`goldens.*`) the test cases. Every map's keys are sorted, so `test/deep_eval_ex/dataset/save_as_parity_test.exs` checks that DeepEvalEx's `save_as` writes these files byte for byte |
 | `csv_cells` | pandas' missing-value markers, numbers in the token columns, trailing commas in tool call JSON, JSON metadata with `true` and `null`, `mustNot` expectations, a blank line and a short row |
 | `csv_columns` | other column names, a `;` context delimiter and absent columns, for goldens and test cases |
 | `jsonl_lines` | JSONL lines with list or delimited-string contexts, tool calls as lists or JSON strings, blank lines, surrounding whitespace, and other key names |

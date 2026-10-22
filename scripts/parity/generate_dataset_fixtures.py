@@ -4,7 +4,9 @@ For every case in `CASES` below this script writes, under
 test/fixtures/deepeval/datasets/<case>/:
 
 - the case's source files: either written by deepeval's own
-  `EvaluationDataset.save_as` (`saved.csv`, `saved.json`, `saved.jsonl`), or
+  `EvaluationDataset.save_as` (`<name>.csv`, `<name>.json`, `<name>.jsonl`
+  for each of the case's `saves`, by default only `saved`, with the test
+  cases included), or
   written verbatim from the case's `files` (files deepeval's `save_as` does
   not produce, such as other column names, pandas' missing-value markers,
   tool calls with trailing commas or JSONL lines of either shape)
@@ -15,7 +17,9 @@ test/fixtures/deepeval/datasets/<case>/:
   the exception's Python `type` name and `message`
 
 test/deep_eval_ex/dataset/loader_parity_test.exs makes the same calls with
-DeepEvalEx.Dataset.EvaluationDataset and compares what it loads.
+DeepEvalEx.Dataset.EvaluationDataset and compares what it loads;
+test/deep_eval_ex/dataset/save_as_parity_test.exs builds the same datasets
+and compares what DeepEvalEx's save_as writes with deepeval's files.
 
 deepeval reads CSV files with pandas, which its Docker image does not
 install; install it into the deepeval virtualenv first:
@@ -124,6 +128,58 @@ def saved_dataset():
     return dataset
 
 
+def edge_dataset():
+    """Cells save_as writes in their own way: empty lists and maps, floats in
+    exponent notation, whole floats, non-ASCII and control characters, a
+    carriage return, tool calls without optional fields, expectations with
+    defaults. Every map's keys are in sorted order, the order Elixir maps
+    keep, so DeepEvalEx can write these files byte for byte."""
+    goldens = [
+        Golden(
+            input="Emoji \U0001F389, bell \x07, CR\rand CRLF\r\nend",
+            actual_output="",
+            expected_output=" padded; semi ",
+            context=[],
+            retrieval_context=[],
+            tools_called=[],
+            expected_tools=[
+                ToolCall(name="noop", input_parameters={},
+                         output={"a": None, "b": [1, 2.5, True, -0.0], "c": 1e16}),
+            ],
+            additional_metadata={},
+            custom_column_key_values={},
+            expectations=Expectations(eval_mode="system_one"),
+            # save_as drops a golden's token cost and counts.
+            token_cost=3.0,
+            input_token_count=4,
+            output_token_count=5,
+            name="edge",
+        ),
+        Golden(
+            input="Tabs\tand \u00fcml\u00e4uts \u2028",
+            context=["only|piped"],
+            retrieval_context=[RetrievedContextData(source="", context="")],
+            tools_called=[ToolCall(name="t", type="MCP", output="plain")],
+            additional_metadata={"a": [], "b": {}, "n": 1.5e-07},
+            custom_column_key_values={"k": "v\u00e9"},
+            expectations=Expectations(model="m", must=["Be kind"], must_not=[]),
+        ),
+    ]
+    dataset = EvaluationDataset(goldens=goldens)
+    dataset.add_test_case(LLMTestCase(
+        input="Tiny cost",
+        actual_output="ok",
+        token_cost=1e-05,
+        input_token_count=0,
+        output_token_count=1000000,
+        retrieval_context=[RetrievedContextData(source="db", context="row 1")],
+        metadata={"nested": {"a": 1, "b": "\u00fc"}},
+        expectations=Expectations(must=["Answer"]),
+    ))
+    dataset.add_test_case(LLMTestCase(input="Whole cost", actual_output="ok", token_cost=2.0))
+    return dataset
+
+
 GOLDEN_LOADS = [
     ("add_goldens_from_csv_file", "saved.csv", [], {}),
     ("add_goldens_from_json_file", "saved.json", [], {}),
@@ -147,6 +203,13 @@ CASES = {
                 "expected_tools_key_name": "expected_tools",
             }),
         ],
+    },
+    # save_as's own cell formats, with and without the test cases; written
+    # byte for byte by DeepEvalEx too.
+    "save_as_edges": {
+        "save_as": edge_dataset,
+        "saves": [("saved", True), ("goldens", False)],
+        "loads": GOLDEN_LOADS,
     },
     # pandas' missing-value markers, its number parsing, trailing commas in
     # tool call JSON, empty list cells and a short row.
@@ -357,8 +420,10 @@ def run_case(name, case):
     os.makedirs(out_dir)
     if "save_as" in case:
         dataset = case["save_as"]()
-        for file_type in ("csv", "json", "jsonl"):
-            dataset.save_as(file_type, out_dir, file_name="saved", include_test_cases=True)
+        for file_name, include_test_cases in case.get("saves", [("saved", True)]):
+            for file_type in ("csv", "json", "jsonl"):
+                dataset.save_as(file_type, out_dir, file_name=file_name,
+                                include_test_cases=include_test_cases)
     for file, content in case.get("files", {}).items():
         with open(os.path.join(out_dir, file), "w", encoding="utf-8", newline="") as f:
             f.write(content)

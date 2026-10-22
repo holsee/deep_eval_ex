@@ -114,3 +114,27 @@ A file that does not load raises: `File.Error` when it cannot be read,
 `ArgumentError` otherwise. Goldens with a `scenario` are deepeval's
 conversational goldens, which DeepEvalEx does not support yet, so they
 raise too.
+
+## Saving a dataset to a file
+
+`EvaluationDataset.save_as/4` writes the goldens to a CSV, JSON or JSONL file
+deepeval loads as it loads its own, and returns the file's path:
+
+```elixir
+EvaluationDataset.save_as(dataset, :csv, "datasets", file_name: "capitals")
+#=> "datasets/capitals.csv"
+
+EvaluationDataset.save_as(dataset, :jsonl, "datasets", include_test_cases: true)
+#=> "datasets/20261022_142501.jsonl"
+```
+
+The directory is created when missing. Without `:file_name` the file is named
+after the local time, as deepeval names it. `include_test_cases: true` writes
+the test cases too, after the goldens, converted to goldens.
+
+The files have deepeval's keys, columns and formats, so the loaders above, and
+deepeval's, read them back. As deepeval, a golden's token cost and counts are
+not written (a test case's are). The one difference from deepeval's bytes is
+the order of map keys (metadata, custom columns, tool call parameters): an
+Elixir map holds its keys sorted, where deepeval keeps the order they were
+added in.
