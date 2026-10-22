@@ -80,6 +80,23 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     `has_whole_metric_form`).
   - `uses_system_one?/1`, `normalize/1` (deepeval's `normalize_eval_mode`,
     which `DeepEvalEx.Config` now uses for `:eval_mode`) and `modes/0`.
+- **`DeepEvalEx.SystemOne.Limits`, the System One context-budget
+  pre-check** (ADR-0009), a port of deepeval 4.3.1's
+  `models/system_one/limits.py` and the Jev limits in `constants.py`. Nothing
+  calls it yet; the whole-metric runner, the batch and the TypeSafe adapter
+  will.
+  - `check/3` returns `{:error, %DeepEvalEx.SystemOne.Error{reason:
+    :context_limit, type: "SystemOneContextLimitError"}}`, with the estimate,
+    the limit and deepeval's message, when the state plus the longest
+    question exceeds the state budget or the whole request exceeds the
+    request budget; otherwise `:ok`. The budget defaults to Jev's
+    32,000/64,000 tokens and may be `:unbounded`.
+  - `estimate_tokens/1` is deepeval's `ceil(len(text) / 3)`, counting code
+    points as Python does: a string as it is, anything else as
+    `json.dumps(ensure_ascii=False)` writes it. `question_tokens/1`
+    estimates a `DeepEvalEx.SystemOne.Question` as its pydantic
+    `model_dump()`, and any other question (such as the SDK's wire shape)
+    as it is. Boundary tests use values from CPython.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in
