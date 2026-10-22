@@ -65,7 +65,7 @@ All adapters implement the `DeepEvalEx.LLM.Adapter` behaviour:
 config :deep_eval_ex,
   openai_api_key: System.get_env("OPENAI_API_KEY"),
   openai_base_url: "https://api.openai.com/v1",  # optional
-  openai_temperature: 0.0                         # optional
+  openai_temperature: 0.0                         # optional, default 0.0
 ```
 
 ### Base URL
@@ -89,9 +89,9 @@ resolved in this order, with a trailing slash stripped:
 
 - The token limit is sent as `max_completion_tokens` (default `4096`);
   OpenAI deprecated `max_tokens`, which is still accepted as an option alias.
-- `temperature` is sent only when given via `:temperature` or the
-  `:openai_temperature` config, and never for reasoning models (`o1`, `o3`,
-  `o4`, `gpt-5`, ...), which reject it.
+- `temperature` comes from `:temperature`, then the `:openai_temperature`
+  config, then defaults to `0.0` as in deepeval's `GPTModel`; it is never sent
+  for reasoning models (`o1`, `o3`, `o4`, `gpt-5`, ...), which reject it.
 
 ### Testing
 
@@ -224,7 +224,7 @@ Options passed to adapter functions:
 | Option | Description |
 |--------|-------------|
 | `:model` | Model name/identifier |
-| `:temperature` | Sampling temperature (0.0-2.0); omitted when not set |
+| `:temperature` | Sampling temperature (0.0-2.0); OpenAI adapter defaults to `0.0` |
 | `:max_completion_tokens` | Maximum tokens in response (`:max_tokens` is an alias) |
 | `:api_key` | API key (overrides config) |
 | `:base_url` | API base URL (OpenAI adapter) |

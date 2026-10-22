@@ -63,10 +63,12 @@ config :deep_eval_ex,
 
 #### Temperature
 
-The adapter sends `temperature` only when it is set explicitly, via the
-`temperature:` option or `config :deep_eval_ex, openai_temperature: 0.0`.
-Reasoning models (`o1`, `o3`, `o4`, `gpt-5`, ...) reject the parameter, so it is
-never sent for them.
+The adapter sends `temperature: 0.0` by default, as deepeval's `GPTModel` does,
+so judge calls are deterministic instead of running at OpenAI's default of
+`1.0`. Override it with the `temperature:` option or
+`config :deep_eval_ex, openai_temperature: 0.3` (the option wins). Reasoning
+models (`o1`, `o3`, `o4`, `gpt-5`, ...) reject the parameter, so it is never
+sent for them.
 
 ### Anthropic
 

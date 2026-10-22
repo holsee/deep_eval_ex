@@ -141,12 +141,21 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
       assert body["max_completion_tokens"] == 512
     end
 
-    test "omits temperature unless explicitly given" do
+    test "defaults temperature to 0.0 like deepeval's GPTModel" do
       stub_completion("hi")
 
       assert {:ok, "hi"} = OpenAI.generate("hello", @base_opts)
       assert_received {:request, _conn, body}
-      refute Map.has_key?(body, "temperature")
+      assert body["temperature"] == 0.0
+    end
+
+    test "sends temperature given via opts over :openai_temperature config" do
+      stub_completion("hi")
+      Application.put_env(:deep_eval_ex, :openai_temperature, 0.3)
+
+      assert {:ok, "hi"} = OpenAI.generate("hello", [{:temperature, 0.7} | @base_opts])
+      assert_received {:request, _conn, body}
+      assert body["temperature"] == 0.7
     end
 
     test "sends temperature given via opts" do
@@ -169,8 +178,9 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
     test "omits temperature for reasoning models, which reject it" do
       stub_completion("hi")
 
-      for model <- ~w(o1 o3-mini o4-mini gpt-5 gpt-5-mini gpt-5.4) do
-        opts = [model: model, temperature: 0.0] ++ @base_opts
+      for model <- ~w(o1 o3-mini o4-mini gpt-5 gpt-5-mini gpt-5.4),
+          explicit <- [[], [temperature: 0.0]] do
+        opts = [model: model] ++ explicit ++ @base_opts
 
         assert {:ok, "hi"} = OpenAI.generate("hello", opts)
         assert_received {:request, _conn, body}
@@ -202,7 +212,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
 
       assert body["max_completion_tokens"] == 4096
       refute Map.has_key?(body, "max_tokens")
-      refute Map.has_key?(body, "temperature")
+      assert body["temperature"] == 0.0
     end
 
     test "returns a json_parse_error for non-JSON content" do

@@ -34,8 +34,9 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   - `:max_completion_tokens` - completion token limit (default `4096`);
     `:max_tokens` is accepted as an alias
   - `:temperature` - sampling temperature; falls back to the
-    `:openai_temperature` config and is omitted from the request when neither
-    is set. Reasoning models (`o1`, `o3`, `o4`, `gpt-5`, ...) reject
+    `:openai_temperature` config, then to `0.0`, as deepeval's `GPTModel`
+    does, so judges are deterministic rather than running at OpenAI's default
+    of `1.0`. Reasoning models (`o1`, `o3`, `o4`, `gpt-5`, ...) reject
     `temperature`, so it is never sent for them, as in deepeval.
   - `:base_url` - API base URL, see above
   - `:api_key` - API key (overrides config and `OPENAI_API_KEY`)
@@ -64,6 +65,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   @default_base_url "https://api.openai.com/v1"
   @default_model "gpt-4o-mini"
   @default_max_completion_tokens 4096
+  @default_temperature 0.0
 
   # Models that reject a `temperature` parameter, mirroring the
   # `supports_temperature=False` entries in deepeval's OpenAI model registry.
@@ -147,13 +149,14 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
     end
   end
 
-  # Only sent when explicitly configured; reasoning models reject it outright.
+  # Defaults to 0.0 like deepeval's GPTModel; reasoning models reject it
+  # outright, so it is dropped for them whatever was configured.
   defp temperature(model, opts) do
     if Regex.match?(@reasoning_model_pattern, model) do
       nil
     else
       Keyword.get_lazy(opts, :temperature, fn ->
-        Application.get_env(:deep_eval_ex, :openai_temperature)
+        Application.get_env(:deep_eval_ex, :openai_temperature, @default_temperature)
       end)
     end
   end
