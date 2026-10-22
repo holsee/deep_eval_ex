@@ -19,6 +19,9 @@ touch "$src"
 # even when an older, more permissive .env.resolved already exists.
 tmp=$(mktemp "$dir/.env.resolved.XXXXXX")
 trap 'rm -f "$tmp"' EXIT
+# A signal (e.g. Ctrl-C at the 1Password prompt) skips the EXIT trap in some
+# shells; clean up and exit explicitly so no resolved secrets are left behind.
+trap 'rm -f "$tmp"; exit 130' INT TERM HUP
 
 if grep -v '^[[:space:]]*#' "$src" | grep -q 'op://'; then
   if ! command -v op >/dev/null 2>&1; then

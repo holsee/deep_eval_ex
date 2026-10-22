@@ -43,3 +43,4 @@ CLAUDE.md
 
 # Resolved dev container secrets
 /.devcontainer/.env.resolved
+/.devcontainer/.env.resolved.*

@@ -87,6 +87,26 @@ defmodule DeepEvalEx.Devcontainer.ResolveEnvTest do
     assert File.ls!(dir) |> Enum.sort() == [".env", ".env.resolved", "resolve-env.sh"]
   end
 
+  test "removes the temp file when interrupted mid-resolve", %{dir: dir, bin: bin} = ctx do
+    File.write!(Path.join(dir, ".env"), "OPENAI_API_KEY=op://vault/item/credential\n")
+    # Stands in for Ctrl-C at the 1Password prompt: op signals the script.
+    File.write!(Path.join(bin, "op"), "#!/bin/sh\nkill -TERM $PPID\n")
+    File.chmod!(Path.join(bin, "op"), 0o755)
+
+    {_output, status} = run(ctx)
+
+    assert status != 0
+    assert File.ls!(dir) |> Enum.sort() == [".env", "resolve-env.sh"]
+  end
+
+  test "gitignores the resolved file and its temp files" do
+    for path <-
+          ~w(.devcontainer/.env .devcontainer/.env.resolved .devcontainer/.env.resolved.Ab12Cd) do
+      assert {_, 0} = System.cmd("git", ["-c", "safe.directory=*", "check-ignore", "-q", path]),
+             "#{path} is not ignored"
+    end
+  end
+
   defp run(%{dir: dir, bin: bin}) do
     System.cmd(Path.join(bin, "sh"), [Path.join(dir, "resolve-env.sh")],
       env: [{"PATH", bin}],
