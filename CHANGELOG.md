@@ -469,6 +469,42 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - The optional `BaseMetric` callback `system_one?/0`: a metric that
     returns `false` gets the `:llm` `DeepEvalEx.SystemOne.Context` in every
     mode. An unrecognised `:eval_mode` option still raises `ArgumentError`.
+- **`DeepEvalEx.Metrics.JevEval`, a custom metric decided by System One**
+  (ADR-0009), a port of deepeval 4.3.1's `JevEval`. You write weighted
+  `DeepEvalEx.SystemOne.Scored` Noul, Score and Choice questions about the
+  test case fields in `:evaluation_params`. One System One request answers
+  them all (keyed `q_<i>`). The score is the weighted mean of the answers
+  that applied, and the reason is deterministic text built from the answers.
+  - Results are named `"<name> [JevEval]"` (`include_jev_eval_suffix:
+    false` drops the suffix). The threshold defaults to `0.5`. In strict
+    mode the score is `1.0` only when every applicable question is answered
+    at its best, and `0.0` otherwise. Results carry `:score_breakdown` (one
+    outcome per question) and `:confidence` (the least decisive answer).
+  - JevEval is always decided by System One, whatever the eval mode, and
+    needs no LLM or LLM key. It is seeded as a metric without an LLM: zero
+    cost and tokens, plus the request's usage. An unpriced request leaves
+    the cost `nil`. A System One error is raised, never caught, and the
+    metric is not batched with others.
+  - `JevEval.new/1` resolves and initialises the System One model, as
+    deepeval's constructor does, and raises `DeepEvalEx.DeepEvalError`
+    ("JevEval needs Jev to score, but it is not usable: ...") when the model
+    cannot be used. It raises `ArgumentError` with deepeval's messages for an
+    empty `:evaluation_params` list, no questions, or a question that is not
+    a Noul, Score or Choice. `JevEval.evaluate/3` measures with a struct, and
+    `DeepEvalEx.evaluate/3` takes the struct like any other metric.
+  - Before asking, the test case is checked as deepeval does. A multimodal
+    test case (one with a `[DEEPEVAL:IMAGE:...]` or `[DEEPEVAL:PDF:...]`
+    marker) raises `ArgumentError`. A missing evaluation param returns
+    `{:error, {:missing_params, params}}`. Without `:evaluation_params`,
+    deepeval asks about the agent's trace. DeepEvalEx test cases carry no
+    trace yet, so such a metric raises `DeepEvalEx.MissingTestCaseParamsError`
+    with deepeval's message. The trace state and `ConversationalJevEval` come
+    later.
+
+  The System One parity test now also measures the `jev_eval` and
+  `jev_eval_strict_not_applicable` fixtures, which match deepeval byte for
+  byte: the request, the measured state, the verbose logs and the exported
+  test run.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in

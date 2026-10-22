@@ -49,6 +49,8 @@ defmodule DeepEvalEx do
   - `DeepEvalEx.Metrics.ContextualRecall` - RAG coverage of ground truth
   - `DeepEvalEx.Metrics.ToolCorrectness` - Agent tool calls against the
     expected tools
+  - `DeepEvalEx.Metrics.JevEval` - Your own weighted questions, decided by
+    a System One model (Jev)
 
   ## LLM Providers
 

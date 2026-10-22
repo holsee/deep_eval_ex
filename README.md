@@ -71,6 +71,7 @@ config :deep_eval_ex,
 | **ContextualPrecision** | RAG retrieval ranking quality |
 | **ContextualRecall** | RAG coverage of ground truth |
 | **ToolCorrectness** | Agent tool calls against the expected tools |
+| **JevEval** | Your own weighted Noul, Score and Choice questions, decided by a System One model (Jev) |
 
 See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation on each metric.
 

@@ -5,7 +5,8 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   deepeval 4.3.1 did for the same scenario (see the fixtures' README).
 
   A scenario's `input.json` holds one metric (`kind`, `eval_mode` and
-  constructor `params`), one `test_case`, the fake System One model
+  constructor `params`; a `jev_eval` has no `eval_mode` and is built as a
+  `DeepEvalEx.Metrics.JevEval` struct), one `test_case`, the fake System One model
   (`system_one`: canned answers or the error it raises) and, when an LLM is
   involved, the scripted judge's `responses`. Here
   `DeepEvalEx.SystemOne.Adapters.Mock.from_fixture/2` stands in for the
@@ -24,11 +25,13 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     ContextualRecall,
     Faithfulness,
     Hallucination,
+    JevEval,
     ToolCorrectness
   }
 
   alias DeepEvalEx.Schemas.ToolCall
   alias DeepEvalEx.SystemOne.Adapters.Mock
+  alias DeepEvalEx.SystemOne.Scored
   alias DeepEvalEx.Test.{JSONDiff, ScriptedParity}
   alias DeepEvalEx.TestRun.JSON
 
@@ -60,13 +63,13 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   @spec measure(String.t()) :: {map(), [map()], [map()]}
   def measure(scenario) do
     input = load(scenario, "input.json")
-    {module, opts, mock} = metric(input)
+    {metric, opts, mock} = metric(input)
 
     measured =
       try do
         input
         |> test_case()
-        |> Evaluator.evaluate_metric(module, [ignore_errors: false] ++ opts)
+        |> Evaluator.evaluate_metric(metric, [ignore_errors: false] ++ opts)
         |> measured(nil)
       rescue
         error in [MetricError] -> measured(error.result, nil)
@@ -85,12 +88,12 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   @spec test_run(String.t(), Path.t()) :: {binary(), [map()]}
   def test_run(scenario, results_folder) do
     input = load(scenario, "input.json")
-    {module, opts, mock} = metric(input)
+    {metric, opts, mock} = metric(input)
 
     {_results, _test_run, path} =
       DeepEvalEx.evaluate_run(
         [test_case(input)],
-        [module],
+        [metric],
         [results_folder: results_folder, ignore_errors: true] ++ opts
       )
 
@@ -160,19 +163,28 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     :ok
   end
 
-  # The metric module, its options (deepeval's constructor params, the eval
-  # mode, the fake System One model and the scripted judge) and the fake.
+  # The metric (a module, or a JevEval struct), its options (deepeval's
+  # constructor params, the eval mode, the fake System One model and the
+  # scripted judge) and the fake.
   defp metric(input) do
-    [%{"kind" => kind, "eval_mode" => eval_mode, "params" => params}] =
+    [%{"kind" => kind, "params" => params} = spec] =
       Enum.map(input["metrics"], &Map.new(&1.values))
 
-    module = Map.fetch!(@modules, kind)
-    Code.ensure_loaded!(module)
     mock = Mock.from_fixture(input["system_one"])
 
     # A scenario without responses had deepeval's exploding LLM: no call.
     responses = (input["responses"] || %{}) |> plain() |> Map.get(kind, %{})
     LLMMock.script(responses, model: input["judge_model"] || "exploding-llm")
+
+    case kind do
+      "jev_eval" -> {jev_eval(params, mock), [adapter: :mock], mock}
+      _kind -> metric(kind, spec["eval_mode"], params, mock)
+    end
+  end
+
+  defp metric(kind, eval_mode, params, mock) do
+    module = Map.fetch!(@modules, kind)
+    Code.ensure_loaded!(module)
 
     opts =
       [
@@ -182,6 +194,27 @@ defmodule DeepEvalEx.Test.SystemOneParity do
       ] ++ Enum.map(params.values, fn {key, value} -> option(key, plain(value)) end)
 
     {module, opts, mock}
+  end
+
+  # deepeval's JevEval(**params): the questions as Scored structs, the
+  # evaluation params as atoms.
+  defp jev_eval(params, mock) do
+    params.values
+    |> Enum.map(fn
+      {"questions", questions} ->
+        {:questions, questions |> JSON.encode!() |> Scored.parse!()}
+
+      {"evaluation_params", names} ->
+        {:evaluation_params, Enum.map(names, &String.to_existing_atom/1)}
+
+      {"_include_jev_eval_suffix", suffix?} ->
+        {:include_jev_eval_suffix, suffix?}
+
+      {key, value} ->
+        option(key, plain(value))
+    end)
+    |> Keyword.put(:system_one_model, mock)
+    |> JevEval.new()
   end
 
   # deepeval's fixture generator builds ToolCalls from available_tools.

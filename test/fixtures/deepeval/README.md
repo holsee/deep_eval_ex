@@ -425,4 +425,5 @@ Mock adapter's script, and compares the `decide()` calls of `measure()` and
 the fixture, byte for byte. It covers Faithfulness, AnswerRelevancy,
 ContextualPrecision, ContextualRecall, Hallucination and ToolCorrectness:
 each one's `system_one`, `hybrid` and `hybrid_fallback` scenarios, and
-`faithfulness_system_one_strict`.
+`faithfulness_system_one_strict`, and `DeepEvalEx.Metrics.JevEval` (`jev_eval`
+and `jev_eval_strict_not_applicable`).
