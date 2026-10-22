@@ -1,0 +1,15 @@
+{
+  "description": "PatternMatch: the stripped output fully matches the stripped pattern, \\w matching a non-ASCII letter",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "pattern_match",
+    "params": {
+      "pattern": "  \\w+: \\d{3}-\\d{4}  "
+    }
+  },
+  "test_case": {
+    "input": "What is the café's phone number?",
+    "actual_output": " café: 555-1234\n"
+  },
+  "responses": {}
+}

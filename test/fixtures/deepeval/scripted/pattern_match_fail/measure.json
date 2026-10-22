@@ -1,0 +1,12 @@
+{
+  "score": 0.0,
+  "success": false,
+  "reason": "The actual output does not match the pattern.",
+  "threshold": 1.0,
+  "error": null,
+  "evaluation_model": null,
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": null
+}

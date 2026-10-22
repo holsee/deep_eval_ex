@@ -64,6 +64,7 @@ config :deep_eval_ex,
 | Metric | Purpose |
 |--------|---------|
 | **ExactMatch** | Simple string comparison |
+| **PatternMatch** | Whole output matches a regular expression |
 | **GEval** | Flexible criteria-based evaluation using LLM-as-judge |
 | **Faithfulness** | RAG: claims supported by retrieval context |
 | **Hallucination** | Detects unsupported statements |
@@ -77,6 +78,7 @@ config :deep_eval_ex,
 | **PromptAlignment** | Whether the output follows the prompt template's instructions |
 | **ToolCorrectness** | Agent tool calls against the expected tools |
 | **ArgumentCorrectness** | Whether each agent tool call's arguments address the input |
+| **ToolPermission** | Agent tool calls against an allowlist and denylist |
 | **JevEval** | Your own weighted Noul, Score and Choice questions, decided by a System One model (Jev) |
 
 See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation on each metric.

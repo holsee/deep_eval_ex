@@ -115,6 +115,7 @@ defmodule DeepEvalEx.MixProject do
         # Metrics
         {"wiki/metrics/Overview.md", [title: "Metrics Overview", filename: "metrics-overview"]},
         "wiki/metrics/ExactMatch.md",
+        "wiki/metrics/PatternMatch.md",
         "wiki/metrics/GEval.md",
         "wiki/metrics/Faithfulness.md",
         "wiki/metrics/Hallucination.md",
@@ -128,6 +129,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/PromptAlignment.md",
         "wiki/metrics/ToolCorrectness.md",
         "wiki/metrics/ArgumentCorrectness.md",
+        "wiki/metrics/ToolPermission.md",
         # API
         "wiki/api/TestCase.md",
         "wiki/api/Result.md",

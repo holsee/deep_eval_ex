@@ -10,6 +10,8 @@ Fast, deterministic metrics that don't require LLM calls:
 | Metric | Purpose | Speed |
 |--------|---------|-------|
 | [ExactMatch](ExactMatch.md) | Exact string comparison | ⚡ Instant |
+| [PatternMatch](PatternMatch.md) | Whole output matches a regular expression | ⚡ Instant |
+| [ToolPermission](ToolPermission.md) | Tool calls within an allow/deny policy | ⚡ Instant |
 
 ### LLM-as-Judge Metrics
 Use an LLM to evaluate outputs based on criteria:
@@ -53,6 +55,7 @@ Evaluate tool-using agents:
 |--------|---------|-----------------|
 | [ToolCorrectness](ToolCorrectness.md) | Tools called vs. expected tools | `tools_called`, `expected_tools` |
 | [ArgumentCorrectness](ArgumentCorrectness.md) | Whether each tool call's arguments address the input | `input`, `tools_called` |
+| [ToolPermission](ToolPermission.md) | Tool calls within an allowlist and denylist (no LLM) | `tools_called` (and `allowed_tools` or `denied_tools`) |
 
 ## Common Parameters
 
@@ -118,9 +121,11 @@ Every metric also takes deepeval's `BaseMetric` options:
 ### For Agents
 - **ToolCorrectness** - Check the agent called the right tools
 - **ArgumentCorrectness** - Check the agent called its tools with the right arguments
+- **ToolPermission** - Check the agent only called the tools it may
 
 ### For Exact Matching
 - **ExactMatch** - When output must exactly match expected
+- **PatternMatch** - When output must follow a format (IDs, dates, labels)
 
 ## Combining Metrics
 

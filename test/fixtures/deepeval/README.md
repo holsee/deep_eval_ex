@@ -7,7 +7,7 @@ Fixtures written by **deepeval 4.3.1**, in five sets:
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
-  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's fourteen
+  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's sixteen
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
 - [prompt goldens](#prompt-goldens) (`prompts/`), used by
@@ -129,8 +129,8 @@ calling an LLM. A script holds:
 - `metric` - `kind` (`exact_match`, `g_eval`, `faithfulness`, `hallucination`,
   `answer_relevancy`, `contextual_precision`, `contextual_recall`,
   `contextual_relevancy`, `bias`, `toxicity`, `pii_leakage`, `prompt_alignment`,
-  `argument_correctness` or `tool_correctness`) and the metric's constructor
-  `params`
+  `argument_correctness`, `tool_correctness`, `pattern_match` or
+  `tool_permission`) and the metric's constructor `params`
 - `test_case` - keyword arguments of deepeval's `LLMTestCase`
 - `judge_model` - the name the judge reports as the evaluation model
 - `responses` - the judge's answers, keyed by metric kind, then by step, then
@@ -189,6 +189,8 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | PromptAlignment | `prompt_alignment_pass`, `prompt_alignment_fail` (a `no` verdict without a reason, listed as `None` in the reason prompt), `prompt_alignment_no_verdicts` (an empty list: the integer `1`), `prompt_alignment_strict`; `prompt_instructions` is a constructor param |
 | ArgumentCorrectness | `argument_correctness_pass`, `argument_correctness_fail` (an MCP tool call, a call with no input parameters, a `no` verdict without a reason, listed as `None` in the reason prompt), `argument_correctness_no_tool_calls` (`tools_called: []`: no judge call, the float `1.0`, `"No tool calls provided"`, and `toolsCalled: []` in the export), `argument_correctness_strict`; each tool call reaches the verdicts prompt as its `ToolCall.__repr__` |
 | ToolCorrectness | `tool_correctness_pass`, `tool_correctness_fail`, `tool_correctness_available_tools` (LLM-scored tool selection), `tool_correctness_strict` |
+| PatternMatch | `pattern_match_pass` (a trimmed pattern and output, `\w` matching a non-ASCII letter), `pattern_match_fail` (a match of part of the output only), `pattern_match_ignore_case` (`ignore_case`, an alternation whose first branch matches a prefix only, and `verbose_mode`, whose printed logs the Elixir side captures); no judge |
+| ToolPermission | `tool_permission_pass`, `tool_permission_fail` (a denied tool that is also allowed, a denied tool, a tool off the allowlist), `tool_permission_no_tool_calls` (`tools_called: []`: the float `1.0`), `tool_permission_denylist_only` (`Allowed=ANY`, a repeated denied call, a lower threshold, `include_reason=False`), `tool_permission_strict` (the integer `0`, threshold the float `1.0`); no judge |
 
 ### Not covered
 

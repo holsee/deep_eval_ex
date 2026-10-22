@@ -12,6 +12,7 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 ### Metrics
 - [Overview](metrics/Overview.md)
 - [ExactMatch](metrics/ExactMatch.md)
+- [PatternMatch](metrics/PatternMatch.md) - Regular expression full match
 - [GEval](metrics/GEval.md) - Flexible LLM-as-judge evaluation
 - [Faithfulness](metrics/Faithfulness.md) - RAG context verification
 - [Hallucination](metrics/Hallucination.md) - Unsupported claim detection
@@ -25,6 +26,7 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 - [PromptAlignment](metrics/PromptAlignment.md) - Following the prompt's instructions
 - [ToolCorrectness](metrics/ToolCorrectness.md) - Agent tool call evaluation
 - [ArgumentCorrectness](metrics/ArgumentCorrectness.md) - Agent tool call arguments
+- [ToolPermission](metrics/ToolPermission.md) - Agent tool calls against a permission policy
 
 ### API Reference
 - [TestCase](api/TestCase.md)

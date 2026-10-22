@@ -30,9 +30,11 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     Faithfulness,
     GEval,
     Hallucination,
+    PatternMatch,
     PIILeakage,
     PromptAlignment,
     ToolCorrectness,
+    ToolPermission,
     Toxicity
   }
 
@@ -56,7 +58,9 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "pii_leakage" => PIILeakage,
     "prompt_alignment" => PromptAlignment,
     "argument_correctness" => ArgumentCorrectness,
-    "tool_correctness" => ToolCorrectness
+    "tool_correctness" => ToolCorrectness,
+    "pattern_match" => PatternMatch,
+    "tool_permission" => ToolPermission
   }
 
   # Pairs of steps that need not keep deepeval's relative order, as neither
@@ -98,12 +102,15 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     {metric, opts} = metric(script)
     load_script(script)
 
-    result =
-      try do
-        Evaluator.evaluate_metric(test_case(script), metric, [ignore_errors: false] ++ opts)
-      rescue
-        error in [MetricError] -> error.result
-      end
+    # A metric in verbose mode prints its logs, as deepeval's does.
+    {result, _printed} =
+      ExUnit.CaptureIO.with_io(fn ->
+        try do
+          Evaluator.evaluate_metric(test_case(script), metric, [ignore_errors: false] ++ opts)
+        rescue
+          error in [MetricError] -> error.result
+        end
+      end)
 
     {measured(result), Mock.scripted_prompts()}
   end
@@ -119,15 +126,17 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     {metric, opts} = metric(script)
     load_script(script)
 
-    {_results, _test_run, path} =
-      ExUnit.CaptureLog.with_log(fn ->
-        DeepEvalEx.evaluate_run(
-          [test_case(script)],
-          [metric],
-          [results_folder: results_folder, ignore_errors: true] ++ opts
-        )
+    {{_results, _test_run, path}, _printed} =
+      ExUnit.CaptureIO.with_io(fn ->
+        ExUnit.CaptureLog.with_log(fn ->
+          DeepEvalEx.evaluate_run(
+            [test_case(script)],
+            [metric],
+            [results_folder: results_folder, ignore_errors: true] ++ opts
+          )
+        end)
+        |> elem(0)
       end)
-      |> elem(0)
 
     assert is_binary(path), "DeepEvalEx wrote no test run file"
     File.read!(path)

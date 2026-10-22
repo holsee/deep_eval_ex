@@ -41,6 +41,8 @@ defmodule DeepEvalEx do
   ## Metrics
 
   - `DeepEvalEx.Metrics.ExactMatch` - Simple string comparison
+  - `DeepEvalEx.Metrics.PatternMatch` - Whole output matches a regular
+    expression
   - `DeepEvalEx.Metrics.GEval` - Flexible criteria-based evaluation
   - `DeepEvalEx.Metrics.Faithfulness` - RAG: claims supported by context
   - `DeepEvalEx.Metrics.Hallucination` - Detects unsupported statements
@@ -61,6 +63,8 @@ defmodule DeepEvalEx do
     expected tools
   - `DeepEvalEx.Metrics.ArgumentCorrectness` - Whether each agent tool
     call's arguments address the input
+  - `DeepEvalEx.Metrics.ToolPermission` - Agent tool calls against an
+    allowlist and denylist
   - `DeepEvalEx.Metrics.JevEval` - Your own weighted questions, decided by
     a System One model (Jev)
 

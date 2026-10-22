@@ -122,9 +122,11 @@ from deepeval.metrics import (  # noqa: E402
     FaithfulnessMetric,
     GEval,
     HallucinationMetric,
+    PatternMatchMetric,
     PIILeakageMetric,
     PromptAlignmentMetric,
     ToolCorrectnessMetric,
+    ToolPermissionMetric,
     ToxicityMetric,
 )
 from deepeval.metrics.contextual_precision.contextual_precision import (  # noqa: E402
@@ -558,7 +560,12 @@ SCRIPTED_METRICS = {
     "prompt_alignment": PromptAlignmentMetric,
     "argument_correctness": ArgumentCorrectnessMetric,
     "tool_correctness": ToolCorrectnessMetric,
+    "pattern_match": PatternMatchMetric,
+    "tool_permission": ToolPermissionMetric,
 }
+
+# Metrics that call no LLM and take no `model`.
+JUDGELESS_METRICS = {"exact_match", "pattern_match", "tool_permission"}
 
 
 def build_scripted_metric(script):
@@ -573,7 +580,7 @@ def build_scripted_metric(script):
             params["evaluation_params"] = [ToolCallParams(p) for p in params["evaluation_params"]]
         if "available_tools" in params:
             params["available_tools"] = [ToolCall(**tool) for tool in params["available_tools"]]
-    if kind == "exact_match":
+    if kind in JUDGELESS_METRICS:
         return SCRIPTED_METRICS[kind](**params), None
     judge = ScriptedJudge(script["judge_model"], script["responses"].get(kind, {}))
     return SCRIPTED_METRICS[kind](model=judge, **params), judge
