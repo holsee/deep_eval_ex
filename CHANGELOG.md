@@ -854,10 +854,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `exclude_none` does; `from_results/3` takes options of the same names.
   `TestRun.load/1` and `from_map/1` now keep what DeepEvalEx does not
   interpret as raw decoded JSON and write it back where deepeval declares it:
-  `conversationalTestCases`, `traceMetricsScores` and `prompts` on the run
-  (`:conversational_test_cases`, `:trace_metrics_scores`, `:prompts`),
-  `expectationsData`, `imagesMapping` and `trace` on each test case, and
-  `expectationsData` on each metric; keys deepeval does not model either are
+  `traceMetricsScores` and `prompts` on the run (`:trace_metrics_scores`,
+  `:prompts`), `expectationsData`, `imagesMapping` and `trace` on each test
+  case, and `expectationsData` on each metric (conversational test cases are
+  read into structs, see below); keys deepeval does not model either are
   kept in each struct's `:extra` and written after the others. A deepeval file
   with traces, prompts and a dataset now round-trips byte for byte, checked
   against a new `round_trip/traced_dataset` fixture generated with
@@ -1472,6 +1472,44 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `check_valid_test_cases_type`: raises `ArgumentError` with deepeval's
   message when a list mixes `DeepEvalEx.TestCase`s and conversational test
   cases.
+- **Conversational test cases in the test run export**, deepeval 4.3.1's
+  `ConversationalApiTestCase` and `TurnApi` with `create_api_test_case` and
+  `create_api_turn`, as `DeepEvalEx.TestRun.ConversationalTestCase` and
+  `DeepEvalEx.TestRun.Turn`.
+  - `DeepEvalEx.TestRun.from_results/3` and `DeepEvalEx.evaluate_run/3`
+    take `DeepEvalEx.ConversationalTestCase`s and export them as
+    `conversationalTestCases`, in deepeval's key order. An unnamed one is
+    named `conversational_test_case_<order>`. The order is its dataset
+    rank, else its position among the conversational test cases, as
+    deepeval counts the two kinds apart. They are sorted and renumbered as
+    `testCases` are.
+  - Each turn is exported with its role, content and position. Its
+    retrieval context is flattened to strings (`RetrievedContextData`
+    becomes its context) and left out when empty, and its tool calls are
+    exported as a test case's. A turn's `user_id` is never exported, as in
+    deepeval: `create_api_turn` passes it by field name, which `TurnApi`
+    ignores.
+  - A conversational test case's `runDuration` is a float even when its
+    metrics are instantaneous, as deepeval adds their time to `0.0`. It
+    succeeds unless a non-flaky metric failed, and its cost is the sum of
+    its metrics' costs. Its metric data follows the single-turn test cases'
+    in `metricsScores`, and its success counts towards `testPassed` and
+    `testFailed`.
+  - `evaluate_run/3` writes a run that has only conversational test cases,
+    as deepeval does.
+  - `TestRun.load/1` and `from_map/1` read `conversationalTestCases` into
+    these structs, keeping `expectationsData`, `imagesMapping` and unknown
+    keys as raw JSON. A missing `order` defaults to the test case's
+    position, and a turn's to its position in `turns`. deepeval's files
+    round-trip byte for byte.
+  - `to_results/1` returns the conversational test cases after the
+    single-turn ones, as `DeepEvalEx.ConversationalTestCase`s with their
+    results.
+  - A new `conversational` parity scenario checks the export byte for byte
+    against deepeval's file.
+
+  `DeepEvalEx.SystemOne.Batch.prefetch/3` does not batch a conversational
+  test case yet: each of its metrics measures on its own.
 
 ### Changed
 

@@ -19,6 +19,8 @@ defmodule DeepEvalEx.ParityTest do
   Only values proven nondeterministic are normalised, in both files:
 
   - the run-level `runDuration`, the wall-clock time of the whole run
+  - each conversational test case's `runDuration`: deepeval sums the time
+    its metrics took, a float even for instantaneous ones
 
   Test-case `runDuration` is not normalised: deepeval's async executor
   records any test case that took under a second as the integer `0`, which
@@ -33,10 +35,10 @@ defmodule DeepEvalEx.ParityTest do
 
   import ExUnit.CaptureLog
 
+  alias DeepEvalEx.{ConversationalTestCase, TestCase}
   alias DeepEvalEx.Metrics.{ExactMatch, Faithfulness, GEval}
   alias DeepEvalEx.Test.JSONDiff
-  alias DeepEvalEx.Test.ParityMetrics.{Failing, Stub}
-  alias DeepEvalEx.TestCase
+  alias DeepEvalEx.Test.ParityMetrics.{ConversationalStub, Failing, Stub}
   alias Jason.OrderedObject
 
   @moduletag :parity
@@ -73,9 +75,11 @@ defmodule DeepEvalEx.ParityTest do
 
   test "covers every scenario of the fixture script" do
     assert @scenarios ==
-             Enum.sort(~w(exact_match hyperparameters ignore_errors_false llm_metric metric_error
-                  missing_params missing_params_ignore_errors_false rag_and_tools
-                  skip_on_missing_params))
+             Enum.sort(
+               ~w(conversational exact_match hyperparameters ignore_errors_false llm_metric
+                  metric_error missing_params missing_params_ignore_errors_false rag_and_tools
+                  skip_on_missing_params)
+             )
 
     assert @raising == ~w(ignore_errors_false missing_params_ignore_errors_false)
   end
@@ -164,9 +168,15 @@ defmodule DeepEvalEx.ParityTest do
     )
   end
 
-  # The run-level runDuration is the only key following testFailed.
+  # The run-level runDuration is the only key following testFailed; within
+  # conversationalTestCases (which "metricsScores" follows), every
+  # runDuration is a conversational test case's.
   defp normalise(json) do
-    String.replace(json, ~r/("testFailed": \d+, "runDuration": )[^,}]+/, "\\1\"<normalised>\"")
+    json
+    |> String.replace(~r/"conversationalTestCases": \[.*?\], "metricsScores"/s, fn section ->
+      String.replace(section, ~r/("runDuration": )[^,}]+/, "\\1\"<normalised>\"")
+    end)
+    |> String.replace(~r/("testFailed": \d+, "runDuration": )[^,}]+/, "\\1\"<normalised>\"")
   end
 
   defp decode(json), do: Jason.decode!(json, objects: :ordered_objects)
@@ -177,17 +187,35 @@ defmodule DeepEvalEx.ParityTest do
   defp hyperparameters(%OrderedObject{values: pairs}), do: pairs
 
   # The test case's own fields as a map; nested JSON objects stay ordered.
-  defp test_case(%OrderedObject{values: pairs}) do
-    pairs
-    |> Map.new(fn
+  # One with turns is a conversational test case, each turn built likewise.
+  defp test_case(%OrderedObject{} = spec) do
+    if turns = get(spec, "turns") do
+      spec
+      |> fields()
+      |> Map.put("turns", Enum.map(turns, &fields/1))
+      |> ConversationalTestCase.new!()
+    else
+      spec |> fields() |> TestCase.new!()
+    end
+  end
+
+  defp fields(%OrderedObject{values: pairs}) do
+    Map.new(pairs, fn
       {key, tool_calls} when key in ["tools_called", "expected_tools"] ->
         {key, Enum.map(tool_calls, &Map.new(&1.values))}
+
+      {"retrieval_context", items} ->
+        {"retrieval_context", Enum.map(items, &context_item/1)}
 
       pair ->
         pair
     end)
-    |> TestCase.new!()
   end
+
+  # A {"context", "source"} item is a RetrievedContextData, as the fixture
+  # script builds it.
+  defp context_item(%OrderedObject{values: pairs}), do: Map.new(pairs)
+  defp context_item(context), do: context
 
   defp metric(spec) do
     case get(spec, "kind") do
@@ -196,6 +224,18 @@ defmodule DeepEvalEx.ParityTest do
 
       "stub" ->
         %Stub{
+          name: get(spec, "name"),
+          score: get(spec, "score"),
+          reason: get(spec, "reason"),
+          threshold: get(spec, "threshold"),
+          evaluation_model: get(spec, "evaluation_model"),
+          evaluation_cost: get(spec, "evaluation_cost"),
+          input_tokens: get(spec, "input_tokens"),
+          output_tokens: get(spec, "output_tokens")
+        }
+
+      "conversational_stub" ->
+        %ConversationalStub{
           name: get(spec, "name"),
           score: get(spec, "score"),
           reason: get(spec, "reason"),
@@ -227,6 +267,8 @@ defmodule DeepEvalEx.ParityTest do
   end
 
   defp orders(export) do
-    export |> get("testCases") |> Enum.map(&{get(&1, "name"), get(&1, "order")})
+    for key <- ~w(testCases conversationalTestCases), test_case <- get(export, key) do
+      {key, get(test_case, "name"), get(test_case, "order")}
+    end
   end
 end

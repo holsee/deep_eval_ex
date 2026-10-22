@@ -20,7 +20,8 @@ defmodule DeepEvalEx.SystemOne.Batch do
   eval mode (its `DeepEvalEx.SystemOne.Context`) is `:system_one`
   (deepeval also leaves out multimodal test cases, which DeepEvalEx does
   not have). With fewer than two
-  candidates nothing is batched. A candidate whose
+  candidates nothing is batched. A `DeepEvalEx.ConversationalTestCase` is
+  not batched yet: each of its metrics measures on its own. A candidate whose
   `c:DeepEvalEx.Metrics.BaseMetric.system_one_eval_spec/2` declines the test
   case (ToolCorrectness always does) still counts, then runs its own
   measure.
@@ -99,8 +100,14 @@ defmodule DeepEvalEx.SystemOne.Batch do
     running then are not prefetched
   - `:max_concurrency` - the most requests sent at once (default: all)
   """
-  @spec prefetch(TestCase.t(), [entry()], keyword()) :: [outcome()]
-  def prefetch(%TestCase{} = test_case, entries, opts \\ []) when is_list(entries) do
+  @spec prefetch(TestCase.t() | DeepEvalEx.ConversationalTestCase.t(), [entry()], keyword()) ::
+          [outcome()]
+  def prefetch(test_case, entries, opts \\ [])
+
+  def prefetch(%DeepEvalEx.ConversationalTestCase{}, entries, _opts) when is_list(entries),
+    do: Enum.map(entries, fn _entry -> nil end)
+
+  def prefetch(%TestCase{} = test_case, entries, opts) when is_list(entries) do
     candidates =
       for {{module, metric_opts}, index} <- Enum.with_index(entries),
           candidate?(metric_opts),

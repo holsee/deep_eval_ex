@@ -50,6 +50,39 @@ defmodule DeepEvalEx.Test.ParityMetrics do
     end
   end
 
+  defmodule ConversationalStub do
+    @moduledoc """
+    `Stub` for conversational test cases, as the fixture script's
+    `ConversationalStubMetric`: the same fixed values from a
+    `DeepEvalEx.Metrics.BaseConversationalMetric`.
+    """
+
+    use DeepEvalEx.Metrics.BaseConversationalMetric
+
+    defstruct [
+      :name,
+      :score,
+      :reason,
+      :threshold,
+      :evaluation_model,
+      :evaluation_cost,
+      :input_tokens,
+      :output_tokens,
+      strict_mode: false
+    ]
+
+    @impl true
+    def metric_name, do: "Conversational Stub"
+
+    @impl true
+    def metric_name(%__MODULE__{name: name}), do: name
+
+    @impl true
+    def required_params, do: [:role, :content]
+
+    def do_measure(test_case, opts), do: Stub.do_measure(test_case, opts)
+  end
+
   defmodule Failing do
     @moduledoc """
     Always raises, as the fixture script's `ErrorMetric` does. deepeval's

@@ -1,8 +1,8 @@
 defmodule DeepEvalEx.TestRunTest do
   use ExUnit.Case, async: true
 
+  alias DeepEvalEx.{ConversationalTestCase, Result, TestCase, TestRun}
   alias DeepEvalEx.Metrics.ArgumentCorrectness
-  alias DeepEvalEx.{Result, TestCase, TestRun}
   alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
   alias DeepEvalEx.TestRun.JSON
 
@@ -278,6 +278,210 @@ defmodule DeepEvalEx.TestRunTest do
 
       assert [%TestRun.TestCase{order: 0, metrics_data: [%{name: "N"}]}] = test_run.test_cases
       assert [%{metric: "N"}] = test_run.metrics_scores
+    end
+  end
+
+  describe "from_results/3 with conversational test cases" do
+    defp conversation(attrs \\ []) do
+      [turns: [%{role: :user, content: "Hi"}, %{role: :assistant, content: "Hello"}]]
+      |> Keyword.merge(attrs)
+      |> ConversationalTestCase.new!()
+    end
+
+    test "exports them as conversationalTestCases, as deepeval's ConversationalApiTestCase" do
+      test_case =
+        conversation(
+          scenario: "s",
+          expected_outcome: "o",
+          user_description: "u",
+          context: ["c"],
+          tags: ["t"],
+          metadata: %{"k" => 1},
+          comments: "cm"
+        )
+
+      test_run = TestRun.from_results([test_case], [[ok("M", 0.75, evaluation_cost: 0.25)]])
+
+      assert test_run.test_cases == []
+
+      assert [
+               %TestRun.ConversationalTestCase{
+                 name: "conversational_test_case_0",
+                 success: true,
+                 run_duration: +0.0,
+                 evaluation_cost: 0.25,
+                 order: 0,
+                 scenario: "s",
+                 expected_outcome: "o",
+                 user_description: "u",
+                 context: ["c"],
+                 tags: ["t"],
+                 metadata: %{"k" => 1},
+                 comments: "cm",
+                 flaky: false,
+                 turns: [
+                   %TestRun.Turn{role: "user", content: "Hi", order: 0},
+                   %TestRun.Turn{role: "assistant", content: "Hello", order: 1}
+                 ]
+               }
+             ] = test_run.conversational_test_cases
+
+      assert encode(test_run) =~
+               ~s("conversationalTestCases": [{"name": "conversational_test_case_0", ) <>
+                 ~s("success": true, "metricsData": [{"name": "M", "threshold": 0.5, ) <>
+                 ~s("success": true, "score": 0.75, "strictMode": false, "flaky": false, ) <>
+                 ~s("evaluationCost": 0.25}], "runDuration": 0.0, "evaluationCost": 0.25, ) <>
+                 ~s("turns": [{"role": "user", "content": "Hi", "order": 0}, ) <>
+                 ~s({"role": "assistant", "content": "Hello", "order": 1}], "order": 0, ) <>
+                 ~s("scenario": "s", "expectedOutcome": "o", "userDescription": "u", ) <>
+                 ~s("context": ["c"], "comments": "cm", "metadata": {"k": 1}, "tags": ["t"], ) <>
+                 ~s("flaky": false}], "metricsScores": [{"metric": "M", "scores": [0.75], ) <>
+                 ~s("passes": 1, "fails": 0, "errors": 0}])
+    end
+
+    test "names unnamed ones conversational_test_case_<order>, by dataset rank, sorted" do
+      test_cases = [
+        %{conversation() | dataset_rank: 3},
+        conversation(name: "named"),
+        conversation()
+      ]
+
+      results = List.duplicate([ok("M", 1.0)], 3)
+
+      test_run = TestRun.from_results(test_cases, results)
+
+      assert Enum.map(test_run.conversational_test_cases, &{&1.name, &1.order}) ==
+               [
+                 {"named", 1},
+                 {"conversational_test_case_2", 2},
+                 {"conversational_test_case_3", 3}
+               ]
+    end
+
+    test "renumbers duplicate orders from 0, as deepeval's sort_test_cases" do
+      test_cases = [%{conversation() | dataset_rank: 1}, conversation(), conversation()]
+
+      test_run = TestRun.from_results(test_cases, List.duplicate([ok("M", 1.0)], 3))
+
+      assert Enum.map(test_run.conversational_test_cases, &{&1.name, &1.order}) ==
+               [
+                 {"conversational_test_case_1", 0},
+                 {"conversational_test_case_1", 1},
+                 {"conversational_test_case_2", 2}
+               ]
+    end
+
+    test "flattens each turn's retrieval context and leaves out an empty one" do
+      test_case =
+        conversation(
+          turns: [
+            %{
+              role: :assistant,
+              content: "a",
+              user_id: "u-1",
+              retrieval_context: ["x", %RetrievedContextData{context: "y", source: "s"}],
+              tools_called: []
+            },
+            %{role: :assistant, content: "b", retrieval_context: []}
+          ]
+        )
+
+      [conversational] =
+        TestRun.from_results([test_case], [[ok("M", 1.0)]]).conversational_test_cases
+
+      assert [
+               %TestRun.Turn{retrieval_context: ["x", "y"], tools_called: [], user_id: nil},
+               %TestRun.Turn{retrieval_context: nil, tools_called: nil}
+             ] = conversational.turns
+    end
+
+    test "never exports a turn's user_id, as deepeval's create_api_turn" do
+      # create_api_turn passes user_id by field name, which TurnApi (aliased
+      # userId, without populate_by_name) ignores.
+      test_case = conversation(turns: [%{role: :user, content: "Hi", user_id: "u-1"}])
+
+      refute [test_case] |> TestRun.from_results([[ok("M", 1.0)]]) |> encode() =~ "userId"
+    end
+
+    test "records the test case's duration as a float, as deepeval sums it" do
+      test_run =
+        TestRun.from_results([conversation(), conversation()], [[ok("M", 1.0)], [ok("M", 1.0)]],
+          run_durations: [0.25, 2]
+        )
+
+      assert Enum.map(test_run.conversational_test_cases, & &1.run_duration) == [0.25, 2.0]
+      assert encode(test_run) =~ ~s("runDuration": 0.25, )
+    end
+
+    test "counts passed and failed ones and aggregates their metric scores" do
+      test_run =
+        TestRun.from_results(
+          [conversation(), conversation(), conversation()],
+          [
+            [ok("M", 1.0), ok("N", 0.75, evaluation_cost: 0.5)],
+            [ok("M", 0.25), Result.error("N", "boom", threshold: 0.5)],
+            []
+          ]
+        )
+
+      assert {test_run.test_passed, test_run.test_failed} == {1, 1}
+      assert Enum.map(test_run.conversational_test_cases, & &1.success) == [true, false]
+      assert test_run.evaluation_cost == 0.5
+
+      assert test_run.metrics_scores == [
+               %{metric: "M", scores: [1.0, 0.25], passes: 1, fails: 1, errors: 0},
+               %{metric: "N", scores: [0.75], passes: 1, fails: 0, errors: 1}
+             ]
+    end
+
+    test "flaky metrics never decide their success, as deepeval's update_metric_data" do
+      [conversational] =
+        TestRun.from_results([conversation()], [[ok("M", 0.0, flaky: true)]]).conversational_test_cases
+
+      assert conversational.success
+    end
+
+    test "orders single- and multi-turn test cases separately, as deepeval's counters" do
+      test_run =
+        TestRun.from_results(
+          [%TestCase{input: "q"}, conversation(), %TestCase{input: "r"}],
+          List.duplicate([ok("M", 1.0)], 3)
+        )
+
+      assert Enum.map(test_run.test_cases, &{&1.name, &1.order}) ==
+               [{"test_case_0", 0}, {"test_case_1", 1}]
+
+      assert Enum.map(test_run.conversational_test_cases, &{&1.name, &1.order}) ==
+               [{"conversational_test_case_0", 0}]
+    end
+
+    test "to_results/1 turns them back into conversational test cases and results" do
+      test_case =
+        conversation(
+          name: "c",
+          scenario: "s",
+          turns: [
+            %{
+              role: :user,
+              content: "Hi",
+              retrieval_context: [%RetrievedContextData{context: "y", source: "s"}],
+              tools_called: [%ToolCall{name: "t"}]
+            }
+          ]
+        )
+
+      results = [[ok("M", 0.75)]]
+
+      assert {[%ConversationalTestCase{} = loaded], [[%Result{metric: "M", score: 0.75}]]} =
+               [test_case] |> TestRun.from_results(results) |> TestRun.to_results()
+
+      assert loaded.name == "c"
+      assert loaded.scenario == "s"
+
+      assert [%DeepEvalEx.Turn{role: :user, content: "Hi", retrieval_context: ["y"]}] =
+               loaded.turns
+
+      assert [%ToolCall{name: "t"}] = hd(loaded.turns).tools_called
     end
   end
 

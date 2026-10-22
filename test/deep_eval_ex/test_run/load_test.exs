@@ -279,6 +279,29 @@ defmodule DeepEvalEx.TestRun.LoadTest do
           {"futureMetricKey", [1, 2.5]}
         ])
 
+      conversational =
+        ordered([
+          {"expectationsData", ordered([{"evaluationCost", 0.5}])},
+          {"name", "conv"},
+          {"success", false},
+          {"metricsData", []},
+          {"runDuration", 0.0},
+          {"turns",
+           [
+             ordered([
+               {"role", "user"},
+               {"content", "Hi"},
+               {"order", 0},
+               {"comments", "c"},
+               {"futureTurnKey", true}
+             ])
+           ]},
+          {"order", 0},
+          {"imagesMapping", ordered([{"img_1", ordered([{"url", "https://x/1.png"}])}])},
+          {"flaky", false},
+          {"futureConversationalKey", 1}
+        ])
+
       test_case =
         ordered([
           {"expectationsData", ordered([{"evaluationCost", 0.25}])},
@@ -298,7 +321,7 @@ defmodule DeepEvalEx.TestRun.LoadTest do
         ordered([
           {"testFile", "test_chatbot.py"},
           {"testCases", [test_case]},
-          {"conversationalTestCases", [ordered([{"name", "conv"}, {"success", false}])]},
+          {"conversationalTestCases", [conversational]},
           {"metricsScores",
            [
              ordered([
@@ -332,7 +355,16 @@ defmodule DeepEvalEx.TestRun.LoadTest do
                {"golden", "ds_1", "2"}
 
       assert test_run.official == true
-      assert [%Jason.OrderedObject{}] = test_run.conversational_test_cases
+
+      assert [
+               %TestRun.ConversationalTestCase{
+                 expectations_data: %Jason.OrderedObject{},
+                 images_mapping: %Jason.OrderedObject{},
+                 turns: [%TestRun.Turn{comments: "c", extra: [{"futureTurnKey", true}]}],
+                 extra: [{"futureConversationalKey", 1}]
+               }
+             ] = test_run.conversational_test_cases
+
       assert test_run.extra == [{"futureRunKey", ordered([{"a", 1}])}]
 
       assert [
@@ -363,6 +395,117 @@ defmodule DeepEvalEx.TestRun.LoadTest do
 
       [none | _] = test_run |> encode() |> Jason.decode!() |> Map.fetch!("testCases")
       refute Map.has_key?(none, "success")
+    end
+
+    test "reads conversational test cases and their turns" do
+      test_run =
+        from_map!(%{
+          "conversationalTestCases" => [
+            %{
+              "name" => "conv",
+              "success" => true,
+              "metricsData" => [%{"name" => "M", "success" => true, "score" => 1.0}],
+              "runDuration" => 1.5,
+              "evaluationCost" => 0.25,
+              "turns" => [
+                %{
+                  "role" => "assistant",
+                  "content" => "Hello",
+                  "order" => 3,
+                  "userId" => "u-1",
+                  "retrievalContext" => ["x"],
+                  "toolsCalled" => [%{"name" => "t", "type" => "MCP"}]
+                },
+                %{"role" => "user", "content" => "Hi"}
+              ],
+              "order" => 2,
+              "scenario" => "s",
+              "expectedOutcome" => "o",
+              "userDescription" => "u",
+              "context" => ["c"],
+              "comments" => "cm",
+              "metadata" => %{"k" => 1},
+              "tags" => ["t"],
+              "flaky" => true
+            }
+          ]
+        })
+
+      assert [
+               %TestRun.ConversationalTestCase{
+                 name: "conv",
+                 success: true,
+                 metrics_data: [%MetricData{name: "M", score: 1.0}],
+                 run_duration: 1.5,
+                 evaluation_cost: 0.25,
+                 turns: [
+                   %TestRun.Turn{
+                     role: "assistant",
+                     content: "Hello",
+                     order: 3,
+                     user_id: "u-1",
+                     retrieval_context: ["x"],
+                     tools_called: [%ToolCall{name: "t", type: :mcp}]
+                   },
+                   %TestRun.Turn{role: "user", content: "Hi", order: 1}
+                 ],
+                 order: 2,
+                 scenario: "s",
+                 expected_outcome: "o",
+                 user_description: "u",
+                 context: ["c"],
+                 comments: "cm",
+                 metadata: %{"k" => 1},
+                 tags: ["t"],
+                 flaky: true
+               }
+             ] = test_run.conversational_test_cases
+
+      assert test_run.metrics_scores == [
+               %{metric: "M", scores: [1.0], passes: 1, fails: 0, errors: 0}
+             ]
+
+      assert test_run.evaluation_cost == nil
+      assert {test_run.test_passed, test_run.test_failed} == {1, 0}
+    end
+
+    test "gives a conversational test case deepeval's defaults, and its runDuration as a float" do
+      test_run = from_map!(%{"conversationalTestCases" => [%{"name" => "c", "runDuration" => 0}]})
+
+      assert [
+               %TestRun.ConversationalTestCase{
+                 success: nil,
+                 metrics_data: [],
+                 run_duration: 0,
+                 turns: [],
+                 order: 0,
+                 flaky: false
+               }
+             ] = test_run.conversational_test_cases
+
+      assert encode(test_run) =~
+               ~s("conversationalTestCases": [{"name": "c", "metricsData": [], ) <>
+                 ~s("runDuration": 0.0, "turns": [], "order": 0, "flaky": false}])
+    end
+
+    test "rejects a conversational test case or turn without its required keys" do
+      assert {:error, {:invalid_test_run, "conversationalTestCases[0].name: " <> _}} =
+               TestRun.from_map(%{"conversationalTestCases" => [%{"turns" => []}]})
+
+      assert {:error,
+              {:invalid_test_run,
+               "conversationalTestCases[0].turns[1].content: expected a string, got nil"}} =
+               TestRun.from_map(%{
+                 "conversationalTestCases" => [
+                   %{
+                     "name" => "c",
+                     "turns" => [%{"role" => "user", "content" => "Hi"}, %{"role" => "assistant"}]
+                   }
+                 ]
+               })
+
+      assert {:error, {:invalid_test_run, "conversationalTestCases: expected a list, got 1"}} =
+               TestRun.from_map(%{"conversationalTestCases" => 1})
     end
 
     test "counts conversational test cases' success when the totals are missing" do

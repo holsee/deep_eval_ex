@@ -7,7 +7,8 @@ calls. For every scenario this script writes, under
 test/fixtures/deepeval/<scenario>/:
 
 - input.json    - the scenario's inputs: `test_cases` (keyword arguments of
-                  deepeval's `LLMTestCase`, snake_case), `metrics` (see
+                  deepeval's `LLMTestCase`, snake_case, or of its
+                  `ConversationalTestCase` when they have `turns`), `metrics` (see
                   `build_metric`), `identifier`, `hyperparameters` and
                   `error_config` (`ErrorConfig`'s keyword arguments;
                   `ignore_errors=True` unless the scenario sets it)
@@ -113,6 +114,7 @@ from deepeval.evaluate.configs import (  # noqa: E402
 from deepeval.metrics import (  # noqa: E402
     AnswerRelevancyMetric,
     ArgumentCorrectnessMetric,
+    BaseConversationalMetric,
     BaseMetric,
     BiasMetric,
     ContextualPrecisionMetric,
@@ -151,11 +153,13 @@ from deepeval.models import DeepEvalBaseLLM  # noqa: E402
 from deepeval.prompt import Prompt, PromptMessage  # noqa: E402
 from deepeval.templates import iter_base_template_methods  # noqa: E402
 from deepeval.test_case import (  # noqa: E402
+    ConversationalTestCase,
     LLMTestCase,
     RetrievedContextData,
     SingleTurnParams,
     ToolCall,
     ToolCallParams,
+    Turn,
 )
 from deepeval.tracing import observe, update_current_span, update_current_trace  # noqa: E402
 from deepeval.utils import serialize_to_json  # noqa: E402
@@ -206,6 +210,18 @@ class StubMetric(BaseMetric):
         return self.name
 
 
+class ConversationalStubMetric(BaseConversationalMetric):
+    """StubMetric for conversational test cases: the same fixed values, from
+    a BaseConversationalMetric, which deepeval runs on ConversationalTestCases.
+    Mirrored by DeepEvalEx.Test.ParityMetrics.ConversationalStub."""
+
+    __init__ = StubMetric.__init__
+    measure = StubMetric.measure
+    a_measure = StubMetric.a_measure
+    is_successful = StubMetric.is_successful
+    __name__ = StubMetric.__dict__["__name__"]
+
+
 class ErrorMetric(BaseMetric):
     """Always raises. With ErrorConfig(ignore_errors=True) deepeval's async
     executor records `str(exception)`, i.e. just the message, as the
@@ -239,6 +255,12 @@ def build_metric(spec):
         return ExactMatchMetric()
     if kind == "stub":
         return StubMetric(
+            spec["name"], spec["score"], spec["reason"], spec["threshold"],
+            spec["evaluation_model"], spec["evaluation_cost"],
+            spec["input_tokens"], spec["output_tokens"],
+        )
+    if kind == "conversational_stub":
+        return ConversationalStubMetric(
             spec["name"], spec["score"], spec["reason"], spec["threshold"],
             spec["evaluation_model"], spec["evaluation_cost"],
             spec["input_tokens"], spec["output_tokens"],
@@ -305,7 +327,20 @@ def build_expected_schema(schema):
 
 
 def build_test_case(spec):
+    """An LLMTestCase from its keyword arguments, or a ConversationalTestCase
+    when they have `turns`, each turn built as one."""
     spec = dict(spec)
+    if "turns" in spec:
+        spec["turns"] = [build_turn(turn) for turn in spec["turns"]]
+        return ConversationalTestCase(**spec)
+    return LLMTestCase(**build_tools_and_contexts(spec))
+
+
+def build_turn(spec):
+    return Turn(**build_tools_and_contexts(dict(spec)))
+
+
+def build_tools_and_contexts(spec):
     for key in ("tools_called", "expected_tools"):
         if key in spec:
             spec[key] = [ToolCall(**tool_call) for tool_call in spec[key]]
@@ -316,7 +351,7 @@ def build_test_case(spec):
             RetrievedContextData(**item) if isinstance(item, dict) else item
             for item in spec["retrieval_context"]
         ]
-    return LLMTestCase(**spec)
+    return spec
 
 
 STUB_JUDGE = {
@@ -517,6 +552,64 @@ SCENARIOS = {
             "prompt_version": "v3",
             "seed": None,
         },
+    },
+    # ConversationalTestCases, exported as conversationalTestCases
+    # (ConversationalApiTestCase and TurnApi): an unnamed one is named
+    # conversational_test_case_<order>, a turn's RetrievedContextData is
+    # flattened to its context, an empty retrieval_context is left out and
+    # empty tools_called kept. A turn's user_id is never exported:
+    # create_api_turn passes it by field name, which TurnApi ignores. A test
+    # case's runDuration is the summed time its metrics took, a float even
+    # when they are instantaneous.
+    "conversational": {
+        "test_cases": [
+            {
+                "scenario": "A customer asks for a refund on a late order. café ✓",
+                "expected_outcome": "The assistant starts a refund for order 42.",
+                "user_description": "A returning customer, polite but in a hurry.",
+                "context": ["Orders over 30 days old are not refundable."],
+                "tags": ["refunds", "support"],
+                "metadata": {"channel": "chat", "priority": 2, "escalated": False},
+                "comments": "Seeded from ticket 1234.",
+                "turns": [
+                    {"role": "user", "content": "My order is late, I want a refund.",
+                     "user_id": "customer-7"},
+                    {
+                        "role": "assistant",
+                        "content": "Sorry about that! I found order 42 and started a refund.",
+                        "retrieval_context": [
+                            "Refunds take 5 business days.",
+                            {"context": "Order 42 shipped on 1 October.", "source": "orders.db"},
+                        ],
+                        "tools_called": [
+                            {
+                                "name": "lookup_order",
+                                "description": "Find an order by customer",
+                                "input_parameters": {"customer": "customer-7", "limit": 1},
+                                "output": {"id": 42, "status": "late"},
+                            },
+                            {"name": "start_refund", "input_parameters": {"order": 42},
+                             "output": True},
+                        ],
+                    },
+                    {"role": "user", "content": "Thanks!", "user_id": "customer-7"},
+                ],
+            },
+            {
+                "name": "greeting",
+                "turns": [
+                    {"role": "user", "content": "Hello"},
+                    {"role": "assistant", "content": "Hi! How can I help?",
+                     "retrieval_context": [], "tools_called": []},
+                ],
+            },
+        ],
+        "metrics": [
+            {**STUB_JUDGE, "kind": "conversational_stub"},
+            {**STRICT_JUDGE, "kind": "conversational_stub"},
+        ],
+        "identifier": "conversational-export",
+        "hyperparameters": None,
     },
 }
 

@@ -77,6 +77,20 @@ defmodule DeepEvalEx.SystemOne.BatchTest do
              ] = outcomes
     end
 
+    test "batches nothing on a conversational test case, leaving each metric its own measure" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.8))
+
+      conversation =
+        DeepEvalEx.ConversationalTestCase.new!(turns: [%{role: :user, content: "Hi"}])
+
+      assert Batch.prefetch(conversation, [
+               entry(Judged, :system_one, mock, spec([:input], "S")),
+               entry(Judged, :system_one, mock, spec([:input], "S"))
+             ]) == [nil, nil]
+
+      assert Mock.calls(mock) == []
+    end
+
     test "batches nothing with fewer than two :system_one metrics" do
       mock = Mock.new(answer_fn: Mock.noul_answers(0.8))
 

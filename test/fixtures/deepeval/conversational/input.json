@@ -1,0 +1,111 @@
+{
+  "test_cases": [
+    {
+      "scenario": "A customer asks for a refund on a late order. café ✓",
+      "expected_outcome": "The assistant starts a refund for order 42.",
+      "user_description": "A returning customer, polite but in a hurry.",
+      "context": [
+        "Orders over 30 days old are not refundable."
+      ],
+      "tags": [
+        "refunds",
+        "support"
+      ],
+      "metadata": {
+        "channel": "chat",
+        "priority": 2,
+        "escalated": false
+      },
+      "comments": "Seeded from ticket 1234.",
+      "turns": [
+        {
+          "role": "user",
+          "content": "My order is late, I want a refund.",
+          "user_id": "customer-7"
+        },
+        {
+          "role": "assistant",
+          "content": "Sorry about that! I found order 42 and started a refund.",
+          "retrieval_context": [
+            "Refunds take 5 business days.",
+            {
+              "context": "Order 42 shipped on 1 October.",
+              "source": "orders.db"
+            }
+          ],
+          "tools_called": [
+            {
+              "name": "lookup_order",
+              "description": "Find an order by customer",
+              "input_parameters": {
+                "customer": "customer-7",
+                "limit": 1
+              },
+              "output": {
+                "id": 42,
+                "status": "late"
+              }
+            },
+            {
+              "name": "start_refund",
+              "input_parameters": {
+                "order": 42
+              },
+              "output": true
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": "Thanks!",
+          "user_id": "customer-7"
+        }
+      ]
+    },
+    {
+      "name": "greeting",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Hello"
+        },
+        {
+          "role": "assistant",
+          "content": "Hi! How can I help?",
+          "retrieval_context": [],
+          "tools_called": []
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "conversational_stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    },
+    {
+      "kind": "conversational_stub",
+      "name": "Strict Judge",
+      "score": 0.5,
+      "reason": "Half of the claims are supported.",
+      "threshold": 0.9,
+      "evaluation_model": "gpt-4o",
+      "evaluation_cost": 0.0025,
+      "input_tokens": 2048,
+      "output_tokens": 128
+    }
+  ],
+  "identifier": "conversational-export",
+  "hyperparameters": null,
+  "error_config": {
+    "ignore_errors": true,
+    "skip_on_missing_params": false
+  }
+}

@@ -24,8 +24,8 @@ defmodule DeepEvalEx.TestRun do
 
   - `:test_file` - The test file the run came from, or `nil` (`testFile`)
   - `:test_cases` - One `DeepEvalEx.TestRun.TestCase` per evaluated test case
-  - `:conversational_test_cases` - deepeval's conversational test cases, as
-    raw JSON (see "Raw JSON" below); DeepEvalEx's own runs have none
+  - `:conversational_test_cases` - One `DeepEvalEx.TestRun.ConversationalTestCase`
+    per evaluated `DeepEvalEx.ConversationalTestCase`
   - `:metrics_scores` - Per metric: every score, plus pass, fail and error
     counts, in the order metrics first appear
   - `:trace_metrics_scores` - deepeval's per-span metric scores, as raw
@@ -51,7 +51,8 @@ defmodule DeepEvalEx.TestRun do
   `load/1` reads a `test_run_<timestamp>.json` written by deepeval (or by
   `DeepEvalEx.TestRun.LocalStore`) back into a test run, and `from_map/1`
   does the same for already decoded JSON. `to_results/1` turns a loaded run
-  into `DeepEvalEx.TestCase`s and `DeepEvalEx.Result`s:
+  into `DeepEvalEx.TestCase`s (or `DeepEvalEx.ConversationalTestCase`s) and
+  `DeepEvalEx.Result`s:
 
       {:ok, test_run} = DeepEvalEx.TestRun.load("eval_results/test_run_20261022_101500.json")
       {test_cases, results} = DeepEvalEx.TestRun.to_results(test_run)
@@ -68,10 +69,11 @@ defmodule DeepEvalEx.TestRun do
   decoded JSON they were loaded from, and written back unchanged in the
   position deepeval's models declare them:
 
-  - on the run: `:conversational_test_cases`, `:trace_metrics_scores` and
-    `:prompts`
+  - on the run: `:trace_metrics_scores` and `:prompts`
   - on each `DeepEvalEx.TestRun.TestCase`: `:expectations_data`,
     `:images_mapping` and `:trace`
+  - on each `DeepEvalEx.TestRun.ConversationalTestCase`:
+    `:expectations_data` and `:images_mapping`
   - on each `DeepEvalEx.TestRun.MetricData`: `:expectations_data`
 
   Keys deepeval itself does not model (deepeval ignores them on load) are
@@ -80,6 +82,7 @@ defmodule DeepEvalEx.TestRun do
   writes such keys, so its own files round-trip byte for byte.
   """
 
+  alias DeepEvalEx.ConversationalTestCase, as: EvalConversationalTestCase
   alias DeepEvalEx.{Result, TestRun}
   alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
   alias DeepEvalEx.TestCase, as: EvalTestCase
@@ -103,7 +106,7 @@ defmodule DeepEvalEx.TestRun do
   @type t :: %__MODULE__{
           test_file: String.t() | nil,
           test_cases: [TestRun.TestCase.t()],
-          conversational_test_cases: [raw()],
+          conversational_test_cases: [TestRun.ConversationalTestCase.t()],
           metrics_scores: [metric_scores()],
           trace_metrics_scores: raw() | nil,
           identifier: String.t() | nil,
@@ -351,6 +354,168 @@ defmodule DeepEvalEx.TestRun do
     end
   end
 
+  defmodule Turn do
+    @moduledoc """
+    One turn of an evaluated conversation, as deepeval's `TurnApi`.
+
+    `:role` is the turn's role as a string (`"user"` or `"assistant"`) and
+    `:order` its position in the conversation. `:retrieval_context` holds
+    strings only: a `DeepEvalEx.Schemas.RetrievedContextData` is flattened to
+    its context, and an empty list is `nil`, as deepeval's `create_api_turn`.
+
+    `:user_id` and `:comments` are only ever set by loading a file:
+    deepeval's `create_api_turn` passes `user_id` by its field name, which
+    `TurnApi` (aliased `userId`) ignores, and never passes `comments`.
+
+    `:extra` holds keys deepeval does not model (see "Raw JSON" in
+    `DeepEvalEx.TestRun`).
+    """
+
+    alias DeepEvalEx.Schemas.ToolCall
+
+    @type t :: %__MODULE__{
+            role: String.t(),
+            content: String.t(),
+            order: non_neg_integer(),
+            user_id: String.t() | nil,
+            retrieval_context: [String.t()] | nil,
+            tools_called: [ToolCall.t()] | nil,
+            comments: String.t() | nil,
+            extra: DeepEvalEx.TestRun.extra()
+          }
+
+    defstruct [
+      :role,
+      :content,
+      :order,
+      :user_id,
+      :retrieval_context,
+      :tools_called,
+      :comments,
+      extra: []
+    ]
+
+    @doc """
+    Converts an evaluated turn back into a `DeepEvalEx.Turn`, keeping its
+    role, content, user, retrieval context and tool calls.
+
+    Raises `ArgumentError` for a role other than `"user"` or `"assistant"`.
+    """
+    @spec to_turn(t()) :: DeepEvalEx.Turn.t()
+    def to_turn(%__MODULE__{} = turn) do
+      role =
+        case DeepEvalEx.Turn.cast_role(turn.role) do
+          {:ok, role} ->
+            role
+
+          {:error, _message, _context} ->
+            raise ArgumentError, "invalid turn role: #{inspect(turn.role)}"
+        end
+
+      %DeepEvalEx.Turn{
+        role: role,
+        content: turn.content,
+        user_id: turn.user_id,
+        retrieval_context: turn.retrieval_context,
+        tools_called: turn.tools_called
+      }
+    end
+  end
+
+  defmodule ConversationalTestCase do
+    @moduledoc """
+    One evaluated conversation, as deepeval's `ConversationalApiTestCase`.
+
+    Carries the conversational test case's fields, its turns as
+    `DeepEvalEx.TestRun.Turn`s, the metric data of each of its results,
+    whether no metric failed (`:success`; flaky metrics never decide it, as
+    in deepeval's `update_metric_data`), its summed `:evaluation_cost` (`nil`
+    when no metric reported one) and its `:run_duration` in seconds.
+    `:name` defaults to `"conversational_test_case_<order>"` as in deepeval.
+
+    Unlike a `DeepEvalEx.TestRun.TestCase`, `:run_duration` is always a
+    float: deepeval adds the time the metrics took to its initial `0.0`, so
+    an instantaneous run is not recorded as the integer `0`.
+
+    `:success` is `nil` for a test case loaded without one, which neither
+    passes nor fails.
+
+    `:expectations_data`, `:images_mapping` and `:extra` hold loaded JSON
+    DeepEvalEx does not interpret (see "Raw JSON" in `DeepEvalEx.TestRun`).
+    """
+
+    alias DeepEvalEx.TestRun.{MetricData, Turn}
+
+    @type t :: %__MODULE__{
+            name: String.t(),
+            success: boolean() | nil,
+            metrics_data: [MetricData.t()],
+            run_duration: number(),
+            evaluation_cost: float() | nil,
+            turns: [Turn.t()],
+            order: non_neg_integer(),
+            scenario: String.t() | nil,
+            expected_outcome: String.t() | nil,
+            user_description: String.t() | nil,
+            context: [String.t()] | nil,
+            comments: String.t() | nil,
+            metadata: map() | nil,
+            tags: [String.t()] | nil,
+            flaky: boolean(),
+            expectations_data: DeepEvalEx.TestRun.raw() | nil,
+            images_mapping: DeepEvalEx.TestRun.raw() | nil,
+            extra: DeepEvalEx.TestRun.extra()
+          }
+
+    defstruct [
+      :name,
+      :evaluation_cost,
+      :order,
+      :scenario,
+      :expected_outcome,
+      :user_description,
+      :context,
+      :comments,
+      :metadata,
+      :tags,
+      :expectations_data,
+      :images_mapping,
+      success: true,
+      metrics_data: [],
+      run_duration: 0.0,
+      turns: [],
+      flaky: false,
+      extra: []
+    ]
+
+    @doc """
+    Converts an evaluated conversation back into a
+    `DeepEvalEx.ConversationalTestCase`, built by
+    `DeepEvalEx.ConversationalTestCase.new!/1` so its modality flags are set.
+
+    Keeps the test case's own fields and turns (see `Turn.to_turn/1`) and
+    drops the evaluation. Raises for a test case without turns, which
+    deepeval's `ConversationalTestCase` rejects too.
+    """
+    @spec to_test_case(t()) :: DeepEvalEx.ConversationalTestCase.t()
+    def to_test_case(%__MODULE__{} = test_case) do
+      [
+        name: test_case.name,
+        turns: Enum.map(test_case.turns, &Turn.to_turn/1),
+        scenario: test_case.scenario,
+        expected_outcome: test_case.expected_outcome,
+        user_description: test_case.user_description,
+        context: test_case.context,
+        comments: test_case.comments,
+        metadata: test_case.metadata,
+        tags: test_case.tags,
+        flaky: test_case.flaky
+      ]
+      |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+      |> DeepEvalEx.ConversationalTestCase.new!()
+    end
+  end
+
   @doc """
   Builds a test run from test cases and their results.
 
@@ -366,6 +531,16 @@ defmodule DeepEvalEx.TestRun do
   `metricsScores` keep the order of `test_cases`. Each metric's
   `strictMode` and `flaky` come from its result.
 
+  `DeepEvalEx.ConversationalTestCase`s become
+  `DeepEvalEx.TestRun.ConversationalTestCase`s in `conversationalTestCases`,
+  named `"conversational_test_case_<order>"` by default and sorted alike.
+  As deepeval counts the two kinds separately, a conversational test case's
+  position is among the conversational ones only. Each turn's retrieval
+  context is flattened as for a test case (see `DeepEvalEx.TestRun.Turn`),
+  and the test case's duration is a float. Their metric data follows the
+  single-turn test cases' in `metricsScores`, and their success counts
+  towards `testPassed` and `testFailed`.
+
   A test case succeeds unless a non-flaky metric failed: score-only results
   (`success: nil`) and flaky ones never decide it, as in deepeval's
   `update_status`. In `metricsScores`, results without a score or a success
@@ -374,8 +549,8 @@ defmodule DeepEvalEx.TestRun do
   ## Options
 
   - `:run_durations` - Seconds each test case took, in `test_cases` order.
-    As in deepeval, a test case that took under one second is recorded as
-    the integer `0` (default: all `0`)
+    As in deepeval, a (single-turn) test case that took under one second is
+    recorded as the integer `0` (default: all `0`)
   - `:run_duration` - Seconds the whole run took (default: `0.0`)
   - `:identifier` - Name for the run
   - `:hyperparameters` - Keyword list or map of hyperparameters, see
@@ -388,36 +563,42 @@ defmodule DeepEvalEx.TestRun do
   `prompts` is `[]`, as deepeval's `evaluate()` writes it when no
   hyperparameter is a `Prompt`.
   """
-  @spec from_results([EvalTestCase.t()], [[Result.t()]], keyword()) :: t()
+  @spec from_results(
+          [EvalTestCase.t() | EvalConversationalTestCase.t()],
+          [[Result.t()]],
+          keyword()
+        ) :: t()
   def from_results(test_cases, results, opts \\ []) do
     durations =
       Keyword.get_lazy(opts, :run_durations, fn -> Enum.map(test_cases, fn _ -> 0 end) end)
 
-    api_test_cases =
+    {conversational, api_test_cases} =
       [test_cases, results, durations]
       |> Enum.zip()
-      |> Enum.with_index()
-      |> Enum.map(fn {{test_case, case_results, duration}, order} ->
-        {{test_case, Enum.reject(case_results, & &1.skipped), duration}, order}
+      |> index_by_kind()
+      |> Enum.flat_map(fn {{test_case, case_results, duration}, index} ->
+        case Enum.reject(case_results, & &1.skipped) do
+          [] -> []
+          kept -> [api_test_case(test_case, kept, duration, test_case.dataset_rank || index)]
+        end
       end)
-      |> Enum.reject(fn {{_test_case, case_results, _duration}, _order} -> case_results == [] end)
-      |> Enum.map(fn {{test_case, case_results, duration}, index} ->
-        api_test_case(test_case, case_results, duration, test_case.dataset_rank || index)
-      end)
+      |> Enum.split_with(&match?(%ConversationalTestCase{}, &1))
 
-    {test_passed, test_failed} = count_successes(api_test_cases)
+    evaluated = api_test_cases ++ conversational
+    {test_passed, test_failed} = count_successes(evaluated)
 
     %__MODULE__{
       test_file: Keyword.get(opts, :test_file),
       test_cases: sort_test_cases(api_test_cases),
-      metrics_scores: metrics_scores(api_test_cases),
+      conversational_test_cases: sort_test_cases(conversational),
+      metrics_scores: metrics_scores(evaluated),
       identifier: Keyword.get(opts, :identifier),
       hyperparameters: process_hyperparameters(Keyword.get(opts, :hyperparameters)),
       prompts: [],
       test_passed: test_passed,
       test_failed: test_failed,
       run_duration: to_float(Keyword.get(opts, :run_duration, 0.0)),
-      evaluation_cost: sum_costs(api_test_cases),
+      evaluation_cost: sum_costs(evaluated),
       dataset_alias: Keyword.get(opts, :dataset_alias),
       dataset_id: Keyword.get(opts, :dataset_id),
       dataset_version: Keyword.get(opts, :dataset_version),
@@ -484,7 +665,9 @@ defmodule DeepEvalEx.TestRun do
   `Jason` for ordinary JSON.
 
   An empty `retrieval_context` list is left out, while empty `tools_called`
-  and `expected_tools` lists are kept, as deepeval does. Raw JSON
+  and `expected_tools` lists are kept, as deepeval does. A conversational
+  test case's `runDuration` is written as a float, as deepeval's
+  `ConversationalApiTestCase` coerces it. Raw JSON
   fields are written as they are, and `:extra` keys after the others (see
   "Raw JSON" in the module documentation).
   """
@@ -494,7 +677,8 @@ defmodule DeepEvalEx.TestRun do
       [
         testFile: test_run.test_file,
         testCases: Enum.map(test_run.test_cases, &test_case_map/1),
-        conversationalTestCases: test_run.conversational_test_cases,
+        conversationalTestCases:
+          Enum.map(test_run.conversational_test_cases, &conversational_test_case_map/1),
         metricsScores: Enum.map(test_run.metrics_scores, &metric_scores_map/1),
         traceMetricsScores: test_run.trace_metrics_scores,
         identifier: test_run.identifier,
@@ -545,12 +729,16 @@ defmodule DeepEvalEx.TestRun do
   re-encoding). Keys DeepEvalEx does not model are kept as raw JSON (see
   "Raw JSON" in the module documentation).
 
-  Only test case and metric data `name`s and each `metricsScores` entry's
-  `metric` are required. Missing optional keys get deepeval's defaults,
-  with these exceptions where DeepEvalEx needs a value:
+  Only test case, conversational test case and metric data `name`s, each
+  turn's `role` and `content`, and each `metricsScores` entry's `metric`
+  are required. Missing optional keys get deepeval's defaults, with these
+  exceptions where DeepEvalEx needs a value:
 
-  - a test case's `order` is its position in `testCases`
+  - a (conversational) test case's `order` is its position in `testCases`
+    (`conversationalTestCases`), and a turn's its position in `turns`
   - a test case's `runDuration` is `0`
+  - a conversational test case's `success` and a test case's `metricsData`
+    are optional (`nil` and `[]`)
   - `metricsScores` is computed from the test cases, and `testPassed` and
     `testFailed` from the test cases' and conversational test cases'
     `success`, as deepeval's `calculate_test_passes_and_fails` does: one
@@ -593,16 +781,58 @@ defmodule DeepEvalEx.TestRun do
 
   Returns `{test_cases, results}` with one `DeepEvalEx.TestCase` and one
   list of `DeepEvalEx.Result`s per evaluated test case, in the shape
-  `DeepEvalEx.evaluate_run/3` returns. See `TestCase.to_test_case/1` and
-  `MetricData.to_result/1` for what is kept.
+  `DeepEvalEx.evaluate_run/3` returns, followed by one
+  `DeepEvalEx.ConversationalTestCase` and its results per conversational
+  test case. See `TestCase.to_test_case/1`,
+  `ConversationalTestCase.to_test_case/1` and `MetricData.to_result/1` for
+  what is kept.
   """
-  @spec to_results(t()) :: {[EvalTestCase.t()], [[Result.t()]]}
-  def to_results(%__MODULE__{test_cases: test_cases}) do
+  @spec to_results(t()) ::
+          {[EvalTestCase.t() | EvalConversationalTestCase.t()], [[Result.t()]]}
+  def to_results(%__MODULE__{} = test_run) do
     {
-      Enum.map(test_cases, &TestCase.to_test_case/1),
-      Enum.map(test_cases, fn test_case ->
+      Enum.map(test_run.test_cases, &TestCase.to_test_case/1) ++
+        Enum.map(test_run.conversational_test_cases, &ConversationalTestCase.to_test_case/1),
+      Enum.map(test_run.test_cases ++ test_run.conversational_test_cases, fn test_case ->
         Enum.map(test_case.metrics_data, &MetricData.to_result/1)
       end)
+    }
+  end
+
+  # deepeval's executors count single- and multi-turn test cases apart:
+  # each item is paired with its position among the test cases of its kind.
+  defp index_by_kind(items) do
+    {indexed, _counts} =
+      Enum.map_reduce(items, %{}, fn {test_case, _results, _duration} = item, counts ->
+        kind = test_case.__struct__
+        index = Map.get(counts, kind, 0)
+        {{item, index}, Map.put(counts, kind, index + 1)}
+      end)
+
+    indexed
+  end
+
+  # deepeval's create_api_test_case for a ConversationalTestCase; its
+  # update_run_duration adds the time taken to the initial 0.0.
+  defp api_test_case(%EvalConversationalTestCase{} = test_case, results, duration, order) do
+    metrics_data = Enum.map(results, &MetricData.from_result/1)
+
+    %ConversationalTestCase{
+      name: test_case.name || "conversational_test_case_#{order}",
+      success: case_success(metrics_data),
+      metrics_data: metrics_data,
+      run_duration: to_float(duration || 0),
+      evaluation_cost: sum_costs(metrics_data),
+      turns: test_case.turns |> Enum.with_index() |> Enum.map(&api_turn/1),
+      order: order,
+      scenario: test_case.scenario,
+      expected_outcome: test_case.expected_outcome,
+      user_description: test_case.user_description,
+      context: test_case.context,
+      comments: test_case.comments,
+      metadata: test_case.metadata,
+      tags: test_case.tags,
+      flaky: test_case.flaky || false
     }
   end
 
@@ -634,14 +864,27 @@ defmodule DeepEvalEx.TestRun do
     }
   end
 
+  # deepeval's create_api_turn. It passes user_id by field name, which
+  # TurnApi (aliased userId, without populate_by_name) drops.
+  defp api_turn({%DeepEvalEx.Turn{} = turn, order}) do
+    %Turn{
+      role: Atom.to_string(turn.role),
+      content: turn.content,
+      order: order,
+      retrieval_context: turn.retrieval_context |> contexts() |> non_empty(),
+      tools_called: turn.tools_called
+    }
+  end
+
   # deepeval's async executor records a test case that finished in under a
   # second as 0 ("all metrics were from cache"). It assigns the int without
   # pydantic coercion, so the export has `"runDuration": 0`, not `0.0`.
   defp case_duration(duration) when is_number(duration) and duration >= 1, do: duration / 1
   defp case_duration(_duration), do: 0
 
-  # deepeval's update_status: a test case starts successful and fails only
-  # when a non-flaky metric's success is False; None (score-only) leaves it.
+  # deepeval's update_status (and ConversationalApiTestCase's
+  # update_metric_data): a test case starts successful and fails only when a
+  # non-flaky metric's success is False; None (score-only) leaves it.
   defp case_success(metrics_data) do
     not Enum.any?(metrics_data, &(not &1.flaky and &1.success == false))
   end
@@ -673,7 +916,7 @@ defmodule DeepEvalEx.TestRun do
 
   defp metrics_scores(test_cases) do
     {order, scores} =
-      for %TestCase{metrics_data: metrics_data} <- test_cases,
+      for %{metrics_data: metrics_data} <- test_cases,
           data <- metrics_data,
           reduce: {[], %{}} do
         {order, scores} ->
@@ -751,6 +994,46 @@ defmodule DeepEvalEx.TestRun do
     )
   end
 
+  defp conversational_test_case_map(%ConversationalTestCase{} = test_case) do
+    ordered(
+      [
+        expectationsData: test_case.expectations_data,
+        name: test_case.name,
+        success: test_case.success,
+        metricsData: Enum.map(test_case.metrics_data, &metric_data_map/1),
+        runDuration: to_float(test_case.run_duration),
+        evaluationCost: to_float(test_case.evaluation_cost),
+        turns: Enum.map(test_case.turns, &turn_map/1),
+        order: test_case.order,
+        scenario: test_case.scenario,
+        expectedOutcome: test_case.expected_outcome,
+        userDescription: test_case.user_description,
+        context: test_case.context,
+        comments: test_case.comments,
+        metadata: test_case.metadata,
+        imagesMapping: test_case.images_mapping,
+        tags: test_case.tags,
+        flaky: test_case.flaky
+      ],
+      test_case.extra
+    )
+  end
+
+  defp turn_map(%Turn{} = turn) do
+    ordered(
+      [
+        role: turn.role,
+        content: turn.content,
+        order: turn.order,
+        userId: turn.user_id,
+        retrievalContext: turn.retrieval_context,
+        toolsCalled: tool_calls_map(turn.tools_called),
+        comments: turn.comments
+      ],
+      turn.extra
+    )
+  end
+
   defp metric_data_map(%MetricData{} = data) do
     ordered(
       [
@@ -811,8 +1094,8 @@ defmodule DeepEvalEx.TestRun do
   # Parsing deepeval JSON. Errors are thrown as {:invalid_test_run, message}
   # and caught by from_map/1.
 
-  # The keys of deepeval's TestRun, LLMApiTestCase and MetricData; any other
-  # key is kept in :extra.
+  # The keys of deepeval's TestRun, LLMApiTestCase, ConversationalApiTestCase,
+  # TurnApi and MetricData; any other key is kept in :extra.
   @test_run_keys ~w(testFile testCases conversationalTestCases metricsScores
                     traceMetricsScores identifier hyperparameters prompts testPassed
                     testFailed runDuration evaluationCost datasetAlias datasetId
@@ -821,6 +1104,11 @@ defmodule DeepEvalEx.TestRun do
                      retrievalContext toolsCalled expectedTools tokenCost inputTokenCount
                      outputTokenCount completionTime tags flaky imagesMapping success
                      metricsData runDuration evaluationCost order metadata comments trace)
+  @conversational_test_case_keys ~w(expectationsData name success metricsData runDuration
+                                    evaluationCost turns order scenario expectedOutcome
+                                    userDescription context comments metadata imagesMapping
+                                    tags flaky)
+  @turn_keys ~w(role content order userId retrievalContext toolsCalled comments)
   @metric_data_keys ~w(name threshold success score reason strictMode flaky evaluationModel
                        error evaluationCost inputTokenCount outputTokenCount verboseLogs
                        expectationsData)
@@ -838,19 +1126,23 @@ defmodule DeepEvalEx.TestRun do
         parse_test_case(test_case, path, index)
       end)
 
+    conversational_test_cases =
+      map
+      |> list!("conversationalTestCases", "")
+      |> indexed("conversationalTestCases", &parse_conversational_test_case/3)
+
+    evaluated = test_cases ++ conversational_test_cases
+
     metrics_scores =
       case map["metricsScores"] do
         nil ->
-          metrics_scores(test_cases)
+          metrics_scores(evaluated)
 
         scores ->
           scores |> list_value!("metricsScores") |> indexed("metricsScores", &parse_scores/3)
       end
 
-    conversational_test_cases = list!(map, "conversationalTestCases", "")
-
-    {test_passed, test_failed} =
-      count_successes(test_cases ++ Enum.map(conversational_test_cases, &raw_success/1))
+    {test_passed, test_failed} = count_successes(evaluated)
 
     %__MODULE__{
       test_file: map["testFile"],
@@ -873,18 +1165,8 @@ defmodule DeepEvalEx.TestRun do
     }
   end
 
-  defp raw_success(test_case) when is_map(test_case), do: %{success: test_case["success"]}
-  defp raw_success(_test_case), do: %{success: nil}
-
   defp parse_test_case(map, path, index) do
     object!(map, path)
-
-    metrics_data =
-      map
-      |> list!("metricsData", path)
-      |> indexed(path <> ".metricsData", fn data, data_path, _index ->
-        parse_metric_data(data, data_path)
-      end)
 
     %TestCase{
       expectations_data: map["expectationsData"],
@@ -904,7 +1186,7 @@ defmodule DeepEvalEx.TestRun do
       flaky: value(map, "flaky", false),
       images_mapping: map["imagesMapping"],
       success: map["success"],
-      metrics_data: metrics_data,
+      metrics_data: parse_metrics_data(map, path),
       run_duration: value(map, "runDuration", 0),
       evaluation_cost: map["evaluationCost"],
       order: value(map, "order", index),
@@ -913,6 +1195,54 @@ defmodule DeepEvalEx.TestRun do
       trace: map["trace"],
       extra: extra(map, @test_case_keys)
     }
+  end
+
+  defp parse_conversational_test_case(map, path, index) do
+    object!(map, path)
+
+    %ConversationalTestCase{
+      expectations_data: map["expectationsData"],
+      name: string!(map, "name", path),
+      success: map["success"],
+      metrics_data: parse_metrics_data(map, path),
+      run_duration: value(map, "runDuration", 0.0),
+      evaluation_cost: map["evaluationCost"],
+      turns: map |> list!("turns", path) |> indexed(path <> ".turns", &parse_turn/3),
+      order: value(map, "order", index),
+      scenario: map["scenario"],
+      expected_outcome: map["expectedOutcome"],
+      user_description: map["userDescription"],
+      context: map["context"],
+      comments: map["comments"],
+      metadata: map["metadata"],
+      images_mapping: map["imagesMapping"],
+      tags: map["tags"],
+      flaky: value(map, "flaky", false),
+      extra: extra(map, @conversational_test_case_keys)
+    }
+  end
+
+  defp parse_turn(map, path, index) do
+    object!(map, path)
+
+    %Turn{
+      role: string!(map, "role", path),
+      content: string!(map, "content", path),
+      order: value(map, "order", index),
+      user_id: map["userId"],
+      retrieval_context: map["retrievalContext"],
+      tools_called: parse_tool_calls(map, "toolsCalled", path),
+      comments: map["comments"],
+      extra: extra(map, @turn_keys)
+    }
+  end
+
+  defp parse_metrics_data(map, path) do
+    map
+    |> list!("metricsData", path)
+    |> indexed(path <> ".metricsData", fn data, data_path, _index ->
+      parse_metric_data(data, data_path)
+    end)
   end
 
   defp parse_metric_data(map, path) do

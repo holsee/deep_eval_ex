@@ -44,12 +44,14 @@ Each directory is one scenario:
 | `skip_on_missing_params` | `skip_on_missing_params=True`: metrics missing params are left out of `metricsData` and `metricsScores`, and test cases left with no metric out of the run, the others keeping their `order` |
 | `missing_params`  | `MissingTestCaseParamsError` messages from ExactMatch, Faithfulness and GEval: `context` not standing in for `retrieval_context` (and a context-only test case exporting no `retrievalContext`), an empty `actual_output`, and two and three missing params |
 | `hyperparameters` | `identifier` and `hyperparameters` (string, float, int, bool and dropped `None` values)        |
+| `conversational`  | Two `ConversationalTestCase`s and two conversational stub metrics: `conversationalTestCases` with an unnamed (`conversational_test_case_0`) and a named test case, scenario, expected outcome, user description, context, tags, metadata and comments; turns with flattened `RetrievedContextData`, tool calls, an empty `retrieval_context` left out, an empty `tools_called` kept and `user_id` never exported; summed float `runDuration` |
 
 and holds:
 
 - `input.json` - the scenario's inputs: `test_cases` (keyword arguments of
-  deepeval's `LLMTestCase`), `metrics` (`exact_match`, `stub`, `error`,
-  `faithfulness` or `g_eval` specs), `identifier`, `hyperparameters` and
+  deepeval's `LLMTestCase`, or of its `ConversationalTestCase` when they
+  have `turns`), `metrics` (`exact_match`, `stub`, `conversational_stub`,
+  `error`, `faithfulness` or `g_eval` specs), `identifier`, `hyperparameters` and
   `error_config` (`ErrorConfig`'s `ignore_errors` and
   `skip_on_missing_params`; `ignore_errors` is `true` unless the scenario
   is about it), passed to `DeepEvalEx.evaluate_run/3` as the options of the
@@ -62,9 +64,12 @@ and holds:
   `MissingTestCaseParamsError`) with the same message, and to write nothing
 
 No LLM is called. The `stub` and `error` metrics are custom deepeval
-`BaseMetric`s returning fixed values or raising; the parity test mirrors them
-with `DeepEvalEx.Test.ParityMetrics.Stub` and `.Failing`
-(`test/support/parity_metrics.ex`). The `faithfulness` and `g_eval` metrics
+`BaseMetric`s returning fixed values or raising, and `conversational_stub` is
+`stub` as a `BaseConversationalMetric`; the parity test mirrors them with
+`DeepEvalEx.Test.ParityMetrics.Stub`, `.ConversationalStub` and `.Failing`
+(`test/support/parity_metrics.ex`). It normalises the run's `runDuration`
+and each conversational test case's, which deepeval sums from wall-clock
+time. The `faithfulness` and `g_eval` metrics
 are deepeval's own, judged by a `ScriptedJudge` without responses (any call
 would fail the metric) and reporting `judge_model`, `mock-model`, the Mock
 adapter's model name: every test case of `missing_params` fails their

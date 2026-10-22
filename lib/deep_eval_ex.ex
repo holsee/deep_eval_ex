@@ -245,7 +245,9 @@ defmodule DeepEvalEx do
   `DeepEvalEx.EvaluationResult.from_results/2`), the run in deepeval's
   `TestRun` format and the path
   of the `test_run_<YYYYMMDD_HHMMSS>.json` file written, or `nil` when
-  nothing was written.
+  nothing was written. `DeepEvalEx.ConversationalTestCase`s evaluated with
+  conversational metrics are exported as the run's
+  `conversationalTestCases` (see `DeepEvalEx.TestRun.from_results/3`).
 
   The file is written when `:results_folder`, `config :deep_eval_ex,
   results_folder:` or the `DEEPEVAL_RESULTS_FOLDER` environment variable is
@@ -299,7 +301,11 @@ defmodule DeepEvalEx do
           hyperparameters: [model: "gpt-4o", temperature: 0.7]
         )
   """
-  @spec evaluate_run([TestCase.t()], [module() | struct()], keyword()) ::
+  @spec evaluate_run(
+          [TestCase.t() | DeepEvalEx.ConversationalTestCase.t()],
+          [module() | struct()],
+          keyword()
+        ) ::
           {[[Result.t()]], TestRun.t(), Path.t() | nil}
   def evaluate_run(test_cases, metrics, opts \\ []) do
     {export_opts, eval_opts} = Keyword.split(opts, @export_opts)
@@ -332,7 +338,7 @@ defmodule DeepEvalEx do
     {results, test_run, save_test_run(test_run, export_opts)}
   end
 
-  defp save_test_run(%TestRun{test_cases: []}, _opts), do: nil
+  defp save_test_run(%TestRun{test_cases: [], conversational_test_cases: []}, _opts), do: nil
 
   # deepeval's save_test_run_locally (rolling snapshot, then the results
   # folder), then wrap_up_test_run's LATEST_TEST_RUN_FILE_PATH.
