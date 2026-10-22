@@ -2,7 +2,8 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   @moduledoc """
   OpenAI LLM adapter for DeepEvalEx.
 
-  Supports OpenAI's chat completions API with structured outputs.
+  Supports OpenAI's chat completions API with structured outputs, and any
+  OpenAI-compatible gateway reachable at a different base URL.
 
   ## Configuration
 
@@ -18,6 +19,30 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
         api_key: "sk-..."
       )
 
+  ## Base URL
+
+  The API base URL is resolved in this order (a trailing slash is stripped):
+
+  1. the `:base_url` option
+  2. `config :deep_eval_ex, openai_base_url: "..."`
+  3. the `OPENAI_BASE_URL` environment variable
+  4. `"https://api.openai.com/v1"`
+
+  ## Options
+
+  - `:model` - model name (default `"gpt-4o-mini"`)
+  - `:max_completion_tokens` - completion token limit (default `4096`);
+    `:max_tokens` is accepted as an alias
+  - `:temperature` - sampling temperature; falls back to the
+    `:openai_temperature` config and is omitted from the request when neither
+    is set. Reasoning models (`o1`, `o3`, `o4`, `gpt-5`, ...) reject
+    `temperature`, so it is never sent for them, as in deepeval.
+  - `:base_url` - API base URL, see above
+  - `:api_key` - API key (overrides config and `OPENAI_API_KEY`)
+  - `:timeout` - receive timeout in milliseconds (default `60_000`)
+  - `:req_options` - extra `Req` options merged into the request, e.g.
+    `[plug: {Req.Test, DeepEvalEx.LLM.Adapters.OpenAI}]` in tests
+
   ## Supported Models
 
   - `gpt-4o` - Latest GPT-4 Omni (recommended)
@@ -28,23 +53,17 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
 
   use DeepEvalEx.LLM.Adapter
 
-  @base_url "https://api.openai.com/v1"
+  @default_base_url "https://api.openai.com/v1"
   @default_model "gpt-4o-mini"
-  @default_temperature 0.0
-  @default_max_tokens 4096
+  @default_max_completion_tokens 4096
+
+  # Models that reject a `temperature` parameter, mirroring the
+  # `supports_temperature=False` entries in deepeval's OpenAI model registry.
+  @reasoning_model_pattern ~r/^(o\d|gpt-[5-9])/
 
   @impl true
   def generate(prompt, opts \\ []) do
-    model = Keyword.get(opts, :model, @default_model)
-    temperature = Keyword.get(opts, :temperature, @default_temperature)
-    max_tokens = Keyword.get(opts, :max_tokens, @default_max_tokens)
-
-    body = %{
-      model: model,
-      messages: [%{role: "user", content: prompt}],
-      temperature: temperature,
-      max_tokens: max_tokens
-    }
+    body = base_body(prompt, opts)
 
     case make_request("/chat/completions", body, opts) do
       {:ok, %{"choices" => [%{"message" => %{"content" => content}} | _]}} ->
@@ -60,26 +79,19 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
 
   @impl true
   def generate_with_schema(prompt, schema, opts \\ []) do
-    model = Keyword.get(opts, :model, @default_model)
-    temperature = Keyword.get(opts, :temperature, @default_temperature)
-    max_tokens = Keyword.get(opts, :max_tokens, @default_max_tokens)
-
     json_schema = schema_to_json_schema(schema)
 
-    body = %{
-      model: model,
-      messages: [%{role: "user", content: prompt}],
-      temperature: temperature,
-      max_tokens: max_tokens,
-      response_format: %{
+    body =
+      prompt
+      |> base_body(opts)
+      |> Map.put(:response_format, %{
         type: "json_schema",
         json_schema: %{
           name: "response",
           strict: true,
           schema: json_schema
         }
-      }
-    }
+      })
 
     case make_request("/chat/completions", body, opts) do
       {:ok, %{"choices" => [%{"message" => %{"content" => content}} | _]}} ->
@@ -107,9 +119,50 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
 
   # Private functions
 
+  defp base_body(prompt, opts) do
+    model = Keyword.get(opts, :model, @default_model)
+
+    max_completion_tokens =
+      Keyword.get_lazy(opts, :max_completion_tokens, fn ->
+        Keyword.get(opts, :max_tokens, @default_max_completion_tokens)
+      end)
+
+    body = %{
+      model: model,
+      messages: [%{role: "user", content: prompt}],
+      max_completion_tokens: max_completion_tokens
+    }
+
+    case temperature(model, opts) do
+      nil -> body
+      temperature -> Map.put(body, :temperature, temperature)
+    end
+  end
+
+  # Only sent when explicitly configured; reasoning models reject it outright.
+  defp temperature(model, opts) do
+    if Regex.match?(@reasoning_model_pattern, model) do
+      nil
+    else
+      Keyword.get_lazy(opts, :temperature, fn ->
+        Application.get_env(:deep_eval_ex, :openai_temperature)
+      end)
+    end
+  end
+
+  defp base_url(opts) do
+    url =
+      Keyword.get(opts, :base_url) ||
+        Application.get_env(:deep_eval_ex, :openai_base_url) ||
+        System.get_env("OPENAI_BASE_URL") ||
+        @default_base_url
+
+    String.trim_trailing(url, "/")
+  end
+
   defp make_request(path, body, opts) do
     api_key = get_api_key(opts)
-    url = "#{@base_url}#{path}"
+    url = base_url(opts) <> path
 
     headers = [
       {"authorization", "Bearer #{api_key}"},
@@ -124,6 +177,8 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
       retry_delay: &retry_delay/1,
       max_retries: 3
     ]
+
+    req_opts = Keyword.merge(req_opts, Keyword.get(opts, :req_options, []))
 
     case Req.post(url, req_opts) do
       {:ok, %Req.Response{status: 200, body: body}} ->
@@ -144,9 +199,9 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
       raise "OpenAI API key not configured. Set OPENAI_API_KEY env var or :openai_api_key config."
   end
 
-  defp retry_delay(attempt) do
-    # Exponential backoff: 1s, 2s, 4s
-    :timer.seconds(round(:math.pow(2, attempt - 1)))
+  # Req passes the retry count starting at 0. Exponential backoff: 1s, 2s, 4s
+  defp retry_delay(retry_count) do
+    :timer.seconds(Integer.pow(2, retry_count))
   end
 
   defp schema_to_json_schema(schema) when is_map(schema), do: schema

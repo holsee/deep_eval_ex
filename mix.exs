@@ -47,7 +47,7 @@ defmodule DeepEvalEx.MixProject do
   defp deps do
     [
       # HTTP client
-      {:req, "~> 0.5"},
+      {:req, "~> 0.7"},
 
       # JSON
       {:jason, "~> 1.4"},
@@ -66,6 +66,7 @@ defmodule DeepEvalEx.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mox, "~> 1.0", only: :test},
+      {:plug, "~> 1.16", only: :test},
       {:excoveralls, "~> 0.18", only: :test}
     ]
   end

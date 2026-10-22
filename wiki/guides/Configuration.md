@@ -26,6 +26,7 @@ config :deep_eval_ex,
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `OPENAI_API_KEY` | OpenAI API key | `sk-...` |
+| `OPENAI_BASE_URL` | OpenAI-compatible API base URL | `https://gateway.example.com/v1` |
 | `ANTHROPIC_API_KEY` | Anthropic API key | `sk-ant-...` |
 | `DEEP_EVAL_DEFAULT_MODEL` | Override default model | `gpt-4o` |
 
@@ -44,6 +45,28 @@ Available models:
 - `gpt-4o-mini` - Fast and cost-effective (recommended)
 - `gpt-4-turbo` - Previous generation
 - `gpt-3.5-turbo` - Fastest, cheapest
+
+#### OpenAI-Compatible Endpoints
+
+Point the OpenAI adapter at a proxy, gateway or any OpenAI-compatible API by
+setting a base URL. The first one set wins (a trailing slash is stripped):
+
+1. `base_url:` runtime option
+2. `config :deep_eval_ex, openai_base_url: "..."`
+3. `OPENAI_BASE_URL` environment variable
+4. `https://api.openai.com/v1`
+
+```elixir
+config :deep_eval_ex,
+  openai_base_url: "https://gateway.example.com/v1"
+```
+
+#### Temperature
+
+The adapter sends `temperature` only when it is set explicitly, via the
+`temperature:` option or `config :deep_eval_ex, openai_temperature: 0.0`.
+Reasoning models (`o1`, `o3`, `o4`, `gpt-5`, ...) reject the parameter, so it is
+never sent for them.
 
 ### Anthropic
 

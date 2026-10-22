@@ -64,7 +64,50 @@ All adapters implement the `DeepEvalEx.LLM.Adapter` behaviour:
 ```elixir
 config :deep_eval_ex,
   openai_api_key: System.get_env("OPENAI_API_KEY"),
-  openai_base_url: "https://api.openai.com/v1"  # optional
+  openai_base_url: "https://api.openai.com/v1",  # optional
+  openai_temperature: 0.0                         # optional
+```
+
+### Base URL
+
+To use a proxy, gateway or any OpenAI-compatible API, set a base URL. It is
+resolved in this order, with a trailing slash stripped:
+
+1. `:base_url` option
+2. `:openai_base_url` application config
+3. `OPENAI_BASE_URL` environment variable
+4. `"https://api.openai.com/v1"`
+
+```elixir
+{:ok, response} = Adapter.generate(prompt,
+  adapter: :openai,
+  base_url: "https://gateway.example.com/v1"
+)
+```
+
+### Request Parameters
+
+- The token limit is sent as `max_completion_tokens` (default `4096`);
+  OpenAI deprecated `max_tokens`, which is still accepted as an option alias.
+- `temperature` is sent only when given via `:temperature` or the
+  `:openai_temperature` config, and never for reasoning models (`o1`, `o3`,
+  `o4`, `gpt-5`, ...), which reject it.
+
+### Testing
+
+Extra `Req` options can be passed with `:req_options`, which makes the adapter
+easy to stub with `Req.Test` (requires `:plug` in your test dependencies):
+
+```elixir
+Req.Test.stub(DeepEvalEx.LLM.Adapters.OpenAI, fn conn ->
+  Req.Test.json(conn, %{"choices" => [%{"message" => %{"content" => "4"}}]})
+end)
+
+{:ok, "4"} =
+  DeepEvalEx.LLM.Adapters.OpenAI.generate("What is 2+2?",
+    api_key: "sk-test",
+    req_options: [plug: {Req.Test, DeepEvalEx.LLM.Adapters.OpenAI}]
+  )
 ```
 
 ### Supported Models
@@ -181,16 +224,18 @@ Options passed to adapter functions:
 | Option | Description |
 |--------|-------------|
 | `:model` | Model name/identifier |
-| `:temperature` | Sampling temperature (0.0-2.0) |
-| `:max_tokens` | Maximum tokens in response |
+| `:temperature` | Sampling temperature (0.0-2.0); omitted when not set |
+| `:max_completion_tokens` | Maximum tokens in response (`:max_tokens` is an alias) |
 | `:api_key` | API key (overrides config) |
+| `:base_url` | API base URL (OpenAI adapter) |
+| `:req_options` | Extra `Req` options (OpenAI adapter) |
 
 ```elixir
 {:ok, response} = Adapter.generate(prompt,
   adapter: :openai,
   model: "gpt-4o",
   temperature: 0.0,
-  max_tokens: 1000
+  max_completion_tokens: 1000
 )
 ```
 
