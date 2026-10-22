@@ -195,8 +195,8 @@ devcontainer exec --workspace-folder . mix test
 
 Provider credentials for live checks go in `.devcontainer/.env` (gitignored;
 copy `.devcontainer/.env.example`), which the container loads at creation:
-`OPENAI_API_KEY`, `OPENAI_BASE_URL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_BASE_URL`
-and `OLLAMA_HOST`. Values may be 1Password secret references
+`OPENAI_API_KEY`, `OPENAI_BASE_URL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_BASE_URL`,
+`OLLAMA_HOST`, `TYPESAFE_API_KEY` and `TYPESAFE_MODEL_NAME`. Values may be 1Password secret references
 (`op://vault/item/field`); `.devcontainer/resolve-env.sh` resolves them with
 `op inject` on the host into the gitignored `.devcontainer/.env.resolved`,
 which is what the container loads. Recreate the container after editing it
@@ -222,6 +222,19 @@ judge model defaults to each adapter's default model; set
 another, for example the provider-prefixed model IDs a gateway publishes
 (`OPENAI_BASE_URL` / `ANTHROPIC_BASE_URL` pointing at the gateway). Live
 checks cost real tokens and are not part of the gate.
+
+`test/deep_eval_ex/live_system_one_test.exs` is the matching check for
+TypeSafe's System One model, Jev. It is tagged `:live_system_one`, excluded by
+default, and skipped unless `TYPESAFE_API_KEY` is set (a blank value counts as
+unset); `TYPESAFE_MODEL_NAME` picks the model and defaults to `jev-latest`, as
+in deepeval:
+
+```sh
+devcontainer exec --workspace-folder . mix test --only live_system_one
+```
+
+For now it is a scaffold that only checks the credentials reach the test;
+it will call Jev once DeepEvalEx has a TypeSafe client.
 
 ### Gate
 

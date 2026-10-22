@@ -104,6 +104,12 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   through each configured provider and checks the exported JSON. Judge models
   are selected with `DEEP_EVAL_LIVE_OPENAI_MODEL` and
   `DEEP_EVAL_LIVE_ANTHROPIC_MODEL`.
+- An opt-in TypeSafe Jev live check scaffold
+  (`mix test --only live_system_one`), excluded by default and skipped unless
+  `TYPESAFE_API_KEY` is set; `TYPESAFE_MODEL_NAME` defaults to `jev-latest`.
+  Both settings, named as in deepeval, are listed in
+  `.devcontainer/.env.example`. It only checks the credentials until a
+  TypeSafe client lands.
 - **ToolCorrectness metric** with full deepeval parity: exact, non-exact and
   ordered (weighted LCS) matching, parameter and output comparison, and
   LLM-scored tool selection when `available_tools` are given. Includes wiki
