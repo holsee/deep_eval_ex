@@ -440,6 +440,11 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `assert_passes` on a score-only metric, or on a flaky one, now raises
   `ArgumentError` with deepeval's "at least one non-flaky metric with a
   'threshold'" message, as `assert_test` does, instead of flunking.
+  `assert_evaluation(test_case, [])` raises `ArgumentError` with the message
+  of `assert_test`'s `ValueError` for a test case with no metrics and no
+  expectations, `"1 test case is missing expectations. Fill in non-empty
+  expectations for these test cases and/or provide at least one metric and/or
+  classifier."`, instead of the threshold message.
   `assert_fails` and `assert_score` keep their messages and also evaluate
   through `DeepEvalEx.Evaluator.evaluate/3`, so the timeouts apply to them too.
 - **BREAKING: `DeepEvalEx.ExUnit` assertions raise metric errors unless

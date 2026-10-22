@@ -43,6 +43,10 @@ defmodule DeepEvalEx.ExUnit do
   - Like `assert_test`, they raise `ArgumentError` unless at least one
     metric has a threshold and is not flaky (see
     `DeepEvalEx.Evaluator.check_at_least_one_metric_has_threshold!/2`).
+    With no metrics at all, `assert_evaluation(test_case, [])` raises
+    `ArgumentError` with the message of the `ValueError` `assert_test`
+    raises for a test case without metrics or expectations:
+    `"1 test case is missing expectations. ..."`.
   - The test case is evaluated by `DeepEvalEx.Evaluator.evaluate/3`, so
     its metrics run concurrently, under the Evaluator's timeouts and
     `ErrorConfig` (see "Concurrency", "Timeouts" and "Errors" there).
@@ -286,9 +290,11 @@ defmodule DeepEvalEx.ExUnit do
   # a flaky test case only warns.
   defp assert_test(test_case, metrics, opts) do
     opts = assert_opts(opts)
-    if metrics != [], do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, opts)
+    check_metrics!(metrics, opts)
 
     results = evaluate(test_case, metrics, opts)
+    # deepeval's assert_test builds its TestResult with index=None; only
+    # :success and :metrics_data are read here, so the index is immaterial.
     test_result = TestResult.new(test_case, results, 0)
 
     if test_result.success == false do
@@ -301,6 +307,19 @@ defmodule DeepEvalEx.ExUnit do
 
     results
   end
+
+  # deepeval's validate_assert_test_inputs: with no metrics (and no
+  # classifiers) it requires the test case to have expectations, which
+  # DeepEvalEx test cases do not have, so it raises with deepeval's ValueError
+  # message.
+  defp check_metrics!([], _opts) do
+    raise ArgumentError,
+          "1 test case is missing expectations. Fill in non-empty expectations for " <>
+            "these test cases and/or provide at least one metric and/or classifier."
+  end
+
+  defp check_metrics!(metrics, opts),
+    do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, opts)
 
   defp validate_score!(result, score_opts) do
     min_score = Keyword.get(score_opts, :min)

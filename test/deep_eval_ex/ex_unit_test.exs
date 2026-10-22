@@ -66,14 +66,17 @@ defmodule DeepEvalEx.ExUnitTest do
   end
 
   # Takes longer than any timeout the tests set, then passes.
-  defmodule SlowMetric do
+  # Blocks until released, which no test does: the Evaluator's metric timeout
+  # kills it.
+  defmodule HangingMetric do
     @moduledoc false
 
-    def metric_name, do: "Slow"
+    def metric_name, do: "Hanging"
 
     def measure(_test_case, _opts) do
-      Process.sleep(2_000)
-      {:ok, Result.new(metric: metric_name(), score: 1.0, threshold: 0.5)}
+      receive do
+        :release -> {:ok, Result.new(metric: metric_name(), score: 1.0, threshold: 0.5)}
+      end
     end
   end
 
@@ -821,7 +824,7 @@ defmodule DeepEvalEx.ExUnitTest do
     test "applies the Evaluator's metric timeout", %{passing: passing} do
       error =
         assert_raise ExUnit.AssertionError, fn ->
-          assert_passes(passing, SlowMetric, metric_timeout: 50, ignore_errors: true)
+          assert_passes(passing, HangingMetric, metric_timeout: 50, ignore_errors: true)
         end
 
       assert error.message =~ "error: Timed out/cancelled while evaluating metric."
@@ -829,8 +832,16 @@ defmodule DeepEvalEx.ExUnitTest do
 
     test "raises the timeout without ignore_errors", %{passing: passing} do
       assert_raise DeepEvalEx.MetricError, ~r/^Timed out\/cancelled/, fn ->
-        assert_score(passing, SlowMetric, [min: 0.5], metric_timeout: 50)
+        assert_score(passing, HangingMetric, [min: 0.5], metric_timeout: 50)
       end
+    end
+
+    test "raises like deepeval when there are no metrics", %{passing: passing} do
+      message =
+        "1 test case is missing expectations. Fill in non-empty expectations for " <>
+          "these test cases and/or provide at least one metric and/or classifier."
+
+      assert_raise ArgumentError, message, fn -> assert_evaluation(passing, []) end
     end
 
     test "raises like deepeval when every metric with a threshold is flaky",
