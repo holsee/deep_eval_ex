@@ -139,6 +139,7 @@ defmodule DeepEvalEx.MixProject do
         "docs/adr/0006-json-schema-for-structured-outputs.md",
         "docs/adr/0007-basemetric-macro-for-instrumentation.md",
         "docs/adr/0008-peri-schema-validation-replacing-ecto.md",
+        "docs/adr/0009-system-one-models-and-eval-modes.md",
         {"docs/adr/template.md", [title: "ADR Template"]}
       ],
       groups_for_extras: [

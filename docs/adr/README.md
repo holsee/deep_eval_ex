@@ -18,6 +18,7 @@ An ADR is a document that captures an important architectural decision made alon
 | [ADR-0006](0006-json-schema-for-structured-outputs.md) | JSON Schema Mode for Structured LLM Outputs | Accepted | 2024-12-25 |
 | [ADR-0007](0007-basemetric-macro-for-instrumentation.md) | BaseMetric Macro for Automatic Instrumentation | Accepted | 2024-12-25 |
 | [ADR-0008](0008-peri-schema-validation-replacing-ecto.md) | Peri Schema Validation Replacing Ecto | Accepted | 2026-03-10 |
+| [ADR-0009](0009-system-one-models-and-eval-modes.md) | System One Models and Eval Modes | Proposed | 2026-10-22 |
 
 ## ADR Template
 
