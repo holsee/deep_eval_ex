@@ -52,14 +52,18 @@ defmodule DeepEvalEx.Test.ParityMetrics do
 
   defmodule Failing do
     @moduledoc """
-    Always fails, as the fixture script's `ErrorMetric` always raises.
-    deepeval's async executor records the exception's message as the
-    metric's error; this returns the same message as `{:error, message}`.
+    Always raises, as the fixture script's `ErrorMetric` does. deepeval's
+    async executor records `str(exception)`, just the message, as the
+    metric's error; DeepEvalEx's evaluator records `Exception.message/1`.
+    Python's `ValueError` maps to `ArgumentError`, `RuntimeError` to
+    `RuntimeError`.
     """
 
     use DeepEvalEx.Metrics.BaseMetric
 
-    defstruct [:name, :threshold, :message, strict_mode: false]
+    defstruct [:name, :threshold, :message, exception: "ValueError", strict_mode: false]
+
+    @exceptions %{"ValueError" => ArgumentError, "RuntimeError" => RuntimeError}
 
     @impl true
     def metric_name, do: "Failing"
@@ -70,6 +74,9 @@ defmodule DeepEvalEx.Test.ParityMetrics do
     @impl true
     def required_params, do: [:input]
 
-    def do_measure(_test_case, opts), do: {:error, Keyword.fetch!(opts, :message)}
+    def do_measure(_test_case, opts) do
+      exception = Map.fetch!(@exceptions, Keyword.fetch!(opts, :exception))
+      raise exception, Keyword.fetch!(opts, :message)
+    end
   end
 end

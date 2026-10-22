@@ -69,6 +69,23 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
   end
 
+  defmodule RaisingJudge do
+    @moduledoc false
+
+    use DeepEvalEx.Metrics.BaseMetric
+
+    @impl true
+    def metric_name, do: "RaisingJudge"
+
+    @impl true
+    def required_params, do: []
+
+    def do_measure(_test_case, _opts) do
+      Usage.record(Usage.new("gpt-4o-mini", 1_000, 200))
+      raise ArgumentError, "judge returned invalid JSON"
+    end
+  end
+
   defmodule SlowJudge do
     @moduledoc false
 
@@ -439,6 +456,30 @@ defmodule DeepEvalEx.EvaluatorTest do
                  adapter: :mock,
                  metric_timeout: 50
                )
+    end
+  end
+
+  describe "evaluate_metric/3 with a metric that raises" do
+    test "records the exception's message as the error, as deepeval records str(e)" do
+      result = Evaluator.evaluate_metric(test_case(), RaisingJudge, threshold: 0.6)
+
+      assert %Result{
+               metric: "RaisingJudge",
+               score: nil,
+               success: false,
+               threshold: 0.6,
+               error: "judge returned invalid JSON"
+             } = result
+    end
+
+    test "keeps the usage of the judge calls made before the exception" do
+      assert %Result{evaluation_model: "gpt-4o-mini", input_tokens: 1_000, output_tokens: 200} =
+               Evaluator.evaluate_metric(test_case(), RaisingJudge, [])
+    end
+
+    test "errors only the raising metric of a test case" do
+      assert [[%Result{error: "judge returned invalid JSON"}, %Result{score: 1.0}]] =
+               Evaluator.evaluate([test_case()], [RaisingJudge, ExactMatch])
     end
   end
 end

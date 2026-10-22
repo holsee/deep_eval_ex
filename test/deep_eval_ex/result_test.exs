@@ -32,6 +32,13 @@ defmodule DeepEvalEx.ResultTest do
   end
 
   describe "error/3" do
+    test "stores an exception as its message, as deepeval stores str(exception)" do
+      result =
+        Result.error("Faithfulness", %ArgumentError{message: "judge returned invalid JSON"})
+
+      assert result.error == "judge returned invalid JSON"
+    end
+
     test "builds an errored result with no score and success false" do
       result = Result.error("Faithfulness", "Rate limit exceeded", threshold: 0.7)
 

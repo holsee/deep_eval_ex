@@ -180,6 +180,10 @@ defmodule DeepEvalEx.Evaluator do
   metric's resolved threshold rather than a zero score. As in deepeval, it
   also carries the judge model and the tokens and cost of any LLM calls made
   before the error.
+
+  An exception raised by the metric is reported the same way, with the
+  exception's message (`Exception.message/1`) as the error, as deepeval's
+  evaluation records `str(exception)`. It does not affect the other metrics.
   """
   @spec evaluate_metric(TestCase.t(), module() | struct(), keyword()) :: Result.t()
   def evaluate_metric(test_case, metric, opts) do
@@ -193,6 +197,7 @@ defmodule DeepEvalEx.Evaluator do
     case outcome do
       {:ok, result} -> result
       {:error, reason} -> error_result(reason, metric, opts, usages)
+      {:raised, exception, _stacktrace} -> error_result(exception, metric, opts, usages)
     end
   end
 

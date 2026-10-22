@@ -164,7 +164,10 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
       This wraps the underlying `do_measure/2` implementation with:
       - Parameter validation
       - Telemetry events
-      - Error handling
+      - Error handling: an exception raised by `do_measure/2` is re-raised
+        after the `:exception` telemetry event and after its LLM usage has
+        been passed on to the caller's scope; `DeepEvalEx.Evaluator` turns
+        it into an errored result
       - LLM usage tracking: the judge model, token counts and cost of every
         LLM call made by `do_measure/2` are set on the result
         (see `DeepEvalEx.LLM.Usage`)
@@ -209,16 +212,12 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
             {:ok, result}
 
           {:error, reason} = error ->
-            :telemetry.execute(
-              [:deep_eval_ex, :metric, :exception],
-              unquote(__MODULE__).exception_measurements(
-                System.monotonic_time(:millisecond) - start_time,
-                usages
-              ),
-              Map.put(metadata, :error, reason)
-            )
-
+            unquote(__MODULE__).emit_exception(start_time, usages, metadata, reason)
             error
+
+          {:raised, exception, stacktrace} ->
+            unquote(__MODULE__).emit_exception(start_time, usages, metadata, exception)
+            reraise exception, stacktrace
         end
       end
 
@@ -240,12 +239,36 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   @doc false
   # Runs a measurement in its own usage scope and returns `{outcome, usages}`.
   # The usages are also passed on to any enclosing scope, so a metric measured
-  # inside another one adds to the outer metric's usage.
-  @spec track_usage((-> outcome)) :: {outcome, [Usage.t()]} when outcome: term()
+  # inside another one adds to the outer metric's usage. An exception raised
+  # by `fun` is returned as `{:raised, exception, stacktrace}`, so the usage
+  # spent before it is not lost; the caller decides whether to re-raise.
+  @spec track_usage((-> outcome)) ::
+          {outcome | {:raised, Exception.t(), Exception.stacktrace()}, [Usage.t()]}
+        when outcome: term()
   def track_usage(fun) do
-    {outcome, usages} = Usage.track(fun)
+    {outcome, usages} =
+      Usage.track(fn ->
+        try do
+          fun.()
+        rescue
+          exception -> {:raised, exception, __STACKTRACE__}
+        end
+      end)
+
     Usage.record_all(usages)
     {outcome, usages}
+  end
+
+  @doc false
+  # Emits `[:deep_eval_ex, :metric, :exception]` for a measurement started at
+  # `start_time` (monotonic milliseconds) that failed with `error`.
+  @spec emit_exception(integer(), [Usage.t()], map(), term()) :: :ok
+  def emit_exception(start_time, usages, metadata, error) do
+    :telemetry.execute(
+      [:deep_eval_ex, :metric, :exception],
+      exception_measurements(System.monotonic_time(:millisecond) - start_time, usages),
+      Map.put(metadata, :error, error)
+    )
   end
 
   @doc false

@@ -142,7 +142,8 @@ defmodule DeepEvalEx.Result do
   Creates an errored result for a metric that could not produce a score.
 
   The result has `score: nil` and `success: false`; `error` is stored as a
-  message string. Strings are kept as-is, `{:missing_params, params}` is
+  message string. Strings are kept as-is, an exception becomes its message
+  (as deepeval records `str(exception)`), `{:missing_params, params}` is
   rendered as a readable message and any other term is inspected.
 
   ## Options
@@ -217,6 +218,7 @@ defmodule DeepEvalEx.Result do
   end
 
   defp format_error(error) when is_binary(error), do: error
+  defp format_error(error) when is_exception(error), do: Exception.message(error)
   defp format_error(error), do: inspect(error)
 end
 

@@ -155,6 +155,7 @@ defmodule DeepEvalEx.ParityTest do
         %Failing{
           name: get(spec, "name"),
           threshold: get(spec, "threshold"),
+          exception: get(spec, "exception"),
           message: get(spec, "message")
         }
     end

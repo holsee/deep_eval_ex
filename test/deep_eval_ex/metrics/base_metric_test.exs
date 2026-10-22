@@ -40,6 +40,23 @@ defmodule DeepEvalEx.Metrics.BaseMetricTest do
     end
   end
 
+  defmodule RaisingJudge do
+    @moduledoc false
+
+    use DeepEvalEx.Metrics.BaseMetric
+
+    @impl true
+    def metric_name, do: "BaseMetric RaisingJudge"
+
+    @impl true
+    def required_params, do: []
+
+    def do_measure(_test_case, _opts) do
+      Usage.record(Usage.new("gpt-4o-mini", 1_000, 200))
+      raise ArgumentError, "judge returned invalid JSON"
+    end
+  end
+
   defp test_case, do: TestCase.new!(input: "Q", actual_output: "A")
 
   describe "measure/2 evaluation model" do
@@ -50,6 +67,25 @@ defmodule DeepEvalEx.Metrics.BaseMetricTest do
 
     test "the public contract stays {:error, reason} when a metric errors after judge calls" do
       assert {:error, :bad_json} = JudgeThenFail.measure(test_case(), [])
+    end
+
+    test "an exception raised by the metric propagates from measure/2" do
+      assert_raise ArgumentError, "judge returned invalid JSON", fn ->
+        RaisingJudge.measure(test_case(), [])
+      end
+    end
+
+    test "usage spent before an exception is passed on to the enclosing scope" do
+      {_raised, usages} =
+        Usage.track(fn ->
+          try do
+            RaisingJudge.measure(test_case(), [])
+          rescue
+            ArgumentError -> :raised
+          end
+        end)
+
+      assert [%Usage{model: "gpt-4o-mini", input_tokens: 1_000}] = usages
     end
 
     test "usage of an errored measurement is passed on to the enclosing scope" do
@@ -66,8 +102,8 @@ defmodule DeepEvalEx.Metrics.BaseMetricTest do
       :telemetry.attach(
         handler_id,
         [:deep_eval_ex, :metric, :exception],
-        fn _event, measurements, %{metric: "BaseMetric JudgeThenFail"}, _config ->
-          send(test_pid, {:exception, measurements})
+        fn _event, measurements, %{metric: metric} = metadata, _config ->
+          send(test_pid, {:exception, metric, measurements, metadata})
         end,
         nil
       )
@@ -78,8 +114,17 @@ defmodule DeepEvalEx.Metrics.BaseMetricTest do
     test "carry the tokens and cost spent before the error" do
       JudgeThenFail.measure(test_case(), [])
 
-      assert_receive {:exception, %{input_tokens: 1_000, output_tokens: 200, cost: cost}}
+      assert_receive {:exception, "BaseMetric JudgeThenFail",
+                      %{input_tokens: 1_000, output_tokens: 200, cost: cost}, _metadata}
+
       assert_in_delta cost, (1_000 * 0.15 + 200 * 0.60) / 1_000_000, 1.0e-12
+    end
+
+    test "are emitted for a raised exception, with the exception as the error" do
+      assert_raise ArgumentError, fn -> RaisingJudge.measure(test_case(), []) end
+
+      assert_receive {:exception, "BaseMetric RaisingJudge", %{input_tokens: 1_000},
+                      %{error: %ArgumentError{message: "judge returned invalid JSON"}}}
     end
   end
 end
