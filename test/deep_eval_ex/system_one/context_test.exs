@@ -18,6 +18,13 @@ defmodule DeepEvalEx.SystemOne.ContextTest do
     def measure(_test_case, _opts), do: :ok
   end
 
+  defmodule LLMOnlyMetric do
+    @moduledoc false
+    # Takes no part in System One, as GEval and ExactMatch.
+    def system_one?, do: false
+    def system_one_eval_spec(_test_case, _opts), do: nil
+  end
+
   describe "resolve!/2 under :llm" do
     test "builds no System One model, whatever :system_one_model says" do
       assert Context.resolve!(WholeChainMetric, eval_mode: :llm, system_one_model: 42) ==
@@ -61,6 +68,21 @@ defmodule DeepEvalEx.SystemOne.ContextTest do
                  eval_mode: :system_one,
                  system_one_model: Mock.new()
                )
+    end
+  end
+
+  describe "resolve!/2 for a metric whose system_one?/0 is false" do
+    test "is the :llm context in every mode, building no System One model" do
+      for mode <- [:llm, :hybrid, :system_one] do
+        assert Context.resolve!(LLMOnlyMetric, eval_mode: mode, system_one_model: SystemOneToy) ==
+                 %Context{mode: :llm, model: nil, llm?: true}
+      end
+    end
+
+    test "still raises for an unrecognised :eval_mode" do
+      assert_raise ArgumentError, ~r/Unsupported eval_mode 'fast'/, fn ->
+        Context.resolve!(LLMOnlyMetric, eval_mode: "fast")
+      end
     end
   end
 

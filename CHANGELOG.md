@@ -459,6 +459,16 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   The System One parity test now also measures the `tool_correctness_*`
   fixtures (`system_one`, `hybrid` and `hybrid_fallback`), which match
   deepeval byte for byte.
+- **GEval and ExactMatch take no part in System One** (ADR-0009), as deepeval
+  4.3.1's `GEval` and `ExactMatchMetric`, which never build a System One
+  model. Under `DEEPEVAL_EVAL_MODE=hybrid` or `system_one` (or the
+  `:eval_mode` option) GEval is still judged by its LLM and ExactMatch
+  measures as before; neither builds nor calls a System One model, so a
+  missing TypeSafe key no longer makes them raise `DeepEvalEx.DeepEvalError`
+  ("... routes metric decisions to TypeSafe AI Jev, but it is not usable").
+  - The optional `BaseMetric` callback `system_one?/0`: a metric that
+    returns `false` gets the `:llm` `DeepEvalEx.SystemOne.Context` in every
+    mode. An unrecognised `:eval_mode` option still raises `ArgumentError`.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in

@@ -118,7 +118,8 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   under `:system_one` only when it implements the optional
   `c:system_one_eval_spec/2`; any other metric runs `:system_one` as
   `:hybrid`. A System One model whose `init/1` fails raises
-  `DeepEvalEx.DeepEvalError` before `do_measure/2` runs.
+  `DeepEvalEx.DeepEvalError` before `do_measure/2` runs. A metric whose
+  `c:system_one?/0` returns `false` runs as under `:llm` in every mode.
 
   Each measure also gets a fresh `DeepEvalEx.SystemOne.Ledger` (deepeval's
   `reset_system_one_state`). Its confidence and fallback reason are set on
@@ -223,11 +224,24 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   """
   @callback system_one_eval_spec(test_case(), opts()) :: DeepEvalEx.SystemOne.EvalSpec.t() | nil
 
+  @doc """
+  Optional callback returning `false` for a metric that takes no part in
+  System One, as deepeval's metrics that never call
+  `initialize_system_one_model` (GEval, ExactMatch).
+
+  Such a metric measures as under `:llm` whatever its eval mode: no System
+  One model is built or called, so a missing TypeSafe key is not an error,
+  and an LLM metric keeps its LLM (see `DeepEvalEx.SystemOne.Context`). A
+  metric that does not implement it takes part.
+  """
+  @callback system_one?() :: boolean()
+
   @optional_callbacks [
     default_opts: 0,
     metric_name: 1,
     evaluation_model: 1,
-    system_one_eval_spec: 2
+    system_one_eval_spec: 2,
+    system_one?: 0
   ]
 
   defmacro __using__(opts \\ []) do

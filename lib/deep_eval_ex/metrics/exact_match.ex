@@ -32,6 +32,12 @@ defmodule DeepEvalEx.Metrics.ExactMatch do
 
   - `1.0` - Exact match
   - `0.0` - No match
+
+  ## Eval Modes
+
+  Like deepeval's, it ignores the eval mode (see
+  `DeepEvalEx.SystemOne.Mode`): it measures the same way under `:hybrid`
+  and `:system_one`, and builds and calls no System One model.
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 1
@@ -45,6 +51,12 @@ defmodule DeepEvalEx.Metrics.ExactMatch do
 
   @impl true
   def required_params, do: [:input, :actual_output, :expected_output]
+
+  @doc """
+  `false`: ExactMatch takes no part in System One (see "Eval Modes").
+  """
+  @impl true
+  def system_one?, do: false
 
   def do_measure(test_case, opts) do
     threshold = BaseMetric.threshold(opts, default_threshold())

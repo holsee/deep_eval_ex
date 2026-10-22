@@ -23,6 +23,12 @@ defmodule DeepEvalEx.SystemOne.Context do
     where nothing falls back to the LLM, so no LLM adapter is resolved and
     no LLM key is needed (`initialize_model` returns `(None, True)`)
 
+  A metric whose `c:DeepEvalEx.Metrics.BaseMetric.system_one?/0` returns
+  `false` (GEval, ExactMatch) takes no part in System One, as deepeval's
+  metrics that never call `initialize_system_one_model`: its context is the
+  `:llm` one in every mode, so it keeps its LLM and builds no System One
+  model.
+
   ## Options
 
   - `:eval_mode` - see `DeepEvalEx.SystemOne.Mode.resolve/1`
@@ -68,9 +74,28 @@ defmodule DeepEvalEx.SystemOne.Context do
   @spec resolve!(module(), keyword()) :: t()
   def resolve!(metric, opts) when is_atom(metric) and is_list(opts) do
     case Keyword.get(opts, :system_one) do
-      %__MODULE__{} = context -> context
-      _ -> metric |> Mode.effective(opts) |> build(Keyword.get(opts, :system_one_model))
+      %__MODULE__{} = context ->
+        context
+
+      _ ->
+        if system_one?(metric),
+          do: metric |> Mode.effective(opts) |> build(Keyword.get(opts, :system_one_model)),
+          else: llm_only(opts)
     end
+  end
+
+  # A metric whose system_one?/0 returns false (GEval, ExactMatch) never
+  # calls initialize_system_one_model in deepeval: it measures as under :llm
+  # in every mode.
+  defp system_one?(metric) do
+    not (Code.ensure_loaded?(metric) and function_exported?(metric, :system_one?, 0) and
+           not metric.system_one?())
+  end
+
+  defp llm_only(opts) do
+    # Still raises for an unrecognised :eval_mode option.
+    Mode.resolve(opts)
+    build(:llm, nil)
   end
 
   defp build(:llm, _model), do: %__MODULE__{mode: :llm, model: nil, llm?: true}

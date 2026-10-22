@@ -122,6 +122,13 @@ defmodule DeepEvalEx.Metrics.GEval do
     evaluation steps, rubric and score) after measuring (default: false)
   - `:include_g_eval_suffix` - Name results `"<name> [GEval]"` rather than
     just `"<name>"` (default: true, as in deepeval)
+
+  ## Eval Modes
+
+  GEval is always judged by its LLM, as deepeval's: it has no System One
+  form, so under the `:hybrid` and `:system_one` eval modes (see
+  `DeepEvalEx.SystemOne.Mode`) it still builds and calls its LLM, and
+  builds and calls no System One model.
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
@@ -292,6 +299,12 @@ defmodule DeepEvalEx.Metrics.GEval do
 
   @impl true
   def metric_name, do: "GEval"
+
+  @doc """
+  `false`: GEval takes no part in System One (see "Eval Modes").
+  """
+  @impl true
+  def system_one?, do: false
 
   @doc """
   Returns the name results of this configured metric carry.
