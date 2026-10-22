@@ -58,4 +58,44 @@ defmodule DeepEvalEx.LLM.PricingTest do
       assert Pricing.cost("gpt-4o", 1_000, nil) == nil
     end
   end
+
+  describe ":model_pricing validation" do
+    test "rejects an entry missing a price with a clear ArgumentError" do
+      Application.put_env(:deep_eval_ex, :model_pricing, %{"my-llm" => %{input: 1.0}})
+
+      assert_raise ArgumentError,
+                   ~r/:model_pricing entry for "my-llm".*%\{input: number, output: number\}/s,
+                   fn ->
+                     Pricing.cost("my-llm", 100, 50)
+                   end
+    end
+
+    test "rejects non-numeric or negative prices" do
+      for price <- [%{input: "1.0", output: 2.0}, %{input: -1, output: 2.0}, {1.0, 2.0}, nil] do
+        Application.put_env(:deep_eval_ex, :model_pricing, %{"my-llm" => price})
+
+        assert_raise ArgumentError, ~r/:model_pricing entry for "my-llm"/, fn ->
+          Pricing.price("my-llm")
+        end
+      end
+    end
+
+    test "rejects a :model_pricing that is not a map" do
+      Application.put_env(:deep_eval_ex, :model_pricing, [{"my-llm", %{input: 1, output: 2}}])
+
+      assert_raise ArgumentError, ~r/:model_pricing must be a map/, fn ->
+        Pricing.price("gpt-4o")
+      end
+    end
+
+    test "only validates the entry that is looked up" do
+      Application.put_env(:deep_eval_ex, :model_pricing, %{
+        "broken" => :oops,
+        "my-llm" => %{input: 1, output: 2}
+      })
+
+      assert Pricing.price("my-llm") == %{input: 1, output: 2}
+      assert Pricing.price("gpt-4o") == %{input: 2.50, output: 10.00}
+    end
+  end
 end

@@ -17,6 +17,10 @@ defmodule DeepEvalEx.LLM.Pricing do
           "gpt-4o-mini" => %{input: 0.15, output: 0.60},
           "my-local-llama" => %{input: 0.0, output: 0.0}
         }
+
+  Each entry must be a map with non-negative numeric `:input` and `:output`
+  prices. A malformed entry raises an `ArgumentError` naming the model when
+  it is looked up, rather than failing obscurely mid-measurement.
   """
 
   @type price :: %{input: number(), output: number()}
@@ -79,7 +83,9 @@ defmodule DeepEvalEx.LLM.Pricing do
   @doc """
   Returns the per-1M-token price of `model`, or `nil` when it is not priced.
 
-  The `:model_pricing` config is consulted before the built-in table.
+  The `:model_pricing` config is consulted before the built-in table. Raises
+  `ArgumentError` when the config is not a map or the model's entry is not a
+  valid price.
 
   ## Examples
 
@@ -93,11 +99,9 @@ defmodule DeepEvalEx.LLM.Pricing do
   def price(nil), do: nil
 
   def price(model) when is_binary(model) do
-    overrides = Application.get_env(:deep_eval_ex, :model_pricing, %{})
-
-    case Map.fetch(overrides, model) do
+    case Map.fetch(overrides(), model) do
       {:ok, price} ->
-        price
+        validate_price!(model, price)
 
       :error ->
         case Map.fetch(@openai_prices, model) do
@@ -105,6 +109,29 @@ defmodule DeepEvalEx.LLM.Pricing do
           :error -> nil
         end
     end
+  end
+
+  defp overrides do
+    case Application.get_env(:deep_eval_ex, :model_pricing, %{}) do
+      overrides when is_map(overrides) ->
+        overrides
+
+      other ->
+        raise ArgumentError,
+              ":model_pricing must be a map of model name to " <>
+                "%{input: number, output: number} (USD per 1M tokens), got: #{inspect(other)}"
+    end
+  end
+
+  defp validate_price!(_model, %{input: input, output: output} = price)
+       when is_number(input) and input >= 0 and is_number(output) and output >= 0,
+       do: price
+
+  defp validate_price!(model, price) do
+    raise ArgumentError,
+          ":model_pricing entry for #{inspect(model)} must be " <>
+            "%{input: number, output: number} with non-negative USD prices per 1M tokens, " <>
+            "got: #{inspect(price)}"
   end
 
   @doc """

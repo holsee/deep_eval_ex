@@ -129,6 +129,10 @@ config :deep_eval_ex,
   }
 ```
 
+Each entry must be `%{input: number, output: number}` with non-negative
+prices. A malformed entry raises an `ArgumentError` naming the model as soon
+as that model is priced.
+
 ## Concurrency Settings
 
 Control parallel evaluation:
