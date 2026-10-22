@@ -114,6 +114,8 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
 
   @impl true
   def generate_with_schema(prompt, schema, opts \\ []) do
+    json_schema = schema_to_json_schema(schema)
+
     body =
       prompt
       |> base_body(opts)
@@ -122,7 +124,7 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
           %{
             name: @tool_name,
             description: "Respond with output matching this schema.",
-            input_schema: schema_to_json_schema(schema)
+            input_schema: json_schema
           }
         ],
         tool_choice: %{type: "tool", name: @tool_name}
@@ -131,7 +133,7 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
     with {:ok, response} <- create_message(body, opts) do
       case tool_input(response) do
         nil -> {:error, {:unexpected_response, response}}
-        input -> {:ok, input}
+        input -> {:ok, decode_stringified(input, json_schema)}
       end
     end
   end
@@ -203,6 +205,49 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
   end
 
   defp tool_input(_response), do: nil
+
+  # Claude sometimes returns a nested array or object in tool input as a
+  # JSON-encoded string, at times with trailing debris (`"[...]}\\n"`). Where
+  # the schema expects an array or object and a string arrived, decode it
+  # from its outermost brackets, as deepeval's trimAndLoadJson does; a string
+  # that does not decode to the expected type is left as is.
+  defp decode_stringified(value, %{"type" => type} = schema)
+       when type in ["array", "object"] and is_binary(value) do
+    case decode_embedded(value, type) do
+      {:ok, decoded} -> decode_stringified(decoded, schema)
+      :error -> value
+    end
+  end
+
+  defp decode_stringified(value, %{"type" => "object", "properties" => properties})
+       when is_map(value) and is_map(properties) do
+    Map.new(value, fn {key, field} ->
+      {key, decode_stringified(field, Map.get(properties, key, %{}))}
+    end)
+  end
+
+  defp decode_stringified(value, %{"type" => "array", "items" => items})
+       when is_list(value) and is_map(items) do
+    Enum.map(value, &decode_stringified(&1, items))
+  end
+
+  defp decode_stringified(value, _schema), do: value
+
+  defp decode_embedded(string, type) do
+    {open, close, guard} =
+      if type == "array", do: {"[", "]", &is_list/1}, else: {"{", "}", &is_map/1}
+
+    with [_, rest] <- String.split(string, open, parts: 2),
+         candidate = open <> rest,
+         [_ | _] = parts <- String.split(candidate, close),
+         json = Enum.join(Enum.drop(parts, -1), close) <> close,
+         {:ok, decoded} <- Jason.decode(json),
+         true <- guard.(decoded) do
+      {:ok, decoded}
+    else
+      _ -> :error
+    end
+  end
 
   defp base_url(opts) do
     url =

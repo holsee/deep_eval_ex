@@ -357,6 +357,49 @@ defmodule DeepEvalEx.LLM.Adapters.AnthropicTest do
       assert body["messages"] == [%{"role" => "user", "content" => "What is 2+2?"}]
     end
 
+    test "decodes array and object fields the model returned as JSON strings" do
+      # Seen live: Claude sometimes stringifies a nested array in tool input,
+      # with trailing debris after the JSON.
+      stub_tool_use(%{
+        "steps" => ~s(["Read the input.", "Check the facts."]}\n),
+        "meta" => ~s({"confidence": 0.9}),
+        "note" => "[kept as a string]"
+      })
+
+      schema = %{
+        "type" => "object",
+        "properties" => %{
+          "steps" => %{"type" => "array", "items" => %{"type" => "string"}},
+          "meta" => %{
+            "type" => "object",
+            "properties" => %{"confidence" => %{"type" => "number"}}
+          },
+          "note" => %{"type" => "string"}
+        },
+        "required" => ["steps", "meta", "note"]
+      }
+
+      assert {:ok, result} = Anthropic.generate_with_schema("Plan", schema, @base_opts)
+
+      assert result == %{
+               "steps" => ["Read the input.", "Check the facts."],
+               "meta" => %{"confidence" => 0.9},
+               "note" => "[kept as a string]"
+             }
+    end
+
+    test "leaves a stringified field alone when it does not decode to the expected type" do
+      stub_tool_use(%{"steps" => "not json at all"})
+
+      schema = %{
+        "type" => "object",
+        "properties" => %{"steps" => %{"type" => "array", "items" => %{"type" => "string"}}}
+      }
+
+      assert {:ok, %{"steps" => "not json at all"}} =
+               Anthropic.generate_with_schema("Plan", schema, @base_opts)
+    end
+
     test "uses a schema module's json_schema/0" do
       stub_tool_use(%{"n" => 4})
 
