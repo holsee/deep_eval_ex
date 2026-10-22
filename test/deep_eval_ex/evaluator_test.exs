@@ -15,6 +15,17 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
   end
 
+  defmodule FailingMetric do
+    @moduledoc false
+
+    defstruct threshold: nil
+
+    def metric_name, do: "FailingMetric"
+    def default_threshold, do: 0.7
+
+    def measure(_test_case, _opts), do: {:error, {:api_error, 500}}
+  end
+
   defmodule ConfigurableMetric do
     @moduledoc false
 
@@ -49,16 +60,65 @@ defmodule DeepEvalEx.EvaluatorTest do
                Evaluator.evaluate([test_case()], [ExactMatch])
     end
 
-    test "returns a flat list with one error result per metric when a test case times out" do
+    test "returns a flat list with one errored result per metric when a test case times out" do
       assert [results] = Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch], timeout: 20)
 
       assert [%Result{metric: "SlowMetric"}, %Result{metric: "ExactMatch"}] = results
 
       for result <- results do
+        assert Result.errored?(result)
         assert result.success == false
-        assert result.score == 0.0
-        assert result.reason == "Evaluation timed out"
+        assert result.score == nil
+        assert result.reason == nil
+        assert result.error == "Evaluation timed out"
       end
+    end
+
+    test "timed-out results carry each metric's real threshold" do
+      assert [[slow, exact]] =
+               Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch], timeout: 20)
+
+      # SlowMetric exposes no default threshold, so none is known.
+      assert slow.threshold == nil
+      assert exact.threshold == ExactMatch.default_threshold()
+    end
+  end
+
+  describe "evaluate_metric/3 errors" do
+    test "a metric returning {:error, reason} yields an errored result, not a failure" do
+      result = Evaluator.evaluate_metric(test_case(), FailingMetric, [])
+
+      assert %Result{
+               metric: "FailingMetric",
+               score: nil,
+               success: false,
+               reason: nil,
+               error: "{:api_error, 500}",
+               threshold: 0.7
+             } = result
+
+      assert Result.errored?(result)
+    end
+
+    test "missing parameters are reported as an error with the metric's threshold" do
+      incomplete = %TestCase{input: "Q", actual_output: nil, expected_output: "A"}
+
+      assert %Result{
+               score: nil,
+               success: false,
+               error: "Missing required parameters: actual_output",
+               threshold: 1.0
+             } = Evaluator.evaluate_metric(incomplete, ExactMatch, [])
+    end
+
+    test "errored results use the run-level threshold over the metric default" do
+      assert %Result{threshold: 0.3} =
+               Evaluator.evaluate_metric(test_case(), FailingMetric, threshold: 0.3)
+    end
+
+    test "errored results use a metric struct's own threshold" do
+      assert [[%Result{threshold: 0.9, error: "{:api_error, 500}"}]] =
+               Evaluator.evaluate([test_case()], [%FailingMetric{threshold: 0.9}], threshold: 0.3)
     end
   end
 

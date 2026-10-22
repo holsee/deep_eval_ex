@@ -125,16 +125,19 @@ end)
 
 ## Error Handling
 
-Errors are captured in the result rather than raising:
+Errors are captured in the result rather than raising. A metric that returns
+`{:error, reason}`, or a test case that times out, yields an *errored* result
+(see [Result](Result.md#errored-vs-failed-results)) that is distinct from a
+failed one:
 
 ```elixir
 results = Evaluator.evaluate(test_cases, metrics)
 
 Enum.each(List.flatten(results), fn result ->
-  if result.success do
-    IO.puts("#{result.metric}: PASS")
-  else
-    IO.puts("#{result.metric}: FAIL - #{result.reason}")
+  cond do
+    Result.errored?(result) -> IO.puts("#{result.metric}: ERROR - #{result.error}")
+    result.success -> IO.puts("#{result.metric}: PASS")
+    true -> IO.puts("#{result.metric}: FAIL - #{result.reason}")
   end
 end)
 ```
@@ -142,10 +145,11 @@ end)
 ### Timeout Handling
 
 ```elixir
-# If evaluation times out:
-result.reason  # => "Evaluation timed out"
-result.score   # => 0.0
-result.success # => false
+# If evaluation times out, every metric for that test case is errored:
+result.error     # => "Evaluation timed out"
+result.score     # => nil
+result.success   # => false
+result.threshold # => the metric's threshold (e.g. 0.5)
 ```
 
 ## Telemetry Events

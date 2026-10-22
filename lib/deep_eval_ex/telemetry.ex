@@ -14,7 +14,7 @@ defmodule DeepEvalEx.Telemetry do
     - Metadata: `%{metric: String.t(), test_case_id: String.t() | nil}`
 
   - `[:deep_eval_ex, :metric, :stop]` - Metric evaluation completed
-    - Measurements: `%{duration: integer(), score: float()}`
+    - Measurements: `%{duration: integer(), score: float() | nil}` (`nil` for an errored result)
     - Metadata: `%{metric: String.t(), test_case_id: String.t() | nil}`
 
   - `[:deep_eval_ex, :metric, :exception]` - Metric evaluation failed
@@ -86,7 +86,7 @@ defmodule DeepEvalEx.Telemetry do
 
   def handle_event([:deep_eval_ex, :metric, :stop], measurements, metadata, _config) do
     Logger.debug(
-      "Completed metric: #{metadata.metric}, score: #{Float.round(measurements.score, 3)}, duration: #{measurements.duration}ms"
+      "Completed metric: #{metadata.metric}, score: #{format_score(measurements.score)}, duration: #{measurements.duration}ms"
     )
   end
 
@@ -140,4 +140,7 @@ defmodule DeepEvalEx.Telemetry do
   def detach_default_logger do
     :telemetry.detach("deep-eval-ex-default-logger")
   end
+
+  defp format_score(score) when is_number(score), do: Float.round(score / 1, 3)
+  defp format_score(nil), do: "none (errored)"
 end

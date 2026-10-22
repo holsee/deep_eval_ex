@@ -337,26 +337,29 @@ end
 
 ## Error Handling
 
-The assertions provide helpful error messages:
+A metric that cannot produce a score is *errored*, not failed. Every
+assertion (including `assert_fails`) flunks on an errored metric and reports
+the error distinctly instead of a low score:
 
 ### Missing Parameters
 
 ```
-Metric evaluation failed with error.
+Faithfulness metric errored: Missing required parameters: retrieval_context
 
-Metric: Faithfulness
-Error:  Missing required parameters: retrieval_context
-
+Metric:    Faithfulness
+Threshold: 0.5 (50.0%)
+Status:    ERROR (no score was produced)
 Ensure your TestCase includes all required fields for this metric.
 ```
 
 ### API Errors
 
 ```
-Metric evaluation failed with error.
+GEval metric errored: {:api_error, 429, "Rate limit exceeded"}
 
-Metric: GEval
-Error:  {:api_error, 429, "Rate limit exceeded"}
+Metric:    GEval
+Threshold: 0.5 (50.0%)
+Status:    ERROR (no score was produced)
 ```
 
 ## Best Practices

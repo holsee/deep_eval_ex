@@ -7,7 +7,22 @@ defmodule DeepEvalEx.ExUnitTest do
 
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.{AnswerRelevancy, ExactMatch, Faithfulness}
-  alias DeepEvalEx.TestCase
+  alias DeepEvalEx.{Result, TestCase}
+
+  # A metric that reports its own failure as an errored result.
+  defmodule ErroredMetric do
+    @moduledoc false
+
+    def metric_name, do: "ErroredMetric"
+
+    def measure(_test_case, _opts) do
+      {:ok, Result.error(metric_name(), "LLM returned invalid JSON", threshold: 0.5)}
+    end
+  end
+
+  defp missing_output_case do
+    %TestCase{input: "Question", actual_output: nil, expected_output: "Answer"}
+  end
 
   setup do
     Mock.clear_responses()
@@ -414,6 +429,65 @@ defmodule DeepEvalEx.ExUnitTest do
         end
 
       assert error.message =~ "Reason:"
+    end
+  end
+
+  describe "errored metrics" do
+    test "assert_passes reports the error rather than a low score" do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_passes(missing_output_case(), ExactMatch)
+        end
+
+      assert error.message =~ "metric errored: Missing required parameters: actual_output"
+      assert error.message =~ "ERROR"
+      refute error.message =~ "Score:"
+    end
+
+    test "assert_passes reports an errored result returned by the metric" do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_passes(missing_output_case(), ErroredMetric)
+        end
+
+      assert error.message =~ "metric errored: LLM returned invalid JSON"
+    end
+
+    test "assert_fails does not treat an errored result as an expected failure" do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_fails(missing_output_case(), ErroredMetric)
+        end
+
+      assert error.message =~ "metric errored: LLM returned invalid JSON"
+    end
+
+    test "assert_fails reports an error from measure distinctly" do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_fails(missing_output_case(), ExactMatch)
+        end
+
+      assert error.message =~ "metric errored: Missing required parameters"
+    end
+
+    test "assert_score reports the error instead of comparing a missing score" do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_score(missing_output_case(), ErroredMetric, min: 0.5)
+        end
+
+      assert error.message =~ "metric errored: LLM returned invalid JSON"
+    end
+
+    test "assert_evaluation lists errored metrics distinctly" do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_evaluation(missing_output_case(), [ExactMatch, ErroredMetric])
+        end
+
+      assert error.message =~ "metric errored: Missing required parameters: actual_output"
+      assert error.message =~ "metric errored: LLM returned invalid JSON"
     end
   end
 

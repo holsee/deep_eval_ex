@@ -5,10 +5,11 @@ defmodule DeepEvalEx.Result do
   ## Fields
 
   - `:metric` - Name of the metric that produced this result
-  - `:score` - Numeric score from 0.0 to 1.0
-  - `:success` - Whether the score meets the threshold
+  - `:score` - Numeric score from 0.0 to 1.0, or `nil` when the metric errored
+  - `:success` - Whether the score meets the threshold (always `false` when errored)
   - `:reason` - Explanation for the score (from LLM-based metrics)
-  - `:threshold` - The threshold used for pass/fail determination
+  - `:threshold` - The threshold used for pass/fail determination (`nil` if unknown)
+  - `:error` - Error message when the metric could not produce a score, else `nil`
   - `:metadata` - Additional metric-specific data
   - `:evaluation_cost` - Cost of the LLM calls for this evaluation
   - `:latency_ms` - Time taken for the evaluation in milliseconds
@@ -28,14 +29,24 @@ defmodule DeepEvalEx.Result do
         evaluation_cost: 0.002,
         latency_ms: 1250
       }
+
+  ## Errored vs failed
+
+  A *failed* result has a score below the threshold. An *errored* result
+  means the metric never produced a score at all (an LLM call failed, the
+  test case was missing parameters, the evaluation timed out, ...). Errored
+  results have `score: nil`, `success: false` and the message in `:error`,
+  mirroring deepeval's `MetricData`. Build them with `error/3` and detect
+  them with `errored?/1`.
   """
 
   @type t :: %__MODULE__{
           metric: String.t(),
-          score: float(),
+          score: float() | nil,
           success: boolean(),
           reason: String.t() | nil,
-          threshold: float(),
+          threshold: float() | nil,
+          error: String.t() | nil,
           metadata: map() | nil,
           evaluation_cost: float() | nil,
           latency_ms: non_neg_integer() | nil
@@ -48,6 +59,7 @@ defmodule DeepEvalEx.Result do
     :success,
     :reason,
     :threshold,
+    :error,
     :metadata,
     :evaluation_cost,
     :latency_ms
@@ -97,15 +109,61 @@ defmodule DeepEvalEx.Result do
   end
 
   @doc """
+  Creates an errored result for a metric that could not produce a score.
+
+  The result has `score: nil` and `success: false`; `error` is stored as a
+  message string. Strings are kept as-is, `{:missing_params, params}` is
+  rendered as a readable message and any other term is inspected.
+
+  ## Options
+
+  - `:threshold` - The metric's threshold, when known (default: `nil`)
+  - `:metadata` - Additional data
+  - `:evaluation_cost` - LLM API cost incurred before the error
+  - `:latency_ms` - Evaluation time
+
+  ## Examples
+
+      DeepEvalEx.Result.error("Faithfulness", "Evaluation timed out", threshold: 0.5)
+  """
+  @spec error(String.t(), term(), keyword()) :: t()
+  def error(metric, error, opts \\ []) do
+    %__MODULE__{
+      metric: metric,
+      score: nil,
+      success: false,
+      threshold: Keyword.get(opts, :threshold),
+      error: format_error(error),
+      metadata: Keyword.get(opts, :metadata),
+      evaluation_cost: Keyword.get(opts, :evaluation_cost),
+      latency_ms: Keyword.get(opts, :latency_ms)
+    }
+  end
+
+  @doc """
   Checks if the result is successful (score >= threshold).
+
+  Errored results are never successful.
   """
   @spec success?(t()) :: boolean()
   def success?(%__MODULE__{success: success}), do: success
 
   @doc """
+  Checks if the metric errored instead of producing a score.
+  """
+  @spec errored?(t()) :: boolean()
+  def errored?(%__MODULE__{error: error}), do: not is_nil(error)
+
+  @doc """
   Returns a human-readable summary of the result.
+
+  Errored results are summarised as `"Metric: ERROR - message"`.
   """
   @spec summary(t()) :: String.t()
+  def summary(%__MODULE__{error: error} = result) when is_binary(error) do
+    "#{result.metric}: ERROR - #{error}"
+  end
+
   def summary(%__MODULE__{} = result) do
     status = if result.success, do: "PASS", else: "FAIL"
     score_pct = Float.round(result.score * 100, 1)
@@ -118,6 +176,13 @@ defmodule DeepEvalEx.Result do
       base
     end
   end
+
+  defp format_error({:missing_params, params}) do
+    "Missing required parameters: #{Enum.join(params, ", ")}"
+  end
+
+  defp format_error(error) when is_binary(error), do: error
+  defp format_error(error), do: inspect(error)
 end
 
 defimpl String.Chars, for: DeepEvalEx.Result do
@@ -130,7 +195,12 @@ defimpl Inspect, for: DeepEvalEx.Result do
   import Inspect.Algebra
 
   def inspect(result, opts) do
-    status = if result.success, do: "PASS", else: "FAIL"
+    status =
+      cond do
+        DeepEvalEx.Result.errored?(result) -> "ERROR"
+        result.success -> "PASS"
+        true -> "FAIL"
+      end
 
     fields =
       [
@@ -139,6 +209,7 @@ defimpl Inspect, for: DeepEvalEx.Result do
         status: status,
         threshold: result.threshold
       ]
+      |> maybe_add(:error, result.error)
       |> maybe_add(:reason, result.reason)
       |> maybe_add(:evaluation_cost, result.evaluation_cost)
       |> maybe_add(:latency_ms, result.latency_ms)

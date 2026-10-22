@@ -33,7 +33,17 @@ defmodule DeepEvalEx.ExUnit do
   - `assert_fails/2,3` - Assert metric evaluation fails (score < threshold)
   - `assert_score/3,4` - Assert score is within a range
   - `assert_evaluation/2,3` - Assert all metrics pass for a test case
+
+  ## Errored Metrics
+
+  A metric that cannot produce a score (missing test case parameters, LLM
+  errors, ...) is *errored*, not failed. Every assertion flunks on an
+  errored metric, including `assert_fails/2,3`, with a message of the form
+  `"<Metric> metric errored: <message>"` so errors are never mistaken for a
+  low score.
   """
+
+  alias DeepEvalEx.Result
 
   @doc """
   Imports DeepEvalEx.ExUnit macros into your test module.
@@ -130,47 +140,68 @@ defmodule DeepEvalEx.ExUnit do
   end
 
   # Internal implementation functions
+  #
+  # Every assertion first normalises the metric outcome into a `Result`: an
+  # `{:error, reason}` from `measure/2` becomes an errored result, so errors
+  # are reported as errors ("metric errored: ...") by every assertion instead
+  # of being mistaken for a low score or an expected failure.
 
   @doc false
   def __assert_passes__(test_case, metric, opts) do
-    case metric.measure(test_case, opts) do
-      {:ok, result} ->
-        unless result.success do
-          flunk!(format_failure_message(result, :expected_pass))
-        end
+    result = run_metric(test_case, metric, opts)
 
-        result
-
-      {:error, reason} ->
-        flunk!(format_error_message(metric, reason))
+    cond do
+      Result.errored?(result) -> flunk!(format_errored_message(result))
+      not result.success -> flunk!(format_failure_message(result, :expected_pass))
+      true -> result
     end
   end
 
   @doc false
   def __assert_fails__(test_case, metric, opts) do
-    case metric.measure(test_case, opts) do
-      {:ok, result} ->
-        if result.success do
-          flunk!(format_failure_message(result, :expected_fail))
-        end
+    result = run_metric(test_case, metric, opts)
 
-        result
-
-      {:error, reason} ->
-        flunk!(format_error_message(metric, reason))
+    cond do
+      Result.errored?(result) -> flunk!(format_errored_message(result))
+      result.success -> flunk!(format_failure_message(result, :expected_fail))
+      true -> result
     end
   end
 
   @doc false
   def __assert_score__(test_case, metric, score_opts, opts) do
+    result = run_metric(test_case, metric, opts)
+
+    if Result.errored?(result) do
+      flunk!(format_errored_message(result))
+    end
+
+    validate_score!(result, score_opts)
+    result
+  end
+
+  defp run_metric(test_case, metric, opts) do
     case metric.measure(test_case, opts) do
       {:ok, result} ->
-        validate_score!(result, score_opts)
         result
 
       {:error, reason} ->
-        flunk!(format_error_message(metric, reason))
+        Result.error(metric_name(metric), reason, threshold: resolve_threshold(metric, opts))
     end
+  end
+
+  defp metric_name(metric) do
+    if function_exported?(metric, :metric_name, 0) do
+      metric.metric_name()
+    else
+      inspect(metric)
+    end
+  end
+
+  defp resolve_threshold(metric, opts) do
+    Keyword.get_lazy(opts, :threshold, fn ->
+      if function_exported?(metric, :default_threshold, 0), do: metric.default_threshold()
+    end)
   end
 
   defp validate_score!(result, score_opts) do
@@ -223,23 +254,15 @@ defmodule DeepEvalEx.ExUnit do
 
   @doc false
   def __assert_evaluation__(test_case, metrics, opts) do
-    results =
-      Enum.map(metrics, fn metric ->
-        {metric, metric.measure(test_case, opts)}
-      end)
-
-    failures =
-      Enum.filter(results, fn
-        {_metric, {:ok, result}} -> not result.success
-        {_metric, {:error, _}} -> true
-      end)
+    results = Enum.map(metrics, &run_metric(test_case, &1, opts))
+    failures = Enum.reject(results, & &1.success)
 
     if failures != [] do
       message = format_evaluation_failures(failures)
       flunk!(message)
     end
 
-    Enum.map(results, fn {_metric, {:ok, result}} -> result end)
+    results
   end
 
   # Raises ExUnit.AssertionError with the given message
@@ -325,65 +348,40 @@ defmodule DeepEvalEx.ExUnit do
     """
   end
 
-  defp format_error_message(metric, {:missing_params, params}) do
-    metric_name =
-      if function_exported?(metric, :metric_name, 0) do
-        metric.metric_name()
-      else
-        inspect(metric)
-      end
-
+  defp format_errored_message(result) do
     """
 
-    Metric evaluation failed with error.
+    #{result.metric} metric errored: #{result.error}
 
-    Metric: #{metric_name}
-    Error:  Missing required parameters: #{Enum.join(params, ", ")}
-
-    Ensure your TestCase includes all required fields for this metric.
+    Metric:    #{result.metric}
+    Threshold: #{format_score(result.threshold)}
+    Status:    ERROR (no score was produced)
+    #{format_error_hint(result.error)}
     """
   end
 
-  defp format_error_message(metric, reason) do
-    metric_name =
-      if function_exported?(metric, :metric_name, 0) do
-        metric.metric_name()
-      else
-        inspect(metric)
-      end
-
-    """
-
-    Metric evaluation failed with error.
-
-    Metric: #{metric_name}
-    Error:  #{inspect(reason)}
-    """
+  defp format_error_hint("Missing required parameters" <> _) do
+    "Ensure your TestCase includes all required fields for this metric."
   end
+
+  defp format_error_hint(_error), do: ""
 
   defp format_evaluation_failures(failures) do
     failure_details =
-      Enum.map_join(failures, "\n", fn
-        {_metric, {:ok, result}} ->
+      Enum.map_join(failures, "\n", fn result ->
+        if Result.errored?(result) do
+          """
+            #{result.metric}:
+              Error:     metric errored: #{result.error}
+          """
+        else
           """
             #{result.metric}:
               Score:     #{format_score(result.score)}
               Threshold: #{format_score(result.threshold)}
               #{format_reason(result.reason) |> String.trim() |> indent("    ")}
           """
-
-        {metric, {:error, reason}} ->
-          metric_name =
-            if function_exported?(metric, :metric_name, 0) do
-              metric.metric_name()
-            else
-              inspect(metric)
-            end
-
-          """
-            #{metric_name}:
-              Error: #{inspect(reason)}
-          """
+        end
       end)
 
     """

@@ -84,8 +84,8 @@ defmodule DeepEvalEx.Evaluator do
       )
       |> Enum.map(fn
         {:ok, results} -> results
-        {:exit, :timeout} -> error_result("Evaluation timed out", metrics)
-        {:exit, reason} -> error_result("Evaluation failed: #{inspect(reason)}", metrics)
+        {:exit, :timeout} -> error_results("Evaluation timed out", metrics, opts)
+        {:exit, reason} -> error_results("Evaluation failed: #{inspect(reason)}", metrics, opts)
       end)
 
     duration = System.monotonic_time(:millisecond) - start_time
@@ -112,24 +112,28 @@ defmodule DeepEvalEx.Evaluator do
 
   @doc """
   Evaluates a single test case against a single metric.
+
+  When the metric returns `{:error, reason}` the result is an errored
+  `DeepEvalEx.Result` (see `DeepEvalEx.Result.error/3`) carrying the
+  metric's resolved threshold rather than a zero score.
   """
   @spec evaluate_metric(TestCase.t(), module() | struct(), keyword()) :: Result.t()
-  def evaluate_metric(test_case, metric, opts) when is_atom(metric) do
-    case metric.measure(test_case, opts) do
-      {:ok, result} -> result
-      {:error, reason} -> error_result_single(reason, metric.metric_name())
-    end
-  end
-
-  def evaluate_metric(test_case, %{__struct__: module} = metric_struct, opts) do
+  def evaluate_metric(test_case, metric, opts) do
     # Run-level options are defaults; a metric's own configuration wins.
-    merged_opts = Keyword.merge(opts, struct_to_opts(metric_struct))
+    merged_opts = metric_opts(metric, opts)
+    module = metric_module(metric)
 
     case module.measure(test_case, merged_opts) do
       {:ok, result} -> result
-      {:error, reason} -> error_result_single(reason, module.metric_name())
+      {:error, reason} -> error_result(reason, metric, opts)
     end
   end
+
+  defp metric_module(metric) when is_atom(metric), do: metric
+  defp metric_module(%{__struct__: module}), do: module
+
+  defp metric_opts(metric, opts) when is_atom(metric), do: opts
+  defp metric_opts(metric, opts), do: Keyword.merge(opts, struct_to_opts(metric))
 
   # Convert a metric struct to an options keyword list, dropping unset
   # (nil) fields so they neither mask run-level options nor shadow the
@@ -140,33 +144,25 @@ defmodule DeepEvalEx.Evaluator do
     |> Enum.reject(fn {_key, value} -> is_nil(value) end)
   end
 
-  defp error_result(reason, metrics) do
-    Enum.map(metrics, fn metric ->
-      name =
-        cond do
-          is_atom(metric) -> metric.metric_name()
-          is_struct(metric) -> metric.__struct__.metric_name()
-          true -> "Unknown"
-        end
+  defp error_results(reason, metrics, opts) do
+    Enum.map(metrics, &error_result(reason, &1, opts))
+  end
 
-      error_result_single(reason, name)
+  defp error_result(reason, metric, opts) do
+    module = metric_module(metric)
+
+    Result.error(module.metric_name(), reason,
+      threshold: resolve_threshold(module, metric_opts(metric, opts))
+    )
+  end
+
+  # The threshold the metric would have used: its own configuration, then
+  # the run-level option, then the metric's default (when it exposes one).
+  defp resolve_threshold(module, opts) do
+    Keyword.get_lazy(opts, :threshold, fn ->
+      if Code.ensure_loaded?(module) and function_exported?(module, :default_threshold, 0) do
+        module.default_threshold()
+      end
     end)
   end
-
-  defp error_result_single(reason, metric_name) do
-    %Result{
-      metric: metric_name,
-      score: 0.0,
-      success: false,
-      reason: format_error(reason),
-      threshold: 0.0
-    }
-  end
-
-  defp format_error({:missing_params, params}) do
-    "Missing required parameters: #{Enum.join(params, ", ")}"
-  end
-
-  defp format_error(reason) when is_binary(reason), do: reason
-  defp format_error(reason), do: inspect(reason)
 end
