@@ -46,10 +46,12 @@ defmodule DeepEvalEx.ParityTest do
   # scripted/ holds the scripted-judge scenarios of ScriptedParityTest,
   # prompts/ the prompt goldens of PromptGoldenTest, system_one/ the fixtures
   # of SystemOneFixturesTest, round_trip/ test runs TestRun.LoadTest only
-  # loads and re-encodes.
+  # loads and re-encodes, datasets/ the files of Dataset.LoaderParityTest.
   @scenarios @fixtures
              |> File.ls!()
-             |> Enum.reject(&(&1 in ["prompts", "round_trip", "scripted", "system_one"]))
+             |> Enum.reject(
+               &(&1 in ["datasets", "prompts", "round_trip", "scripted", "system_one"])
+             )
              |> Enum.filter(&File.dir?(Path.join(@fixtures, &1)))
              |> Enum.sort()
 

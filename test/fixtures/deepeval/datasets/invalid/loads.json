@@ -1,0 +1,22 @@
+[
+  {
+    "loader": "add_goldens_from_json_file",
+    "file": "bad.json",
+    "args": [],
+    "kwargs": {},
+    "raised": {
+      "type": "ValueError",
+      "message": "The file bad.json is not a valid JSON file."
+    }
+  },
+  {
+    "loader": "add_goldens_from_jsonl_file",
+    "file": "bad.jsonl",
+    "args": [],
+    "kwargs": {},
+    "raised": {
+      "type": "ValueError",
+      "message": "The file bad.jsonl contains invalid JSON on line 3."
+    }
+  }
+]

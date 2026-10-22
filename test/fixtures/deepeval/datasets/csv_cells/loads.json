@@ -1,0 +1,110 @@
+[
+  {
+    "loader": "add_goldens_from_csv_file",
+    "file": "goldens.csv",
+    "args": [],
+    "kwargs": {},
+    "goldens": [
+      {
+        "input": "First",
+        "actual_output": "  padded  ",
+        "expected_output": null,
+        "context": [
+          "a",
+          "b",
+          ""
+        ],
+        "retrieval_context": [
+          {
+            "source": "s.md",
+            "context": "c"
+          },
+          "plain"
+        ],
+        "additional_metadata": {
+          "flag": true,
+          "none": null,
+          "n": 1.5
+        },
+        "comments": null,
+        "tools_called": [
+          {
+            "name": "search",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": {
+              "q": "x"
+            },
+            "output": null
+          }
+        ],
+        "expected_tools": [
+          {
+            "name": "lookup",
+            "type": "MCP",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": null,
+            "output": 3
+          }
+        ],
+        "token_cost": 0.5,
+        "input_token_count": 10,
+        "output_token_count": null,
+        "source_file": "src.txt",
+        "name": null,
+        "custom_column_key_values": {
+          "team": "qa"
+        },
+        "expectations": {
+          "model": null,
+          "eval_mode": null,
+          "must": [
+            "Be brief"
+          ],
+          "must_not": []
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Second",
+        "actual_output": null,
+        "expected_output": null,
+        "context": [],
+        "retrieval_context": [],
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": [],
+        "expected_tools": [],
+        "token_cost": 2.0,
+        "input_token_count": 7,
+        "output_token_count": 3,
+        "source_file": null,
+        "name": "second",
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      },
+      {
+        "input": "Third",
+        "actual_output": "out",
+        "expected_output": null,
+        "context": [],
+        "retrieval_context": [],
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": [],
+        "expected_tools": [],
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      }
+    ]
+  }
+]

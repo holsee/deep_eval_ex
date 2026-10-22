@@ -1,0 +1,5 @@
+input,actual_output,expected_output,context,retrieval_context,tools_called,expected_tools,token_cost,input_token_count,output_token_count,additional_metadata,custom_column_key_values,comments,name,source_file,expectations
+First,  padded  ,NA,a|b|,"deepeval_source=s.md,deepeval_context=c|plain","[{""name"": ""search"", ""inputParameters"": {""q"": ""x""},}]","[{""name"": ""lookup"", ""type"": ""MCP"", ""output"": 3}]",0.5,10,,"{""flag"": true, ""none"": null, ""n"": 1.5}","{""team"": ""qa""}",null,N/A,src.txt,"{""must"": ["" Be brief ""], ""mustNot"": []}"
+Second,,,,,,,2,7,3,,,None,second,,
+
+Third,out

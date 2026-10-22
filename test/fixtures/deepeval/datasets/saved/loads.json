@@ -1,0 +1,685 @@
+[
+  {
+    "loader": "add_goldens_from_csv_file",
+    "file": "saved.csv",
+    "args": [],
+    "kwargs": {},
+    "goldens": [
+      {
+        "input": "What is the refund window, in days?",
+        "actual_output": "30 days, from delivery.",
+        "expected_output": "30 days",
+        "context": [
+          "Refunds: 30 days from delivery.",
+          "Exchanges: 60 days."
+        ],
+        "retrieval_context": [
+          "Plain retrieved chunk",
+          {
+            "source": "policy.md#refunds",
+            "context": "Refunds are accepted within 30 days."
+          }
+        ],
+        "additional_metadata": {
+          "locale": "en-GB",
+          "priority": 2,
+          "tags": [
+            "refunds",
+            "policy"
+          ]
+        },
+        "comments": "Checked against the 2026 policy.",
+        "tools_called": [
+          {
+            "name": "search_policy",
+            "type": "FUNCTION",
+            "description": "Searches the policy",
+            "reasoning": "Needs the refund rule",
+            "input_parameters": {
+              "query": "refund window",
+              "limit": 3
+            },
+            "output": [
+              "Refunds: 30 days"
+            ]
+          }
+        ],
+        "expected_tools": [
+          {
+            "name": "search_policy",
+            "type": "MCP",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": null,
+            "output": null
+          }
+        ],
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": "policy.md",
+        "name": "refund-window",
+        "custom_column_key_values": {
+          "team": "support"
+        },
+        "expectations": {
+          "model": "gpt-4o-mini",
+          "eval_mode": "llm",
+          "must": [
+            "Cite the policy"
+          ],
+          "must_not": [
+            "Promise exceptions"
+          ]
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Minimal golden",
+        "actual_output": null,
+        "expected_output": null,
+        "context": [],
+        "retrieval_context": [],
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": [],
+        "expected_tools": [],
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      },
+      {
+        "input": "Say \"hello\", then\na new line",
+        "actual_output": null,
+        "expected_output": "Grüße, “quoted”; done",
+        "context": [
+          "one, with comma",
+          "two \"quoted\""
+        ],
+        "retrieval_context": [
+          {
+            "source": "a,b",
+            "context": "x"
+          },
+          "y"
+        ],
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": [],
+        "expected_tools": [],
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      },
+      {
+        "input": "Summarise the order",
+        "actual_output": "Two items, shipped.",
+        "expected_output": "Two items",
+        "context": [],
+        "retrieval_context": [],
+        "additional_metadata": {
+          "order_id": "A-1"
+        },
+        "comments": null,
+        "tools_called": [
+          {
+            "name": "get_order",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": {
+              "id": "A-1"
+            },
+            "output": null
+          }
+        ],
+        "expected_tools": [],
+        "token_cost": 0.25,
+        "input_token_count": 120,
+        "output_token_count": 8,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      }
+    ]
+  },
+  {
+    "loader": "add_goldens_from_json_file",
+    "file": "saved.json",
+    "args": [],
+    "kwargs": {},
+    "goldens": [
+      {
+        "input": "What is the refund window, in days?",
+        "actual_output": "30 days, from delivery.",
+        "expected_output": "30 days",
+        "context": [
+          "Refunds: 30 days from delivery.",
+          "Exchanges: 60 days."
+        ],
+        "retrieval_context": [
+          "Plain retrieved chunk",
+          {
+            "source": "policy.md#refunds",
+            "context": "Refunds are accepted within 30 days."
+          }
+        ],
+        "additional_metadata": {
+          "locale": "en-GB",
+          "priority": 2,
+          "tags": [
+            "refunds",
+            "policy"
+          ]
+        },
+        "comments": "Checked against the 2026 policy.",
+        "tools_called": [
+          {
+            "name": "search_policy",
+            "type": "FUNCTION",
+            "description": "Searches the policy",
+            "reasoning": "Needs the refund rule",
+            "input_parameters": {
+              "query": "refund window",
+              "limit": 3
+            },
+            "output": [
+              "Refunds: 30 days"
+            ]
+          }
+        ],
+        "expected_tools": [
+          {
+            "name": "search_policy",
+            "type": "MCP",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": null,
+            "output": null
+          }
+        ],
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": "policy.md",
+        "name": "refund-window",
+        "custom_column_key_values": {
+          "team": "support"
+        },
+        "expectations": {
+          "model": "gpt-4o-mini",
+          "eval_mode": "llm",
+          "must": [
+            "Cite the policy"
+          ],
+          "must_not": [
+            "Promise exceptions"
+          ]
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Minimal golden",
+        "actual_output": null,
+        "expected_output": null,
+        "context": null,
+        "retrieval_context": null,
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      },
+      {
+        "input": "Say \"hello\", then\na new line",
+        "actual_output": null,
+        "expected_output": "Grüße, “quoted”; done",
+        "context": [
+          "one, with comma",
+          "two \"quoted\""
+        ],
+        "retrieval_context": [
+          {
+            "source": "a,b",
+            "context": "x|y"
+          }
+        ],
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      },
+      {
+        "input": "Summarise the order",
+        "actual_output": "Two items, shipped.",
+        "expected_output": "Two items",
+        "context": null,
+        "retrieval_context": null,
+        "additional_metadata": {
+          "order_id": "A-1"
+        },
+        "comments": null,
+        "tools_called": [
+          {
+            "name": "get_order",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": {
+              "id": "A-1"
+            },
+            "output": null
+          }
+        ],
+        "expected_tools": null,
+        "token_cost": 0.25,
+        "input_token_count": 120,
+        "output_token_count": 8,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      }
+    ]
+  },
+  {
+    "loader": "add_goldens_from_jsonl_file",
+    "file": "saved.jsonl",
+    "args": [],
+    "kwargs": {},
+    "goldens": [
+      {
+        "input": "What is the refund window, in days?",
+        "actual_output": "30 days, from delivery.",
+        "expected_output": "30 days",
+        "context": [
+          "Refunds: 30 days from delivery.",
+          "Exchanges: 60 days."
+        ],
+        "retrieval_context": [
+          "Plain retrieved chunk",
+          {
+            "source": "policy.md#refunds",
+            "context": "Refunds are accepted within 30 days."
+          }
+        ],
+        "additional_metadata": {
+          "locale": "en-GB",
+          "priority": 2,
+          "tags": [
+            "refunds",
+            "policy"
+          ]
+        },
+        "comments": "Checked against the 2026 policy.",
+        "tools_called": [
+          {
+            "name": "search_policy",
+            "type": "FUNCTION",
+            "description": "Searches the policy",
+            "reasoning": "Needs the refund rule",
+            "input_parameters": {
+              "query": "refund window",
+              "limit": 3
+            },
+            "output": [
+              "Refunds: 30 days"
+            ]
+          }
+        ],
+        "expected_tools": [
+          {
+            "name": "search_policy",
+            "type": "MCP",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": null,
+            "output": null
+          }
+        ],
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": "policy.md",
+        "name": "refund-window",
+        "custom_column_key_values": {
+          "team": "support"
+        },
+        "expectations": {
+          "model": "gpt-4o-mini",
+          "eval_mode": "llm",
+          "must": [
+            "Cite the policy"
+          ],
+          "must_not": [
+            "Promise exceptions"
+          ]
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Minimal golden",
+        "actual_output": null,
+        "expected_output": null,
+        "context": null,
+        "retrieval_context": null,
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      },
+      {
+        "input": "Say \"hello\", then\na new line",
+        "actual_output": null,
+        "expected_output": "Grüße, “quoted”; done",
+        "context": [
+          "one, with comma",
+          "two \"quoted\""
+        ],
+        "retrieval_context": [
+          {
+            "source": "a,b",
+            "context": "x"
+          },
+          "y"
+        ],
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      },
+      {
+        "input": "Summarise the order",
+        "actual_output": "Two items, shipped.",
+        "expected_output": "Two items",
+        "context": null,
+        "retrieval_context": null,
+        "additional_metadata": {
+          "order_id": "A-1"
+        },
+        "comments": null,
+        "tools_called": [
+          {
+            "name": "get_order",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": {
+              "id": "A-1"
+            },
+            "output": null
+          }
+        ],
+        "expected_tools": null,
+        "token_cost": 0.25,
+        "input_token_count": 120,
+        "output_token_count": 8,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      }
+    ]
+  },
+  {
+    "loader": "add_test_cases_from_csv_file",
+    "file": "saved.csv",
+    "args": [
+      "input",
+      "actual_output"
+    ],
+    "kwargs": {},
+    "test_cases": [
+      {
+        "input": "What is the refund window, in days?",
+        "actual_output": "30 days, from delivery.",
+        "expected_output": "30 days",
+        "context": [
+          "Refunds: 30 days from delivery.",
+          "Exchanges: 60 days."
+        ],
+        "retrieval_context": [
+          "Plain retrieved chunk",
+          {
+            "source": "policy.md#refunds",
+            "context": "Refunds are accepted within 30 days."
+          }
+        ],
+        "tools_called": [
+          {
+            "name": "search_policy",
+            "type": "FUNCTION",
+            "description": "Searches the policy",
+            "reasoning": "Needs the refund rule",
+            "input_parameters": {
+              "query": "refund window",
+              "limit": 3
+            },
+            "output": [
+              "Refunds: 30 days"
+            ]
+          }
+        ],
+        "expected_tools": [
+          {
+            "name": "search_policy",
+            "type": "MCP",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": null,
+            "output": null
+          }
+        ],
+        "metadata": {
+          "locale": "en-GB",
+          "priority": 2,
+          "tags": [
+            "refunds",
+            "policy"
+          ]
+        },
+        "expectations": {
+          "model": "gpt-4o-mini",
+          "eval_mode": "llm",
+          "must": [
+            "Cite the policy"
+          ],
+          "must_not": [
+            "Promise exceptions"
+          ]
+        },
+        "dataset_rank": 0
+      },
+      {
+        "input": "Minimal golden",
+        "actual_output": null,
+        "expected_output": null,
+        "context": [],
+        "retrieval_context": [],
+        "tools_called": [],
+        "expected_tools": [],
+        "metadata": null,
+        "expectations": null,
+        "dataset_rank": 1
+      },
+      {
+        "input": "Say \"hello\", then\na new line",
+        "actual_output": null,
+        "expected_output": "Grüße, “quoted”; done",
+        "context": [
+          "one, with comma",
+          "two \"quoted\""
+        ],
+        "retrieval_context": [
+          {
+            "source": "a,b",
+            "context": "x"
+          },
+          "y"
+        ],
+        "tools_called": [],
+        "expected_tools": [],
+        "metadata": null,
+        "expectations": null,
+        "dataset_rank": 2
+      },
+      {
+        "input": "Summarise the order",
+        "actual_output": "Two items, shipped.",
+        "expected_output": "Two items",
+        "context": [],
+        "retrieval_context": [],
+        "tools_called": [
+          {
+            "name": "get_order",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": {
+              "id": "A-1"
+            },
+            "output": null
+          }
+        ],
+        "expected_tools": [],
+        "metadata": {
+          "order_id": "A-1"
+        },
+        "expectations": null,
+        "dataset_rank": 3
+      }
+    ]
+  },
+  {
+    "loader": "add_test_cases_from_json_file",
+    "file": "saved.json",
+    "args": [
+      "input",
+      "actual_output"
+    ],
+    "kwargs": {},
+    "test_cases": [
+      {
+        "input": "What is the refund window, in days?",
+        "actual_output": "30 days, from delivery.",
+        "expected_output": null,
+        "context": null,
+        "retrieval_context": null,
+        "tools_called": [],
+        "expected_tools": [],
+        "metadata": null,
+        "expectations": {
+          "model": "gpt-4o-mini",
+          "eval_mode": "llm",
+          "must": [
+            "Cite the policy"
+          ],
+          "must_not": [
+            "Promise exceptions"
+          ]
+        },
+        "dataset_rank": 0
+      },
+      {
+        "input": "Minimal golden",
+        "actual_output": null,
+        "expected_output": null,
+        "context": null,
+        "retrieval_context": null,
+        "tools_called": [],
+        "expected_tools": [],
+        "metadata": null,
+        "expectations": null,
+        "dataset_rank": 1
+      },
+      {
+        "input": "Say \"hello\", then\na new line",
+        "actual_output": null,
+        "expected_output": null,
+        "context": null,
+        "retrieval_context": null,
+        "tools_called": [],
+        "expected_tools": [],
+        "metadata": null,
+        "expectations": null,
+        "dataset_rank": 2
+      },
+      {
+        "input": "Summarise the order",
+        "actual_output": "Two items, shipped.",
+        "expected_output": null,
+        "context": null,
+        "retrieval_context": null,
+        "tools_called": [],
+        "expected_tools": [],
+        "metadata": null,
+        "expectations": null,
+        "dataset_rank": 3
+      }
+    ]
+  },
+  {
+    "loader": "add_test_cases_from_json_file",
+    "file": "saved.json",
+    "args": [
+      "input",
+      "actual_output"
+    ],
+    "kwargs": {
+      "expected_output_key_name": "expected_output",
+      "context_key_name": "context",
+      "retrieval_context_key_name": "retrieval_context",
+      "tools_called_key_name": "tools_called",
+      "expected_tools_key_name": "expected_tools"
+    },
+    "raised": {
+      "type": "TypeError",
+      "message": "'NoneType' object is not iterable"
+    }
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "loader": "add_test_cases_from_json_file",
+    "file": "cases.json",
+    "args": [
+      "q",
+      "a"
+    ],
+    "kwargs": {
+      "expected_output_key_name": "e",
+      "context_key_name": "ctx",
+      "retrieval_context_key_name": "rc",
+      "tools_called_key_name": "tools",
+      "addtional_metadata_key_name": "meta"
+    },
+    "test_cases": [
+      {
+        "input": "Where is my parcel?",
+        "actual_output": "In transit.",
+        "expected_output": "In transit",
+        "context": [
+          "Shipped Monday"
+        ],
+        "retrieval_context": [
+          {
+            "source": "crm",
+            "context": "Order 7"
+          },
+          "Tracking: in transit"
+        ],
+        "tools_called": [
+          {
+            "name": "track",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": {
+              "id": 7
+            },
+            "output": null
+          }
+        ],
+        "expected_tools": [],
+        "metadata": null,
+        "expectations": {
+          "model": null,
+          "eval_mode": null,
+          "must": [],
+          "must_not": [
+            "Guess"
+          ]
+        },
+        "dataset_rank": 0
+      },
+      {
+        "input": "Hi",
+        "actual_output": "Hello",
+        "expected_output": null,
+        "context": null,
+        "retrieval_context": null,
+        "tools_called": [],
+        "expected_tools": [],
+        "metadata": null,
+        "expectations": null,
+        "dataset_rank": 1
+      }
+    ]
+  },
+  {
+    "loader": "add_test_cases_from_json_file",
+    "file": "cases.json",
+    "args": [
+      "q",
+      "e"
+    ],
+    "kwargs": {},
+    "raised": {
+      "type": "ValueError",
+      "message": "Required fields are missing in one or more JSON objects"
+    }
+  }
+]

@@ -1,9 +1,9 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in five sets:
+Fixtures written by **deepeval 4.3.1**, in six sets:
 
 - export scenarios (the directories below, except `scripted/`, `prompts/`,
-  `round_trip/` and `system_one/`), used by
+  `round_trip/`, `system_one/` and `datasets/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
@@ -23,6 +23,9 @@ Fixtures written by **deepeval 4.3.1**, in five sets:
   the `system_one` and `hybrid` eval modes, for the eval-mode units (P3, P4).
   `test/deep_eval_ex/system_one_fixtures_test.exs` only checks their
   structure for now
+- [dataset files](#dataset-files) (`datasets/`), CSV, JSON and JSONL datasets
+  (some written by deepeval's `save_as`) and what deepeval's loaders load
+  from them, used by `test/deep_eval_ex/dataset/loader_parity_test.exs`
 
 ## Export scenarios
 
@@ -357,6 +360,38 @@ scenarios).
 None: every case renders deepeval's prompt byte for byte. A divergence
 would be tagged in `@known_divergences`
 (`test/deep_eval_ex/prompt_golden_test.exs`).
+
+## Dataset files
+
+`scripts/parity/generate_dataset_fixtures.py` writes, for every case in its
+`CASES`, `datasets/<case>/` with the case's files and `loads.json`: one
+entry per call of a deepeval loader (`add_goldens_from_csv_file`,
+`add_goldens_from_json_file`, `add_goldens_from_jsonl_file`,
+`add_test_cases_from_csv_file` or `add_test_cases_from_json_file`) on one of
+the files, with its arguments and the goldens or test cases it loaded (each
+field by its DeepEvalEx name), or the exception it raised.
+
+| Case | What it covers |
+| --- | --- |
+| `saved` | `save_as("csv" / "json" / "jsonl", include_test_cases=True)` of goldens with every field, a minimal golden, a golden of commas, quotes, newlines and non-ASCII text, and a test case with token cost and counts; loaded back by every loader |
+| `csv_cells` | pandas' missing-value markers, numbers in the token columns, trailing commas in tool call JSON, JSON metadata with `true` and `null`, `mustNot` expectations, a blank line and a short row |
+| `csv_columns` | other column names, a `;` context delimiter and absent columns, for goldens and test cases |
+| `jsonl_lines` | JSONL lines with list or delimited-string contexts, tool calls as lists or JSON strings, blank lines, surrounding whitespace, and other key names |
+| `json_test_cases` | `add_test_cases_from_json_file` with its own key names (metadata ignored, tool calls `[]` when absent) and a missing required key |
+| `invalid` | a JSON file and a JSONL line that are not valid JSON |
+
+deepeval reads CSV with pandas, which the devcontainer does not install.
+Install it, then run the generator:
+
+```sh
+devcontainer exec --workspace-folder . pip install pandas
+devcontainer exec --workspace-folder . \
+  env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_dataset_fixtures.py
+```
+
+The fixtures were generated with pandas 3.1.0. The test compares deepeval's
+own `ValueError` messages; for pydantic's validation errors and Python's
+`TypeError`s it checks only that DeepEvalEx raises `ArgumentError`.
 
 ## System One fixtures
 

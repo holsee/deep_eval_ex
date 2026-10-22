@@ -1,0 +1,105 @@
+[
+  {
+    "loader": "add_goldens_from_csv_file",
+    "file": "data.csv",
+    "args": [],
+    "kwargs": {
+      "input_col_name": "question",
+      "actual_output_col_name": "answer",
+      "expected_output_col_name": "ideal",
+      "context_col_name": "ctx",
+      "context_col_delimiter": ";",
+      "additional_metadata_col_name": "meta"
+    },
+    "goldens": [
+      {
+        "input": "What is 2 + 2?",
+        "actual_output": "Four",
+        "expected_output": "four",
+        "context": [
+          "one",
+          "two"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+          "k": "v"
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      },
+      {
+        "input": "What is 3 + 3?",
+        "actual_output": "Six",
+        "expected_output": null,
+        "context": [],
+        "retrieval_context": null,
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      }
+    ]
+  },
+  {
+    "loader": "add_test_cases_from_csv_file",
+    "file": "data.csv",
+    "args": [
+      "question",
+      "answer"
+    ],
+    "kwargs": {
+      "expected_output_col_name": "ideal",
+      "context_col_name": "ctx",
+      "context_col_delimiter": ";",
+      "additional_metadata_col_name": "meta"
+    },
+    "test_cases": [
+      {
+        "input": "What is 2 + 2?",
+        "actual_output": "Four",
+        "expected_output": "four",
+        "context": [
+          "one",
+          "two"
+        ],
+        "retrieval_context": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "metadata": {
+          "k": "v"
+        },
+        "expectations": null,
+        "dataset_rank": 0
+      },
+      {
+        "input": "What is 3 + 3?",
+        "actual_output": "Six",
+        "expected_output": null,
+        "context": [],
+        "retrieval_context": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "metadata": null,
+        "expectations": null,
+        "dataset_rank": 1
+      }
+    ]
+  }
+]

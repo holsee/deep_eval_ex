@@ -65,6 +65,9 @@ defmodule DeepEvalEx.MixProject do
       # Option validation
       {:nimble_options, "~> 1.0"},
 
+      # CSV parsing (dataset loaders)
+      {:nimble_csv, "~> 1.3"},
+
       # Observability
       {:telemetry, "~> 1.0"},
 

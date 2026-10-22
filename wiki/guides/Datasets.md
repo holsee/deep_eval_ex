@@ -75,3 +75,42 @@ does.
 deepeval's datasets hold single-turn or multi-turn (conversational) goldens,
 never both. DeepEvalEx has no conversational goldens or test cases yet, so
 its datasets are single-turn.
+
+## Loading goldens and test cases from files
+
+`EvaluationDataset` reads the CSV, JSON and JSONL files deepeval's
+`save_as` writes, and files of your own, with deepeval's loaders. Each
+returns the dataset with what it loaded appended:
+
+```elixir
+dataset =
+  EvaluationDataset.new()
+  |> EvaluationDataset.add_goldens_from_csv_file("goldens.csv")
+  |> EvaluationDataset.add_goldens_from_json_file("goldens.json")
+  |> EvaluationDataset.add_goldens_from_jsonl_file("goldens.jsonl")
+
+dataset =
+  EvaluationDataset.add_test_cases_from_csv_file(dataset, "runs.csv", "question", "answer",
+    context_col_name: "ctx",
+    context_col_delimiter: ";"
+  )
+```
+
+`add_test_cases_from_json_file/5` reads a JSON list of objects the same
+way. The options are deepeval's argument names, with its defaults: a
+golden's columns or keys are named after its fields, list cells (context,
+retrieval context) are joined on `"|"`, and tool calls, metadata, custom
+columns and expectations are JSON. A `nil` name leaves that field unset.
+
+CSV files are read as pandas reads them for deepeval: `NA`, `null`,
+`None`, `N/A`, an empty cell and pandas' other missing-value markers are
+`nil`; a context or tool column that is present but empty gives `[]`, an
+absent one `nil`. Retrieved context written as
+`deepeval_source=...,deepeval_context=...` comes back as
+`DeepEvalEx.Schemas.RetrievedContextData`; as in deepeval, an item that
+itself contains the delimiter comes back split.
+
+A file that does not load raises: `File.Error` when it cannot be read,
+`ArgumentError` otherwise. Goldens with a `scenario` are deepeval's
+conversational goldens, which DeepEvalEx does not support yet, so they
+raise too.
