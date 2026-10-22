@@ -156,12 +156,37 @@ defmodule DeepEvalEx.Turn do
   """
   @spec model_dump_for_prompt(t()) :: OrderedObject.t()
   def model_dump_for_prompt(%__MODULE__{} = turn) do
+    %OrderedObject{values: values} = model_dump(turn)
+
+    values
+    |> Enum.reject(fn {key, _value} -> key in ["audio", "provider_transcript"] end)
+    |> OrderedObject.new()
+  end
+
+  @doc """
+  The turn as deepeval's `model_dump()` gives it: every field, in
+  deepeval's order, as for `model_dump_for_prompt/1` but with `audio` (as
+  the plain data it is kept as) and `provider_transcript`. deepeval's
+  `prettify_list` prints turns this way in verbose logs.
+
+  ## Examples
+
+      iex> turn = DeepEvalEx.Turn.new!(role: :assistant, content: "Hello!")
+      iex> turn |> DeepEvalEx.Turn.model_dump() |> Map.get(:values) |> Enum.map(&elem(&1, 0))
+      ["role", "content", "user_id", "audio", "latency_ms", "interrupted", "provider_transcript",
+       "retrieval_context", "tools_called", "mcp_tools_called", "mcp_resources_called",
+       "mcp_prompts_called", "metadata"]
+  """
+  @spec model_dump(t()) :: OrderedObject.t()
+  def model_dump(%__MODULE__{} = turn) do
     OrderedObject.new([
       {"role", Atom.to_string(turn.role)},
       {"content", turn.content},
       {"user_id", turn.user_id},
+      {"audio", turn.audio},
       {"latency_ms", turn.latency_ms},
       {"interrupted", turn.interrupted},
+      {"provider_transcript", turn.provider_transcript},
       {"retrieval_context", dump_retrieval_context(turn.retrieval_context)},
       {"tools_called", dump_tools_called(turn.tools_called)},
       {"mcp_tools_called", nil},

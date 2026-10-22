@@ -1,0 +1,16 @@
+{
+  "template": "TurnRelevancyMetric.generate_reason",
+  "inputs": {
+    "score": 0.6666666666666666,
+    "irrelevancies": [
+      {
+        "message number": "3",
+        "reason": "The pizza advert ignores the question."
+      },
+      {
+        "message number": "5",
+        "reason": null
+      }
+    ]
+  }
+}

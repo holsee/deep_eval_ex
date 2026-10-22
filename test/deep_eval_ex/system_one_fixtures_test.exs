@@ -33,7 +33,8 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     answer_relevancy_hybrid answer_relevancy_hybrid_fallback answer_relevancy_system_one
     argument_correctness_hybrid argument_correctness_hybrid_fallback
     argument_correctness_system_one
-    batch_system_one batch_system_one_agent batch_system_one_down batch_system_one_json
+    batch_system_one batch_system_one_agent batch_system_one_conversational batch_system_one_down
+    batch_system_one_json
     batch_system_one_pii_alignment batch_system_one_retrieval batch_system_one_safety
     batch_system_one_summarization
     bias_hybrid bias_hybrid_fallback bias_system_one
@@ -42,6 +43,8 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     contextual_recall_hybrid contextual_recall_hybrid_fallback contextual_recall_system_one
     contextual_relevancy_hybrid contextual_relevancy_hybrid_fallback
     contextual_relevancy_system_one
+    conversation_completeness_hybrid conversation_completeness_hybrid_fallback
+    conversation_completeness_system_one
     faithfulness_hybrid faithfulness_hybrid_fallback faithfulness_system_one
     faithfulness_system_one_strict
     hallucination_hybrid hallucination_hybrid_fallback hallucination_system_one
@@ -53,6 +56,8 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     summarization_hybrid summarization_hybrid_fallback summarization_system_one
     tool_correctness_hybrid tool_correctness_hybrid_fallback tool_correctness_system_one
     toxicity_hybrid toxicity_hybrid_fallback toxicity_system_one
+    turn_relevancy_hybrid turn_relevancy_hybrid_fallback turn_relevancy_system_one
+    turn_relevancy_system_one_strict
   )
 
   @answer_kinds %{"noul" => "nouls", "score" => "scores", "choice" => "choices"}
@@ -75,7 +80,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     for kind <-
           ~w(faithfulness hallucination answer_relevancy contextual_precision contextual_recall
              contextual_relevancy bias toxicity pii_leakage prompt_alignment summarization
-             argument_correctness tool_correctness),
+             argument_correctness tool_correctness turn_relevancy conversation_completeness),
         suffix <- ~w(system_one hybrid hybrid_fallback) do
       assert "#{kind}_#{suffix}" in @scenarios
     end
@@ -179,7 +184,9 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
           if input["classifier"] do
             load(unquote(scenario), "classifications.json")
           else
-            [test_case] = load(unquote(scenario), "test_run.json")["testCases"]
+            # A conversational test case is exported apart.
+            test_run = load(unquote(scenario), "test_run.json")
+            [test_case] = test_run["testCases"] ++ (test_run["conversationalTestCases"] || [])
             test_case["metricsData"]
           end
 

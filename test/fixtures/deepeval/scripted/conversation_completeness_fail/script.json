@@ -1,0 +1,84 @@
+{
+  "description": "ConversationCompleteness: one intention unmet, one verdict out of vocabulary and dropped; the turns carry tools, context and metadata",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "conversation_completeness",
+    "params": {
+      "threshold": 0.7,
+      "window_size": 5
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Book a table for two in Zürich on Friday, and tell me the dress code."
+      },
+      {
+        "role": "assistant",
+        "content": "Your table for two at Café Odéon is booked for Friday at 8pm.",
+        "user_id": "agent-3",
+        "latency_ms": 820.5,
+        "retrieval_context": [
+          "Café Odéon opens at 6pm.",
+          {
+            "context": "Table 4 is free on Friday.",
+            "source": "tables.db"
+          }
+        ],
+        "tools_called": [
+          {
+            "name": "book_table",
+            "description": "Book a table",
+            "input_parameters": {
+              "guests": 2,
+              "day": "Friday"
+            },
+            "output": {
+              "table": 4
+            }
+          }
+        ],
+        "metadata": {
+          "channel": "chat"
+        }
+      },
+      {
+        "role": "user",
+        "content": "And can I bring my dog?"
+      },
+      {
+        "role": "assistant",
+        "content": "Have a lovely dinner!"
+      }
+    ]
+  },
+  "responses": {
+    "conversation_completeness": {
+      "intentions": [
+        {
+          "intentions": [
+            "User wants to book a table for two on Friday",
+            "User wants to know the dress code",
+            "User wants to know if they can bring a dog"
+          ]
+        }
+      ],
+      "reason,verdict": [
+        {
+          "verdict": "yes"
+        },
+        {
+          "verdict": "no",
+          "reason": "The LLM never says what the dress code is."
+        },
+        "{\"verdict\": \"unclear\"}"
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.5 because the LLM books the table but never gives the dress code."
+        }
+      ]
+    }
+  }
+}

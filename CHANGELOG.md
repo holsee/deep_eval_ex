@@ -1507,9 +1507,6 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     results.
   - A new `conversational` parity scenario checks the export byte for byte
     against deepeval's file.
-
-  `DeepEvalEx.SystemOne.Batch.prefetch/3` does not batch a conversational
-  test case yet: each of its metrics measures on its own.
 - **`DeepEvalEx.Metrics.ConversationalGEval`**, deepeval 4.3.1's
   `ConversationalGEval`: an LLM judges a whole
   `DeepEvalEx.ConversationalTestCase` against custom criteria or evaluation
@@ -1544,6 +1541,55 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `DeepEvalEx.Metrics.BaseConversationalMetric`; `DeepEvalEx.Evaluator`
   measures `copy_metric(metric)` unless `run_async: false`, and a result
   reports the evaluation model `describe_evaluation_model/2` gives.
+- **`DeepEvalEx.Metrics.TurnRelevancy`**, deepeval 4.3.1's
+  `TurnRelevancyMetric`: for each unit interaction of a
+  `DeepEvalEx.ConversationalTestCase`, the judge decides whether the last
+  assistant turn of a sliding window of at most `:window_size` (default 10)
+  unit interactions is relevant to the turns before it; the score is the
+  share of relevant windows, `1` when there are none. Results are named
+  `"Turn Relevancy"`. Its prompts are `DeepEvalEx.Prompts.TurnRelevancy`,
+  which, as deepeval's, always print the multimodal input rules and the
+  score unformatted.
+- **`DeepEvalEx.Metrics.ConversationCompleteness`**, deepeval 4.3.1's
+  `ConversationCompletenessMetric`: the judge extracts the user's
+  intentions, then decides for each whether the conversation satisfies it;
+  the score is the share satisfied, `1` when there are none. Results are
+  named `"Conversation Completeness"`. As in deepeval, `:window_size`
+  (default 3) is taken but unused. Its prompts are
+  `DeepEvalEx.Prompts.ConversationCompleteness`, which print deepeval's
+  multimodal input rules for a multimodal test case.
+- **System One for conversational metrics** (ADR-0009). Both new metrics
+  run under every eval mode, as deepeval's:
+  - `:hybrid` asks one `DeepEvalEx.SystemOne.Spec.Binary` Noul per sliding
+    window (its `turns`) or per user intention (the `turns` and the
+    `intention`) through the new `DeepEvalEx.SystemOne.Decision.verdict/3`,
+    deepeval's `generate_qag_verdict`: P(yes) of `0.5` and above is `yes`,
+    with the reason `"P(yes)=0.91"`; a failed request falls back to the LLM
+    for that decision.
+  - `:system_one` answers the whole metric from one request about the
+    turns (two Nouls and a four-level Score each). `DeepEvalEx.SystemOne.Runner`
+    and `DeepEvalEx.SystemOne.State.build/2` now take a
+    `DeepEvalEx.ConversationalTestCase`, whose state is built by the new
+    `State.multi_turn/2`, deepeval's `construct_multi_turn_state`
+    (`{"turns": [...], "test_case": {...}}`).
+  - `DeepEvalEx.SystemOne.Batch.prefetch/3` now batches the `:system_one`
+    conversational metrics of a conversational test case into one request,
+    their turns merged, as deepeval does; single-turn metrics are never
+    batched on a conversational test case, nor conversational metrics on a
+    single-turn one, and a multimodal conversation is not batched.
+  - A multimodal conversation has no System One form: both metrics judge it
+    with the LLM.
+- `DeepEvalEx.Metrics.QAG.verdict_from_json/2`, deepeval's
+  `verdict_from_json`, parses a single verdict, `nil` when it is outside the
+  vocabulary; `DeepEvalEx.Turn.model_dump/1` dumps every field of a turn, as
+  deepeval's `model_dump()`; and `DeepEvalEx.Prompts.Python.repr/1` prints
+  a `DeepEvalEx.Turn` as deepeval's `Turn.__repr__`. The metrics' verbose
+  logs use them, matching deepeval's.
+- New prompt goldens for every template of both metrics (their System One
+  templates included), eight scripted-judge scenarios and eight System One
+  scenarios (`system_one`, strict, `hybrid`, `hybrid` fallback and a batched
+  pair) check their prompts, decisions, scores, verbose logs and exported
+  `conversationalTestCases` byte for byte against deepeval's.
 
 ### Changed
 

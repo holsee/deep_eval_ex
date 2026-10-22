@@ -39,6 +39,22 @@ defmodule DeepEvalEx.SystemOne.BatchTest do
     def system_one_eval_spec(_test_case, opts), do: Keyword.get(opts, :test_spec)
   end
 
+  defmodule ConversationalJudged do
+    @moduledoc false
+    # A whole-chain conversational metric whose spec comes from
+    # opts[:test_spec].
+    use DeepEvalEx.Metrics.BaseConversationalMetric
+
+    @impl true
+    def metric_name, do: "Conversational Judged"
+
+    @impl true
+    def required_params, do: [:content]
+
+    @impl true
+    def system_one_eval_spec(_test_case, opts), do: Keyword.get(opts, :test_spec)
+  end
+
   @test_case %TestCase{input: "Q?", actual_output: "A."}
 
   defp spec(params, statement, extra_state \\ []) do
@@ -77,7 +93,60 @@ defmodule DeepEvalEx.SystemOne.BatchTest do
              ] = outcomes
     end
 
-    test "batches nothing on a conversational test case, leaving each metric its own measure" do
+    test "batches the conversational metrics of a conversational test case, merging each turn" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.8), cost: {0.0002, 200, 0})
+
+      conversation =
+        DeepEvalEx.ConversationalTestCase.new!(
+          scenario: "Greeting",
+          turns: [%{role: :user, content: "Hi"}, %{role: :assistant, content: "Hello!"}]
+        )
+
+      outcomes =
+        Batch.prefetch(conversation, [
+          entry(ConversationalJudged, :system_one, mock, spec([:content], "Polite.")),
+          entry(Judged, :system_one, mock, spec([:input], "S")),
+          entry(ConversationalJudged, :system_one, mock, spec([:role, :scenario], "On topic."))
+        ])
+
+      assert [%Mock.Call{state: state, questions: questions}] = Mock.calls(mock)
+
+      assert encode(state) ==
+               ~s({"turns": [{"content": "Hi", "role": "user"}, ) <>
+                 ~s({"content": "Hello!", "role": "assistant"}], "test_case": {"scenario": "Greeting"}})
+
+      assert Enum.map(questions, &elem(&1, 0)) == ["m0.q_0", "m1.q_0"]
+      assert [{:answers, _, %Usage{input_tokens: 100}}, nil, {:answers, _, _}] = outcomes
+    end
+
+    test "batches nothing on a multimodal conversational test case" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.8))
+
+      conversation =
+        DeepEvalEx.ConversationalTestCase.new!(
+          turns: [%{role: :user, content: "What is this? [DEEPEVAL:IMAGE:img-1]"}]
+        )
+
+      assert Batch.prefetch(conversation, [
+               entry(ConversationalJudged, :system_one, mock, spec([:content], "S")),
+               entry(ConversationalJudged, :system_one, mock, spec([:content], "S"))
+             ]) == [nil, nil]
+
+      assert Mock.calls(mock) == []
+    end
+
+    test "batches no conversational metric on a single-turn test case" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.8))
+
+      assert Batch.prefetch(@test_case, [
+               entry(ConversationalJudged, :system_one, mock, spec([:content], "S")),
+               entry(ConversationalJudged, :system_one, mock, spec([:content], "S"))
+             ]) == [nil, nil]
+
+      assert Mock.calls(mock) == []
+    end
+
+    test "batches no single-turn metric on a conversational test case, leaving each its own measure" do
       mock = Mock.new(answer_fn: Mock.noul_answers(0.8))
 
       conversation =

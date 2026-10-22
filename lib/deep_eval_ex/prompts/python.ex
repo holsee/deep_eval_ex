@@ -29,6 +29,7 @@ defmodule DeepEvalEx.Prompts.Python do
 
   alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
   alias DeepEvalEx.TestRun.JSON
+  alias DeepEvalEx.Turn
 
   # Python's default precision for the "g" format.
   @g_precision 6
@@ -92,6 +93,8 @@ defmodule DeepEvalEx.Prompts.Python do
   - lists as `[a, b]`; maps and `Jason.OrderedObject`s as `{k: v}`, in
     iteration order
   - `DeepEvalEx.Schemas.ToolCall`s as deepeval's `ToolCall.__repr__`
+  - `DeepEvalEx.Turn`s as deepeval's `Turn.__repr__`,
+    `Turn(role='user', content='Hi')` and the fields that are set
   - `DeepEvalEx.Schemas.RetrievedContextData` as pydantic's `__repr__`,
     `RetrievedContextData(context='...', source='...')`
   - `DeepEvalEx.Prompts.Python.EnumMember`s as `<Class.NAME: value>`
@@ -448,6 +451,7 @@ defmodule DeepEvalEx.Prompts.Python do
   defp do_repr(float) when is_float(float), do: JSON.float_repr(float)
   defp do_repr(list) when is_list(list), do: [?[, list |> Enum.map(&do_repr/1) |> join(), ?]]
   defp do_repr(%ToolCall{} = tool_call), do: tool_call(tool_call)
+  defp do_repr(%Turn{} = turn), do: turn(turn)
 
   defp do_repr(%RetrievedContextData{context: context, source: source}),
     do: ["RetrievedContextData(context=", string(context), ", source=", string(source), ?)]
@@ -493,6 +497,28 @@ defmodule DeepEvalEx.Prompts.Python do
 
   defp hex(char, width),
     do: char |> Integer.to_string(16) |> String.downcase() |> String.pad_leading(width, "0")
+
+  # deepeval's Turn.__repr__: role and content, then the set fields, each
+  # as name=repr(value), in its order.
+  defp turn(%Turn{} = turn) do
+    optional =
+      for field <- [
+            :audio,
+            :latency_ms,
+            :interrupted,
+            :provider_transcript,
+            :user_id,
+            :retrieval_context,
+            :tools_called,
+            :metadata
+          ],
+          value <- [Map.fetch!(turn, field)],
+          value != nil,
+          do: [Atom.to_string(field), ?=, do_repr(value)]
+
+    fields = [["role=", do_repr(turn.role)], ["content=", do_repr(turn.content)] | optional]
+    ["Turn(", join(fields), ?)]
+  end
 
   # deepeval's ToolCall.__repr__: the set fields one per line, dict
   # input_parameters and output as json.dumps(indent=4, ensure_ascii=False).

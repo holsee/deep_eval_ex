@@ -48,12 +48,16 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
     tool_correctness_system_one tool_correctness_hybrid tool_correctness_hybrid_fallback
     json_correctness_system_one json_correctness_hybrid
     jev_eval jev_eval_strict_not_applicable
+    turn_relevancy_system_one turn_relevancy_system_one_strict turn_relevancy_hybrid
+    turn_relevancy_hybrid_fallback
+    conversation_completeness_system_one conversation_completeness_hybrid
+    conversation_completeness_hybrid_fallback
   )
 
   @batched_scenarios ~w(
     batch_system_one batch_system_one_retrieval batch_system_one_safety
     batch_system_one_pii_alignment batch_system_one_agent batch_system_one_json
-    batch_system_one_summarization
+    batch_system_one_summarization batch_system_one_conversational
     batch_system_one_down
   )
 

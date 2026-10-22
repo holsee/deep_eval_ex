@@ -47,7 +47,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the sixteen LLM-judged metrics, the way the metric itself renders it
+uses for the eighteen LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -121,6 +121,7 @@ from deepeval.metrics import (  # noqa: E402
     ContextualRecallMetric,
     ContextualRelevancyMetric,
     ConversationalGEval,
+    ConversationCompletenessMetric,
     ExactMatchMetric,
     FaithfulnessMetric,
     GEval,
@@ -133,6 +134,7 @@ from deepeval.metrics import (  # noqa: E402
     ToolCorrectnessMetric,
     ToolPermissionMetric,
     ToxicityMetric,
+    TurnRelevancyMetric,
 )
 from deepeval.metrics.contextual_precision.contextual_precision import (  # noqa: E402
     _contextual_precision_verdict_fields,
@@ -152,6 +154,7 @@ from deepeval.metrics.g_eval.utils import (  # noqa: E402
     Rubric,
     construct_conversational_g_eval_turn_params_string,
 )
+from deepeval.metrics.utils import convert_turn_to_dict  # noqa: E402
 from deepeval.metrics.utils.verbose import print_tools_called  # noqa: E402
 from deepeval.models import DeepEvalBaseLLM  # noqa: E402
 from deepeval.prompt import Prompt, PromptMessage  # noqa: E402
@@ -723,6 +726,8 @@ SCRIPTED_METRICS = {
     "pattern_match": PatternMatchMetric,
     "tool_permission": ToolPermissionMetric,
     "conversational_g_eval": ConversationalGEval,
+    "turn_relevancy": TurnRelevancyMetric,
+    "conversation_completeness": ConversationCompletenessMetric,
 }
 
 # Metrics that call no LLM and take no `model`.
@@ -889,6 +894,27 @@ def _render_conversational_g_eval_results(inputs):
 
 def _prompt(metric_cls, method, **kwargs):
     return metric_cls(model=_prompt_judge())._get_prompt(method, multimodal=False, **kwargs)
+
+
+def _turn_dicts(turns):
+    # The turns as the conversational metrics print them: each one's content
+    # and role (convert_turn_to_dict's defaults).
+    return [convert_turn_to_dict(build_turn(t)) for t in turns]
+
+
+def _turn_relevancy(method, **kwargs):
+    # TurnRelevancyMetric passes its template_class (None) and no
+    # multimodal flag; its templates print the multimodal rules regardless.
+    return TurnRelevancyMetric(model=_prompt_judge())._get_prompt(
+        method, template_class=None, **kwargs
+    )
+
+
+def _conversation_completeness(method, inputs, **kwargs):
+    # ConversationCompletenessMetric passes the test case's multimodal flag.
+    return ConversationCompletenessMetric(model=_prompt_judge())._get_prompt(
+        method, multimodal=inputs.get("multimodal", False), **kwargs
+    )
 
 
 def _prompt_alignment(method, inputs, **kwargs):
@@ -1193,6 +1219,38 @@ PROMPT_RENDERERS = {
     "HallucinationMetric._experimental_system_one_verdict": lambda i: _prompt(
         HallucinationMetric, "_experimental_system_one_verdict",
     ),
+    # TurnRelevancy and ConversationCompleteness print the score unformatted,
+    # as the metric passes it.
+    "TurnRelevancyMetric.generate_verdicts": lambda i: _turn_relevancy(
+        "generate_verdicts", sliding_window=_turn_dicts(i["sliding_window"]),
+    ),
+    "TurnRelevancyMetric.generate_reason": lambda i: _turn_relevancy(
+        "generate_reason", score=i["score"], irrelevancies=i["irrelevancies"],
+    ),
+    "TurnRelevancyMetric._experimental_system_one_questions": lambda i: _turn_relevancy(
+        "_experimental_system_one_questions",
+    ),
+    "TurnRelevancyMetric._experimental_system_one_verdict": lambda i: _turn_relevancy(
+        "_experimental_system_one_verdict",
+    ),
+    "ConversationCompletenessMetric.extract_user_intentions": lambda i: _conversation_completeness(
+        "extract_user_intentions", i, turns=_turn_dicts(i["turns"]),
+    ),
+    "ConversationCompletenessMetric.generate_verdicts": lambda i: _conversation_completeness(
+        "generate_verdicts", i, turns=_turn_dicts(i["turns"]), intention=i["intention"],
+    ),
+    "ConversationCompletenessMetric.generate_reason": lambda i: _conversation_completeness(
+        "generate_reason", i,
+        score=i["score"],
+        incompletenesses=i["incompletenesses"],
+        intentions=i["intentions"],
+    ),
+    "ConversationCompletenessMetric._experimental_system_one_questions": lambda i: _prompt(
+        ConversationCompletenessMetric, "_experimental_system_one_questions",
+    ),
+    "ConversationCompletenessMetric._experimental_system_one_verdict": lambda i: _prompt(
+        ConversationCompletenessMetric, "_experimental_system_one_verdict",
+    ),
     "ToolCorrectnessMetric._experimental_system_one_tool_selection_score": lambda i: _prompt(
         ToolCorrectnessMetric, "_experimental_system_one_tool_selection_score",
     ),
@@ -1393,6 +1451,84 @@ PROMPT_CASES = {
                 ],
             },
         },
+    },
+    "turn_relevancy_generate_verdicts": {
+        "template": "TurnRelevancyMetric.generate_verdicts",
+        "inputs": {
+            "sliding_window": [
+                {"role": "user", "content": "My order is late. Where's my café au lait set?"},
+                {"role": "assistant", "content": 'It\'s "on its way": order 42 ships today.'},
+                {"role": "user", "content": "Thanks!\nAnything else I need to do?"},
+                {"role": "assistant", "content": "Have you tried our new pizza?"},
+            ],
+        },
+    },
+    "turn_relevancy_generate_reason": {
+        "template": "TurnRelevancyMetric.generate_reason",
+        "inputs": {
+            "score": 0.6666666666666666,
+            "irrelevancies": [
+                {"message number": "3", "reason": "The pizza advert ignores the question."},
+                {"message number": "5", "reason": None},
+            ],
+        },
+    },
+    "turn_relevancy_generate_reason_no_irrelevancies": {
+        "template": "TurnRelevancyMetric.generate_reason",
+        "inputs": {"score": 1, "irrelevancies": []},
+    },
+    "turn_relevancy_experimental_system_one_questions": {
+        "template": "TurnRelevancyMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "turn_relevancy_experimental_system_one_verdict": {
+        "template": "TurnRelevancyMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "conversation_completeness_extract_user_intentions": {
+        "template": "ConversationCompletenessMetric.extract_user_intentions",
+        "inputs": {
+            "turns": [
+                {"role": "user", "content": "Book a table for two in Zürich on Friday."},
+                {"role": "assistant", "content": "Done: Café Odéon, Friday at 8pm."},
+                {"role": "user", "content": "And what's the dress code?"},
+            ],
+        },
+    },
+    "conversation_completeness_generate_verdicts": {
+        "template": "ConversationCompletenessMetric.generate_verdicts",
+        "inputs": {
+            "turns": [
+                {"role": "user", "content": "Book a table for two in Zürich on Friday."},
+                {"role": "assistant", "content": "Done: Café Odéon, Friday at 8pm."},
+            ],
+            "intention": "User wants to book a table for two on Friday",
+        },
+    },
+    "conversation_completeness_generate_reason": {
+        "template": "ConversationCompletenessMetric.generate_reason",
+        "inputs": {
+            "score": 0.5,
+            "incompletenesses": ["The LLM never says what the dress code is.", None],
+            "intentions": ["User wants to book a table", "User wants to know the dress code"],
+        },
+    },
+    "conversation_completeness_generate_reason_multimodal": {
+        "template": "ConversationCompletenessMetric.generate_reason",
+        "inputs": {
+            "multimodal": True,
+            "score": 1,
+            "incompletenesses": [],
+            "intentions": ["User wants to know what is in the picture"],
+        },
+    },
+    "conversation_completeness_experimental_system_one_questions": {
+        "template": "ConversationCompletenessMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "conversation_completeness_experimental_system_one_verdict": {
+        "template": "ConversationCompletenessMetric._experimental_system_one_verdict",
+        "inputs": {},
     },
     "faithfulness_generate_claims": {
         "template": "FaithfulnessMetric.generate_claims",
@@ -1842,7 +1978,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the sixteen metrics is rendered
+    """Fails unless every bundled template of the eighteen metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()

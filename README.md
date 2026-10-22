@@ -68,6 +68,8 @@ config :deep_eval_ex,
 | **JsonCorrectness** | Output is JSON matching an expected JSON Schema |
 | **GEval** | Flexible criteria-based evaluation using LLM-as-judge |
 | **ConversationalGEval** | GEval for multi-turn conversations (`ConversationalTestCase`) |
+| **TurnRelevancy** | Whether each assistant turn of a conversation is relevant to the turns before it |
+| **ConversationCompleteness** | Whether the assistant satisfies every intention the user expresses in a conversation |
 | **Faithfulness** | RAG: claims supported by retrieval context |
 | **Hallucination** | Detects unsupported statements |
 | **AnswerRelevancy** | Response relevance to input question |

@@ -72,6 +72,48 @@ defmodule DeepEvalEx.SystemOne.StateTest do
     end
   end
 
+  describe "multi_turn/2" do
+    test "sends each turn's turn-level params in order, then the populated case-level ones" do
+      test_case =
+        DeepEvalEx.ConversationalTestCase.new!(
+          scenario: "Café booking",
+          expected_outcome: "",
+          tags: [],
+          turns: [
+            %{role: :user, content: "Book it."},
+            %{
+              role: :assistant,
+              content: "Booked.",
+              retrieval_context: ["Open 6pm", %{"context" => "Table 4", "source" => "db"}],
+              tools_called: [%ToolCall{name: "book", input_parameters: %{"guests" => 2}}]
+            }
+          ]
+        )
+
+      state =
+        State.multi_turn(
+          [:scenario, :tools_called, :content, :expected_outcome, :tags, :retrieval_context],
+          test_case
+        )
+
+      assert encode(state) ==
+               ~s({"turns": [{"content": "Book it."}, {"tools_called": [{"name": "book", ) <>
+                 ~s("type": "FUNCTION", "input_parameters": {"guests": 2}}], "content": "Booked.", ) <>
+                 ~s("retrieval_context": ["Open 6pm", "db: Table 4"]}], ) <>
+                 ~s("test_case": {"scenario": "Café booking"}})
+    end
+
+    test "build/2 sends a conversational test case's state, then the extra state" do
+      test_case =
+        DeepEvalEx.ConversationalTestCase.new!(turns: [%{role: :user, content: "Hi"}])
+
+      spec = %EvalSpec{evaluation_params: [:role], extra_state: [goal: "greet"]}
+
+      assert encode(State.build(spec, test_case)) ==
+               ~s({"turns": [{"role": "user"}], "goal": "greet"})
+    end
+  end
+
   describe "dump/1" do
     test "turns keys into strings, tuples into lists and atoms into names" do
       assert State.dump(%{1 => {:ok, nil}, key: :value}) == %{

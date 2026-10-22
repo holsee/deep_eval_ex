@@ -1,0 +1,94 @@
+{
+  "description": "TurnRelevancy and ConversationCompleteness batched into one request about the turns by evaluate()",
+  "batched": true,
+  "metrics": [
+    {
+      "kind": "turn_relevancy",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    },
+    {
+      "kind": "conversation_completeness",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order 42 is late."
+      },
+      {
+        "role": "assistant",
+        "content": "Sorry! It ships today."
+      },
+      {
+        "role": "user",
+        "content": "Can I change the address to Zürich?"
+      },
+      {
+        "role": "assistant",
+        "content": "Have you tried our new café blend?"
+      },
+      {
+        "role": "user",
+        "content": "Please just change the address."
+      },
+      {
+        "role": "assistant",
+        "content": "Done: order 42 now ships to Zürich."
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 8.4e-05,
+      "input_tokens": 2001,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "m0.q_0": {
+          "probability": 0.7
+        },
+        "m0.q_1": {
+          "probability": 0.4
+        },
+        "m1.q_0": {
+          "probability": 0.9
+        },
+        "m1.q_1": {
+          "probability": 0.85
+        }
+      },
+      "scores": {
+        "m0.q_2": {
+          "score": 2,
+          "probabilities": {
+            "0": 0.05,
+            "1": 0.25,
+            "2": 0.6,
+            "3": 0.1
+          },
+          "confidence": 0.45
+        },
+        "m1.q_2": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.0,
+            "1": 0.05,
+            "2": 0.15,
+            "3": 0.8
+          },
+          "confidence": 0.8
+        }
+      }
+    }
+  }
+}

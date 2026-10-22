@@ -1,0 +1,66 @@
+{
+  "description": "TurnRelevancy in hybrid mode: Jev judges each sliding window, one request per window",
+  "metrics": [
+    {
+      "kind": "turn_relevancy",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5,
+        "window_size": 2
+      }
+    }
+  ],
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order 42 is late."
+      },
+      {
+        "role": "assistant",
+        "content": "Sorry! It ships today."
+      },
+      {
+        "role": "user",
+        "content": "Can I change the address to Zürich?"
+      },
+      {
+        "role": "assistant",
+        "content": "Have you tried our new café blend?"
+      },
+      {
+        "role": "user",
+        "content": "Please just change the address."
+      },
+      {
+        "role": "assistant",
+        "content": "Done: order 42 now ships to Zürich."
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "verdict": {
+          "probability": 0.42
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "turn_relevancy": {
+      "reason": [
+        {
+          "reason": "The score is 0.0 because the System One model found every message irrelevant."
+        }
+      ]
+    }
+  }
+}

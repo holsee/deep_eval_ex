@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.6666666666666666,
+    "success": true,
+    "reason": "The score is 0.6666666666666666 because message 2 advertises coffee.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "verbose_logs": "Turns Sliding Windows (size=10):\n[\n    [Turn(role='user', content='My order 42 is late.'), Turn(role='assistant', content='Sorry! It ships today.')],\n    [Turn(role='user', content='My order 42 is late.'), Turn(role='assistant', content='Sorry! It ships today.'), Turn(role='user', content='Can I change the address to Zürich?'), Turn(role='assistant', content='Have you tried our new café blend?')],\n    [Turn(role='user', content='My order 42 is late.'), Turn(role='assistant', content='Sorry! It ships today.'), Turn(role='user', content='Can I change the address to Zürich?'), Turn(role='assistant', content='Have you tried our new café blend?'), Turn(role='user', content='Please just change the address.'), Turn(role='assistant', content='Done: order 42 now ships to Zürich.')]\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"A coffee advert does not change the address.\"\n    },\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    }\n]",
+    "confidence": null,
+    "system_one_fallback_reason": "ConnectionError: Jev is down; ConnectionError: Jev is down; ConnectionError: Jev is down",
+    "score_breakdown": null,
+    "raised": null
+  }
+]

@@ -112,13 +112,36 @@ defmodule DeepEvalEx.Metrics.QAG do
   def parse_verdicts(other, _allowed), do: {:error, {:invalid_verdicts_response, other}}
 
   defp parse_verdict(%{} = item, allowed) do
-    case normalize_qag_verdict(item["verdict"], allowed) do
+    case verdict_from_json(item, allowed) do
       nil -> []
-      verdict -> [%{verdict: verdict, reason: item["reason"]}]
+      verdict -> [verdict]
     end
   end
 
   defp parse_verdict(_item, _allowed), do: []
+
+  @doc """
+  Parses one verdict of a judge's response, deepeval's `verdict_from_json`,
+  for metrics that ask for a single verdict per prompt (TurnRelevancy,
+  ConversationCompleteness): `%{verdict: verdict, reason: reason}`, its
+  verdict normalised with `normalize_qag_verdict/2`, or `nil` when the
+  verdict is outside `allowed`, which `score_qag_verdicts/2` then ignores.
+
+  ## Examples
+
+      iex> DeepEvalEx.Metrics.QAG.verdict_from_json(%{"verdict" => "No.", "reason" => "Off-topic."})
+      %{verdict: :no, reason: "Off-topic."}
+
+      iex> DeepEvalEx.Metrics.QAG.verdict_from_json(%{"verdict" => "idk"})
+      nil
+  """
+  @spec verdict_from_json(map(), [verdict()]) :: parsed_verdict() | nil
+  def verdict_from_json(%{} = data, allowed \\ yes_no()) do
+    case normalize_qag_verdict(data["verdict"], allowed) do
+      nil -> nil
+      verdict -> %{verdict: verdict, reason: data["reason"]}
+    end
+  end
 
   @doc """
   Scores the fraction of `verdicts` whose `:verdict` is in `:passing`.

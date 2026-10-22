@@ -141,7 +141,23 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "HallucinationMetric._experimental_system_one_verdict" =>
       {Prompts.Hallucination, :system_one_verdict},
     "ToolCorrectnessMetric._experimental_system_one_tool_selection_score" =>
-      {Prompts.ToolCorrectness, :system_one_tool_selection_score}
+      {Prompts.ToolCorrectness, :system_one_tool_selection_score},
+    "TurnRelevancyMetric.generate_verdicts" => {Prompts.TurnRelevancy, :generate_verdicts},
+    "TurnRelevancyMetric.generate_reason" => {Prompts.TurnRelevancy, :generate_reason},
+    "TurnRelevancyMetric._experimental_system_one_questions" =>
+      {Prompts.TurnRelevancy, :system_one_questions},
+    "TurnRelevancyMetric._experimental_system_one_verdict" =>
+      {Prompts.TurnRelevancy, :system_one_verdict},
+    "ConversationCompletenessMetric.extract_user_intentions" =>
+      {Prompts.ConversationCompleteness, :extract_user_intentions},
+    "ConversationCompletenessMetric.generate_verdicts" =>
+      {Prompts.ConversationCompleteness, :generate_verdicts},
+    "ConversationCompletenessMetric.generate_reason" =>
+      {Prompts.ConversationCompleteness, :generate_reason},
+    "ConversationCompletenessMetric._experimental_system_one_questions" =>
+      {Prompts.ConversationCompleteness, :system_one_questions},
+    "ConversationCompletenessMetric._experimental_system_one_verdict" =>
+      {Prompts.ConversationCompleteness, :system_one_verdict}
   }
 
   # {the ROADMAP unit that removes the tag, cases}. The fixtures' README
@@ -158,7 +174,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the sixteen LLM metrics" do
+  test "covers every template of the eighteen LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -174,6 +190,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.ContextualRecall,
             Prompts.ContextualRelevancy,
             Prompts.ConversationalGEval,
+            Prompts.ConversationCompleteness,
             Prompts.Faithfulness,
             Prompts.GEval,
             Prompts.Hallucination,
@@ -182,7 +199,8 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.PromptAlignment,
             Prompts.Summarization,
             Prompts.ToolCorrectness,
-            Prompts.Toxicity
+            Prompts.Toxicity,
+            Prompts.TurnRelevancy
           ],
           {fun, arity} <- module.__info__(:functions),
           arity in [0, 1],
@@ -467,6 +485,44 @@ defmodule DeepEvalEx.PromptGoldenTest do
     ]
   end
 
+  # The turns as the conversational metrics print them, their content and
+  # role (Turns.convert_turn_to_dict/2's defaults).
+  defp options("TurnRelevancyMetric.generate_verdicts", inputs),
+    do: [sliding_window: turn_dicts(inputs["sliding_window"])]
+
+  defp options("TurnRelevancyMetric.generate_reason", inputs) do
+    [
+      score: inputs["score"],
+      irrelevancies:
+        Enum.map(inputs["irrelevancies"], fn irrelevancy ->
+          OrderedObject.new([
+            {"message number", irrelevancy["message number"]},
+            {"reason", irrelevancy["reason"]}
+          ])
+        end)
+    ]
+  end
+
+  defp options("ConversationCompletenessMetric.extract_user_intentions", inputs),
+    do: [turns: turn_dicts(inputs["turns"]), multimodal: Map.get(inputs, "multimodal", false)]
+
+  defp options("ConversationCompletenessMetric.generate_verdicts", inputs) do
+    [
+      turns: turn_dicts(inputs["turns"]),
+      intention: inputs["intention"],
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options("ConversationCompletenessMetric.generate_reason", inputs) do
+    [
+      score: inputs["score"],
+      incompletenesses: inputs["incompletenesses"],
+      intentions: inputs["intentions"],
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
   defp options("ToolCorrectnessMetric.get_tool_selection_score", inputs) do
     [
       user_input: inputs["input"],
@@ -476,6 +532,9 @@ defmodule DeepEvalEx.PromptGoldenTest do
         inputs["available_tools"] |> tool_calls() |> Prompts.ToolCorrectness.format_tools()
     ]
   end
+
+  defp turn_dicts(turns),
+    do: Enum.map(turns, &(&1 |> DeepEvalEx.Turn.new!() |> Turns.convert_turn_to_dict()))
 
   # Evaluation params name test case fields, atoms TestCase and
   # ConversationalTestCase define once loaded.

@@ -1,0 +1,12 @@
+{
+  "score": 1.0,
+  "success": true,
+  "reason": "The score is 1 because every assistant message answers the user.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Turns Sliding Windows (size=10):\n[\n    [Turn(role='user', content='My order is late.'), Turn(role='assistant', content='Sorry! Let me check order 42 for you.')],\n    [Turn(role='user', content='My order is late.'), Turn(role='assistant', content='Sorry! Let me check order 42 for you.'), Turn(role='user', content='Thanks. When will it arrive?'), Turn(role='assistant', content='It ships today and arrives on Friday.')]\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    },\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    }\n]"
+}

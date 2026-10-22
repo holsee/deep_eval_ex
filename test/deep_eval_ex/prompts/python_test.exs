@@ -114,6 +114,34 @@ defmodule DeepEvalEx.Prompts.PythonTest do
   end
 
   # Expected strings are what Jinja 3's `{{ x | tojson }}` renders.
+  describe "repr/1 on turns" do
+    test "prints deepeval's Turn.__repr__: role, content, then the fields that are set" do
+      turn =
+        DeepEvalEx.Turn.new!(
+          role: :assistant,
+          content: "It's here",
+          user_id: "u",
+          latency_ms: 12,
+          interrupted: true,
+          provider_transcript: "hy",
+          retrieval_context: ["a", %{"context" => "c", "source" => "s"}],
+          tools_called: [%ToolCall{name: "x", input_parameters: %{"a" => 1}}],
+          metadata: %{"k" => 1}
+        )
+
+      # deepeval 4.3.1: repr(Turn(...)) of the same fields
+      assert Python.repr(turn) ==
+               ~S|Turn(role='assistant', content="It's here", latency_ms=12.0, interrupted=True, | <>
+                 ~S|provider_transcript='hy', user_id='u', retrieval_context=['a', | <>
+                 ~S|RetrievedContextData(context='c', source='s')], tools_called=[ToolCall(| <>
+                 ~s|\n    name="x",\n    type="FUNCTION",\n    input_parameters={\n        "a": 1\n    }\n)], | <>
+                 ~S|metadata={'k': 1})|
+
+      assert Python.repr(DeepEvalEx.Turn.new!(role: :user, content: "Hi")) ==
+               "Turn(role='user', content='Hi')"
+    end
+  end
+
   describe "tojson/1" do
     test "writes JSON with <, >, & and ' escaped for HTML" do
       assert Python.tojson("plain") == ~S("plain")

@@ -1,0 +1,72 @@
+{
+  "description": "TurnRelevancy decided by Jev in strict mode, with a window size it does not use",
+  "metrics": [
+    {
+      "kind": "turn_relevancy",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5,
+        "strict_mode": true,
+        "window_size": 2
+      }
+    }
+  ],
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order 42 is late."
+      },
+      {
+        "role": "assistant",
+        "content": "Sorry! It ships today."
+      },
+      {
+        "role": "user",
+        "content": "Can I change the address to Zürich?"
+      },
+      {
+        "role": "assistant",
+        "content": "Have you tried our new café blend?"
+      },
+      {
+        "role": "user",
+        "content": "Please just change the address."
+      },
+      {
+        "role": "assistant",
+        "content": "Done: order 42 now ships to Zürich."
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.92
+        },
+        "q_1": {
+          "probability": 0.88
+        }
+      },
+      "scores": {
+        "q_2": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.0,
+            "1": 0.05,
+            "2": 0.15,
+            "3": 0.8
+          },
+          "confidence": 0.6
+        }
+      }
+    }
+  }
+}

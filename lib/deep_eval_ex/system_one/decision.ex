@@ -13,6 +13,8 @@ defmodule DeepEvalEx.SystemOne.Decision do
 
   - `probability/2` - P(yes) of a `DeepEvalEx.SystemOne.Spec.Binary`,
     deepeval's `system_one_probability`
+  - `verdict/3` - one QAG verdict of a `DeepEvalEx.SystemOne.Spec.Binary`,
+    the System One branch of deepeval's `generate_qag_verdict`
   - `choice/2` - the `DeepEvalEx.SystemOne.Answers.Choice` of a
     `DeepEvalEx.SystemOne.Spec.Choice`
   - `score/2` - a `DeepEvalEx.SystemOne.Spec.Score` on `0..1`, deepeval's
@@ -109,6 +111,37 @@ defmodule DeepEvalEx.SystemOne.Decision do
     with {:ok, answers} <- ask(spec, opts, :nouls),
          %Answers.Noul{probability: probability} <- Map.fetch!(answers, @key),
          do: {:ok, probability}
+  end
+
+  @doc """
+  One QAG verdict of a yes/no decision, or `:llm`: the System One branch of
+  deepeval's `generate_qag_verdict` (`_single_verdict`), for metrics that
+  ask for one verdict per prompt. Asks `probability/2`, and thresholds its
+  P(yes) into a verdict of `allowed` (`verdict_from_probability/2`), with
+  the reason `"P(yes)=0.91"`.
+
+  ## Examples
+
+      spec = %DeepEvalEx.SystemOne.Spec.Binary{
+        instructions: "Do the assistant turns in `turns` satisfy `intention`?",
+        state: [turns: turns, intention: intention]
+      }
+
+      case DeepEvalEx.SystemOne.Decision.verdict(spec, QAG.yes_no(), opts) do
+        {:ok, verdict} -> {:ok, verdict}
+        :llm -> llm_verdict(turns, intention, opts)
+      end
+  """
+  @spec verdict(Spec.Binary.t() | nil, [QAG.verdict()], keyword()) ::
+          {:ok, QAG.parsed_verdict()} | :llm
+  def verdict(spec, allowed, opts) when is_list(allowed) do
+    with {:ok, probability} <- probability(spec, opts) do
+      {:ok,
+       %{
+         verdict: verdict_from_probability(probability, allowed),
+         reason: "P(yes)=#{Python.format_fixed(probability, 2)}"
+       }}
+    end
   end
 
   @doc """

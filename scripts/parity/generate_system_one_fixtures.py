@@ -115,6 +115,7 @@ from deepeval.metrics import (  # noqa: E402
     ContextualPrecisionMetric,
     ContextualRecallMetric,
     ContextualRelevancyMetric,
+    ConversationCompletenessMetric,
     FaithfulnessMetric,
     HallucinationMetric,
     JevEval,
@@ -124,6 +125,7 @@ from deepeval.metrics import (  # noqa: E402
     SummarizationMetric,
     ToolCorrectnessMetric,
     ToxicityMetric,
+    TurnRelevancyMetric,
 )
 from deepeval.metrics.jev_eval import Choice, Noul, Score  # noqa: E402
 from deepeval.models.system_one import (  # noqa: E402
@@ -162,6 +164,8 @@ METRICS = {
     "tool_correctness": ToolCorrectnessMetric,
     "json_correctness": JsonCorrectnessMetric,
     "jev_eval": JevEval,
+    "turn_relevancy": TurnRelevancyMetric,
+    "conversation_completeness": ConversationCompletenessMetric,
 }
 
 # Metrics that follow their eval mode but never build a System One model, so
@@ -640,6 +644,47 @@ def faithfulness(eval_mode, **params):
 def metric(kind, eval_mode, **params):
     return {"kind": kind, "eval_mode": eval_mode, "params": {"threshold": 0.5, **params}}
 
+
+# A conversation for the conversational metrics: three unit interactions,
+# the second answered off-topic.
+SUPPORT = {
+    "turns": [
+        {"role": "user", "content": "My order 42 is late."},
+        {"role": "assistant", "content": "Sorry! It ships today."},
+        {"role": "user", "content": "Can I change the address to Zürich?"},
+        {"role": "assistant", "content": "Have you tried our new café blend?"},
+        {"role": "user", "content": "Please just change the address."},
+        {"role": "assistant", "content": "Done: order 42 now ships to Zürich."},
+    ],
+}
+SUPPORT_INTENTIONS = [
+    "User wants to know where order 42 is",
+    "User wants to change the delivery address to Zürich",
+]
+
+TURN_RELEVANCY_REASON = {
+    "reason": [{"reason": "The score is 0.0 because the System One model found every message "
+                          "irrelevant."}],
+}
+TURN_RELEVANCY_VERDICTS = {
+    "reason,verdict": [
+        {"verdict": "yes"},
+        {"verdict": "no", "reason": "A coffee advert does not change the address."},
+        {"verdict": "yes"},
+    ],
+}
+
+COMPLETENESS_LLM = {
+    "intentions": [{"intentions": SUPPORT_INTENTIONS}],
+    "reason": [{"reason": "The score is 1.0 because the LLM explains the delay and changes "
+                          "the address."}],
+}
+COMPLETENESS_VERDICTS = {
+    "reason,verdict": [
+        {"verdict": "yes"},
+        {"verdict": "no", "reason": "The address change is only confirmed after a detour."},
+    ],
+}
 
 FAITHFULNESS_LLM = {
     "truths": [{"truths": VACATION_TRUTHS}],
@@ -1154,6 +1199,68 @@ SCENARIOS = {
         ]}},
     },
     # JevEval: the user's own questions, always on Jev.
+    # TurnRelevancy
+    "turn_relevancy_system_one": {
+        "description": "TurnRelevancy decided by Jev in one request about the turns",
+        "metrics": [metric("turn_relevancy", "system_one")],
+        "test_case": SUPPORT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.55, 0.3, 2, {"0": 0.05, "1": 0.3, "2": 0.5, "3": 0.15}, 0.42)},
+    },
+    "turn_relevancy_system_one_strict": {
+        "description": "TurnRelevancy decided by Jev in strict mode, with a window size it does not use",
+        "metrics": [metric("turn_relevancy", "system_one", strict_mode=True, window_size=2)],
+        "test_case": SUPPORT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.92, 0.88, 3, FOUR_LEVELS_HIGH, 0.6)},
+    },
+    "turn_relevancy_hybrid": {
+        "description": "TurnRelevancy in hybrid mode: Jev judges each sliding window, one request per window",
+        "metrics": [metric("turn_relevancy", "hybrid", window_size=2)],
+        "test_case": SUPPORT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"verdict": noul(0.42)}}},
+        "judge_model": JUDGE,
+        "responses": {"turn_relevancy": TURN_RELEVANCY_REASON},
+    },
+    "turn_relevancy_hybrid_fallback": {
+        "description": "TurnRelevancy in hybrid mode with Jev down: the LLM judges every window",
+        "metrics": [metric("turn_relevancy", "hybrid")],
+        "test_case": SUPPORT,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"turn_relevancy": {
+            **TURN_RELEVANCY_VERDICTS,
+            "reason": [{"reason": "The score is 0.6666666666666666 because message 2 "
+                                  "advertises coffee."}],
+        }},
+    },
+    # ConversationCompleteness
+    "conversation_completeness_system_one": {
+        "description": "ConversationCompleteness decided by Jev in one request about the turns",
+        "metrics": [metric("conversation_completeness", "system_one")],
+        "test_case": SUPPORT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.81, 0.62, 3, FOUR_LEVELS_HIGH, 0.6)},
+    },
+    "conversation_completeness_hybrid": {
+        "description": "ConversationCompleteness in hybrid mode: Jev judges each user intention "
+                       "against the turns, one request per intention",
+        "metrics": [metric("conversation_completeness", "hybrid")],
+        "test_case": SUPPORT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"verdict": noul(0.86)}}},
+        "judge_model": JUDGE,
+        "responses": {"conversation_completeness": COMPLETENESS_LLM},
+    },
+    "conversation_completeness_hybrid_fallback": {
+        "description": "ConversationCompleteness in hybrid mode with Jev down: the LLM judges every intention",
+        "metrics": [metric("conversation_completeness", "hybrid")],
+        "test_case": SUPPORT,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"conversation_completeness": {**COMPLETENESS_LLM, **COMPLETENESS_VERDICTS}},
+    },
     "jev_eval": {
         "description": "JevEval with a weighted Noul, a Score and a Choice whose N/A option stays unlikely",
         "metrics": [{"kind": "jev_eval", "params": {
@@ -1322,6 +1429,21 @@ SCENARIOS = {
         "system_one": {"model": JEV, "cost": JEV_COST,
                        "answers": {"nouls": {"m0.q_0": noul(0.9)},
                                    "scores": {"m0.q_1": score(3, FOUR_LEVELS_HIGH, 0.8)}}},
+    },
+    "batch_system_one_conversational": {
+        "description": "TurnRelevancy and ConversationCompleteness batched into one request about "
+                       "the turns by evaluate()",
+        "batched": True,
+        "metrics": [metric("turn_relevancy", "system_one"),
+                    metric("conversation_completeness", "system_one")],
+        "test_case": SUPPORT,
+        "system_one": {"model": JEV, "cost": {"value": 0.000084, "input_tokens": 2001, "output_tokens": 0},
+                       "answers": {
+                           "nouls": {"m0.q_0": noul(0.7), "m0.q_1": noul(0.4),
+                                     "m1.q_0": noul(0.9), "m1.q_1": noul(0.85)},
+                           "scores": {"m0.q_2": score(2, {"0": 0.05, "1": 0.25, "2": 0.6, "3": 0.1}, 0.45),
+                                      "m1.q_2": score(3, FOUR_LEVELS_HIGH, 0.8)},
+                       }},
     },
     "batch_system_one_down": {
         "description": "Two system_one metrics batched with Jev down: no fallback, each metric errors",

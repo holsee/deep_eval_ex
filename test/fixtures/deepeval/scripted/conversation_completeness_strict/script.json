@@ -1,0 +1,47 @@
+{
+  "description": "ConversationCompleteness in strict mode: an unmet intention without a reason clamps the score to the integer 0",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "conversation_completeness",
+    "params": {
+      "strict_mode": true
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Book a table for two in Zürich on Friday, and tell me the dress code."
+      },
+      {
+        "role": "assistant",
+        "content": "Your table for two at Café Odéon is booked for Friday at 8pm."
+      }
+    ]
+  },
+  "responses": {
+    "conversation_completeness": {
+      "intentions": [
+        {
+          "intentions": [
+            "User wants to book a table",
+            "User wants to know the dress code"
+          ]
+        }
+      ],
+      "reason,verdict": [
+        {
+          "verdict": "yes"
+        },
+        {
+          "verdict": "no"
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0 because the dress code is never given."
+        }
+      ]
+    }
+  }
+}

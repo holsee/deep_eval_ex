@@ -18,10 +18,10 @@ defmodule DeepEvalEx.SystemOne.Batch do
 
   As deepeval's `_candidates`, a metric is a candidate when its effective
   eval mode (its `DeepEvalEx.SystemOne.Context`) is `:system_one`
-  (deepeval also leaves out multimodal test cases, which DeepEvalEx does
-  not have). With fewer than two
-  candidates nothing is batched. A `DeepEvalEx.ConversationalTestCase` is
-  not batched yet: each of its metrics measures on its own. A candidate whose
+  (deepeval also leaves out multimodal test cases, whose metrics all
+  decline them). With fewer than two candidates nothing is batched. A
+  `DeepEvalEx.ConversationalTestCase`'s conversational metrics are batched
+  likewise, their states merged turn by turn. A candidate whose
   `c:DeepEvalEx.Metrics.BaseMetric.system_one_eval_spec/2` declines the test
   case (ToolCorrectness always does) still counts, then runs its own
   measure.
@@ -51,7 +51,15 @@ defmodule DeepEvalEx.SystemOne.Batch do
   """
 
   alias DeepEvalEx.LLM.Usage
-  alias DeepEvalEx.{MissingTestCaseParamsError, Result, SystemOne, TestCase}
+
+  alias DeepEvalEx.{
+    ConversationalTestCase,
+    MissingTestCaseParamsError,
+    Result,
+    SystemOne,
+    TestCase
+  }
+
   alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.SystemOne.{Answers, Context, Decision, Limits, Model, Runner, State}
 
@@ -100,17 +108,16 @@ defmodule DeepEvalEx.SystemOne.Batch do
     running then are not prefetched
   - `:max_concurrency` - the most requests sent at once (default: all)
   """
-  @spec prefetch(TestCase.t() | DeepEvalEx.ConversationalTestCase.t(), [entry()], keyword()) ::
+  @spec prefetch(TestCase.t() | ConversationalTestCase.t(), [entry()], keyword()) ::
           [outcome()]
   def prefetch(test_case, entries, opts \\ [])
 
-  def prefetch(%DeepEvalEx.ConversationalTestCase{}, entries, _opts) when is_list(entries),
-    do: Enum.map(entries, fn _entry -> nil end)
-
-  def prefetch(%TestCase{} = test_case, entries, opts) when is_list(entries) do
+  def prefetch(test_case, entries, opts)
+      when (is_struct(test_case, TestCase) or is_struct(test_case, ConversationalTestCase)) and
+             is_list(entries) do
     candidates =
       for {{module, metric_opts}, index} <- Enum.with_index(entries),
-          candidate?(metric_opts),
+          candidate?(module, test_case, metric_opts),
           do: {index, module, metric_opts}
 
     outcomes =
@@ -121,9 +128,20 @@ defmodule DeepEvalEx.SystemOne.Batch do
     for index <- 0..(length(entries) - 1)//1, do: Map.get(outcomes, index)
   end
 
-  # deepeval's _candidates. DeepEvalEx has no result cache, and no
-  # multimodal test cases, which deepeval never batches.
-  defp candidate?(opts), do: match?(%Context{mode: :system_one}, Keyword.get(opts, :system_one))
+  # deepeval's _candidates: metrics of the test case's kind (conversational
+  # metrics for a conversational test case) whose effective eval mode is
+  # :system_one. DeepEvalEx has no result cache. A multimodal test case's
+  # metrics all decline it, so it is not batched.
+  defp candidate?(_module, %ConversationalTestCase{multimodal: true}, _opts), do: false
+
+  defp candidate?(module, test_case, opts) do
+    conversational_metric?(module) == is_struct(test_case, ConversationalTestCase) and
+      match?(%Context{mode: :system_one}, Keyword.get(opts, :system_one))
+  end
+
+  # A BaseConversationalMetric, which alone defines requires_chatbot_role?/0.
+  defp conversational_metric?(module),
+    do: Code.ensure_loaded?(module) and function_exported?(module, :requires_chatbot_role?, 0)
 
   defp batch(test_case, candidates, opts) do
     {failed, prepared} =

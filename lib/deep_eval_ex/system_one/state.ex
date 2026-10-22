@@ -1,20 +1,28 @@
 defmodule DeepEvalEx.SystemOne.State do
   @moduledoc """
   The JSON state a whole-metric System One request is about, ports of
-  deepeval 4.3.1's `construct_single_turn_state`, `_field` and `_jsonable`
+  deepeval 4.3.1's `construct_single_turn_state`,
+  `construct_multi_turn_state`, `_field` and `_jsonable`
   (`deepeval/metrics/jev_eval/utils.py`,
   `deepeval/metrics/utils/decision.py`) and of the state half of
   `_request_for` (`deepeval/metrics/utils/system_one.py`).
 
   `build/2` sends a test case as `{"test_case": {field: value, ...}}`, in
-  the order of the spec's `evaluation_params`, then the spec's
-  `extra_state`. Objects are `Jason.OrderedObject`s, so the state is
-  encoded in the order deepeval's dicts are.
+  the order of the spec's `evaluation_params`, and a conversational test
+  case as `{"turns": [...], "test_case": {...}}` (`multi_turn/2`, deepeval's
+  `construct_multi_turn_state`), then the spec's `extra_state`. Objects are
+  `Jason.OrderedObject`s, so the state is encoded in the order deepeval's
+  dicts are.
   """
 
+  alias DeepEvalEx.{ConversationalTestCase, TestCase}
+  alias DeepEvalEx.Metrics.Utils.Turns
   alias DeepEvalEx.SystemOne.{Dumpable, EvalSpec}
-  alias DeepEvalEx.TestCase
   alias Jason.OrderedObject
+
+  # deepeval's _TURN_LEVEL_PARAMS, but for the MCP params DeepEvalEx does
+  # not port.
+  @turn_level_params [:role, :content, :retrieval_context, :tools_called]
 
   @doc """
   The state of `spec` for `test_case`: `"test_case"` holds the populated
@@ -32,13 +40,21 @@ defmodule DeepEvalEx.SystemOne.State do
       iex> DeepEvalEx.TestRun.JSON.encode!(state)
       ~s({"test_case": {"input": "Q"}, "relevant_topics": ["billing"]})
   """
-  @spec build(EvalSpec.t(), TestCase.t()) :: OrderedObject.t()
+  @spec build(EvalSpec.t(), TestCase.t() | ConversationalTestCase.t()) :: OrderedObject.t()
   def build(%EvalSpec{} = spec, %TestCase{} = test_case) do
     %OrderedObject{values: [{"test_case", fields}]} =
       single_turn(spec.evaluation_params, test_case)
 
     base = if fields.values == [], do: [], else: [{"test_case", fields}]
+    put_extra_state(base, spec)
+  end
 
+  def build(%EvalSpec{} = spec, %ConversationalTestCase{} = test_case) do
+    %OrderedObject{values: base} = multi_turn(spec.evaluation_params, test_case)
+    put_extra_state(base, spec)
+  end
+
+  defp put_extra_state(base, spec) do
     spec.extra_state
     |> Enum.reject(fn {_key, value} -> is_nil(value) end)
     |> Enum.reduce(base, fn {key, value}, values ->
@@ -131,6 +147,49 @@ defmodule DeepEvalEx.SystemOne.State do
           do: {to_string(param), dump(value)}
 
     OrderedObject.new([{"test_case", OrderedObject.new(fields)}])
+  end
+
+  @doc """
+  A conversational test case's state, deepeval's
+  `construct_multi_turn_state`: `{"turns": [...]}`, each turn's fields among
+  `params` that name a turn field (`:role`, `:content`,
+  `:retrieval_context` and `:tools_called`, in the order of `params`, unset
+  ones left out, see
+  `DeepEvalEx.Metrics.Utils.Turns.convert_turn_to_dict/2`), then, when any
+  is populated, `"test_case"` with the other params' fields (`:scenario`,
+  `:expected_outcome`, ...), as `single_turn/2` sends them. Every value is
+  dumped with `dump/1`.
+
+  ## Examples
+
+      iex> test_case = DeepEvalEx.ConversationalTestCase.new!(
+      ...>   scenario: "Refund",
+      ...>   turns: [%{role: :user, content: "Hi"}, %{role: :assistant, content: "Hello!"}]
+      ...> )
+      iex> state = DeepEvalEx.SystemOne.State.multi_turn([:content, :role, :scenario, :tags], test_case)
+      iex> DeepEvalEx.TestRun.JSON.encode!(state)
+      ~s({"turns": [{"content": "Hi", "role": "user"}, {"content": "Hello!", "role": "assistant"}], "test_case": {"scenario": "Refund"}})
+  """
+  @spec multi_turn([atom()], ConversationalTestCase.t()) :: OrderedObject.t()
+  def multi_turn(params, %ConversationalTestCase{} = test_case) when is_list(params) do
+    turn_params = Enum.filter(params, &(&1 in @turn_level_params))
+
+    turns =
+      Enum.map(test_case.turns, fn turn ->
+        turn |> Turns.convert_turn_to_dict(turn_params) |> dump()
+      end)
+
+    fields =
+      for param <- params,
+          param not in @turn_level_params,
+          value <- [field(test_case, param)],
+          populated?(value),
+          do: {to_string(param), dump(value)}
+
+    case fields do
+      [] -> OrderedObject.new([{"turns", turns}])
+      fields -> OrderedObject.new([{"turns", turns}, {"test_case", OrderedObject.new(fields)}])
+    end
   end
 
   @doc """

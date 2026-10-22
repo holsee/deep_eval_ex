@@ -1,0 +1,164 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "content": "My order 42 is late.",
+              "role": "user"
+            },
+            {
+              "content": "Sorry! It ships today.",
+              "role": "assistant"
+            },
+            {
+              "content": "Can I change the address to Zürich?",
+              "role": "user"
+            },
+            {
+              "content": "Have you tried our new café blend?",
+              "role": "assistant"
+            },
+            {
+              "content": "Please just change the address.",
+              "role": "user"
+            },
+            {
+              "content": "Done: order 42 now ships to Zürich.",
+              "role": "assistant"
+            }
+          ]
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every assistant turn in `turns` is relevant to the conversation so far, given the user turns before it."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "No assistant turn in `turns` ignores the user turn it responds to or changes the subject."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "Across `turns`, how relevant are the assistant turns to the conversation so far?",
+            "criteria": [
+              "Mostly irrelevant",
+              "Several irrelevant turns",
+              "Mostly relevant",
+              "All relevant"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.92
+            },
+            "q_1": {
+              "probability": 0.88
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 3.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.05,
+                "2": 0.15,
+                "3": 0.8
+              },
+              "confidence": 0.6
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "turns": [
+          {
+            "content": "My order 42 is late.",
+            "role": "user"
+          },
+          {
+            "content": "Sorry! It ships today.",
+            "role": "assistant"
+          },
+          {
+            "content": "Can I change the address to Zürich?",
+            "role": "user"
+          },
+          {
+            "content": "Have you tried our new café blend?",
+            "role": "assistant"
+          },
+          {
+            "content": "Please just change the address.",
+            "role": "user"
+          },
+          {
+            "content": "Done: order 42 now ships to Zürich.",
+            "role": "assistant"
+          }
+        ]
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "Every assistant turn in `turns` is relevant to the conversation so far, given the user turns before it."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "No assistant turn in `turns` ignores the user turn it responds to or changes the subject."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "Across `turns`, how relevant are the assistant turns to the conversation so far?",
+          "criteria": [
+            "Mostly irrelevant",
+            "Several irrelevant turns",
+            "Mostly relevant",
+            "All relevant"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.92
+          },
+          "q_1": {
+            "probability": 0.88
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.05,
+              "2": 0.15,
+              "3": 0.8
+            },
+            "confidence": 0.6
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

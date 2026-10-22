@@ -1,0 +1,18 @@
+[
+  {
+    "score": 1.0,
+    "success": true,
+    "reason": "The score is 1.0 because the LLM explains the delay and changes the address.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 2000,
+    "output_tokens": 0,
+    "verbose_logs": "Turns:\n[\n    {\n        \"role\": \"user\",\n        \"content\": \"My order 42 is late.\",\n        \"user_id\": null,\n        \"audio\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"provider_transcript\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": null\n    },\n    {\n        \"role\": \"assistant\",\n        \"content\": \"Sorry! It ships today.\",\n        \"user_id\": null,\n        \"audio\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"provider_transcript\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": null\n    },\n    {\n        \"role\": \"user\",\n        \"content\": \"Can I change the address to Z\\u00fcrich?\",\n        \"user_id\": null,\n        \"audio\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"provider_transcript\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": null\n    },\n    {\n        \"role\": \"assistant\",\n        \"content\": \"Have you tried our new caf\\u00e9 blend?\",\n        \"user_id\": null,\n        \"audio\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"provider_transcript\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": null\n    },\n    {\n        \"role\": \"user\",\n        \"content\": \"Please just change the address.\",\n        \"user_id\": null,\n        \"audio\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"provider_transcript\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": null\n    },\n    {\n        \"role\": \"assistant\",\n        \"content\": \"Done: order 42 now ships to Z\\u00fcrich.\",\n        \"user_id\": null,\n        \"audio\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"provider_transcript\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": null\n    }\n] \n \nUser Intentions:\n[\n    \"User wants to know where order 42 is\",\n    \"User wants to change the delivery address to Zürich\"\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.86\"\n    },\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.86\"\n    }\n]",
+    "confidence": 0.72,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

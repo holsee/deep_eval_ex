@@ -18,7 +18,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
 
   import ExUnit.Assertions
 
-  alias DeepEvalEx.{Evaluator, MetricError, TestCase}
+  alias DeepEvalEx.{ConversationalTestCase, Evaluator, MetricError, TestCase}
   alias DeepEvalEx.LLM.Adapters.Mock, as: LLMMock
 
   alias DeepEvalEx.Metrics.{
@@ -28,6 +28,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     ContextualPrecision,
     ContextualRecall,
     ContextualRelevancy,
+    ConversationCompleteness,
     Faithfulness,
     Hallucination,
     JevEval,
@@ -36,7 +37,8 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     PromptAlignment,
     Summarization,
     ToolCorrectness,
-    Toxicity
+    Toxicity,
+    TurnRelevancy
   }
 
   alias DeepEvalEx.Schemas.ToolCall
@@ -61,7 +63,9 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     "summarization" => Summarization,
     "argument_correctness" => ArgumentCorrectness,
     "tool_correctness" => ToolCorrectness,
-    "json_correctness" => JsonCorrectness
+    "json_correctness" => JsonCorrectness,
+    "turn_relevancy" => TurnRelevancy,
+    "conversation_completeness" => ConversationCompleteness
   }
 
   @eval_modes %{"llm" => :llm, "hybrid" => :hybrid, "system_one" => :system_one}
@@ -332,7 +336,13 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   defp type(%DeepEvalEx.SystemOne.Error{type: type}) when is_binary(type), do: type
   defp type(%module{}), do: module |> Module.split() |> List.last()
 
-  defp test_case(input), do: input["test_case"] |> plain() |> TestCase.new!()
+  # One with turns is a conversational test case.
+  defp test_case(input) do
+    case plain(input["test_case"]) do
+      %{"turns" => _} = spec -> ConversationalTestCase.new!(spec)
+      spec -> TestCase.new!(spec)
+    end
+  end
 
   # Encoded as deepeval's json.dumps and decoded again, so Python floats
   # (2.0) and ordered dumps compare with the fixture's decoded JSON.
@@ -351,8 +361,15 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   defp plain(list) when is_list(list), do: Enum.map(list, &plain/1)
   defp plain(term), do: term
 
-  # The run-level runDuration is the only key following testFailed.
+  # The run-level runDuration is the only key following testFailed; within
+  # conversationalTestCases (which "metricsScores" follows), every
+  # runDuration is a conversational test case's, which deepeval sums from
+  # wall-clock time.
   defp normalise(json) do
-    String.replace(json, ~r/("testFailed": \d+, "runDuration": )[^,}]+/, "\\1\"<normalised>\"")
+    json
+    |> String.replace(~r/"conversationalTestCases": \[.*?\], "metricsScores"/s, fn section ->
+      String.replace(section, ~r/("runDuration": )[^,}]+/, "\\1\"<normalised>\"")
+    end)
+    |> String.replace(~r/("testFailed": \d+, "runDuration": )[^,}]+/, "\\1\"<normalised>\"")
   end
 end

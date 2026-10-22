@@ -121,6 +121,24 @@ defmodule DeepEvalEx.TurnTest do
     end
   end
 
+  describe "model_dump/1" do
+    test "dumps every field of deepeval's model_dump(), audio and provider transcript included" do
+      turn =
+        Turn.new!(
+          role: :user,
+          content: "hi",
+          audio: %{"url" => "a.wav"},
+          provider_transcript: "hy"
+        )
+
+      assert JSON.encode!(Turn.model_dump(turn)) ==
+               ~s({"role": "user", "content": "hi", "user_id": null, "audio": {"url": "a.wav"}, ) <>
+                 ~s("latency_ms": null, "interrupted": null, "provider_transcript": "hy", ) <>
+                 ~s("retrieval_context": null, "tools_called": null, "mcp_tools_called": null, ) <>
+                 ~s("mcp_resources_called": null, "mcp_prompts_called": null, "metadata": null})
+    end
+  end
+
   describe "model_dump_for_prompt/1" do
     test "dumps deepeval's fields in order, without audio or provider transcript" do
       turn =

@@ -28,9 +28,19 @@ defmodule DeepEvalEx.SystemOne.ExportTest do
 
   @fixtures Path.expand("../../fixtures/deepeval/system_one", __DIR__)
 
+  # Single-turn scenarios only: Replay is a single-turn metric. The
+  # conversational hybrid scenarios (a test case with turns) are compared
+  # with the real metrics by DeepEvalEx.Metrics.SystemOneParityTest.
   @scenarios @fixtures
              |> File.ls!()
              |> Enum.filter(&String.contains?(&1, "_hybrid"))
+             |> Enum.reject(fn scenario ->
+               [@fixtures, scenario, "input.json"]
+               |> Path.join()
+               |> File.read!()
+               |> Jason.decode!()
+               |> get_in(["test_case", "turns"])
+             end)
              |> Enum.sort()
 
   for scenario <- @scenarios, file <- ~w(input.json decide.json measure.json test_run.json) do
@@ -120,7 +130,7 @@ defmodule DeepEvalEx.SystemOne.ExportTest do
     end
   end
 
-  test "covers every hybrid scenario" do
+  test "covers every single-turn hybrid scenario" do
     assert length(@scenarios) == 27
   end
 

@@ -175,6 +175,36 @@ defmodule DeepEvalEx.SystemOne.DecisionTest do
     end
   end
 
+  describe "verdict/3" do
+    test "thresholds the Noul's P(yes) into a verdict with deepeval's P(yes) reason" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.5))
+
+      assert {{:ok, %{verdict: :yes, reason: "P(yes)=0.50"}}, [_usage], _ledger} =
+               measure(fn -> Decision.verdict(@binary, QAG.yes_no(), opts(:hybrid, mock)) end)
+
+      assert [%Mock.Call{questions: [{"verdict", %Question.Noul{}}]}] = Mock.calls(mock)
+
+      low = Mock.new(answer_fn: Mock.noul_answers(0.494))
+
+      assert {{:ok, %{verdict: :no, reason: "P(yes)=0.49"}}, _usages, _ledger} =
+               measure(fn -> Decision.verdict(@binary, QAG.yes_no(), opts(:hybrid, low)) end)
+    end
+
+    test "is :llm without a spec, under the llm mode or when the request fails" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.9))
+      assert Decision.verdict(nil, QAG.yes_no(), opts(:hybrid, mock)) == :llm
+      assert Decision.verdict(@binary, QAG.yes_no(), opts(:llm, nil)) == :llm
+
+      down = Mock.new(raises: @jev_down)
+
+      {result, _usages, ledger} =
+        measure(fn -> Decision.verdict(@binary, QAG.yes_no(), opts(:hybrid, down)) end)
+
+      assert result == :llm
+      assert Ledger.fallback_reason(ledger) == "ConnectionError: Jev is down"
+    end
+  end
+
   describe "probability/2 when the request fails under hybrid" do
     test "hands the decision to the LLM and records why" do
       mock = Mock.new(raises: @jev_down)

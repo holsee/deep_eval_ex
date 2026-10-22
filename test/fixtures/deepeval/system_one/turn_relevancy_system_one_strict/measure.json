@@ -1,0 +1,60 @@
+[
+  {
+    "score": 1.0,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.60.\n1. Every assistant turn in `turns` is relevant to the conversation so far, given the user turns before it. -> clearly holds (P(yes)=0.92, confidence=0.84, weight=2) strict=pass\n2. No assistant turn in `turns` ignores the user turn it responds to or changes the subject. -> clearly holds (P(yes)=0.88, confidence=0.76) strict=pass\n3. Across `turns`, how relevant are the assistant turns to the conversation so far? -> \"All relevant\" (expected level=1.00 of 1.00, confidence=0.60) strict=pass\nScore: 1.00 (strict mode: every applicable question passed).",
+    "threshold": 1,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every assistant turn in `turns` is relevant to the conversation so far, given the user turns before it.\n   value=0.920 applicable=True probabilities={'true': 0.92, 'false': 0.08} confidence=0.840 strict_pass=True\n2. [noul, weight=1] No assistant turn in `turns` ignores the user turn it responds to or changes the subject.\n   value=0.880 applicable=True probabilities={'true': 0.88, 'false': 0.12} confidence=0.760 strict_pass=True\n3. [score, weight=1] Across `turns`, how relevant are the assistant turns to the conversation so far?\n   value=1.000 applicable=True probabilities={'Mostly irrelevant': 0.0, 'Several irrelevant turns': 0.05, 'Mostly relevant': 0.15, 'All relevant': 0.8} confidence=0.600 strict_pass=True",
+    "confidence": 0.6,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every assistant turn in `turns` is relevant to the conversation so far, given the user turns before it.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.92,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.92,
+          "false": 0.07999999999999996
+        },
+        "confidence": 0.8400000000000001,
+        "passed": true
+      },
+      {
+        "question": "No assistant turn in `turns` ignores the user turn it responds to or changes the subject.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.88,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.88,
+          "false": 0.12
+        },
+        "confidence": 0.76,
+        "passed": true
+      },
+      {
+        "question": "Across `turns`, how relevant are the assistant turns to the conversation so far?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 1.0,
+        "applicable": true,
+        "probabilities": {
+          "Mostly irrelevant": 0.0,
+          "Several irrelevant turns": 0.05,
+          "Mostly relevant": 0.15,
+          "All relevant": 0.8
+        },
+        "confidence": 0.6,
+        "passed": true
+      }
+    ],
+    "raised": null
+  }
+]

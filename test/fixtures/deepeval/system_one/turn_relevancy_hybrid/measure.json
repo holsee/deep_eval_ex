@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.0,
+    "success": false,
+    "reason": "The score is 0.0 because the System One model found every message irrelevant.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 3000,
+    "output_tokens": 0,
+    "verbose_logs": "Turns Sliding Windows (size=2):\n[\n    [Turn(role='user', content='My order 42 is late.'), Turn(role='assistant', content='Sorry! It ships today.')],\n    [Turn(role='user', content='My order 42 is late.'), Turn(role='assistant', content='Sorry! It ships today.'), Turn(role='user', content='Can I change the address to Zürich?'), Turn(role='assistant', content='Have you tried our new café blend?')],\n    [Turn(role='user', content='Can I change the address to Zürich?'), Turn(role='assistant', content='Have you tried our new café blend?'), Turn(role='user', content='Please just change the address.'), Turn(role='assistant', content='Done: order 42 now ships to Zürich.')]\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"P(yes)=0.42\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"P(yes)=0.42\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"P(yes)=0.42\"\n    }\n]",
+    "confidence": 0.16000000000000003,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "template": "TurnRelevancyMetric.generate_verdicts",
+  "inputs": {
+    "sliding_window": [
+      {
+        "role": "user",
+        "content": "My order is late. Where's my café au lait set?"
+      },
+      {
+        "role": "assistant",
+        "content": "It's \"on its way\": order 42 ships today."
+      },
+      {
+        "role": "user",
+        "content": "Thanks!\nAnything else I need to do?"
+      },
+      {
+        "role": "assistant",
+        "content": "Have you tried our new pizza?"
+      }
+    ]
+  }
+}

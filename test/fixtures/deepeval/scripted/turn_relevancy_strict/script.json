@@ -1,0 +1,44 @@
+{
+  "description": "TurnRelevancy in strict mode without a reason: one irrelevant window clamps the score to the integer 0",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "turn_relevancy",
+    "params": {
+      "strict_mode": true,
+      "include_reason": false
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order is late."
+      },
+      {
+        "role": "assistant",
+        "content": "Sorry! Let me check order 42 for you."
+      },
+      {
+        "role": "user",
+        "content": "Thanks. When will it arrive?"
+      },
+      {
+        "role": "assistant",
+        "content": "It ships today and arrives on Friday."
+      }
+    ]
+  },
+  "responses": {
+    "turn_relevancy": {
+      "reason,verdict": [
+        {
+          "verdict": "yes"
+        },
+        {
+          "verdict": "no",
+          "reason": "It does not say when the order arrives."
+        }
+      ]
+    }
+  }
+}

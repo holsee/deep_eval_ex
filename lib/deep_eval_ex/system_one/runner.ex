@@ -34,8 +34,10 @@ defmodule DeepEvalEx.SystemOne.Runner do
   - a `nil` spec is `:continue` when the metric has an LLM, and raises
     `DeepEvalEx.DeepEvalError` ("... which cannot judge this test case")
     when it has none, which is always the case under `:system_one`
-  - the request's state is `DeepEvalEx.SystemOne.State.build/2` and its
-    questions `DeepEvalEx.SystemOne.Scoring.questions/1`, keyed `"q_<i>"`
+  - the request's state is `DeepEvalEx.SystemOne.State.build/2` (for a
+    `DeepEvalEx.ConversationalTestCase`, its turns and case-level fields,
+    deepeval's `construct_multi_turn_state`) and its questions
+    `DeepEvalEx.SystemOne.Scoring.questions/1`, keyed `"q_<i>"`
   - the request is checked against the model's context budget
     (`c:DeepEvalEx.SystemOne.Adapter.context_budget/1`) before it is sent
 
@@ -74,7 +76,7 @@ defmodule DeepEvalEx.SystemOne.Runner do
     (default: the metric's `metric_name/0`)
   """
 
-  alias DeepEvalEx.{DeepEvalError, Result, SystemOne, TestCase}
+  alias DeepEvalEx.{ConversationalTestCase, DeepEvalError, Result, SystemOne, TestCase}
   alias DeepEvalEx.LLM.Usage
   alias DeepEvalEx.Metrics.Utils.Verbose
 
@@ -98,8 +100,11 @@ defmodule DeepEvalEx.SystemOne.Runner do
   with its System One model, or returns `:continue` for the metric's own
   chain. See the moduledoc.
   """
-  @spec run(module(), TestCase.t(), keyword()) :: {:ok, Result.t()} | :continue
-  def run(metric, %TestCase{} = test_case, opts) when is_atom(metric) and is_list(opts) do
+  @spec run(module(), TestCase.t() | ConversationalTestCase.t(), keyword()) ::
+          {:ok, Result.t()} | :continue
+  def run(metric, test_case, opts)
+      when is_atom(metric) and is_struct(test_case, TestCase) and is_list(opts)
+      when is_atom(metric) and is_struct(test_case, ConversationalTestCase) and is_list(opts) do
     case Context.resolve!(metric, opts) do
       %Context{mode: :system_one} = context -> prepare(metric, test_case, context, opts)
       %Context{} -> :continue
@@ -115,9 +120,11 @@ defmodule DeepEvalEx.SystemOne.Runner do
   Raises `DeepEvalEx.DeepEvalError` when the metric has no System One
   model.
   """
-  @spec request_for(module(), TestCase.t(), keyword()) ::
+  @spec request_for(module(), TestCase.t() | ConversationalTestCase.t(), keyword()) ::
           {EvalSpec.t(), Jason.OrderedObject.t(), Question.questions()} | nil
-  def request_for(metric, %TestCase{} = test_case, opts) when is_atom(metric) and is_list(opts) do
+  def request_for(metric, test_case, opts)
+      when is_atom(metric) and is_struct(test_case, TestCase) and is_list(opts)
+      when is_atom(metric) and is_struct(test_case, ConversationalTestCase) and is_list(opts) do
     case eval_spec(metric, test_case, opts) do
       %EvalSpec{} = spec ->
         %Context{model: model} = Context.resolve!(metric, opts)

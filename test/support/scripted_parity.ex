@@ -27,6 +27,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     ContextualRecall,
     ContextualRelevancy,
     ConversationalGEval,
+    ConversationCompleteness,
     ExactMatch,
     Faithfulness,
     GEval,
@@ -38,7 +39,8 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     Summarization,
     ToolCorrectness,
     ToolPermission,
-    Toxicity
+    Toxicity,
+    TurnRelevancy
   }
 
   alias DeepEvalEx.Metrics.GEval.Rubric
@@ -66,7 +68,9 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "json_correctness" => JsonCorrectness,
     "tool_correctness" => ToolCorrectness,
     "pattern_match" => PatternMatch,
-    "tool_permission" => ToolPermission
+    "tool_permission" => ToolPermission,
+    "turn_relevancy" => TurnRelevancy,
+    "conversation_completeness" => ConversationCompleteness
   }
 
   # Pairs of steps that need not keep deepeval's relative order, as neither
