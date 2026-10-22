@@ -278,5 +278,10 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     if Keyword.has_key?(opts, key), do: Keyword.update!(opts, key, fun), else: opts
   end
 
-  defp atoms(names), do: Enum.map(names, &String.to_existing_atom/1)
+  # Evaluation params name test case fields, atoms TestCase defines once
+  # loaded; without it a test running first in a fresh VM sees none.
+  defp atoms(names) do
+    Code.ensure_loaded!(TestCase)
+    Enum.map(names, &String.to_existing_atom/1)
+  end
 end
