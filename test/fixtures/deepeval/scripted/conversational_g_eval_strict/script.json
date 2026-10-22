@@ -1,0 +1,53 @@
+{
+  "description": "ConversationalGEval in strict mode: the threshold forced to 1, a 7/10 clamped to the integer 0",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "conversational_g_eval",
+    "params": {
+      "name": "Helpfulness",
+      "evaluation_params": [
+        "role",
+        "content"
+      ],
+      "criteria": "Determine whether the assistant resolves the user's request politely.",
+      "strict_mode": true
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order is late, I want a refund."
+      },
+      {
+        "role": "assistant",
+        "content": "Sorry about that! Could you give me the order number?"
+      },
+      {
+        "role": "user",
+        "content": "It's order 42."
+      },
+      {
+        "role": "assistant",
+        "content": "Thanks, I've started a refund for order 42. It takes 5 business days."
+      }
+    ]
+  },
+  "responses": {
+    "conversational_g_eval": {
+      "steps": [
+        {
+          "steps": [
+            "Check that the assistant resolves the request."
+          ]
+        }
+      ],
+      "reason,score": [
+        {
+          "reason": "The request is resolved but the refund delay is not explained.",
+          "score": 7
+        }
+      ]
+    }
+  }
+}

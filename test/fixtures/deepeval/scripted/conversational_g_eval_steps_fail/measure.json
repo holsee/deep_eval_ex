@@ -1,0 +1,12 @@
+{
+  "score": 0.25,
+  "success": false,
+  "reason": "The assistant refused the refund, so the expected outcome is not reached.",
+  "threshold": 0.6,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Criteria:\nNone \n \nEvaluation Steps:\n[\n    \"Read the scenario and the expected outcome.\",\n    \"Check that the conversation reaches the expected outcome.\"\n] \n \nRubric:\n0-5: The expected outcome is not reached.\n6-10: The expected outcome is reached."
+}

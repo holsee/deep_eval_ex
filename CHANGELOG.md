@@ -1510,6 +1510,40 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
   `DeepEvalEx.SystemOne.Batch.prefetch/3` does not batch a conversational
   test case yet: each of its metrics measures on its own.
+- **`DeepEvalEx.Metrics.ConversationalGEval`**, deepeval 4.3.1's
+  `ConversationalGEval`: an LLM judges a whole
+  `DeepEvalEx.ConversationalTestCase` against custom criteria or evaluation
+  steps, with an optional `DeepEvalEx.Metrics.GEval.Rubric`. Results are
+  named `"<name> [Conversational GEval]"`. It is LLM-only, as deepeval's:
+  under `:hybrid` and `:system_one` it still calls its LLM.
+  - `:content` and `:role` are appended to `:evaluation_params` when
+    missing. Per-turn params (`:content`, `:role`, `:retrieval_context`,
+    `:tools_called`) are printed for each turn; conversation-level ones
+    (`:scenario`, `:expected_outcome`, `:metadata`, `:tags`) once, and must
+    be set on the test case. `:audio`, and params deepeval cannot name in
+    its prompt (`:context`, `:user_description`, `:chatbot_role`, ...),
+    raise `ArgumentError` in `new/1`.
+  - The judge scores from 0 to 10 and the score is divided by 10, a
+    fractional score kept; strict mode clamps a score below 1 to `0`.
+  - A judge with logprobs gets GEval's weighted score, with deepeval's
+    conversational differences: the first token equal to the score is
+    weighted, and a weighting left with no token errors the metric with
+    `"float division by zero"`
+    (`ConversationalGEval.calculate_weighted_summed_score/2`).
+  - Its prompts are `DeepEvalEx.Prompts.ConversationalGEval`
+    (`generate_evaluation_steps/1`, `generate_evaluation_results/1`),
+    overridable with `:evaluation_template`.
+  - New prompt goldens and scripted-judge scenarios check its prompts,
+    scores, verbose logs and exported test run byte for byte against
+    deepeval's, including the `conversationalTestCases` block.
+- **Metric copies, as deepeval's asynchronous `evaluate()` makes them.**
+  deepeval measures copies of its metrics rebuilt from their attributes,
+  and a `ConversationalGEval` copy reports its evaluation model as
+  `"<judge> (audio: <judge>)"`. Conversational metrics may implement the new
+  optional `copy_metric/1` and `describe_evaluation_model/2` callbacks of
+  `DeepEvalEx.Metrics.BaseConversationalMetric`; `DeepEvalEx.Evaluator`
+  measures `copy_metric(metric)` unless `run_async: false`, and a result
+  reports the evaluation model `describe_evaluation_model/2` gives.
 
 ### Changed
 

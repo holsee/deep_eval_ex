@@ -1,0 +1,232 @@
+{
+  "description": "ConversationalGEval scored 7/10 with logprobs: unlike GEval, the score weighted by the FIRST token equal to the score (here in the reason), 1% and non-decimal tokens dropped",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "conversational_g_eval",
+    "params": {
+      "name": "Helpfulness",
+      "evaluation_params": [
+        "content",
+        "role",
+        "retrieval_context",
+        "tools_called"
+      ],
+      "criteria": "Determine whether the assistant resolves the user's request politely.",
+      "threshold": 0.7
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Where is order 42?"
+      },
+      {
+        "role": "assistant",
+        "content": "It shipped on 1 October.",
+        "retrieval_context": [
+          "Orders ship within 2 days.",
+          {
+            "context": "Order 42 shipped on 1 October.",
+            "source": "orders.db"
+          }
+        ],
+        "tools_called": [
+          {
+            "name": "lookup_order",
+            "input_parameters": {
+              "order": 42
+            },
+            "output": {
+              "status": "shipped"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "responses": {
+    "conversational_g_eval": {
+      "steps": [
+        {
+          "steps": [
+            "Check that the assistant answers with the order's status."
+          ]
+        }
+      ],
+      "raw_response": [
+        {
+          "id": "chatcmpl-scripted",
+          "object": "chat.completion",
+          "created": 1761140000,
+          "model": "scripted-judge",
+          "choices": [
+            {
+              "index": 0,
+              "finish_reason": "stop",
+              "message": {
+                "role": "assistant",
+                "content": "{\"reason\": \"Polite: 7 of the 8 replies resolve the request.\", \"score\": 7}"
+              },
+              "logprobs": {
+                "content": [
+                  {
+                    "token": "{\"",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": "reason",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": "\":",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": " \"",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": "Polite",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": ":",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": " ",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": "7",
+                    "logprob": -0.1,
+                    "top_logprobs": [
+                      {
+                        "token": "7",
+                        "logprob": -0.1
+                      },
+                      {
+                        "token": "6",
+                        "logprob": -2.0
+                      },
+                      {
+                        "token": "seven",
+                        "logprob": -2.5
+                      },
+                      {
+                        "token": "5",
+                        "logprob": -6.0
+                      }
+                    ]
+                  },
+                  {
+                    "token": " of",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": " the",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": " ",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": "8",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": " replies",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": " resolve",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": " the",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": " request",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": ".\"",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": ",",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": " \"",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": "score",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": "\":",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": " ",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  },
+                  {
+                    "token": "7",
+                    "logprob": -0.3,
+                    "top_logprobs": [
+                      {
+                        "token": "7",
+                        "logprob": -0.3
+                      },
+                      {
+                        "token": "8",
+                        "logprob": -1.5
+                      },
+                      {
+                        "token": "9",
+                        "logprob": -3.0
+                      }
+                    ]
+                  },
+                  {
+                    "token": "}",
+                    "logprob": 0.0,
+                    "top_logprobs": []
+                  }
+                ],
+                "refusal": null
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -16,7 +16,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
 
   import ExUnit.Assertions
 
-  alias DeepEvalEx.{Evaluator, MetricError}
+  alias DeepEvalEx.{ConversationalTestCase, Evaluator, MetricError}
   alias DeepEvalEx.LLM.Adapters.Mock
 
   alias DeepEvalEx.Metrics.{
@@ -26,6 +26,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     ContextualPrecision,
     ContextualRecall,
     ContextualRelevancy,
+    ConversationalGEval,
     ExactMatch,
     Faithfulness,
     GEval,
@@ -40,6 +41,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     Toxicity
   }
 
+  alias DeepEvalEx.Metrics.GEval.Rubric
   alias DeepEvalEx.Schemas.ToolCall
   alias DeepEvalEx.Test.JSONDiff
   alias DeepEvalEx.TestCase
@@ -254,9 +256,16 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     assert ours == theirs
   end
 
-  # The run-level runDuration is the only key following testFailed.
+  # The run-level runDuration is the only key following testFailed; within
+  # conversationalTestCases (which "metricsScores" follows), every
+  # runDuration is a conversational test case's, which deepeval sums from
+  # wall-clock time.
   defp normalise(json) do
-    String.replace(json, ~r/("testFailed": \d+, "runDuration": )[^,}]+/, "\\1\"<normalised>\"")
+    json
+    |> String.replace(~r/"conversationalTestCases": \[.*?\], "metricsScores"/s, fn section ->
+      String.replace(section, ~r/("runDuration": )[^,}]+/, "\\1\"<normalised>\"")
+    end)
+    |> String.replace(~r/("testFailed": \d+, "runDuration": )[^,}]+/, "\\1\"<normalised>\"")
   end
 
   defp decode(json), do: Jason.decode!(json, objects: :ordered_objects)
@@ -284,9 +293,20 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     Mock.script(Map.get(script["responses"], kind, %{}), model: script["judge_model"])
   end
 
-  defp test_case(%{"test_case" => %OrderedObject{values: pairs}}) do
-    pairs
-    |> Map.new(fn
+  # One with turns is a conversational test case, each turn built likewise.
+  defp test_case(%{"test_case" => %OrderedObject{} = spec}) do
+    if turns = spec["turns"] do
+      spec
+      |> fields()
+      |> Map.put("turns", Enum.map(turns, &fields/1))
+      |> ConversationalTestCase.new!()
+    else
+      spec |> fields() |> TestCase.new!()
+    end
+  end
+
+  defp fields(%OrderedObject{values: pairs}) do
+    Map.new(pairs, fn
       {key, tool_calls} when key in ["tools_called", "expected_tools"] ->
         {key, Enum.map(tool_calls, &Map.new(&1.values))}
 
@@ -301,7 +321,6 @@ defmodule DeepEvalEx.Test.ScriptedParity do
       pair ->
         pair
     end)
-    |> TestCase.new!()
   end
 
   # The metric and the evaluation options deepeval's constructor params
@@ -309,6 +328,16 @@ defmodule DeepEvalEx.Test.ScriptedParity do
   defp metric(%{"metric" => %{"kind" => "g_eval", "params" => params}}) do
     opts = params |> options(GEval) |> Keyword.update(:evaluation_params, [], &atoms/1)
     {GEval.new(opts), [adapter: :mock]}
+  end
+
+  defp metric(%{"metric" => %{"kind" => "conversational_g_eval", "params" => params}}) do
+    opts =
+      params
+      |> options(ConversationalGEval)
+      |> Keyword.update!(:evaluation_params, &conversational_atoms/1)
+      |> update_present(:rubric, &Enum.map(&1, fn rubric -> rubric(rubric) end))
+
+    {ConversationalGEval.new(opts), [adapter: :mock]}
   end
 
   defp metric(%{"metric" => %{"kind" => kind, "params" => params}}) do
@@ -334,6 +363,9 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     tool_call
   end
 
+  defp rubric(%{"score_range" => range, "expected_outcome" => outcome}),
+    do: Rubric.new!(score_range: range, expected_outcome: outcome)
+
   defp update_present(opts, key, fun) do
     if Keyword.has_key?(opts, key), do: Keyword.update!(opts, key, fun), else: opts
   end
@@ -342,6 +374,11 @@ defmodule DeepEvalEx.Test.ScriptedParity do
   # loaded; without it a test running first in a fresh VM sees none.
   defp atoms(names) do
     Code.ensure_loaded!(TestCase)
+    Enum.map(names, &String.to_existing_atom/1)
+  end
+
+  defp conversational_atoms(names) do
+    Code.ensure_loaded!(ConversationalTestCase)
     Enum.map(names, &String.to_existing_atom/1)
   end
 end

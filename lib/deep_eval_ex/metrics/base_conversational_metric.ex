@@ -142,7 +142,27 @@ defmodule DeepEvalEx.Metrics.BaseConversationalMetric do
   """
   @callback system_one_model?() :: boolean()
 
+  @doc """
+  Optional callback giving the evaluation model a result reports for the
+  judge model `model` (the name the LLM adapter reported, else
+  `c:evaluation_model/1`'s), when it names more than the model, as
+  `DeepEvalEx.Metrics.ConversationalGEval`'s audio judge.
+  """
+  @callback describe_evaluation_model(model :: String.t(), opts()) :: String.t()
+
+  @doc """
+  Optional callback returning the copy of a metric struct that deepeval's
+  asynchronous `evaluate()` would measure (its `copy_metrics` rebuilds each
+  metric from its attributes), when it differs from the metric. The
+  `DeepEvalEx.Evaluator` measures `copy_metric(metric)` unless
+  `run_async: false`, as deepeval's synchronous executor measures the
+  metric itself.
+  """
+  @callback copy_metric(metric :: struct()) :: struct()
+
   @optional_callbacks [
+    describe_evaluation_model: 2,
+    copy_metric: 1,
     default_opts: 0,
     metric_name: 1,
     evaluation_model: 1,

@@ -47,7 +47,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the fifteen LLM-judged metrics, the way the metric itself renders it
+uses for the sixteen LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -120,6 +120,7 @@ from deepeval.metrics import (  # noqa: E402
     ContextualPrecisionMetric,
     ContextualRecallMetric,
     ContextualRelevancyMetric,
+    ConversationalGEval,
     ExactMatchMetric,
     FaithfulnessMetric,
     GEval,
@@ -147,7 +148,10 @@ from deepeval.metrics.faithfulness.faithfulness import (  # noqa: E402
     _faithfulness_truths_limit_phrase,
     _faithfulness_truths_multimodal_instruction,
 )
-from deepeval.metrics.g_eval.utils import Rubric  # noqa: E402
+from deepeval.metrics.g_eval.utils import (  # noqa: E402
+    Rubric,
+    construct_conversational_g_eval_turn_params_string,
+)
 from deepeval.metrics.utils.verbose import print_tools_called  # noqa: E402
 from deepeval.models import DeepEvalBaseLLM  # noqa: E402
 from deepeval.prompt import Prompt, PromptMessage  # noqa: E402
@@ -155,6 +159,7 @@ from deepeval.templates import iter_base_template_methods  # noqa: E402
 from deepeval.test_case import (  # noqa: E402
     ConversationalTestCase,
     LLMTestCase,
+    MultiTurnParams,
     RetrievedContextData,
     SingleTurnParams,
     ToolCall,
@@ -717,6 +722,7 @@ SCRIPTED_METRICS = {
     "tool_correctness": ToolCorrectnessMetric,
     "pattern_match": PatternMatchMetric,
     "tool_permission": ToolPermissionMetric,
+    "conversational_g_eval": ConversationalGEval,
 }
 
 # Metrics that call no LLM and take no `model`.
@@ -730,6 +736,10 @@ def build_scripted_metric(script):
     params = dict(script["metric"]["params"])
     if kind == "g_eval" and "evaluation_params" in params:
         params["evaluation_params"] = [SingleTurnParams(p) for p in params["evaluation_params"]]
+    if kind == "conversational_g_eval" and "evaluation_params" in params:
+        params["evaluation_params"] = [MultiTurnParams(p) for p in params["evaluation_params"]]
+    if kind in ("g_eval", "conversational_g_eval") and "rubric" in params:
+        params["rubric"] = [Rubric(**rubric) for rubric in params["rubric"]]
     if kind == "tool_correctness":
         if "evaluation_params" in params:
             params["evaluation_params"] = [ToolCallParams(p) for p in params["evaluation_params"]]
@@ -848,6 +858,35 @@ def _render_g_eval_steps(inputs):
     return metric._steps_prompt(False)
 
 
+def _conversational_g_eval(inputs, **kwargs):
+    rubric = inputs.get("rubric")
+    return ConversationalGEval(
+        name="Golden",
+        evaluation_params=[MultiTurnParams(p) for p in inputs["evaluation_params"]],
+        rubric=[Rubric(**r) for r in rubric] if rubric else None,
+        model=_prompt_judge(),
+        **kwargs,
+    )
+
+
+def _render_conversational_g_eval_steps(inputs):
+    # ConversationalGEval._generate_evaluation_steps, up to the judge call;
+    # the constructor appends CONTENT and ROLE to the evaluation params.
+    metric = _conversational_g_eval(inputs, criteria=inputs["criteria"])
+    return metric._get_prompt(
+        "generate_evaluation_steps",
+        criteria=metric.criteria,
+        parameters=construct_conversational_g_eval_turn_params_string(metric.evaluation_params),
+    )
+
+
+def _render_conversational_g_eval_results(inputs):
+    metric = _conversational_g_eval(inputs, evaluation_steps=inputs["evaluation_steps"])
+    prompt, audio = metric._evaluation_prompt(build_test_case(inputs["test_case"]))
+    assert audio == []
+    return prompt
+
+
 def _prompt(metric_cls, method, **kwargs):
     return metric_cls(model=_prompt_judge())._get_prompt(method, multimodal=False, **kwargs)
 
@@ -900,6 +939,8 @@ PROMPT_RENDERERS = {
     "GEval.generate_evaluation_steps": _render_g_eval_steps,
     "GEval.generate_evaluation_results": lambda i: _render_g_eval_results(i, False),
     "GEval.generate_strict_evaluation_results": lambda i: _render_g_eval_results(i, True),
+    "ConversationalGEval.generate_evaluation_steps": _render_conversational_g_eval_steps,
+    "ConversationalGEval.generate_evaluation_results": _render_conversational_g_eval_results,
     "FaithfulnessMetric.generate_claims": lambda i: _prompt(
         FaithfulnessMetric, "generate_claims",
         actual_output=i["actual_output"],
@@ -1279,6 +1320,77 @@ PROMPT_CASES = {
             "test_case": {
                 "input": "What is the capital of France?",
                 "actual_output": "Paris is the capital of France.",
+            },
+        },
+    },
+    "conversational_g_eval_generate_evaluation_steps": {
+        "template": "ConversationalGEval.generate_evaluation_steps",
+        "inputs": {
+            "criteria": "Determine whether the assistant resolves the user's request politely.",
+            "evaluation_params": ["content"],
+        },
+    },
+    "conversational_g_eval_generate_evaluation_steps_case_params": {
+        "template": "ConversationalGEval.generate_evaluation_steps",
+        "inputs": {
+            "criteria": "Check that the conversation plays out the scenario and reaches the expected outcome.",
+            "evaluation_params": ["scenario", "expected_outcome", "role", "content"],
+        },
+    },
+    "conversational_g_eval_generate_evaluation_results": {
+        "template": "ConversationalGEval.generate_evaluation_results",
+        "inputs": {
+            "evaluation_steps": [
+                "Read the scenario and the tags.",
+                "Check that each assistant turn answers the user turn before it.",
+            ],
+            "evaluation_params": ["scenario", "metadata", "tags", "content"],
+            "test_case": {
+                "scenario": "A customer asks for a refund on a late order. café ✓",
+                "metadata": {"channel": "chat", "priority": 2, "escalated": False},
+                "tags": ["refunds", "support"],
+                "turns": [
+                    {"role": "user", "content": "My order is late, I want a refund."},
+                    {"role": "assistant", "content": "Sorry! I've started a refund for order 42."},
+                    {"role": "user", "content": "Thanks, that's all."},
+                ],
+            },
+        },
+    },
+    "conversational_g_eval_generate_evaluation_results_rubric": {
+        "template": "ConversationalGEval.generate_evaluation_results",
+        "inputs": {
+            "evaluation_steps": [
+                "Check that the assistant's answers are grounded in its retrieval context.",
+                "Check that the assistant called the right tools.",
+            ],
+            "evaluation_params": ["role", "content", "retrieval_context", "tools_called"],
+            "rubric": [
+                {"score_range": [0, 3], "expected_outcome": "Ungrounded answers or wrong tools."},
+                {"score_range": [4, 7], "expected_outcome": "Partly grounded answers."},
+                {"score_range": [8, 10], "expected_outcome": "Grounded answers and the right tools."},
+            ],
+            "test_case": {
+                "expected_outcome": "Not an evaluation param, so not in the prompt.",
+                "turns": [
+                    {"role": "user", "content": "Where is order 42?"},
+                    {
+                        "role": "assistant",
+                        "content": "It shipped on 1 October.",
+                        "retrieval_context": [
+                            "Orders ship within 2 days.",
+                            {"context": "Order 42 shipped on 1 October.", "source": "orders.db"},
+                        ],
+                        "tools_called": [
+                            {
+                                "name": "lookup_order",
+                                "description": "Find an order",
+                                "input_parameters": {"order": 42},
+                                "output": {"status": "shipped"},
+                            },
+                        ],
+                    },
+                ],
             },
         },
     },
@@ -1730,7 +1842,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the fifteen metrics is rendered
+    """Fails unless every bundled template of the sixteen metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()

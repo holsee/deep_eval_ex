@@ -1,0 +1,12 @@
+{
+  "score": 0.6,
+  "success": true,
+  "reason": "Resolved, with a short delay.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Criteria:\nNone \n \nEvaluation Steps:\n[\n    \"Check that the assistant resolves the request.\"\n] \n \nRubric:\nNone"
+}

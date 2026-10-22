@@ -579,7 +579,19 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
       Usage.summarize(usages) ||
         %{evaluation_model: nil, input_tokens: nil, output_tokens: nil, evaluation_cost: nil}
 
-    Map.update!(summary, :evaluation_model, &(&1 || configured_model(module, opts)))
+    Map.update!(summary, :evaluation_model, fn model ->
+      (model || configured_model(module, opts)) |> describe_model(module, opts)
+    end)
+  end
+
+  # A metric may report its judge as more than the model's name
+  # (ConversationalGEval's describe_evaluation_model/2).
+  defp describe_model(nil, _module, _opts), do: nil
+
+  defp describe_model(model, module, opts) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :describe_evaluation_model, 2),
+      do: module.describe_evaluation_model(model, opts),
+      else: model
   end
 
   defp configured_model(module, opts) do

@@ -109,6 +109,13 @@ defmodule DeepEvalEx.Evaluator do
   asynchronous executor records it, not the synchronous executor's
   `DeepEvalEx.Result.format_error_text/2`.
 
+  As deepeval's asynchronous executor measures copies of the metrics, each
+  rebuilt from its attributes, `evaluate/3` measures the copy a metric
+  struct's `copy_metric/1` returns, if it has one, unless
+  `run_async: false` (see `DeepEvalEx.Metrics.BaseConversationalMetric`);
+  a `DeepEvalEx.Metrics.ConversationalGEval` copy reports its judge as its
+  audio judge too, as deepeval's does.
+
   ## Timeouts
 
   `:timeout` defaults to deepeval's per-task timeout, so
@@ -241,6 +248,7 @@ defmodule DeepEvalEx.Evaluator do
           {[[Result.t()]], [float()]}
   def evaluate_with_durations(test_cases, metrics, opts \\ []) do
     {opts, throttle_value} = async_config!(opts)
+    metrics = copy_metrics(metrics, opts)
     opts = preflight(metrics, opts)
     concurrency = Keyword.fetch!(opts, :concurrency)
     timeout = case_timeout(metrics, opts)
@@ -777,6 +785,22 @@ defmodule DeepEvalEx.Evaluator do
         max(timeout, rounds * metric_timeout + @timeout_grace)
     end
   end
+
+  # deepeval's asynchronous executor measures copies of the metrics, each
+  # rebuilt from its attributes (copy_metrics); its synchronous executor
+  # measures the metrics themselves. A metric struct whose copy differs
+  # implements copy_metric/1 (see DeepEvalEx.Metrics.BaseConversationalMetric).
+  defp copy_metrics(metrics, opts) do
+    if Keyword.get(opts, :run_async, true),
+      do: Enum.map(metrics, &copy_metric/1),
+      else: metrics
+  end
+
+  defp copy_metric(%{__struct__: module} = metric) do
+    if function_exported?(module, :copy_metric, 1), do: module.copy_metric(metric), else: metric
+  end
+
+  defp copy_metric(module), do: module
 
   defp metric_module(metric) when is_atom(metric), do: metric
   defp metric_module(%{__struct__: module}), do: module

@@ -511,23 +511,40 @@ defmodule DeepEvalEx.Metrics.GEval do
     rubric_score(metric, prompt, opts)
   end
 
-  # deepeval's generate_rubric_score: a judge with logprobs answers a raw
-  # response whose score is weighted (except in strict mode); any other is
-  # asked for the score schema, as deepeval falls back on the AttributeError
-  # of a judge without generate_raw_response.
   defp rubric_score(metric, prompt, opts) do
+    generate_rubric_score(prompt, opts,
+      strict_mode: metric.strict_mode,
+      top_logprobs: metric.top_logprobs,
+      schema: Schema.reason_score_schema(),
+      parse: &Schema.parse_reason_score/1,
+      weighted_score: &calculate_weighted_summed_score/2
+    )
+  end
+
+  @doc false
+  # deepeval's generate_rubric_score (metrics/utils/decision.py), shared
+  # with ConversationalGEval: a judge with logprobs answers a raw response
+  # whose score is weighted by `:weighted_score` (except in strict mode);
+  # any other is asked for the `:schema`, as deepeval falls back on the
+  # AttributeError of a judge without generate_raw_response. `:parse` reads
+  # `{score, reason}` from either answer.
+  @spec generate_rubric_score(String.t(), keyword(), keyword()) ::
+          {:ok, {number(), String.t()}} | {:error, term()}
+  def generate_rubric_score(prompt, opts, scoring) do
+    parse = Keyword.fetch!(scoring, :parse)
+
     if Adapter.supports_log_probs?(opts) do
-      raw_opts = Keyword.put(opts, :top_logprobs, metric.top_logprobs)
+      raw_opts = Keyword.put(opts, :top_logprobs, Keyword.fetch!(scoring, :top_logprobs))
 
       with {:ok, raw_response} <- Adapter.generate_raw_response(prompt, raw_opts),
-           {:ok, {score, reason}} <- score_from_raw_response(raw_response) do
-        if metric.strict_mode,
+           {:ok, {score, reason}} <- score_from_raw_response(raw_response, parse) do
+        if Keyword.fetch!(scoring, :strict_mode),
           do: {:ok, {score, reason}},
-          else: {:ok, {calculate_weighted_summed_score(score, raw_response), reason}}
+          else: {:ok, {Keyword.fetch!(scoring, :weighted_score).(score, raw_response), reason}}
       end
     else
-      case Adapter.generate_with_schema(prompt, Schema.reason_score_schema(), opts) do
-        {:ok, response} -> Schema.parse_reason_score(response)
+      case Adapter.generate_with_schema(prompt, Keyword.fetch!(scoring, :schema), opts) do
+        {:ok, response} -> parse.(response)
         {:error, _} = error -> error
       end
     end
@@ -535,13 +552,16 @@ defmodule DeepEvalEx.Metrics.GEval do
 
   # deepeval's _score_from_raw_response: the message is loaded with
   # trimAndLoadJson whatever the judge's structured output support.
-  defp score_from_raw_response(%{"choices" => [%{"message" => %{"content" => content}} | _]}) do
+  defp score_from_raw_response(
+         %{"choices" => [%{"message" => %{"content" => content}} | _]},
+         parse
+       ) do
     with {:ok, data} <- Generation.trim_and_load_json(content) do
-      Schema.parse_reason_score(data)
+      parse.(data)
     end
   end
 
-  defp score_from_raw_response(raw_response),
+  defp score_from_raw_response(raw_response, _parse),
     do: {:error, {:unexpected_response, raw_response}}
 
   # Tokens under 1% probability are dropped.
@@ -575,30 +595,45 @@ defmodule DeepEvalEx.Metrics.GEval do
       7
   """
   @spec calculate_weighted_summed_score(number(), map()) :: number()
-  def calculate_weighted_summed_score(raw_score, raw_response) do
-    with {:ok, top_logprobs} <- score_top_logprobs(raw_score, raw_response),
+  def calculate_weighted_summed_score(raw_score, raw_response),
+    do: calculate_weighted_summed_score(raw_score, raw_response, [])
+
+  @doc false
+  # calculate_weighted_summed_score/2 with ConversationalGEval's variant of
+  # it: `score_token: :first` weights the first token equal to the score
+  # rather than the last (default: `:last`), and `no_tokens: :raise` raises
+  # deepeval's ZeroDivisionError, as an ArithmeticError, when every top
+  # token is dropped rather than returning the raw score (default:
+  # `:raw_score`).
+  @spec calculate_weighted_summed_score(number(), map(), keyword()) :: number()
+  def calculate_weighted_summed_score(raw_score, raw_response, opts) do
+    with {:ok, top_logprobs} <-
+           score_top_logprobs(raw_score, raw_response, Keyword.get(opts, :score_token, :last)),
          {:ok, {scores, sum}} <- linear_probabilities(top_logprobs) do
-      weighted_summed_score(scores, sum, raw_score)
+      weighted_summed_score(scores, sum, raw_score, Keyword.get(opts, :no_tokens, :raw_score))
     else
       :error -> raw_score
     end
   end
 
-  # The top logprobs of the last token equal to the score, as Python's
-  # str(raw_score).
-  defp score_top_logprobs(raw_score, %{
-         "choices" => [%{"logprobs" => %{"content" => tokens}} | _]
-       })
+  # The top logprobs of the last (or first) token equal to the score, as
+  # Python's str(raw_score).
+  defp score_top_logprobs(
+         raw_score,
+         %{"choices" => [%{"logprobs" => %{"content" => tokens}} | _]},
+         score_token
+       )
        when is_list(tokens) do
     token = Verbose.to_str(raw_score)
+    tokens = if score_token == :last, do: Enum.reverse(tokens), else: tokens
 
-    case tokens |> Enum.reverse() |> Enum.find(&match?(%{"token" => ^token}, &1)) do
+    case Enum.find(tokens, &match?(%{"token" => ^token}, &1)) do
       %{"top_logprobs" => top_logprobs} when is_list(top_logprobs) -> {:ok, top_logprobs}
       _ -> :error
     end
   end
 
-  defp score_top_logprobs(_raw_score, _raw_response), do: :error
+  defp score_top_logprobs(_raw_score, _raw_response, _score_token), do: :error
 
   # Each kept score with its summed linear probability, in first-seen order
   # as deepeval's dict, and the running sum of every kept probability in
@@ -634,10 +669,14 @@ defmodule DeepEvalEx.Metrics.GEval do
   # Python's str.isdecimal, for ASCII digits.
   defp decimal?(token), do: token =~ ~r/\A[0-9]+\z/
 
-  # Every token filtered out: the raw score.
-  defp weighted_summed_score([], _sum, raw_score), do: raw_score
+  # Every token filtered out: the raw score, or deepeval's ZeroDivisionError
+  # (0.0 / 0) where its sum is left unchecked.
+  defp weighted_summed_score([], _sum, raw_score, :raw_score), do: raw_score
 
-  defp weighted_summed_score(scores, sum_linear_probability, _raw_score) do
+  defp weighted_summed_score([], _sum, _raw_score, :raise),
+    do: raise(ArithmeticError, message: "float division by zero")
+
+  defp weighted_summed_score(scores, sum_linear_probability, _raw_score, _no_tokens) do
     sum_of_weighted_scores = Enum.reduce(scores, 0.0, fn {s, p}, sum -> sum + s * p end)
     sum_of_weighted_scores / sum_linear_probability
   end

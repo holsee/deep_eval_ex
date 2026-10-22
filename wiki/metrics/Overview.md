@@ -20,6 +20,7 @@ Use an LLM to evaluate outputs based on criteria:
 | Metric | Purpose | Use Case |
 |--------|---------|----------|
 | [GEval](GEval.md) | Flexible criteria-based evaluation | Custom evaluation criteria |
+| [ConversationalGEval](ConversationalGEval.md) | Criteria-based evaluation of a whole conversation | Custom criteria for multi-turn chatbots |
 
 ### RAG Metrics
 Evaluate Retrieval-Augmented Generation pipelines:

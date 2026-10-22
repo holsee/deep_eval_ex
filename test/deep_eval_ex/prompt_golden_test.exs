@@ -20,10 +20,13 @@ defmodule DeepEvalEx.PromptGoldenTest do
 
   use ExUnit.Case, async: true
 
+  alias DeepEvalEx.{ConversationalTestCase, TestCase}
+  alias DeepEvalEx.Metrics.ConversationalGEval
   alias DeepEvalEx.Metrics.GEval.Rubric
+  alias DeepEvalEx.Metrics.Utils.Turns
   alias DeepEvalEx.Prompts
   alias DeepEvalEx.Schemas.ToolCall
-  alias DeepEvalEx.TestCase
+  alias Jason.OrderedObject
 
   @moduletag :parity
 
@@ -45,6 +48,10 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "GEval.generate_evaluation_results" => {Prompts.GEval, :generate_evaluation_results},
     "GEval.generate_strict_evaluation_results" =>
       {Prompts.GEval, :generate_strict_evaluation_results},
+    "ConversationalGEval.generate_evaluation_steps" =>
+      {Prompts.ConversationalGEval, :generate_evaluation_steps},
+    "ConversationalGEval.generate_evaluation_results" =>
+      {Prompts.ConversationalGEval, :generate_evaluation_results},
     "FaithfulnessMetric.generate_claims" => {Prompts.Faithfulness, :generate_claims},
     "FaithfulnessMetric.generate_truths" => {Prompts.Faithfulness, :generate_truths},
     "FaithfulnessMetric.generate_verdicts" => {Prompts.Faithfulness, :generate_verdicts},
@@ -151,7 +158,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the fifteen LLM metrics" do
+  test "covers every template of the sixteen LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -166,6 +173,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.ContextualPrecision,
             Prompts.ContextualRecall,
             Prompts.ContextualRelevancy,
+            Prompts.ConversationalGEval,
             Prompts.Faithfulness,
             Prompts.GEval,
             Prompts.Hallucination,
@@ -221,6 +229,27 @@ defmodule DeepEvalEx.PromptGoldenTest do
     ]
   end
 
+  # The conversation keeps its JSON objects' key order (metadata), as
+  # deepeval's dicts do, so it is read again with its order kept.
+  defp options("ConversationalGEval.generate_evaluation_results", inputs, name) do
+    ordered =
+      Path.join([@fixtures, name, "input.json"])
+      |> File.read!()
+      |> Jason.decode!(objects: :ordered_objects)
+
+    metric = conversational_g_eval(inputs, evaluation_steps: inputs["evaluation_steps"])
+    test_case = conversational_test_case(ordered["inputs"]["test_case"])
+
+    [
+      evaluation_steps: metric.evaluation_steps,
+      test_case_content:
+        Prompts.ConversationalGEval.format_test_case_content(test_case, metric.evaluation_params),
+      turns: Enum.map(test_case.turns, &Turns.convert_turn_to_dict(&1, metric.evaluation_params)),
+      parameters: Prompts.ConversationalGEval.format_params(metric.evaluation_params),
+      rubric: Prompts.ConversationalGEval.format_rubric(metric.rubric)
+    ]
+  end
+
   defp options(template, inputs, _name), do: options(template, inputs)
 
   # The options the DeepEvalEx metric passes its prompt function for these
@@ -247,6 +276,16 @@ defmodule DeepEvalEx.PromptGoldenTest do
       test_case_content:
         Prompts.GEval.format_test_case_content(TestCase.new!(inputs["test_case"]), params),
       parameters: Prompts.GEval.format_params(params)
+    ]
+  end
+
+  # The metric's constructor appends :content and :role to its params.
+  defp options("ConversationalGEval.generate_evaluation_steps", inputs) do
+    metric = conversational_g_eval(inputs, criteria: inputs["criteria"])
+
+    [
+      criteria: metric.criteria,
+      parameters: Prompts.ConversationalGEval.format_params(metric.evaluation_params)
     ]
   end
 
@@ -438,12 +477,44 @@ defmodule DeepEvalEx.PromptGoldenTest do
     ]
   end
 
-  # Evaluation params name test case fields, atoms TestCase defines once
-  # loaded.
+  # Evaluation params name test case fields, atoms TestCase and
+  # ConversationalTestCase define once loaded.
   defp params(%{"evaluation_params" => names}) do
     Code.ensure_loaded!(TestCase)
+    Code.ensure_loaded!(ConversationalTestCase)
     Enum.map(names, &String.to_existing_atom/1)
   end
+
+  defp conversational_g_eval(inputs, opts) do
+    ConversationalGEval.new(
+      [
+        name: "Golden",
+        evaluation_params: params(inputs),
+        rubric: rubric(inputs["rubric"])
+      ] ++ opts
+    )
+  end
+
+  # The test case's fields as a map, each turn's too; nested JSON objects
+  # (metadata, tool call parameters) stay ordered.
+  defp conversational_test_case(%OrderedObject{} = spec) do
+    spec
+    |> fields()
+    |> Map.update!("turns", &Enum.map(&1, fn turn -> fields(turn) end))
+    |> ConversationalTestCase.new!()
+  end
+
+  defp fields(%OrderedObject{values: pairs}) do
+    Map.new(pairs, fn
+      {"tools_called", tool_calls} -> {"tools_called", Enum.map(tool_calls, &Map.new(&1.values))}
+      {"retrieval_context", items} -> {"retrieval_context", Enum.map(items, &context_item/1)}
+      pair -> pair
+    end)
+  end
+
+  # A {"context", "source"} item is a RetrievedContextData.
+  defp context_item(%OrderedObject{values: pairs}), do: Map.new(pairs)
+  defp context_item(context), do: context
 
   # deepeval's Rubric entries, validated and sorted as GEval's constructor
   # does.

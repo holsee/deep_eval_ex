@@ -122,6 +122,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/PatternMatch.md",
         "wiki/metrics/JsonCorrectness.md",
         "wiki/metrics/GEval.md",
+        "wiki/metrics/ConversationalGEval.md",
         "wiki/metrics/Faithfulness.md",
         "wiki/metrics/Hallucination.md",
         "wiki/metrics/AnswerRelevancy.md",

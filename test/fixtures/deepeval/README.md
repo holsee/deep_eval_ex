@@ -7,7 +7,7 @@ Fixtures written by **deepeval 4.3.1**, in six sets:
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
-  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's eighteen
+  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's nineteen
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
 - [prompt goldens](#prompt-goldens) (`prompts/`), used by
@@ -140,13 +140,14 @@ calling an LLM. A script holds:
   `answer_relevancy`, `contextual_precision`, `contextual_recall`,
   `contextual_relevancy`, `bias`, `toxicity`, `pii_leakage`, `prompt_alignment`,
   `summarization`, `argument_correctness`, `json_correctness`, `tool_correctness`,
-  `pattern_match` or `tool_permission`) and the metric's constructor
+  `pattern_match`, `tool_permission` or `conversational_g_eval`) and the metric's constructor
   `params`. JsonCorrectness's `expected_schema` is a pydantic model's
   `model_json_schema()`: the generator rebuilds the model from it
   (`build_expected_schema`) and fails unless the model's own schema is the
   same, key order included; DeepEvalEx takes the schema as it is
-- `test_case` - keyword arguments of deepeval's `LLMTestCase`; a
-  `retrieval_context` item written as a `{"context", "source"}` object is a
+- `test_case` - keyword arguments of deepeval's `LLMTestCase`, or of its
+  `ConversationalTestCase` when they have `turns` (each turn built as a
+  `Turn`); a `retrieval_context` item written as a `{"context", "source"}` object is a
   `RetrievedContextData` (`DeepEvalEx.Schemas.RetrievedContextData`)
 - `judge_model` - the name the judge reports as the evaluation model
 - `responses` - the judge's answers, keyed by metric kind, then by step, then
@@ -187,12 +188,13 @@ The Elixir test loads the same script into the Mock adapter's scripted mode
 per scenario: prompts (byte for byte, per step), measure (every field but
 `verbose_logs`, integer vs float included), verbose logs, and the test run
 (keys, key order, types and values, then bytes; only the run-level
-`runDuration` is normalised).
+`runDuration`, and a conversational test case's, are normalised).
 
 | Metric | Scenarios |
 | --- | --- |
 | ExactMatch | `exact_match_pass`, `exact_match_fail` |
 | GEval | `g_eval_criteria_pass` (steps generated from criteria), `g_eval_steps_fail` (given steps), `g_eval_strict`, `g_eval_logprobs` (a raw response with logprobs: the score weighted by the final score token's top logprobs, the same number earlier in the reason ignored, a 1% and a non-decimal token dropped, `"08"` summed with `"8"`), `g_eval_logprobs_missing` (a raw response without logprobs: the raw score kept), `g_eval_retrieved_context_data` (`retrieval_context` holding a `RetrievedContextData`, printed as its pydantic repr) |
+| ConversationalGEval | `conversational_g_eval_criteria_pass` (steps generated from criteria; `:role` appended to `[:content]`), `conversational_g_eval_steps_fail` (given steps, case-level `scenario` and `expected_outcome`, a rubric sorted by range, a fractional `2.5` kept as `0.25`), `conversational_g_eval_strict` (a `7` clamped to the integer `0`, threshold `1`), `conversational_g_eval_logprobs` (per-turn `retrieval_context` and `tools_called`; the score weighted by the *first* token equal to it, in the reason, unlike GEval), `conversational_g_eval_logprobs_missing` (a raw response without logprobs: the raw score kept). deepeval's asynchronous `evaluate()` copies the metric, so the test runs report `"scripted-judge (audio: scripted-judge)"` where `measure()` reports `"scripted-judge"` |
 | Faithfulness | `faithfulness_pass`, `faithfulness_fail`, `faithfulness_borderline`, `faithfulness_penalize_ambiguous` (`penalize_ambiguous_claims`: the borderline verdict fails and is an `(Ambiguous)` contradiction), `faithfulness_no_claims` (empty list), `faithfulness_strict` |
 | Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_no_verdicts` (empty list), `hallucination_strict`, `hallucination_messy_json` (raw-text answers: prose, a code fence and trailing commas around the verdicts, a reason missing its closing brace), `hallucination_invalid_json` (a raw-text answer with no JSON: the metric errors) |
 | AnswerRelevancy | `answer_relevancy_pass`, `answer_relevancy_fail`, `answer_relevancy_no_statements` (empty list), `answer_relevancy_strict` |
@@ -240,7 +242,7 @@ scenarios, why it fails and its tag.
 ## Prompt goldens
 
 `prompts/<case>/` holds one prompt deepeval 4.3.1 renders for one of the
-fifteen LLM-judged metrics, for fixed inputs:
+sixteen LLM-judged metrics, for fixed inputs:
 
 - `input.json` - `template`, deepeval's template class key and method (e.g.
   `FaithfulnessMetric.generate_truths`, from
@@ -255,7 +257,8 @@ way the metric does: the metric's own `_get_prompt` (strict Jinja,
 `multimodal=False`) with the arguments its helpers derive from the inputs
 (`"\n\n".join` of truths, `format(score, ".2f")`,
 `_contextual_precision_verdict_fields`, `print_tools_called`, ...); GEval's
-cases call the metric's `_steps_prompt` and `_results_prompt`. The generator
+cases call the metric's `_steps_prompt` and `_results_prompt`, and
+ConversationalGEval's its `_evaluation_prompt`. The generator
 fails if a bundled template of these metrics is neither rendered by a case
 nor listed in `UNRENDERED_TEMPLATES`.
 
@@ -278,6 +281,8 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.GEval.generate_evaluation_steps/1` | `GEval.generate_evaluation_steps` (`g_eval/templates/generate_evaluation_steps.txt`) | `criteria`, `parameters` | `g_eval_generate_evaluation_steps`, `_three_params` |
 | `Prompts.GEval.generate_evaluation_results/1` | `GEval.generate_evaluation_results` (`g_eval/templates/generate_evaluation_results.txt`) | `evaluation_steps` (numbered), `test_case_content`, `parameters`, `rubric`, `score_range`, `_additional_context` | `g_eval_generate_evaluation_results`, `_rubric` |
 | `Prompts.GEval.generate_strict_evaluation_results/1` | `GEval.generate_strict_evaluation_results` (`g_eval/templates/generate_strict_evaluation_results.txt`) | `evaluation_steps`, `test_case_content`, `parameters`, `_additional_context` | `g_eval_generate_strict_evaluation_results` |
+| `Prompts.ConversationalGEval.generate_evaluation_steps/1` | `ConversationalGEval.generate_evaluation_steps` (`conversational_g_eval/templates/generate_evaluation_steps.txt`) | `criteria`, `parameters` (`:content` and `:role` appended) | `conversational_g_eval_generate_evaluation_steps`, `_case_params` |
+| `Prompts.ConversationalGEval.generate_evaluation_results/1` | `ConversationalGEval.generate_evaluation_results` (`conversational_g_eval/templates/generate_evaluation_results.txt`) | `evaluation_steps` (numbered), `turns` (list of `convert_turn_to_dict`), `test_case_content`, `parameters`, `rubric` | `conversational_g_eval_generate_evaluation_results`, `_rubric` |
 | `Prompts.Faithfulness.generate_claims/1` | `FaithfulnessMetric.generate_claims` (`faithfulness/templates/generate_claims.txt`) | `actual_output`, `multimodal_instruction` | `faithfulness_generate_claims` |
 | `Prompts.Faithfulness.generate_truths/1` | `FaithfulnessMetric.generate_truths` (`faithfulness/templates/generate_truths.txt`) | `retrieval_context` (joined with blank lines), `limit` (phrase), `multimodal_instruction` | `faithfulness_generate_truths`, `_limit_1`, `_limit_3` |
 | `Prompts.Faithfulness.generate_verdicts/1` | `FaithfulnessMetric.generate_verdicts` (`faithfulness/templates/generate_verdicts.txt`) | `claims` (list), `retrieval_context` (truths joined with blank lines) | `faithfulness_generate_verdicts` |
@@ -352,7 +357,11 @@ templates by itself, so each has a case of its own above.
 `format_test_case_content/2` and `format_rubric/1` and
 `Prompts.ToolCorrectness.format_tools/1` stand for deepeval's
 `number_evaluation_steps`, `construct_g_eval_params_string`,
-`construct_test_case_string`, `format_rubrics` and `print_tools_called`.
+`construct_test_case_string`, `format_rubrics` and `print_tools_called`;
+`Prompts.ConversationalGEval.format_params/1` and
+`format_test_case_content/2` for
+`construct_conversational_g_eval_turn_params_string` and
+`construct_non_turns_test_case_string`.
 `DeepEvalEx.Prompts.Python` prints template arguments as Jinja prints them:
 lists as Python lists (`repr`) and scores as `format(score, ".2f")`.
 

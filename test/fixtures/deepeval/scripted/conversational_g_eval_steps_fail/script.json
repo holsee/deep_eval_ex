@@ -1,0 +1,61 @@
+{
+  "description": "ConversationalGEval with given steps, conversation-level params and a rubric, scored 2.5/10: a float score kept, not rounded",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "conversational_g_eval",
+    "params": {
+      "name": "Outcome",
+      "evaluation_params": [
+        "scenario",
+        "expected_outcome",
+        "role",
+        "content"
+      ],
+      "evaluation_steps": [
+        "Read the scenario and the expected outcome.",
+        "Check that the conversation reaches the expected outcome."
+      ],
+      "rubric": [
+        {
+          "score_range": [
+            6,
+            10
+          ],
+          "expected_outcome": "The expected outcome is reached."
+        },
+        {
+          "score_range": [
+            0,
+            5
+          ],
+          "expected_outcome": "The expected outcome is not reached."
+        }
+      ],
+      "threshold": 0.6
+    }
+  },
+  "test_case": {
+    "scenario": "A customer asks for a refund on a late order. café ✓",
+    "expected_outcome": "The assistant starts a refund for order 42.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order is late, I want a refund."
+      },
+      {
+        "role": "assistant",
+        "content": "Refunds are not possible, sorry."
+      }
+    ]
+  },
+  "responses": {
+    "conversational_g_eval": {
+      "reason,score": [
+        {
+          "reason": "The assistant refused the refund, so the expected outcome is not reached.",
+          "score": 2.5
+        }
+      ]
+    }
+  }
+}

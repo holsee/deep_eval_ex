@@ -1,0 +1,53 @@
+{
+  "description": "ConversationalGEval scored 8/10: steps generated from criteria, ROLE appended to the evaluation params",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "conversational_g_eval",
+    "params": {
+      "name": "Helpfulness",
+      "evaluation_params": [
+        "content"
+      ],
+      "criteria": "Determine whether the assistant resolves the user's request politely."
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order is late, I want a refund."
+      },
+      {
+        "role": "assistant",
+        "content": "Sorry about that! Could you give me the order number?"
+      },
+      {
+        "role": "user",
+        "content": "It's order 42."
+      },
+      {
+        "role": "assistant",
+        "content": "Thanks, I've started a refund for order 42. It takes 5 business days."
+      }
+    ]
+  },
+  "responses": {
+    "conversational_g_eval": {
+      "steps": [
+        {
+          "steps": [
+            "Check that each assistant turn answers the user turn before it.",
+            "Check that the assistant stays polite throughout.",
+            "Check that the request is resolved by the end of the conversation."
+          ]
+        }
+      ],
+      "reason,score": [
+        {
+          "reason": "The assistant asked for the order number, then started the refund, politely.",
+          "score": 8
+        }
+      ]
+    }
+  }
+}

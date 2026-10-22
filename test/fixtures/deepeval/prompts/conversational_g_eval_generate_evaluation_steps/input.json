@@ -1,0 +1,9 @@
+{
+  "template": "ConversationalGEval.generate_evaluation_steps",
+  "inputs": {
+    "criteria": "Determine whether the assistant resolves the user's request politely.",
+    "evaluation_params": [
+      "content"
+    ]
+  }
+}

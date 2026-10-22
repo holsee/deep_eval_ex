@@ -67,6 +67,7 @@ config :deep_eval_ex,
 | **PatternMatch** | Whole output matches a regular expression |
 | **JsonCorrectness** | Output is JSON matching an expected JSON Schema |
 | **GEval** | Flexible criteria-based evaluation using LLM-as-judge |
+| **ConversationalGEval** | GEval for multi-turn conversations (`ConversationalTestCase`) |
 | **Faithfulness** | RAG: claims supported by retrieval context |
 | **Hallucination** | Detects unsupported statements |
 | **AnswerRelevancy** | Response relevance to input question |
