@@ -1,0 +1,24 @@
+{
+  "name": "deep_eval_ex",
+  "build": { "dockerfile": "Dockerfile" },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "mounts": [
+    "source=deep_eval_ex-deps,target=/workspace/deps,type=volume",
+    "source=deep_eval_ex-build,target=/workspace/_build,type=volume",
+    "source=deep_eval_ex-mix,target=/root/.mix,type=volume",
+    "source=deep_eval_ex-hex,target=/root/.hex,type=volume"
+  ],
+  "containerEnv": {
+    "MIX_ENV": "test",
+    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
+    "OPENAI_BASE_URL": "${localEnv:OPENAI_BASE_URL}",
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
+  },
+  "postCreateCommand": "mix local.hex --force --if-missing && mix local.rebar --force --if-missing && mix deps.get",
+  "customizations": {
+    "vscode": {
+      "extensions": ["JakeBecker.elixir-ls"]
+    }
+  }
+}
