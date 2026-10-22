@@ -9,7 +9,9 @@ defmodule DeepEvalEx.LiveTest do
 
   A provider runs only when its credentials are set; otherwise its tests are
   skipped. `DEEP_EVAL_LIVE_OPENAI_MODEL` and `DEEP_EVAL_LIVE_ANTHROPIC_MODEL`
-  pick the judge model (defaults: each adapter's default model).
+  pick the judge model. Unset, each provider uses its adapter's default model,
+  which a gateway may not serve under that name: behind a gateway, set both
+  variables to the model IDs it publishes (often provider-prefixed).
   """
 
   use ExUnit.Case, async: false
@@ -26,7 +28,9 @@ defmodule DeepEvalEx.LiveTest do
     %{
       adapter: :openai,
       key: "OPENAI_API_KEY",
-      model: Adapter.env("DEEP_EVAL_LIVE_OPENAI_MODEL") || "gpt-4o-mini"
+      model:
+        Adapter.env("DEEP_EVAL_LIVE_OPENAI_MODEL") ||
+          DeepEvalEx.LLM.Adapters.OpenAI.model_name([])
     },
     %{
       adapter: :anthropic,
