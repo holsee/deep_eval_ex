@@ -196,7 +196,10 @@ devcontainer exec --workspace-folder . mix test
 Provider credentials for live checks go in `.devcontainer/.env` (gitignored;
 copy `.devcontainer/.env.example`), which the container loads at creation:
 `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_BASE_URL`
-and `OLLAMA_HOST`. Recreate the container after editing it
+and `OLLAMA_HOST`. Values may be 1Password secret references
+(`op://vault/item/field`); `.devcontainer/resolve-env.sh` resolves them with
+`op inject` on the host into the gitignored `.devcontainer/.env.resolved`,
+which is what the container loads. Recreate the container after editing it
 (`devcontainer up --workspace-folder . --remove-existing-container`). The test
 suite itself never calls a real LLM (it uses the Mock adapter and `Req.Test`
 stubs).

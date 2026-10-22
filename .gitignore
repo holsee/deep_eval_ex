@@ -40,3 +40,6 @@ CLAUDE.md
 
 # Reference checkouts
 /_ref/
+
+# Resolved dev container secrets
+/.devcontainer/.env.resolved

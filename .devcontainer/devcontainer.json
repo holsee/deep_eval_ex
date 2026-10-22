@@ -11,10 +11,10 @@
     "source=deep_eval_ex-mix,target=/root/.mix,type=volume",
     "source=deep_eval_ex-hex,target=/root/.hex,type=volume"
   ],
-  "initializeCommand": "touch .devcontainer/.env",
+  "initializeCommand": "sh .devcontainer/resolve-env.sh",
   "runArgs": [
     "--env-file",
-    "${localWorkspaceFolder}/.devcontainer/.env"
+    "${localWorkspaceFolder}/.devcontainer/.env.resolved"
   ],
   "containerEnv": {
     "MIX_ENV": "test"
