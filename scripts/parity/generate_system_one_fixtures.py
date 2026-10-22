@@ -119,9 +119,11 @@ from deepeval.metrics import (  # noqa: E402
     FaithfulnessMetric,
     HallucinationMetric,
     JevEval,
+    KnowledgeRetentionMetric,
     JsonCorrectnessMetric,
     PIILeakageMetric,
     PromptAlignmentMetric,
+    RoleAdherenceMetric,
     SummarizationMetric,
     ToolCorrectnessMetric,
     ToxicityMetric,
@@ -166,6 +168,8 @@ METRICS = {
     "jev_eval": JevEval,
     "turn_relevancy": TurnRelevancyMetric,
     "conversation_completeness": ConversationCompletenessMetric,
+    "knowledge_retention": KnowledgeRetentionMetric,
+    "role_adherence": RoleAdherenceMetric,
 }
 
 # Metrics that follow their eval mode but never build a System One model, so
@@ -684,6 +688,41 @@ COMPLETENESS_VERDICTS = {
         {"verdict": "yes"},
         {"verdict": "no", "reason": "The address change is only confirmed after a detour."},
     ],
+}
+
+# A conversation for KnowledgeRetention and RoleAdherence: the user's facts,
+# an assistant turn that asks for one again, and the chatbot's role.
+TRAVEL = {
+    "chatbot_role": "A cheerful travel agent who keeps every reply short.",
+    "turns": [
+        {"role": "user", "content": "I'm flying to Lisbon on 3 May."},
+        {"role": "assistant", "content": "Lovely! Where are you flying to?"},
+        {"role": "user", "content": "Lisbon. I'm vegetarian, too."},
+        {"role": "assistant", "content": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!"},
+    ],
+}
+
+RETENTION_LLM = {
+    "data": [
+        {"data": {"Date": "3 May", "Destination": "Lisbon"}},
+        {"data": {"Destination": "Lisbon", "Diet": "Vegetarian"}},
+    ],
+    "reason": [{"reason": "The score is 0.50 because the LLM asks for Lisbon again."}],
+}
+RETENTION_VERDICTS = {
+    "reason,verdict": [
+        {"verdict": "yes", "reason": "The LLM asks for the destination, Lisbon, again."},
+        {"verdict": "no"},
+    ],
+}
+
+ROLE_REASON = {
+    "reason": [{"reason": "The score is 0.5 because turn #2 forgets the destination."}],
+}
+ROLE_VERDICTS = {
+    "verdicts": [{"verdicts": [
+        {"index": 1, "reason": "A cheerful agent would not forget the destination."},
+    ]}],
 }
 
 FAITHFULNESS_LLM = {
@@ -1261,6 +1300,59 @@ SCENARIOS = {
         "judge_model": JUDGE,
         "responses": {"conversation_completeness": {**COMPLETENESS_LLM, **COMPLETENESS_VERDICTS}},
     },
+    # KnowledgeRetention
+    "knowledge_retention_system_one": {
+        "description": "KnowledgeRetention decided by Jev in one request about the turns",
+        "metrics": [metric("knowledge_retention", "system_one")],
+        "test_case": TRAVEL,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.35, 0.2, 1, {"0": 0.1, "1": 0.55, "2": 0.25, "3": 0.1}, 0.3)},
+    },
+    "knowledge_retention_hybrid": {
+        "description": "KnowledgeRetention in hybrid mode: the LLM extracts each user turn's facts, "
+                       "Jev judges each assistant turn against them, one request per turn",
+        "metrics": [metric("knowledge_retention", "hybrid")],
+        "test_case": TRAVEL,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"verdict": noul(0.74)}}},
+        "judge_model": JUDGE,
+        "responses": {"knowledge_retention": RETENTION_LLM},
+    },
+    "knowledge_retention_hybrid_fallback": {
+        "description": "KnowledgeRetention in hybrid mode with Jev down: the LLM judges every assistant turn",
+        "metrics": [metric("knowledge_retention", "hybrid")],
+        "test_case": TRAVEL,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"knowledge_retention": {**RETENTION_LLM, **RETENTION_VERDICTS}},
+    },
+    # RoleAdherence
+    "role_adherence_system_one": {
+        "description": "RoleAdherence decided by Jev in one request about the turns and the chatbot_role",
+        "metrics": [metric("role_adherence", "system_one")],
+        "test_case": TRAVEL,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.83, 0.71, 3, FOUR_LEVELS_HIGH, 0.6)},
+    },
+    "role_adherence_hybrid": {
+        "description": "RoleAdherence in hybrid mode: Jev judges each assistant turn against the role, "
+                       "one request per turn, below 0.5 out of character",
+        "metrics": [metric("role_adherence", "hybrid")],
+        "test_case": TRAVEL,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"verdict": noul(0.31)}}},
+        "judge_model": JUDGE,
+        "responses": {"role_adherence": ROLE_REASON},
+    },
+    "role_adherence_hybrid_fallback": {
+        "description": "RoleAdherence in hybrid mode with Jev down: every turn is asked, then the LLM "
+                       "lists the out of character turns",
+        "metrics": [metric("role_adherence", "hybrid")],
+        "test_case": TRAVEL,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"role_adherence": {**ROLE_VERDICTS, **ROLE_REASON}},
+    },
     "jev_eval": {
         "description": "JevEval with a weighted Noul, a Score and a Choice whose N/A option stays unlikely",
         "metrics": [{"kind": "jev_eval", "params": {
@@ -1442,6 +1534,21 @@ SCENARIOS = {
                            "nouls": {"m0.q_0": noul(0.7), "m0.q_1": noul(0.4),
                                      "m1.q_0": noul(0.9), "m1.q_1": noul(0.85)},
                            "scores": {"m0.q_2": score(2, {"0": 0.05, "1": 0.25, "2": 0.6, "3": 0.1}, 0.45),
+                                      "m1.q_2": score(3, FOUR_LEVELS_HIGH, 0.8)},
+                       }},
+    },
+    "batch_system_one_retention_role": {
+        "description": "KnowledgeRetention and RoleAdherence batched into one request by evaluate(), "
+                       "the state holding the turns and the chatbot_role",
+        "batched": True,
+        "metrics": [metric("knowledge_retention", "system_one"),
+                    metric("role_adherence", "system_one")],
+        "test_case": TRAVEL,
+        "system_one": {"model": JEV, "cost": {"value": 0.000084, "input_tokens": 2001, "output_tokens": 0},
+                       "answers": {
+                           "nouls": {"m0.q_0": noul(0.4), "m0.q_1": noul(0.25),
+                                     "m1.q_0": noul(0.88), "m1.q_1": noul(0.9)},
+                           "scores": {"m0.q_2": score(1, {"0": 0.1, "1": 0.5, "2": 0.3, "3": 0.1}, 0.4),
                                       "m1.q_2": score(3, FOUR_LEVELS_HIGH, 0.8)},
                        }},
     },

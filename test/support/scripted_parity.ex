@@ -33,9 +33,11 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     GEval,
     Hallucination,
     JsonCorrectness,
+    KnowledgeRetention,
     PatternMatch,
     PIILeakage,
     PromptAlignment,
+    RoleAdherence,
     Summarization,
     ToolCorrectness,
     ToolPermission,
@@ -70,7 +72,9 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "pattern_match" => PatternMatch,
     "tool_permission" => ToolPermission,
     "turn_relevancy" => TurnRelevancy,
-    "conversation_completeness" => ConversationCompleteness
+    "conversation_completeness" => ConversationCompleteness,
+    "knowledge_retention" => KnowledgeRetention,
+    "role_adherence" => RoleAdherence
   }
 
   # Pairs of steps that need not keep deepeval's relative order, as neither

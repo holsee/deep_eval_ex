@@ -1,0 +1,50 @@
+{
+  "description": "RoleAdherence in strict mode: a negative index counts from the end (turn #0), and the score clamps to the integer 0",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "role_adherence",
+    "params": {
+      "strict_mode": true
+    }
+  },
+  "test_case": {
+    "chatbot_role": "A grumpy pirate captain who never breaks character.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Ahoy!"
+      },
+      {
+        "role": "assistant",
+        "content": "Arr!"
+      },
+      {
+        "role": "user",
+        "content": "Bye."
+      },
+      {
+        "role": "assistant",
+        "content": "Have a wonderful day! 😊"
+      }
+    ]
+  },
+  "responses": {
+    "role_adherence": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "index": -1,
+              "reason": "Far too cheerful for a grumpy pirate."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0 because the last reply is cheerful."
+        }
+      ]
+    }
+  }
+}

@@ -70,6 +70,8 @@ config :deep_eval_ex,
 | **ConversationalGEval** | GEval for multi-turn conversations (`ConversationalTestCase`) |
 | **TurnRelevancy** | Whether each assistant turn of a conversation is relevant to the turns before it |
 | **ConversationCompleteness** | Whether the assistant satisfies every intention the user expresses in a conversation |
+| **KnowledgeRetention** | Whether the assistant remembers the facts the user gave earlier in a conversation |
+| **RoleAdherence** | Whether the assistant stays in the character of the conversation's `chatbot_role` |
 | **Faithfulness** | RAG: claims supported by retrieval context |
 | **Hallucination** | Detects unsupported statements |
 | **AnswerRelevancy** | Response relevance to input question |

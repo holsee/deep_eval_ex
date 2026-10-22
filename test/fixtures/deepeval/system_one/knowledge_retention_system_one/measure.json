@@ -1,0 +1,60 @@
+[
+  {
+    "score": 0.3083333333333333,
+    "success": false,
+    "reason": "Decided by fake-jev, minimum confidence 0.30.\n1. No assistant turn in `turns` forgets or contradicts a fact the user stated in an earlier turn. -> unclear (P(yes)=0.35, confidence=0.30, weight=2)\n2. No assistant turn in `turns` asks the user again for information the user already gave in an earlier turn, other than to clarify, confirm or correct it. -> likely fails (P(yes)=0.20, confidence=0.60)\n3. Across `turns`, how well does the assistant retain and respect the facts the user has already stated? -> \"Forgets several facts\" (expected level=0.33 of 1.00, confidence=0.30)\nScore: 0.31 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] No assistant turn in `turns` forgets or contradicts a fact the user stated in an earlier turn.\n   value=0.350 applicable=True probabilities={'true': 0.35, 'false': 0.65} confidence=0.300\n2. [noul, weight=1] No assistant turn in `turns` asks the user again for information the user already gave in an earlier turn, other than to clarify, confirm or correct it.\n   value=0.200 applicable=True probabilities={'true': 0.2, 'false': 0.8} confidence=0.600\n3. [score, weight=1] Across `turns`, how well does the assistant retain and respect the facts the user has already stated?\n   value=0.333 applicable=True probabilities={'Forgets most facts': 0.1, 'Forgets several facts': 0.55, 'Forgets a minor fact': 0.25, 'Retains every fact': 0.1} confidence=0.300",
+    "confidence": 0.3,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "No assistant turn in `turns` forgets or contradicts a fact the user stated in an earlier turn.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.35,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.35,
+          "false": 0.65
+        },
+        "confidence": 0.30000000000000004,
+        "passed": null
+      },
+      {
+        "question": "No assistant turn in `turns` asks the user again for information the user already gave in an earlier turn, other than to clarify, confirm or correct it.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.2,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.2,
+          "false": 0.8
+        },
+        "confidence": 0.6,
+        "passed": null
+      },
+      {
+        "question": "Across `turns`, how well does the assistant retain and respect the facts the user has already stated?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.3333333333333333,
+        "applicable": true,
+        "probabilities": {
+          "Forgets most facts": 0.1,
+          "Forgets several facts": 0.55,
+          "Forgets a minor fact": 0.25,
+          "Retains every fact": 0.1
+        },
+        "confidence": 0.3,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

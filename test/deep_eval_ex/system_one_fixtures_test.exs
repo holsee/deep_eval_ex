@@ -34,7 +34,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     argument_correctness_hybrid argument_correctness_hybrid_fallback
     argument_correctness_system_one
     batch_system_one batch_system_one_agent batch_system_one_conversational batch_system_one_down
-    batch_system_one_json
+    batch_system_one_json batch_system_one_retention_role
     batch_system_one_pii_alignment batch_system_one_retrieval batch_system_one_safety
     batch_system_one_summarization
     bias_hybrid bias_hybrid_fallback bias_system_one
@@ -48,11 +48,13 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     faithfulness_hybrid faithfulness_hybrid_fallback faithfulness_system_one
     faithfulness_system_one_strict
     hallucination_hybrid hallucination_hybrid_fallback hallucination_system_one
+    knowledge_retention_hybrid knowledge_retention_hybrid_fallback knowledge_retention_system_one
     jev_eval jev_eval_strict_not_applicable
     json_correctness_hybrid json_correctness_system_one
     pii_leakage_hybrid pii_leakage_hybrid_fallback pii_leakage_system_one
     prompt_alignment_hybrid prompt_alignment_hybrid_fallback prompt_alignment_system_one
     refusal_classifier_system_one
+    role_adherence_hybrid role_adherence_hybrid_fallback role_adherence_system_one
     summarization_hybrid summarization_hybrid_fallback summarization_system_one
     tool_correctness_hybrid tool_correctness_hybrid_fallback tool_correctness_system_one
     toxicity_hybrid toxicity_hybrid_fallback toxicity_system_one
@@ -80,7 +82,8 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     for kind <-
           ~w(faithfulness hallucination answer_relevancy contextual_precision contextual_recall
              contextual_relevancy bias toxicity pii_leakage prompt_alignment summarization
-             argument_correctness tool_correctness turn_relevancy conversation_completeness),
+             argument_correctness tool_correctness turn_relevancy conversation_completeness
+             knowledge_retention role_adherence),
         suffix <- ~w(system_one hybrid hybrid_fallback) do
       assert "#{kind}_#{suffix}" in @scenarios
     end

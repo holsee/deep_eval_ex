@@ -157,7 +157,22 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "ConversationCompletenessMetric._experimental_system_one_questions" =>
       {Prompts.ConversationCompleteness, :system_one_questions},
     "ConversationCompletenessMetric._experimental_system_one_verdict" =>
-      {Prompts.ConversationCompleteness, :system_one_verdict}
+      {Prompts.ConversationCompleteness, :system_one_verdict},
+    "KnowledgeRetentionMetric.extract_data" => {Prompts.KnowledgeRetention, :extract_data},
+    "KnowledgeRetentionMetric.generate_verdict" =>
+      {Prompts.KnowledgeRetention, :generate_verdict},
+    "KnowledgeRetentionMetric.generate_reason" => {Prompts.KnowledgeRetention, :generate_reason},
+    "KnowledgeRetentionMetric._experimental_system_one_questions" =>
+      {Prompts.KnowledgeRetention, :system_one_questions},
+    "KnowledgeRetentionMetric._experimental_system_one_verdict" =>
+      {Prompts.KnowledgeRetention, :system_one_verdict},
+    "RoleAdherenceMetric.extract_out_of_character_response_verdicts" =>
+      {Prompts.RoleAdherence, :extract_out_of_character_response_verdicts},
+    "RoleAdherenceMetric.generate_reason" => {Prompts.RoleAdherence, :generate_reason},
+    "RoleAdherenceMetric._experimental_system_one_questions" =>
+      {Prompts.RoleAdherence, :system_one_questions},
+    "RoleAdherenceMetric._experimental_system_one_verdict" =>
+      {Prompts.RoleAdherence, :system_one_verdict}
   }
 
   # {the ROADMAP unit that removes the tag, cases}. The fixtures' README
@@ -174,7 +189,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the eighteen LLM metrics" do
+  test "covers every template of the twenty LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -195,8 +210,10 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.GEval,
             Prompts.Hallucination,
             Prompts.JsonCorrectness,
+            Prompts.KnowledgeRetention,
             Prompts.PIILeakage,
             Prompts.PromptAlignment,
+            Prompts.RoleAdherence,
             Prompts.Summarization,
             Prompts.ToolCorrectness,
             Prompts.Toxicity,
@@ -520,6 +537,33 @@ defmodule DeepEvalEx.PromptGoldenTest do
       incompletenesses: inputs["incompletenesses"],
       intentions: inputs["intentions"],
       multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options("KnowledgeRetentionMetric.extract_data", inputs),
+    do: [
+      user_message: inputs["user_message"],
+      previous_turns: turn_dicts(inputs["previous_turns"])
+    ]
+
+  defp options("KnowledgeRetentionMetric.generate_verdict", inputs) do
+    [
+      llm_message: inputs["llm_message"],
+      accumulated_knowledge: inputs["accumulated_knowledge"]
+    ]
+  end
+
+  defp options("KnowledgeRetentionMetric.generate_reason", inputs),
+    do: [score: inputs["score"], attritions: inputs["attritions"]]
+
+  defp options("RoleAdherenceMetric.extract_out_of_character_response_verdicts", inputs),
+    do: [turns: turn_dicts(inputs["turns"]), role: inputs["role"]]
+
+  defp options("RoleAdherenceMetric.generate_reason", inputs) do
+    [
+      score: inputs["score"],
+      role: inputs["role"],
+      out_of_character_responses: inputs["out_of_character_responses"]
     ]
   end
 

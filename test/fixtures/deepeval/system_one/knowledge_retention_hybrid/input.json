@@ -1,0 +1,72 @@
+{
+  "description": "KnowledgeRetention in hybrid mode: the LLM extracts each user turn's facts, Jev judges each assistant turn against them, one request per turn",
+  "metrics": [
+    {
+      "kind": "knowledge_retention",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "chatbot_role": "A cheerful travel agent who keeps every reply short.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "I'm flying to Lisbon on 3 May."
+      },
+      {
+        "role": "assistant",
+        "content": "Lovely! Where are you flying to?"
+      },
+      {
+        "role": "user",
+        "content": "Lisbon. I'm vegetarian, too."
+      },
+      {
+        "role": "assistant",
+        "content": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!"
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "verdict": {
+          "probability": 0.74
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "knowledge_retention": {
+      "data": [
+        {
+          "data": {
+            "Date": "3 May",
+            "Destination": "Lisbon"
+          }
+        },
+        {
+          "data": {
+            "Destination": "Lisbon",
+            "Diet": "Vegetarian"
+          }
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.50 because the LLM asks for Lisbon again."
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "description": "RoleAdherence in hybrid mode: Jev judges each assistant turn against the role, one request per turn, below 0.5 out of character",
+  "metrics": [
+    {
+      "kind": "role_adherence",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "chatbot_role": "A cheerful travel agent who keeps every reply short.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "I'm flying to Lisbon on 3 May."
+      },
+      {
+        "role": "assistant",
+        "content": "Lovely! Where are you flying to?"
+      },
+      {
+        "role": "user",
+        "content": "Lisbon. I'm vegetarian, too."
+      },
+      {
+        "role": "assistant",
+        "content": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!"
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "verdict": {
+          "probability": 0.31
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "role_adherence": {
+      "reason": [
+        {
+          "reason": "The score is 0.5 because turn #2 forgets the destination."
+        }
+      ]
+    }
+  }
+}

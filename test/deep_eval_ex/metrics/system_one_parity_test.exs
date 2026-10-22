@@ -52,12 +52,15 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
     turn_relevancy_hybrid_fallback
     conversation_completeness_system_one conversation_completeness_hybrid
     conversation_completeness_hybrid_fallback
+    knowledge_retention_system_one knowledge_retention_hybrid knowledge_retention_hybrid_fallback
+    role_adherence_system_one role_adherence_hybrid role_adherence_hybrid_fallback
   )
 
   @batched_scenarios ~w(
     batch_system_one batch_system_one_retrieval batch_system_one_safety
     batch_system_one_pii_alignment batch_system_one_agent batch_system_one_json
     batch_system_one_summarization batch_system_one_conversational
+    batch_system_one_retention_role
     batch_system_one_down
   )
 

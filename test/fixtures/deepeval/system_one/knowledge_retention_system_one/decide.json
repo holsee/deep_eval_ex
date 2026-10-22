@@ -1,0 +1,148 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "content": "I'm flying to Lisbon on 3 May.",
+              "role": "user"
+            },
+            {
+              "content": "Lovely! Where are you flying to?",
+              "role": "assistant"
+            },
+            {
+              "content": "Lisbon. I'm vegetarian, too.",
+              "role": "user"
+            },
+            {
+              "content": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!",
+              "role": "assistant"
+            }
+          ]
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "No assistant turn in `turns` forgets or contradicts a fact the user stated in an earlier turn."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "No assistant turn in `turns` asks the user again for information the user already gave in an earlier turn, other than to clarify, confirm or correct it."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "Across `turns`, how well does the assistant retain and respect the facts the user has already stated?",
+            "criteria": [
+              "Forgets most facts",
+              "Forgets several facts",
+              "Forgets a minor fact",
+              "Retains every fact"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.35
+            },
+            "q_1": {
+              "probability": 0.2
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 1.0,
+              "probabilities": {
+                "0": 0.1,
+                "1": 0.55,
+                "2": 0.25,
+                "3": 0.1
+              },
+              "confidence": 0.3
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "turns": [
+          {
+            "content": "I'm flying to Lisbon on 3 May.",
+            "role": "user"
+          },
+          {
+            "content": "Lovely! Where are you flying to?",
+            "role": "assistant"
+          },
+          {
+            "content": "Lisbon. I'm vegetarian, too.",
+            "role": "user"
+          },
+          {
+            "content": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!",
+            "role": "assistant"
+          }
+        ]
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "No assistant turn in `turns` forgets or contradicts a fact the user stated in an earlier turn."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "No assistant turn in `turns` asks the user again for information the user already gave in an earlier turn, other than to clarify, confirm or correct it."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "Across `turns`, how well does the assistant retain and respect the facts the user has already stated?",
+          "criteria": [
+            "Forgets most facts",
+            "Forgets several facts",
+            "Forgets a minor fact",
+            "Retains every fact"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.35
+          },
+          "q_1": {
+            "probability": 0.2
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 1.0,
+            "probabilities": {
+              "0": 0.1,
+              "1": 0.55,
+              "2": 0.25,
+              "3": 0.1
+            },
+            "confidence": 0.3
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.5,
+    "success": true,
+    "reason": "The score is 0.50 because the LLM asks for Lisbon again.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "verbose_logs": "Knowledges:\n[\n    {\n        \"data\": {\n            \"Date\": \"3 May\",\n            \"Destination\": \"Lisbon\"\n        }\n    },\n    None,\n    {\n        \"data\": {\n            \"Destination\": \"Lisbon\",\n            \"Diet\": \"Vegetarian\"\n        }\n    },\n    None\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"The LLM asks for the destination, Lisbon, again.\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": null\n    }\n]",
+    "confidence": null,
+    "system_one_fallback_reason": "ConnectionError: Jev is down; ConnectionError: Jev is down",
+    "score_breakdown": null,
+    "raised": null
+  }
+]

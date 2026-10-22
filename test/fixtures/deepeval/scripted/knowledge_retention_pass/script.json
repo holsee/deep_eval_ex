@@ -1,0 +1,57 @@
+{
+  "description": "KnowledgeRetention: each assistant turn remembers the facts before it",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "knowledge_retention",
+    "params": {}
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My name is Zoë."
+      },
+      {
+        "role": "assistant",
+        "content": "Nice to meet you, Zoë!"
+      },
+      {
+        "role": "user",
+        "content": "I'd like a table for two."
+      },
+      {
+        "role": "assistant",
+        "content": "A table for two, Zoë. Any allergies?"
+      }
+    ]
+  },
+  "responses": {
+    "knowledge_retention": {
+      "data": [
+        {
+          "data": {
+            "Name": "Zoë"
+          }
+        },
+        {
+          "data": {
+            "Party Size": "2"
+          }
+        }
+      ],
+      "reason,verdict": [
+        {
+          "verdict": "no"
+        },
+        {
+          "verdict": "no"
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1.00 because the LLM remembers Zoë's name and party size."
+        }
+      ]
+    }
+  }
+}

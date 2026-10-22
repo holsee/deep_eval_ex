@@ -125,6 +125,8 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/ConversationalGEval.md",
         "wiki/metrics/TurnRelevancy.md",
         "wiki/metrics/ConversationCompleteness.md",
+        "wiki/metrics/KnowledgeRetention.md",
+        "wiki/metrics/RoleAdherence.md",
         "wiki/metrics/Faithfulness.md",
         "wiki/metrics/Hallucination.md",
         "wiki/metrics/AnswerRelevancy.md",

@@ -1590,6 +1590,47 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   scenarios (`system_one`, strict, `hybrid`, `hybrid` fallback and a batched
   pair) check their prompts, decisions, scores, verbose logs and exported
   `conversationalTestCases` byte for byte against deepeval's.
+- **`DeepEvalEx.Metrics.KnowledgeRetention`**, deepeval 4.3.1's
+  `KnowledgeRetentionMetric`: the judge extracts the facts each user turn
+  of a `DeepEvalEx.ConversationalTestCase` states, then decides for each
+  assistant turn that follows any facts whether it forgets or contradicts
+  them; the score is the share of turns that do not (`no` passes), `1`
+  when none is judged. Results are named `"Knowledge Retention"`. Its
+  prompts are `DeepEvalEx.Prompts.KnowledgeRetention`, whose verdict and
+  reason templates, as deepeval's, always print the multimodal input rules;
+  the reason prints the score to two decimals. As in deepeval, a verdict
+  outside yes and no cannot be explained: with `:include_reason` the
+  measure raises `'NoneType' object has no attribute 'verdict'`.
+- **`DeepEvalEx.Metrics.RoleAdherence`**, deepeval 4.3.1's
+  `RoleAdherenceMetric`, which requires a `:chatbot_role`: the judge lists
+  the assistant turns that break the role by index, each verdict's
+  `ai_message` set to `"<content> (turn #<n>)"` with Python's indexing; the
+  score is `(assistant turns - verdicts) / assistant turns`, at least `0`,
+  `1` without assistant turns. Results are named `"Role Adherence"`. Its
+  prompts are `DeepEvalEx.Prompts.RoleAdherence`, which always print the
+  multimodal input rules and the score unformatted.
+- **System One for both** (ADR-0009), as deepeval's:
+  - `:hybrid` asks one `DeepEvalEx.SystemOne.Spec.Binary` Noul per judged
+    assistant turn. KnowledgeRetention's is about the turn's `llm_message`
+    and the `accumulated_knowledge`, through
+    `DeepEvalEx.SystemOne.Decision.verdict/3` (P(yes) of `0.5` and above
+    forgets), falling back to the LLM per turn. RoleAdherence's is about the
+    `chatbot_role`, the `previous_turns` and the turn's `ai_message`,
+    through `DeepEvalEx.SystemOne.Decision.probability/2`: below `0.5` the
+    turn is out of character (`"P(in character)=0.31"`). Every turn is
+    asked, as deepeval gathers them, and if any request fails the LLM lists
+    the out of character turns instead; a conversation without assistant
+    turns is judged by the LLM.
+  - `:system_one` answers the whole metric from one request about the turns
+    (two Nouls and a four-level Score), RoleAdherence's state carrying the
+    `chatbot_role`; both batch with the test case's other `system_one`
+    conversational metrics.
+  - A multimodal conversation has no System One form.
+- New prompt goldens for every template of both metrics (their System One
+  templates included), eight scripted-judge scenarios and seven System One
+  scenarios (`system_one`, `hybrid` and `hybrid` fallback for each, and a
+  batched pair) check their prompts, decisions, scores, verbose logs and
+  exported `conversationalTestCases` byte for byte against deepeval's.
 
 ### Changed
 

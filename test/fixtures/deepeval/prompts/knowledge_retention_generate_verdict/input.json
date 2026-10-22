@@ -1,0 +1,18 @@
+{
+  "template": "KnowledgeRetentionMetric.generate_verdict",
+  "inputs": {
+    "llm_message": "Shall I add a peanut satay to your order, Zoë?",
+    "accumulated_knowledge": [
+      {
+        "Name": "Zoë"
+      },
+      {
+        "Allergies": [
+          "Peanuts",
+          "Shellfish"
+        ],
+        "Party Size": "2"
+      }
+    ]
+  }
+}

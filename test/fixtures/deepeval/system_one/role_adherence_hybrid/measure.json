@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.0,
+    "success": false,
+    "reason": "The score is 0.5 because turn #2 forgets the destination.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 2000,
+    "output_tokens": 0,
+    "verbose_logs": "Chatbot Role:\nA cheerful travel agent who keeps every reply short. \n \nOut-of-Character Turn(s):\n[\n    {\n        \"index\": 1,\n        \"reason\": \"P(in character)=0.31\",\n        \"ai_message\": \"Lovely! Where are you flying to? (turn #2)\"\n    },\n    {\n        \"index\": 3,\n        \"reason\": \"P(in character)=0.31\",\n        \"ai_message\": \"Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage! (turn #4)\"\n    }\n]",
+    "confidence": 0.38,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.5,
+    "success": true,
+    "reason": "The score is 0.5 because turn #2 forgets the destination.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "verbose_logs": "Chatbot Role:\nA cheerful travel agent who keeps every reply short. \n \nOut-of-Character Turn(s):\n[\n    {\n        \"index\": 1,\n        \"reason\": \"A cheerful agent would not forget the destination.\",\n        \"ai_message\": \"Lovely! Where are you flying to? (turn #2)\"\n    }\n]",
+    "confidence": null,
+    "system_one_fallback_reason": "ConnectionError: Jev is down; ConnectionError: Jev is down",
+    "score_breakdown": null,
+    "raised": null
+  }
+]

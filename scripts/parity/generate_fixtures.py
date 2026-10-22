@@ -47,7 +47,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the eighteen LLM-judged metrics, the way the metric itself renders it
+uses for the twenty LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -126,10 +126,12 @@ from deepeval.metrics import (  # noqa: E402
     FaithfulnessMetric,
     GEval,
     HallucinationMetric,
+    KnowledgeRetentionMetric,
     JsonCorrectnessMetric,
     PatternMatchMetric,
     PIILeakageMetric,
     PromptAlignmentMetric,
+    RoleAdherenceMetric,
     SummarizationMetric,
     ToolCorrectnessMetric,
     ToolPermissionMetric,
@@ -728,6 +730,8 @@ SCRIPTED_METRICS = {
     "conversational_g_eval": ConversationalGEval,
     "turn_relevancy": TurnRelevancyMetric,
     "conversation_completeness": ConversationCompletenessMetric,
+    "knowledge_retention": KnowledgeRetentionMetric,
+    "role_adherence": RoleAdherenceMetric,
 }
 
 # Metrics that call no LLM and take no `model`.
@@ -915,6 +919,18 @@ def _conversation_completeness(method, inputs, **kwargs):
     return ConversationCompletenessMetric(model=_prompt_judge())._get_prompt(
         method, multimodal=inputs.get("multimodal", False), **kwargs
     )
+
+
+def _knowledge_retention(method, **kwargs):
+    # KnowledgeRetentionMetric passes no multimodal flag; its verdict and
+    # reason templates print the multimodal rules regardless.
+    return KnowledgeRetentionMetric(model=_prompt_judge())._get_prompt(method, **kwargs)
+
+
+def _role_adherence(method, **kwargs):
+    # RoleAdherenceMetric passes no multimodal flag; its LLM templates print
+    # the multimodal rules regardless.
+    return RoleAdherenceMetric(model=_prompt_judge())._get_prompt(method, **kwargs)
 
 
 def _prompt_alignment(method, inputs, **kwargs):
@@ -1251,6 +1267,44 @@ PROMPT_RENDERERS = {
     "ConversationCompletenessMetric._experimental_system_one_verdict": lambda i: _prompt(
         ConversationCompletenessMetric, "_experimental_system_one_verdict",
     ),
+    # KnowledgeRetention formats the reason's score to two decimals;
+    # RoleAdherence prints it unformatted, as the metric passes it.
+    "KnowledgeRetentionMetric.extract_data": lambda i: _knowledge_retention(
+        "extract_data",
+        user_message=i["user_message"],
+        previous_turns=_turn_dicts(i["previous_turns"]),
+    ),
+    "KnowledgeRetentionMetric.generate_verdict": lambda i: _knowledge_retention(
+        "generate_verdict",
+        llm_message=i["llm_message"],
+        accumulated_knowledge=i["accumulated_knowledge"],
+    ),
+    "KnowledgeRetentionMetric.generate_reason": lambda i: _knowledge_retention(
+        "generate_reason", attritions=i["attritions"], score=format(i["score"], ".2f"),
+    ),
+    "KnowledgeRetentionMetric._experimental_system_one_questions": lambda i: _knowledge_retention(
+        "_experimental_system_one_questions",
+    ),
+    "KnowledgeRetentionMetric._experimental_system_one_verdict": lambda i: _knowledge_retention(
+        "_experimental_system_one_verdict",
+    ),
+    "RoleAdherenceMetric.extract_out_of_character_response_verdicts": lambda i: _role_adherence(
+        "extract_out_of_character_response_verdicts",
+        turns=_turn_dicts(i["turns"]),
+        role=i["role"],
+    ),
+    "RoleAdherenceMetric.generate_reason": lambda i: _role_adherence(
+        "generate_reason",
+        score=i["score"],
+        role=i["role"],
+        out_of_character_responses=i["out_of_character_responses"],
+    ),
+    "RoleAdherenceMetric._experimental_system_one_questions": lambda i: _role_adherence(
+        "_experimental_system_one_questions",
+    ),
+    "RoleAdherenceMetric._experimental_system_one_verdict": lambda i: _role_adherence(
+        "_experimental_system_one_verdict",
+    ),
     "ToolCorrectnessMetric._experimental_system_one_tool_selection_score": lambda i: _prompt(
         ToolCorrectnessMetric, "_experimental_system_one_tool_selection_score",
     ),
@@ -1528,6 +1582,81 @@ PROMPT_CASES = {
     },
     "conversation_completeness_experimental_system_one_verdict": {
         "template": "ConversationCompletenessMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "knowledge_retention_extract_data": {
+        "template": "KnowledgeRetentionMetric.extract_data",
+        "inputs": {
+            "user_message": "It's \"Zoë\", and I'm allergic to peanuts.",
+            "previous_turns": [
+                {"role": "user", "content": "Hi, I'd like to book a table."},
+                {"role": "assistant", "content": "Sure! What's your name?"},
+            ],
+        },
+    },
+    "knowledge_retention_extract_data_first_turn": {
+        "template": "KnowledgeRetentionMetric.extract_data",
+        "inputs": {"user_message": "I'm flying to Lisbon on 3 May.", "previous_turns": []},
+    },
+    "knowledge_retention_generate_verdict": {
+        "template": "KnowledgeRetentionMetric.generate_verdict",
+        "inputs": {
+            "llm_message": "Shall I add a peanut satay to your order, Zoë?",
+            "accumulated_knowledge": [
+                {"Name": "Zoë"},
+                {"Allergies": ["Peanuts", "Shellfish"], "Party Size": "2"},
+            ],
+        },
+    },
+    "knowledge_retention_generate_reason": {
+        "template": "KnowledgeRetentionMetric.generate_reason",
+        "inputs": {
+            "score": 0.3333333333333333,
+            "attritions": ["The LLM offers peanuts to a user allergic to them.", None],
+        },
+    },
+    "knowledge_retention_generate_reason_no_attritions": {
+        "template": "KnowledgeRetentionMetric.generate_reason",
+        "inputs": {"score": 1, "attritions": []},
+    },
+    "knowledge_retention_experimental_system_one_questions": {
+        "template": "KnowledgeRetentionMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "knowledge_retention_experimental_system_one_verdict": {
+        "template": "KnowledgeRetentionMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "role_adherence_extract_out_of_character_response_verdicts": {
+        "template": "RoleAdherenceMetric.extract_out_of_character_response_verdicts",
+        "inputs": {
+            "role": "A humble wizard who's never sure his spells work.",
+            "turns": [
+                {"role": "user", "content": "Show me a spell!"},
+                {"role": "assistant", "content": "Oh, it's only a little spark… I'm still learning."},
+                {"role": "user", "content": "Something \"bigger\"!"},
+                {"role": "assistant", "content": "Behold, the greatest wizard alive!"},
+            ],
+        },
+    },
+    "role_adherence_generate_reason": {
+        "template": "RoleAdherenceMetric.generate_reason",
+        "inputs": {
+            "score": 0.5,
+            "role": "A humble wizard who's never sure his spells work.",
+            "out_of_character_responses": ["Behold, the greatest wizard alive! (turn #4)", None],
+        },
+    },
+    "role_adherence_generate_reason_in_character": {
+        "template": "RoleAdherenceMetric.generate_reason",
+        "inputs": {"score": 1, "role": "A pirate.", "out_of_character_responses": []},
+    },
+    "role_adherence_experimental_system_one_questions": {
+        "template": "RoleAdherenceMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "role_adherence_experimental_system_one_verdict": {
+        "template": "RoleAdherenceMetric._experimental_system_one_verdict",
         "inputs": {},
     },
     "faithfulness_generate_claims": {
@@ -1978,7 +2107,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the eighteen metrics is rendered
+    """Fails unless every bundled template of the twenty metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()

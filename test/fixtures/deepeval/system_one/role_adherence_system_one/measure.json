@@ -1,0 +1,60 @@
+[
+  {
+    "score": 0.8425,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.42.\n1. Every assistant turn in `turns` stays in character as the role described in `chatbot_role`. -> likely holds (P(yes)=0.83, confidence=0.66, weight=2)\n2. No assistant turn in `turns` breaks character or acts against the persona, tone or behaviour set out in `chatbot_role`, even when the user pushes it to. -> likely holds (P(yes)=0.71, confidence=0.42)\n3. Across the assistant turns in `turns`, how consistently does the assistant adhere to the role in `chatbot_role`? -> \"Always in character\" (expected level=1.00 of 1.00, confidence=0.60)\nScore: 0.84 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every assistant turn in `turns` stays in character as the role described in `chatbot_role`.\n   value=0.830 applicable=True probabilities={'true': 0.83, 'false': 0.17} confidence=0.660\n2. [noul, weight=1] No assistant turn in `turns` breaks character or acts against the persona, tone or behaviour set out in `chatbot_role`, even when the user pushes it to.\n   value=0.710 applicable=True probabilities={'true': 0.71, 'false': 0.29} confidence=0.420\n3. [score, weight=1] Across the assistant turns in `turns`, how consistently does the assistant adhere to the role in `chatbot_role`?\n   value=1.000 applicable=True probabilities={'Mostly out of character': 0.0, 'Often out of character': 0.05, 'Rarely out of character': 0.15, 'Always in character': 0.8} confidence=0.600",
+    "confidence": 0.41999999999999993,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every assistant turn in `turns` stays in character as the role described in `chatbot_role`.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.83,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.83,
+          "false": 0.17000000000000004
+        },
+        "confidence": 0.6599999999999999,
+        "passed": null
+      },
+      {
+        "question": "No assistant turn in `turns` breaks character or acts against the persona, tone or behaviour set out in `chatbot_role`, even when the user pushes it to.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.71,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.71,
+          "false": 0.29000000000000004
+        },
+        "confidence": 0.41999999999999993,
+        "passed": null
+      },
+      {
+        "question": "Across the assistant turns in `turns`, how consistently does the assistant adhere to the role in `chatbot_role`?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 1.0,
+        "applicable": true,
+        "probabilities": {
+          "Mostly out of character": 0.0,
+          "Often out of character": 0.05,
+          "Rarely out of character": 0.15,
+          "Always in character": 0.8
+        },
+        "confidence": 0.6,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

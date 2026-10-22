@@ -33,8 +33,10 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     Hallucination,
     JevEval,
     JsonCorrectness,
+    KnowledgeRetention,
     PIILeakage,
     PromptAlignment,
+    RoleAdherence,
     Summarization,
     ToolCorrectness,
     Toxicity,
@@ -65,7 +67,9 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     "tool_correctness" => ToolCorrectness,
     "json_correctness" => JsonCorrectness,
     "turn_relevancy" => TurnRelevancy,
-    "conversation_completeness" => ConversationCompleteness
+    "conversation_completeness" => ConversationCompleteness,
+    "knowledge_retention" => KnowledgeRetention,
+    "role_adherence" => RoleAdherence
   }
 
   @eval_modes %{"llm" => :llm, "hybrid" => :hybrid, "system_one" => :system_one}

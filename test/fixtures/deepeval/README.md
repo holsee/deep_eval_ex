@@ -7,7 +7,7 @@ Fixtures written by **deepeval 4.3.1**, in six sets:
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
-  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's twenty-one
+  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's twenty-three
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
 - [prompt goldens](#prompt-goldens) (`prompts/`), used by
@@ -140,8 +140,9 @@ calling an LLM. A script holds:
   `answer_relevancy`, `contextual_precision`, `contextual_recall`,
   `contextual_relevancy`, `bias`, `toxicity`, `pii_leakage`, `prompt_alignment`,
   `summarization`, `argument_correctness`, `json_correctness`, `tool_correctness`,
-  `pattern_match`, `tool_permission`, `conversational_g_eval`, `turn_relevancy` or
-  `conversation_completeness`) and the metric's constructor
+  `pattern_match`, `tool_permission`, `conversational_g_eval`, `turn_relevancy`,
+  `conversation_completeness`, `knowledge_retention` or `role_adherence`) and the
+  metric's constructor
   `params`. JsonCorrectness's `expected_schema` is a pydantic model's
   `model_json_schema()`: the generator rebuilds the model from it
   (`build_expected_schema`) and fails unless the model's own schema is the
@@ -198,6 +199,8 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | ConversationalGEval | `conversational_g_eval_criteria_pass` (steps generated from criteria; `:role` appended to `[:content]`), `conversational_g_eval_steps_fail` (given steps, case-level `scenario` and `expected_outcome`, a rubric sorted by range, a fractional `2.5` kept as `0.25`), `conversational_g_eval_strict` (a `7` clamped to the integer `0`, threshold `1`), `conversational_g_eval_logprobs` (per-turn `retrieval_context` and `tools_called`; the score weighted by the *first* token equal to it, in the reason, unlike GEval), `conversational_g_eval_logprobs_missing` (a raw response without logprobs: the raw score kept). deepeval's asynchronous `evaluate()` copies the metric, so the test runs report `"scripted-judge (audio: scripted-judge)"` where `measure()` reports `"scripted-judge"` |
 | TurnRelevancy | `turn_relevancy_pass` (one window per unit interaction, the default `window_size` of 10), `turn_relevancy_fail` (`window_size` 2; a raw-text verdict outside yes and no dropped, so `None` in the verbose logs, while the irrelevant window keeps its message number `2`; turns with `retrieval_context`, `tools_called`, `metadata`, `user_id` and `latency_ms` printed as `Turn.__repr__`), `turn_relevancy_strict` (the integer `0`, no reason), `turn_relevancy_no_verdicts` (no answered user turn: no window, the integer score `1`). The reason prompt prints the score unformatted |
 | ConversationCompleteness | `conversation_completeness_pass`, `conversation_completeness_fail` (an unmet intention, a raw-text verdict outside yes and no dropped; turns with every field, printed as `model_dump()` JSON in the verbose logs; an unused `window_size`), `conversation_completeness_strict` (an unmet intention without a reason, `None` in the reason prompt), `conversation_completeness_no_intentions` (no verdict, the integer score `1`) |
+| KnowledgeRetention | `knowledge_retention_pass`, `knowledge_retention_fail` (an opening assistant turn, and one after a user turn whose facts are `{}`, get no verdict; a forgotten destination fails; a raw-text verdict in a code fence; a dict of several facts, its keys in sorted order), `knowledge_retention_strict` (a forgotten fact without a reason, `None` in the reason prompt, the integer `0`), `knowledge_retention_no_verdicts` (facts `null`: no verdict, the integer score `1`). The reason prompt prints the score to two decimals |
+| RoleAdherence | `role_adherence_pass` (turns with `retrieval_context` and `tools_called`, of which the prompt shows `content` and `role`), `role_adherence_fail` (one turn out of character, and a verdict whose index names no turn keeps the judge's `ai_message`: 1 of 3), `role_adherence_strict` (index `-1` counts from the end, `(turn #0)`; non-ASCII escaped in the verbose logs; the integer `0`), `role_adherence_no_assistant_turns` (the integer score `1`). The reason prompt prints the score unformatted |
 | Faithfulness | `faithfulness_pass`, `faithfulness_fail`, `faithfulness_borderline`, `faithfulness_penalize_ambiguous` (`penalize_ambiguous_claims`: the borderline verdict fails and is an `(Ambiguous)` contradiction), `faithfulness_no_claims` (empty list), `faithfulness_strict` |
 | Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_no_verdicts` (empty list), `hallucination_strict`, `hallucination_messy_json` (raw-text answers: prose, a code fence and trailing commas around the verdicts, a reason missing its closing brace), `hallucination_invalid_json` (a raw-text answer with no JSON: the metric errors) |
 | AnswerRelevancy | `answer_relevancy_pass`, `answer_relevancy_fail`, `answer_relevancy_no_statements` (empty list), `answer_relevancy_strict` |
@@ -245,7 +248,7 @@ scenarios, why it fails and its tag.
 ## Prompt goldens
 
 `prompts/<case>/` holds one prompt deepeval 4.3.1 renders for one of the
-eighteen LLM-judged metrics, for fixed inputs:
+twenty LLM-judged metrics, for fixed inputs:
 
 - `input.json` - `template`, deepeval's template class key and method (e.g.
   `FaithfulnessMetric.generate_truths`, from
@@ -353,6 +356,15 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.ConversationCompleteness.generate_reason/1` | `ConversationCompletenessMetric.generate_reason` (`conversation_completeness/templates/generate_reason.txt`) | `score` (unformatted), `incompletenesses` (list, `None` included), `intentions` (list), `multimodal` (the rules included when `true`) | `conversation_completeness_generate_reason`, `_multimodal` |
 | `Prompts.ConversationCompleteness.system_one_questions/0` | `ConversationCompletenessMetric._experimental_system_one_questions` (`conversation_completeness/templates/_experimental_system_one_questions.txt`) | none | `conversation_completeness_experimental_system_one_questions` |
 | `Prompts.ConversationCompleteness.system_one_verdict/0` | `ConversationCompletenessMetric._experimental_system_one_verdict` (`conversation_completeness/templates/_experimental_system_one_verdict.txt`) | none | `conversation_completeness_experimental_system_one_verdict` |
+| `Prompts.KnowledgeRetention.extract_data/1` | `KnowledgeRetentionMetric.extract_data` (`knowledge_retention/templates/extract_data.txt`) | `user_message`, `previous_turns` (list of `convert_turn_to_dict`) | `knowledge_retention_extract_data`, `_first_turn` |
+| `Prompts.KnowledgeRetention.generate_verdict/1` | `KnowledgeRetentionMetric.generate_verdict` (`knowledge_retention/templates/generate_verdict.txt`) | `llm_message`, `accumulated_knowledge` (list of dicts; the multimodal rules always included) | `knowledge_retention_generate_verdict` |
+| `Prompts.KnowledgeRetention.generate_reason/1` | `KnowledgeRetentionMetric.generate_reason` (`knowledge_retention/templates/generate_reason.txt`) | `attritions` (list, `None` included), `score` (`format(score, ".2f")`; the multimodal rules always included) | `knowledge_retention_generate_reason`, `_no_attritions` |
+| `Prompts.KnowledgeRetention.system_one_questions/0` | `KnowledgeRetentionMetric._experimental_system_one_questions` (`knowledge_retention/templates/_experimental_system_one_questions.txt`) | none | `knowledge_retention_experimental_system_one_questions` |
+| `Prompts.KnowledgeRetention.system_one_verdict/0` | `KnowledgeRetentionMetric._experimental_system_one_verdict` (`knowledge_retention/templates/_experimental_system_one_verdict.txt`) | none | `knowledge_retention_experimental_system_one_verdict` |
+| `Prompts.RoleAdherence.extract_out_of_character_response_verdicts/1` | `RoleAdherenceMetric.extract_out_of_character_response_verdicts` (`role_adherence/templates/extract_out_of_character_response_verdicts.txt`) | `turns` (list of `convert_turn_to_dict`), `role` (the multimodal rules always included) | `role_adherence_extract_out_of_character_response_verdicts` |
+| `Prompts.RoleAdherence.generate_reason/1` | `RoleAdherenceMetric.generate_reason` (`role_adherence/templates/generate_reason.txt`) | `score` (unformatted), `role`, `out_of_character_responses` (list, `None` included; the multimodal rules always included) | `role_adherence_generate_reason`, `_in_character` |
+| `Prompts.RoleAdherence.system_one_questions/0` | `RoleAdherenceMetric._experimental_system_one_questions` (`role_adherence/templates/_experimental_system_one_questions.txt`) | none | `role_adherence_experimental_system_one_questions` |
+| `Prompts.RoleAdherence.system_one_verdict/0` | `RoleAdherenceMetric._experimental_system_one_verdict` (`role_adherence/templates/_experimental_system_one_verdict.txt`) | none | `role_adherence_experimental_system_one_verdict` |
 | `Prompts.ToolCorrectness.system_one_tool_selection_score/0` | `ToolCorrectnessMetric._experimental_system_one_tool_selection_score` (`tool_correctness/templates/_experimental_system_one_tool_selection_score.txt`) | none | `tool_correctness_experimental_system_one_tool_selection_score` |
 
 Templates of these metrics without a DeepEvalEx counterpart, so without a
@@ -537,6 +549,10 @@ Each `system_one/<scenario>/` holds:
 | `turn_relevancy_system_one_strict` | TurnRelevancy in strict mode on Jev, with a `window_size` the whole-metric request does not use |
 | `turn_relevancy_hybrid`, `conversation_completeness_hybrid` | `hybrid` with a `SystemOneBinarySpec` per decision: one request per sliding window (TurnRelevancy, the window's `turns`) or per extracted user intention (ConversationCompleteness, the `turns` and the `intention`), its one Noul keyed `verdict`, P(yes) of `0.5` and above `yes` |
 | `turn_relevancy_hybrid_fallback`, `conversation_completeness_hybrid_fallback` | The same with Jev down: each window or intention falls back to the LLM, the reasons joined in `system_one_fallback_reason` |
+| `knowledge_retention_system_one`, `role_adherence_system_one` | The whole-metric request of KnowledgeRetention (the turns) and RoleAdherence (the turns, and `chatbot_role` under `test_case`) |
+| `knowledge_retention_hybrid` | `hybrid`: the LLM extracts each user turn's facts and writes the reason; one request per judged assistant turn about its `llm_message` and the `accumulated_knowledge`, P(yes) of `0.5` and above `yes` (it forgets) |
+| `role_adherence_hybrid` | `hybrid`: one request per assistant turn about the `chatbot_role`, the `previous_turns` and its `ai_message`, P(yes) below `0.5` out of character with the reason `P(in character)=0.31`; the LLM writes the reason |
+| `knowledge_retention_hybrid_fallback`, `role_adherence_hybrid_fallback` | The same with Jev down: KnowledgeRetention falls back per turn; RoleAdherence asks every turn (deepeval gathers them), then the LLM lists the out of character turns |
 | `<metric>_hybrid` | The same thirteen metrics in `hybrid`: the LLM extracts and explains (`prompts.json`), Jev decides each item; ContextualRelevancy asks one request per retrieval context node, about its sentences (`statement_<i>`); Bias and Toxicity ask whether each opinion is biased (toxic), `opinion_<i>`, P(yes) of `0.5` and above failing it; PIILeakage whether each extracted statement holds PII, `statement_<i>`, likewise; PromptAlignment whether each instruction is followed, `instruction_<i>` with `input` and `actual_output` in the state, P(yes) of `0.5` and above passing it (no LLM extraction); ArgumentCorrectness whether each tool call's input parameters address the input, `tool_call_<i>` holding the call's `ToolCall.__repr__` with `input` in the state, likewise passing (no LLM extraction); Summarization whether each claim of the summary agrees with the truths of the original text, `summary_claim_<i>` with `original_text` (the truths) in the state, the LLM still asking and answering the coverage questions |
 | `<metric>_hybrid_fallback` | `hybrid` with `ExplodingSystemOneModel`: each Jev call fails, the scripted judge takes the decisions, `system_one_fallback_reason` set |
 | `jev_eval` | `JevEval` with a weighted Noul, a Score and a Choice (credits and a not-applicable option) |
@@ -551,6 +567,7 @@ Each `system_one/<scenario>/` holds:
 | `batch_system_one_summarization` | Summarization and AnswerRelevancy batched into one request about `input` and `actual_output` by `evaluate()` |
 | `batch_system_one_agent` | ArgumentCorrectness and AnswerRelevancy batched into one request by `evaluate()`, the state merging `input`, `tools_called` and `actual_output` |
 | `batch_system_one_conversational` | TurnRelevancy and ConversationCompleteness batched into one request about the turns by `evaluate()` |
+| `batch_system_one_retention_role` | KnowledgeRetention and RoleAdherence batched into one request by `evaluate()`, the state holding the turns and the `chatbot_role` |
 | `batch_system_one_down` | Two batched metrics with Jev down: no fallback, `measure()` raises and `evaluate()` records the error on each metric |
 | `refusal_classifier_system_one` | `RefusalClassifier` on Jev: one Choice over its labels, deterministic reason |
 
