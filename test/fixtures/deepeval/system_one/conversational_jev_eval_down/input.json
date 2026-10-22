@@ -1,0 +1,55 @@
+{
+  "description": "ConversationalJevEval with Jev down: measure() raises, evaluate() records the error",
+  "metrics": [
+    {
+      "kind": "conversational_jev_eval",
+      "params": {
+        "name": "Support",
+        "evaluation_params": [
+          "content"
+        ],
+        "questions": [
+          {
+            "type": "noul",
+            "statement": "The assistant changes the address."
+          }
+        ]
+      }
+    }
+  ],
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order 42 is late."
+      },
+      {
+        "role": "assistant",
+        "content": "Sorry! It ships today."
+      },
+      {
+        "role": "user",
+        "content": "Can I change the address to Zürich?"
+      },
+      {
+        "role": "assistant",
+        "content": "Have you tried our new café blend?"
+      },
+      {
+        "role": "user",
+        "content": "Please just change the address."
+      },
+      {
+        "role": "assistant",
+        "content": "Done: order 42 now ships to Zürich."
+      }
+    ]
+  },
+  "system_one": {
+    "model": "exploding-jev",
+    "raises": {
+      "type": "ConnectionError",
+      "message": "Jev is down"
+    }
+  }
+}

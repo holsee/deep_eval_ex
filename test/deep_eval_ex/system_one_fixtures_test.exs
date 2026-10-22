@@ -45,6 +45,8 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     contextual_relevancy_system_one
     conversation_completeness_hybrid conversation_completeness_hybrid_fallback
     conversation_completeness_system_one
+    conversational_jev_eval conversational_jev_eval_strict_not_applicable
+    conversational_jev_eval_down
     faithfulness_hybrid faithfulness_hybrid_fallback faithfulness_system_one
     faithfulness_system_one_strict
     hallucination_hybrid hallucination_hybrid_fallback hallucination_system_one
@@ -77,6 +79,10 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
   @asks_nothing ~w(json_correctness)
 
   defp asks?(spec), do: spec["kind"] not in @asks_nothing
+
+  # A JevEval has no eval mode: it is always decided by System One.
+  defp decided_by_system_one?(spec),
+    do: spec["eval_mode"] == "system_one" or spec["kind"] in ~w(jev_eval conversational_jev_eval)
 
   defp load(scenario, file) do
     [@fixtures, scenario, file] |> Path.join() |> File.read!() |> Jason.decode!()
@@ -179,8 +185,9 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
             assert state["system_one_fallback_reason"] == nil
           end
 
-          # Under system_one nothing falls back: measure() raises.
-          if failed? and spec["eval_mode"] == "system_one" do
+          # Under system_one nothing falls back: measure() raises, as a
+          # JevEval's always does.
+          if failed? and decided_by_system_one?(spec) do
             assert state["raised"]["type"] == input["system_one"]["raises"]["type"]
           else
             assert state["raised"] == nil

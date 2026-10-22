@@ -26,6 +26,13 @@ Use an LLM to evaluate outputs based on criteria:
 | [KnowledgeRetention](KnowledgeRetention.md) | The assistant remembers what the user told it | Multi-turn chatbots that ask for the same thing twice |
 | [RoleAdherence](RoleAdherence.md) | The assistant stays in the character of its `chatbot_role` | Persona and role-play chatbots |
 
+### System One Metrics
+Your own questions, answered by a System One model (Jev) with calibrated probabilities; no LLM is called:
+
+| Metric | Purpose | Use Case |
+|--------|---------|----------|
+| [ConversationalJevEval](ConversationalJevEval.md) | Weighted Noul, Score and Choice questions about a whole conversation | Cheap, deterministic checks of multi-turn chatbots |
+
 ### RAG Metrics
 Evaluate Retrieval-Augmented Generation pipelines:
 

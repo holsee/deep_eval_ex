@@ -5,8 +5,9 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   deepeval 4.3.1 did for the same scenario (see the fixtures' README).
 
   A scenario's `input.json` holds its metrics (`kind`, `eval_mode` and
-  constructor `params`; a `jev_eval` has no `eval_mode` and is built as a
-  `DeepEvalEx.Metrics.JevEval` struct): one, or several for a `batched`
+  constructor `params`; a `jev_eval` or `conversational_jev_eval` has no
+  `eval_mode` and is built as a `DeepEvalEx.Metrics.JevEval` or
+  `DeepEvalEx.Metrics.ConversationalJevEval` struct): one, or several for a `batched`
   scenario, whose `evaluate()` asked one batched request (see
   `DeepEvalEx.SystemOne.Batch`). It also holds one `test_case`, the fake System One model
   (`system_one`: canned answers or the error it raises) and, when an LLM is
@@ -28,6 +29,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     ContextualPrecision,
     ContextualRecall,
     ContextualRelevancy,
+    ConversationalJevEval,
     ConversationCompleteness,
     Faithfulness,
     Hallucination,
@@ -231,7 +233,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     :ok
   end
 
-  # Each metric (a module, or a JevEval struct) with its options (deepeval's
+  # Each metric (a module, or a JevEval or ConversationalJevEval struct) with its options (deepeval's
   # constructor params, the eval mode, the fake System One model and the
   # scripted judge).
   defp metrics(input, mock) do
@@ -245,7 +247,10 @@ defmodule DeepEvalEx.Test.SystemOneParity do
 
     Enum.map(specs, fn
       %{"kind" => "jev_eval", "params" => params} ->
-        {jev_eval(params, mock), [adapter: :mock]}
+        {jev_eval(JevEval, params, mock), [adapter: :mock]}
+
+      %{"kind" => "conversational_jev_eval", "params" => params} ->
+        {jev_eval(ConversationalJevEval, params, mock), [adapter: :mock]}
 
       %{"kind" => kind, "params" => params} = spec ->
         metric(kind, spec["eval_mode"], params, mock)
@@ -286,11 +291,12 @@ defmodule DeepEvalEx.Test.SystemOneParity do
 
   defp configured(module, opts), do: {module, opts}
 
-  # deepeval's JevEval(**params): the questions as Scored structs, the
-  # evaluation params as atoms.
-  defp jev_eval(params, mock) do
+  # deepeval's JevEval(**params) or ConversationalJevEval(**params): the
+  # questions as Scored structs, the evaluation params as atoms.
+  defp jev_eval(module, params, mock) do
     # Its evaluation params are the test case's field names.
     Code.ensure_loaded!(TestCase)
+    Code.ensure_loaded!(ConversationalTestCase)
 
     params.values
     |> Enum.map(fn
@@ -307,7 +313,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
         option(key, plain(value))
     end)
     |> Keyword.put(:system_one_model, mock)
-    |> JevEval.new()
+    |> module.new()
   end
 
   # deepeval's fixture generator builds ToolCalls from available_tools.

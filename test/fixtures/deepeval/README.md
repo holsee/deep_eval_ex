@@ -580,6 +580,9 @@ Each `system_one/<scenario>/` holds:
 | `<metric>_hybrid_fallback` | `hybrid` with `ExplodingSystemOneModel`: each Jev call fails, the scripted judge takes the decisions, `system_one_fallback_reason` set |
 | `jev_eval` | `JevEval` with a weighted Noul, a Score and a Choice (credits and a not-applicable option) |
 | `jev_eval_strict_not_applicable` | `JevEval` in strict mode without the `[JevEval]` suffix, a Noul with `true` / `false` criteria, a Choice judged not applicable |
+| `conversational_jev_eval` | `ConversationalJevEval` with a weighted Noul, a Score and a Choice about the turns (`content` and `role` appended to the evaluation params) and `chatbot_role` under `test_case`; results export under `conversationalTestCases` |
+| `conversational_jev_eval_strict_not_applicable` | `ConversationalJevEval` in strict mode without the suffix, about each turn's `role`, `retrieval_context` and `content` and the `expected_outcome`: a Choice judged not applicable |
+| `conversational_jev_eval_down` | `ConversationalJevEval` with Jev down: `measure()` raises, `evaluate()` records the error |
 | `batch_system_one` | Faithfulness, AnswerRelevancy and ContextualRecall batched into one request by `evaluate()`; cost and tokens split by question count |
 | `batch_system_one_retrieval` | ContextualRelevancy and ContextualPrecision batched into one request by `evaluate()` |
 | `batch_system_one_safety` | Bias and Toxicity batched into one request about `actual_output` by `evaluate()` |
@@ -603,7 +606,8 @@ questions are well formed and answered under their own type and nothing
 else, that a batched request prefixes its keys per metric that asks
 anything (and an unbatched `evaluate()` repeats `measure()`'s calls), that a
 metric that asks nothing (JsonCorrectness) makes no call, that fallbacks,
-raised errors and confidence appear exactly when Jev failed or answered, and
+raised errors (under `system_one`, and for a JevEval or ConversationalJevEval)
+and confidence appear exactly when Jev failed or answered, and
 that the export agrees with `measure()` on evaluation model and reason.
 
 `test/deep_eval_ex/metrics/system_one_parity_test.exs`
@@ -618,4 +622,6 @@ Bias, Toxicity, PIILeakage, PromptAlignment, ArgumentCorrectness, Summarization 
 scenarios, JsonCorrectness's `system_one` and `hybrid`, and
 `faithfulness_system_one_strict`, and
 `DeepEvalEx.Metrics.JevEval` (`jev_eval` and
-`jev_eval_strict_not_applicable`), and the batched scenarios.
+`jev_eval_strict_not_applicable`), `DeepEvalEx.Metrics.ConversationalJevEval`
+(`conversational_jev_eval`, `conversational_jev_eval_strict_not_applicable`
+and `conversational_jev_eval_down`), and the batched scenarios.

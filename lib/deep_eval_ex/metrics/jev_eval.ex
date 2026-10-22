@@ -57,7 +57,8 @@ defmodule DeepEvalEx.Metrics.JevEval do
       result.score_breakdown  # => one outcome per question
 
   A metric struct can also be passed to `DeepEvalEx.evaluate/3` like any
-  other metric.
+  other metric. To ask about a conversation, use
+  `DeepEvalEx.Metrics.ConversationalJevEval`.
 
   ## Eval modes
 
@@ -179,12 +180,14 @@ defmodule DeepEvalEx.Metrics.JevEval do
     }
   end
 
-  # deepeval's validate_questions.
-  defp validate_questions!(questions) when questions in [nil, []] do
+  @doc false
+  # deepeval's validate_questions, shared with ConversationalJevEval.
+  @spec validate_questions!(term()) :: [Scored.t(), ...]
+  def validate_questions!(questions) when questions in [nil, []] do
     raise ArgumentError, "JevEval needs at least one question (Noul, Score or Choice)."
   end
 
-  defp validate_questions!(questions) when is_list(questions) do
+  def validate_questions!(questions) when is_list(questions) do
     Enum.each(questions, fn
       %module{} when module in [Scored.Noul, Scored.Score, Scored.Choice] ->
         :ok
@@ -197,8 +200,11 @@ defmodule DeepEvalEx.Metrics.JevEval do
     questions
   end
 
-  # deepeval's initialize_jev_model: there is no LLM to fall back to.
-  defp jev_model!(spec) do
+  @doc false
+  # deepeval's initialize_jev_model, shared with ConversationalJevEval:
+  # there is no LLM to fall back to.
+  @spec jev_model!(term()) :: Model.t()
+  def jev_model!(spec) do
     case spec |> Model.resolve() |> Model.init() do
       {:ok, model} ->
         model
@@ -316,11 +322,18 @@ defmodule DeepEvalEx.Metrics.JevEval do
 
   @doc false
   def do_measure(%TestCase{} = test_case, opts) do
+    state = State.single_turn(Keyword.fetch!(opts, :evaluation_params), test_case)
+    decide(state, name(opts), opts)
+  end
+
+  @doc false
+  # One System One request about `state`, then deepeval's _finalize: the
+  # measure shared with ConversationalJevEval, which builds its own state
+  # and result name.
+  @spec decide(Jason.OrderedObject.t(), String.t(), keyword()) :: {:ok, Result.t()}
+  def decide(state, name, opts) do
     %Context{model: %Model{name: model_name} = model} = Keyword.fetch!(opts, :system_one)
     questions = Keyword.fetch!(opts, :questions)
-    name = name(opts)
-
-    state = State.single_turn(Keyword.fetch!(opts, :evaluation_params), test_case)
 
     case SystemOne.decide(state, Scoring.questions(questions),
            system_one_model: model,

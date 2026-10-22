@@ -1,0 +1,85 @@
+{
+  "description": "ConversationalJevEval in strict mode, without the suffix, about each turn's retrieval_context and the expected_outcome: a Choice judged not applicable",
+  "metrics": [
+    {
+      "kind": "conversational_jev_eval",
+      "params": {
+        "name": "Grounded Chat",
+        "evaluation_params": [
+          "role",
+          "retrieval_context",
+          "expected_outcome"
+        ],
+        "strict_mode": true,
+        "_include_jev_eval_suffix": false,
+        "questions": [
+          {
+            "type": "noul",
+            "statement": "Every assistant turn is grounded in its `retrieval_context`.",
+            "true": "Every turn is grounded.",
+            "false": "Some turn is not."
+          },
+          {
+            "type": "choice",
+            "question": "Does the conversation reach `expected_outcome`?",
+            "options": {
+              "reaches_it": 1.0,
+              "misses_it": 0.0,
+              "no_outcome": null
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "test_case": {
+    "expected_outcome": "Order 42 shipped on 1 October. Refunds take 5 business days.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Where is order 42?"
+      },
+      {
+        "role": "assistant",
+        "content": "It shipped on 1 October from Zürich.",
+        "retrieval_context": [
+          "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+          "Our café is open late."
+        ]
+      },
+      {
+        "role": "user",
+        "content": "How long does a refund take?"
+      },
+      {
+        "role": "assistant",
+        "content": "Refunds take 2 business days.",
+        "retrieval_context": [
+          "Refunds take 5 business days."
+        ]
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": null,
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.62
+        }
+      },
+      "choices": {
+        "q_1": {
+          "choice": "no_outcome",
+          "probabilities": {
+            "reaches_it": 0.2,
+            "misses_it": 0.1,
+            "no_outcome": 0.7
+          },
+          "confidence": 0.55
+        }
+      }
+    }
+  }
+}

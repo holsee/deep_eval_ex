@@ -498,8 +498,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     `{:error, {:missing_params, params}}`. Without `:evaluation_params`,
     deepeval asks about the agent's trace. DeepEvalEx test cases carry no
     trace yet, so such a metric raises `DeepEvalEx.MissingTestCaseParamsError`
-    with deepeval's message. The trace state and `ConversationalJevEval` come
-    later.
+    with deepeval's message. The trace state comes later.
 
   The System One parity test now also measures the `jev_eval` and
   `jev_eval_strict_not_applicable` fixtures, which match deepeval byte for
@@ -1682,6 +1681,38 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `hybrid` fallback for each, a strict TurnFaithfulness, and the four
   batched) check their prompts, decisions, scores, verbose logs and
   exported `conversationalTestCases` byte for byte against deepeval's.
+- **`DeepEvalEx.Metrics.ConversationalJevEval`**, deepeval 4.3.1's
+  `ConversationalJevEval`: JevEval's weighted Noul, Score and Choice
+  questions about a `DeepEvalEx.ConversationalTestCase`. One System One
+  request answers them about the state deepeval's
+  `construct_multi_turn_state` builds (`DeepEvalEx.SystemOne.State.multi_turn/2`):
+  `"turns"`, each turn's `role`, `content`, `retrieval_context` and
+  `tools_called` among the evaluation params, then `"test_case"` with the
+  conversation-level ones that are set. Scoring, strict mode, the
+  deterministic reason, verbose logs and usage are JevEval's: always System
+  One whatever the eval mode, no LLM, a System One error raised and never
+  caught, never batched.
+  - `ConversationalJevEval.new/1` requires `:evaluation_params` and appends
+    `:content`, then `:role`, when missing. It raises `ArgumentError` with
+    deepeval's message ("evaluation_params cannot be empty; ...") when they
+    are missing or empty, and for a param that is not a multi-turn param,
+    and JevEval's errors for the questions and the System One model.
+  - Results are named `"<name> [Conversational JevEval]"`
+    (`include_jev_eval_suffix: false` drops the suffix) and export under
+    `conversationalTestCases`. `ConversationalJevEval.evaluate/3` measures
+    with a struct, and `DeepEvalEx.evaluate/3` takes the struct like any
+    other metric.
+  - Before asking, a multimodal conversation raises `ArgumentError` ("...
+    evaluates text only: Jev has no image input. Pass a text-only
+    ConversationalTestCase."), and a missing `:expected_outcome`,
+    `:scenario`, `:metadata` or `:tags` evaluation param, or a missing
+    `:chatbot_role` when it is one, returns its error as any conversational
+    metric's.
+- Three System One scenarios (`conversational_jev_eval`,
+  `conversational_jev_eval_strict_not_applicable` and
+  `conversational_jev_eval_down`) check its request, measured state,
+  verbose logs and exported `conversationalTestCases` byte for byte against
+  deepeval's.
 
 ### Changed
 

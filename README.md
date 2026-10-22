@@ -91,6 +91,7 @@ config :deep_eval_ex,
 | **ArgumentCorrectness** | Whether each agent tool call's arguments address the input |
 | **ToolPermission** | Agent tool calls against an allowlist and denylist |
 | **JevEval** | Your own weighted Noul, Score and Choice questions, decided by a System One model (Jev) |
+| **ConversationalJevEval** | JevEval for multi-turn conversations: your own questions about the turns, decided by a System One model (Jev) |
 
 See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation on each metric.
 

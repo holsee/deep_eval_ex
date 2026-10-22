@@ -116,6 +116,7 @@ from deepeval.metrics import (  # noqa: E402
     ContextualRecallMetric,
     ContextualRelevancyMetric,
     ConversationCompletenessMetric,
+    ConversationalJevEval,
     FaithfulnessMetric,
     HallucinationMetric,
     JevEval,
@@ -145,7 +146,7 @@ from deepeval.models.system_one import (  # noqa: E402
     TypeSafeModel,
 )
 from deepeval.models.utils import EvaluationCost  # noqa: E402
-from deepeval.test_case import SingleTurnParams, ToolCall  # noqa: E402
+from deepeval.test_case import MultiTurnParams, SingleTurnParams, ToolCall  # noqa: E402
 
 # Only translates questions to the SDK's shape (`_to_sdk_questions` reads no
 # instance state). Constructing a TypeSafeModel would build its client, which
@@ -170,6 +171,7 @@ METRICS = {
     "tool_correctness": ToolCorrectnessMetric,
     "json_correctness": JsonCorrectnessMetric,
     "jev_eval": JevEval,
+    "conversational_jev_eval": ConversationalJevEval,
     "turn_relevancy": TurnRelevancyMetric,
     "conversation_completeness": ConversationCompletenessMetric,
     "knowledge_retention": KnowledgeRetentionMetric,
@@ -272,6 +274,12 @@ def build_metric(spec, system_one_model, judge):
             JEV_QUESTIONS[q.pop("type")](**q) for q in params["questions"]
         ]
         return JevEval(system_one_model=system_one_model, **params)
+    if kind == "conversational_jev_eval":
+        params["evaluation_params"] = [MultiTurnParams(p) for p in params["evaluation_params"]]
+        params["questions"] = [
+            JEV_QUESTIONS[q.pop("type")](**q) for q in params["questions"]
+        ]
+        return ConversationalJevEval(system_one_model=system_one_model, **params)
     if "available_tools" in params:
         params["available_tools"] = [ToolCall(**tool) for tool in params["available_tools"]]
     if "expected_schema" in params:
@@ -1605,6 +1613,64 @@ SCENARIOS = {
                 "nothing_to_cite", {"cites": 0.1, "does_not_cite": 0.2, "nothing_to_cite": 0.7}, 0.55,
             )},
         }},
+    },
+    "conversational_jev_eval": {
+        "description": "ConversationalJevEval about the turns and the chatbot_role: a weighted Noul, "
+                       "a Score and a Choice",
+        "metrics": [{"kind": "conversational_jev_eval", "params": {
+            "name": "Travel Agent",
+            "evaluation_params": ["chatbot_role"],
+            "threshold": 0.7,
+            "questions": [
+                {"type": "noul", "statement": "The assistant remembers what the user told it.",
+                 "weight": 2},
+                {"type": "score", "question": "How well do the assistant's turns keep to `chatbot_role`?",
+                 "levels": ["Not at all", "Partly", "Fully"]},
+                {"type": "choice", "question": "How does the assistant end the conversation?",
+                 "options": {"confirms_the_booking": 1.0, "asks_again": 0.0, "still_open": None}},
+            ],
+        }}],
+        "test_case": TRAVEL,
+        "system_one": {"model": JEV, "cost": JEV_COST, "answers": {
+            "nouls": {"q_0": noul(0.35)},
+            "scores": {"q_1": score(1.8, {"0": 0.05, "1": 0.1, "2": 0.85}, 0.8)},
+            "choices": {"q_2": choice(
+                "confirms_the_booking", {"confirms_the_booking": 0.7, "asks_again": 0.2, "still_open": 0.1}, 0.6,
+            )},
+        }},
+    },
+    "conversational_jev_eval_strict_not_applicable": {
+        "description": "ConversationalJevEval in strict mode, without the suffix, about each turn's "
+                       "retrieval_context and the expected_outcome: a Choice judged not applicable",
+        "metrics": [{"kind": "conversational_jev_eval", "params": {
+            "name": "Grounded Chat",
+            "evaluation_params": ["role", "retrieval_context", "expected_outcome"],
+            "strict_mode": True,
+            "_include_jev_eval_suffix": False,
+            "questions": [
+                {"type": "noul", "statement": "Every assistant turn is grounded in its `retrieval_context`.",
+                 "true": "Every turn is grounded.", "false": "Some turn is not."},
+                {"type": "choice", "question": "Does the conversation reach `expected_outcome`?",
+                 "options": {"reaches_it": 1.0, "misses_it": 0.0, "no_outcome": None}},
+            ],
+        }}],
+        "test_case": RAG_CHAT,
+        "system_one": {"model": JEV, "cost": None, "answers": {
+            "nouls": {"q_0": noul(0.62)},
+            "choices": {"q_1": choice(
+                "no_outcome", {"reaches_it": 0.2, "misses_it": 0.1, "no_outcome": 0.7}, 0.55,
+            )},
+        }},
+    },
+    "conversational_jev_eval_down": {
+        "description": "ConversationalJevEval with Jev down: measure() raises, evaluate() records the error",
+        "metrics": [{"kind": "conversational_jev_eval", "params": {
+            "name": "Support",
+            "evaluation_params": ["content"],
+            "questions": [{"type": "noul", "statement": "The assistant changes the address."}],
+        }}],
+        "test_case": SUPPORT,
+        "system_one": DOWN,
     },
     # Batched: evaluate() merges a test case's system_one metrics.
     "batch_system_one": {
