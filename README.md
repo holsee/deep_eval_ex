@@ -261,7 +261,8 @@ Every user-visible change adds an entry under `## [Unreleased]` in
 Deprecated, Removed, Fixed, Security). On release, `[Unreleased]` becomes the
 new version section.
 
-See the [Roadmap](ROADMAP.md) for what is shipped and what is planned.
+See the [Roadmap](ROADMAP.md) for the plan to deepeval 4.3.1 parity and the
+[Changelog](CHANGELOG.md) for what has shipped.
 
 ## License
 

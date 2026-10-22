@@ -483,9 +483,10 @@ lib/deep_eval_ex/
 
 ## Contributing
 
-Contributions are welcome, especially on the units above. See the README's *Development* section for the dev container,
-the gate, live checks and regenerating parity fixtures, and the
-[Custom Metrics](wiki/guides/Custom-Metrics.md) and
-[Custom LLM Adapters](wiki/guides/Custom-LLM-Adapters.md) guides for
-implementation patterns. Every user-visible change adds an entry under
-`## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md) in the same commit.
+Contributions are welcome, especially on the units above. See the README's
+*Development* section for the dev container, the gate, live checks and
+regenerating parity fixtures, and the [Custom
+Metrics](wiki/guides/Custom-Metrics.md) and [Custom LLM
+Adapters](wiki/guides/Custom-LLM-Adapters.md) guides for implementation
+patterns. Every user-visible change adds an entry under `## [Unreleased]` in
+[CHANGELOG.md](CHANGELOG.md) in the same commit.

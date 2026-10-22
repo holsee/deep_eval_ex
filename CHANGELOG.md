@@ -99,9 +99,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   Each schema module exports `json_schema/0`.
 - `req` now requires `~> 0.7`.
 - CI runs Elixir 1.19.5 and OTP 28.4, matching `.tool-versions`.
-- The roadmap and module docs describe what has shipped and what is planned.
-- The roadmap now sets out the phased plan to deepeval 4.3.1 parity, including
-  System One (Jev) support.
+- Module docs describe only what has shipped. The roadmap sets out the phased
+  plan to deepeval 4.3.1 parity, including System One (Jev) support, and links
+  to this changelog for shipped work.
 
 ### Removed
 
