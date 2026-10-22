@@ -179,6 +179,36 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     is.
   - `DeepEvalEx.SystemOne.AdapterCase`'s `:init_failure` check also checks
     that `Context.resolve!/2` raises the failure as a `DeepEvalError`.
+- **`DeepEvalEx.SystemOne.Decision`, the `:hybrid` decision points**
+  (ADR-0009), a port of the System One helpers of deepeval 4.3.1's
+  `metrics/utils/decision.py`. No built-in metric calls them yet.
+  - `DeepEvalEx.SystemOne.Spec.Binary`, `Spec.Choice` and `Spec.Score`
+    (deepeval's `SystemOneBinarySpec`, `SystemOneChoiceSpec` and
+    `SystemOneScoreSpec`) describe one decision: its instructions, its
+    options or levels, and the state it is about.
+  - `Decision.probability/2` (P(yes) of one Noul), `choice/2` (the answer
+    to one Choice) and `score/2` (one Score on `0..1`) return
+    `{:ok, value}`, or `:llm` when the metric should run its LLM branch:
+    under `:llm`, without a spec, or once a permanent failure disabled
+    System One for the measure. They ask one question keyed `"verdict"`,
+    book the request's usage (an unpriced request voids the summed cost)
+    and fold its confidence into the measure's minimum. As in deepeval,
+    they do not pre-check the context budget, and a mode that uses System
+    One with no model raises deepeval's "routes decisions to a System One
+    model, but ... has none configured" `DeepEvalError`.
+  - `Decision.handle_failure/2`, deepeval's `handle_system_one_failure`:
+    under `:hybrid` a failed request falls back to the LLM and adds
+    deepeval's text (`"ConnectionError: Jev is down"`, `"timeout (...)"`,
+    `"context limit (N est. tokens > L)"`) to the measure's
+    `system_one_fallback_reason`, joined with `"; "`; a permanent failure
+    (a rejected or missing key, a missing SDK) keeps the rest of the measure
+    on the LLM. Under `:system_one` a context overflow raises
+    `DeepEvalEx.ContextWindowExceededError` with deepeval's "could not run
+    on System One ... Switch this metric back to the LLM" text
+    (`Decision.context_limit_error/2`), and any other error is re-raised.
+    An exception that is not a System One error always propagates.
+  - `Decision.format_reason/3`, deepeval's `format_decision_reason`:
+    `"Decided by fake-jev: tool selection 0.75, confidence 0.25."`.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in
