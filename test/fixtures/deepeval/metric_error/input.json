@@ -1,0 +1,39 @@
+{
+  "test_cases": [
+    {
+      "input": "Hello",
+      "actual_output": "Hi",
+      "expected_output": "Hi"
+    },
+    {
+      "input": "Bye",
+      "actual_output": "Ciao",
+      "expected_output": "Goodbye"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "exact_match"
+    },
+    {
+      "kind": "error",
+      "name": "Flaky Judge",
+      "threshold": 0.5,
+      "exception": "ValueError",
+      "message": "judge returned invalid JSON"
+    },
+    {
+      "kind": "stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    }
+  ],
+  "identifier": null,
+  "hyperparameters": null
+}
