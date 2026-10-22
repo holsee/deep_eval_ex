@@ -590,6 +590,9 @@ defmodule DeepEvalEx.Evaluator do
 
   defp missing_params?({:missing_params, params}) when is_list(params), do: true
   defp missing_params?({:empty_param, param}) when is_atom(param), do: true
+  defp missing_params?({:missing_conversational_param, param}) when is_atom(param), do: true
+  defp missing_params?(:empty_turns), do: true
+  defp missing_params?({:no_turn_with, param}) when is_atom(param), do: true
   defp missing_params?(%MissingTestCaseParamsError{}), do: true
   defp missing_params?(_reason), do: false
 

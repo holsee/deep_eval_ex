@@ -6,9 +6,11 @@ defmodule DeepEvalEx.MissingTestCaseParamsError do
   The counterpart of deepeval's `MissingTestCaseParamsError`, raised by
   `DeepEvalEx.Evaluator` for a metric returning `{:error, {:missing_params,
   params}}` or `{:error, {:empty_param, param}}` (see
-  `DeepEvalEx.TestCase.validate_params/2`) unless `:skip_on_missing_params`
-  or `:ignore_errors` is set. Its message is deepeval's, e.g.
-  `"'expected_output' cannot be None for the 'Exact Match' metric"`.
+  `DeepEvalEx.TestCase.validate_params/2`), or one of the errors of
+  `DeepEvalEx.ConversationalTestCase.validate_params/3`, unless
+  `:skip_on_missing_params` or `:ignore_errors` is set. Its message is
+  deepeval's, e.g. `"'expected_output' cannot be None for the 'Exact Match'
+  metric"`.
 
   Has the fields of `DeepEvalEx.MetricError`.
   """

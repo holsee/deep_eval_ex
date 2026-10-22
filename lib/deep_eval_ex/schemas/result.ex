@@ -222,6 +222,22 @@ defmodule DeepEvalEx.Result do
   - `{:empty_param, :actual_output}` - `"'actual_output' cannot be empty for
     the 'Exact Match' metric"`
 
+  and for the errors of `DeepEvalEx.ConversationalTestCase.validate_params/3`
+  and a conversational metric given another test case, which get the
+  messages of deepeval's `check_conversational_test_case_params`:
+
+  - `{:missing_conversational_param, :scenario}` - `"'scenario' in a
+    conversational test case cannot be empty for the 'Role Adherence'
+    metric."`
+  - `:empty_turns` - `"'turns' in conversational test case cannot be
+    empty."`
+  - `{:no_turn_with, :provider_transcript}` and `{:no_turn_with, :audio}` -
+    `"No turn in the conversational test case has ..."`, naming the metric
+  - `:not_conversational_test_case` - `"Unable to evaluate test cases that
+    are not of type 'ConversationalTestCase' using the conversational
+    'Role Adherence' metric."` (deepeval's `ValueError`, not a missing
+    param)
+
   ## Options
 
   - `:threshold` - The metric's threshold, when known (default: `nil`,
@@ -408,6 +424,32 @@ defmodule DeepEvalEx.Result do
 
   defp format_error({:empty_param, param}, metric) when is_atom(param) do
     "'#{param}' cannot be empty for the '#{metric}' metric"
+  end
+
+  defp format_error({:missing_conversational_param, param}, metric) when is_atom(param) do
+    "'#{param}' in a conversational test case cannot be empty for the '#{metric}' metric."
+  end
+
+  defp format_error(:empty_turns, _metric),
+    do: "'turns' in conversational test case cannot be empty."
+
+  defp format_error({:no_turn_with, :provider_transcript}, metric) do
+    "No turn in the conversational test case has a 'provider_transcript', which the " <>
+      "'#{metric}' metric needs. Only voice connectors that report the agent's own " <>
+      "transcription of the caller populate it, so a phone call or a text conversation " <>
+      "will never have one."
+  end
+
+  defp format_error({:no_turn_with, :audio}, metric) do
+    "No turn in the conversational test case has 'audio', which the '#{metric}' metric " <>
+      "needs. Voice simulations attach each turn's clip as `Turn.audio`; for a recorded " <>
+      "call, cut the recording into one clip per turn and attach them with " <>
+      "`Audio.from_bytes(..., start_time=...)`."
+  end
+
+  defp format_error(:not_conversational_test_case, metric) do
+    "Unable to evaluate test cases that are not of type 'ConversationalTestCase' using " <>
+      "the conversational '#{metric}' metric."
   end
 
   defp format_error(error, _metric) when is_binary(error), do: error

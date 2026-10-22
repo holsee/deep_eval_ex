@@ -314,64 +314,8 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
       """
       @spec measure(TestCase.t(), keyword()) ::
               {:ok, Result.t()} | {:error, term()}
-      def measure(test_case, opts \\ []) do
-        start_time = System.monotonic_time(:millisecond)
-
-        opts =
-          opts
-          |> unquote(__MODULE__).with_default_opts(__MODULE__)
-          |> unquote(__MODULE__).strict_opts(default_threshold())
-          |> unquote(__MODULE__).system_one_opts(__MODULE__)
-
-        metadata = %{
-          metric: metric_name(),
-          test_case_id: Map.get(test_case, :name)
-        }
-
-        :telemetry.execute(
-          [:deep_eval_ex, :metric, :start],
-          %{system_time: System.system_time()},
-          metadata
-        )
-
-        {outcome, usages, ledger} =
-          unquote(__MODULE__).track_measure(fn ->
-            with :ok <- validate_test_case(test_case) do
-              unquote(__MODULE__).seed_usage(__MODULE__, opts)
-              do_measure(test_case, opts)
-            end
-          end)
-
-        case outcome do
-          {:ok, result} ->
-            latency = System.monotonic_time(:millisecond) - start_time
-
-            result =
-              result
-              |> unquote(__MODULE__).apply_metric_semantics(opts)
-              |> Map.put(:latency_ms, latency)
-              |> unquote(__MODULE__).put_usage(
-                unquote(__MODULE__).usage_fields(__MODULE__, opts, usages)
-              )
-              |> unquote(__MODULE__).put_system_one_state(ledger)
-
-            :telemetry.execute(
-              [:deep_eval_ex, :metric, :stop],
-              unquote(__MODULE__).stop_measurements(result),
-              metadata
-            )
-
-            {:ok, result}
-
-          {:error, reason} = error ->
-            unquote(__MODULE__).emit_exception(start_time, usages, metadata, reason)
-            error
-
-          {:raised, exception, stacktrace} ->
-            unquote(__MODULE__).emit_exception(start_time, usages, metadata, exception)
-            reraise exception, stacktrace
-        end
-      end
+      def measure(test_case, opts \\ []),
+        do: unquote(__MODULE__).run_measure(__MODULE__, test_case, opts)
 
       @doc """
       Implement this function with your metric logic.
@@ -385,6 +329,66 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
       end
 
       defoverridable measure: 2, do_measure: 2, validate_test_case: 1
+    end
+  end
+
+  @doc false
+  # The body of every `measure/2` that `use` (of this module or of
+  # `DeepEvalEx.Metrics.BaseConversationalMetric`) generates: `module`'s
+  # `validate_test_case/1` and `do_measure/2` run with the metric options,
+  # telemetry, usage tracking and a fresh System One ledger described in
+  # the generated `measure/2`'s documentation.
+  @spec run_measure(module(), term(), keyword()) :: measure_result()
+  def run_measure(module, test_case, opts) do
+    start_time = System.monotonic_time(:millisecond)
+
+    opts =
+      opts
+      |> with_default_opts(module)
+      |> strict_opts(module.default_threshold())
+      |> system_one_opts(module)
+
+    metadata = %{
+      metric: module.metric_name(),
+      test_case_id: Map.get(test_case, :name)
+    }
+
+    :telemetry.execute(
+      [:deep_eval_ex, :metric, :start],
+      %{system_time: System.system_time()},
+      metadata
+    )
+
+    {outcome, usages, ledger} =
+      track_measure(fn ->
+        with :ok <- module.validate_test_case(test_case) do
+          seed_usage(module, opts)
+          module.do_measure(test_case, opts)
+        end
+      end)
+
+    case outcome do
+      {:ok, result} ->
+        latency = System.monotonic_time(:millisecond) - start_time
+
+        result =
+          result
+          |> apply_metric_semantics(opts)
+          |> Map.put(:latency_ms, latency)
+          |> put_usage(usage_fields(module, opts, usages))
+          |> put_system_one_state(ledger)
+
+        :telemetry.execute([:deep_eval_ex, :metric, :stop], stop_measurements(result), metadata)
+
+        {:ok, result}
+
+      {:error, reason} = error ->
+        emit_exception(start_time, usages, metadata, reason)
+        error
+
+      {:raised, exception, stacktrace} ->
+        emit_exception(start_time, usages, metadata, exception)
+        reraise exception, stacktrace
     end
   end
 

@@ -196,6 +196,83 @@ defmodule DeepEvalEx.ConversationalTestCase do
     end
   end
 
+  @typedoc """
+  Why a conversational test case cannot be measured by a metric, as
+  returned by `validate_params/3`.
+  """
+  @type validation_error ::
+          {:missing_conversational_param,
+           :expected_outcome | :scenario | :metadata | :tags | :chatbot_role}
+          | :empty_turns
+          | {:no_turn_with, :provider_transcript | :audio}
+
+  # The case-level params deepeval's check_conversational_test_case_params
+  # checks, in its order. Any other required param is not checked.
+  @case_params [:expected_outcome, :scenario, :metadata, :tags]
+
+  @doc """
+  Validates that the test case has what a conversational metric requiring
+  `required_params` needs, as deepeval 4.3.1's
+  `check_conversational_test_case_params`. The first failing check, in
+  deepeval's order, is returned:
+
+  1. `{:missing_conversational_param, param}` - `:expected_outcome`,
+     `:scenario`, `:metadata` or `:tags` is required and `nil`
+  2. `{:missing_conversational_param, :chatbot_role}` - the
+     `:requires_chatbot_role` option is set and `:chatbot_role` is `nil`
+  3. `:empty_turns` - the test case has no turns
+  4. `{:no_turn_with, :provider_transcript}` / `{:no_turn_with, :audio}` -
+     the param is required and no turn has it
+
+  Like deepeval, it checks no other param: a turn-level param such as
+  `:content` or `:retrieval_context`, `:context` and `:user_description`
+  are never missing. deepeval's `mcp_servers` check is not ported, nor its
+  checks that the judge model accepts multimodal or audio input.
+
+  `DeepEvalEx.Result.error/3` renders each error with deepeval's
+  `MissingTestCaseParamsError` message.
+
+  ## Options
+
+  - `:requires_chatbot_role` - also require `:chatbot_role`, deepeval's
+    `_requires_chatbot_role` (default: `false`)
+
+  ## Examples
+
+      iex> test_case = DeepEvalEx.ConversationalTestCase.new!(turns: [%{role: :user, content: "Hi"}])
+      iex> DeepEvalEx.ConversationalTestCase.validate_params(test_case, [:content, :scenario])
+      {:error, {:missing_conversational_param, :scenario}}
+  """
+  @spec validate_params(t(), [DeepEvalEx.Params.MultiTurn.t()], keyword()) ::
+          :ok | {:error, validation_error()}
+  def validate_params(%__MODULE__{} = test_case, required_params, opts \\ []) do
+    missing_case_param =
+      Enum.find(@case_params, &(&1 in required_params and is_nil(Map.fetch!(test_case, &1))))
+
+    cond do
+      missing_case_param ->
+        {:error, {:missing_conversational_param, missing_case_param}}
+
+      Keyword.get(opts, :requires_chatbot_role, false) and is_nil(test_case.chatbot_role) ->
+        {:error, {:missing_conversational_param, :chatbot_role}}
+
+      test_case.turns == [] ->
+        {:error, :empty_turns}
+
+      missing_turn_param?(test_case, required_params, :provider_transcript) ->
+        {:error, {:no_turn_with, :provider_transcript}}
+
+      missing_turn_param?(test_case, required_params, :audio) ->
+        {:error, {:no_turn_with, :audio}}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp missing_turn_param?(%__MODULE__{turns: turns}, required_params, param),
+    do: param in required_params and not Enum.any?(turns, &(not is_nil(Map.fetch!(&1, param))))
+
   @doc false
   # Peri custom validator for the turns: a non-empty list of turns, each
   # cast by DeepEvalEx.Turn.cast/1.

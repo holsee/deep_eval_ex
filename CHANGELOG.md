@@ -1441,6 +1441,33 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     reply, as deepeval.
 
   Both dict helpers raise `ArgumentError` for a param of the wrong kind.
+- **`DeepEvalEx.Metrics.BaseConversationalMetric`**, deepeval 4.3.1's
+  `BaseConversationalMetric`, the behaviour conversational metrics
+  implement. No built-in metric uses it yet.
+  - `use` gives a conversational metric `BaseMetric`'s `measure/2`
+    wrapper (strict mode, score-only thresholds, flakiness, telemetry,
+    usage tracking and cost seeding) and the same System One hooks: the
+    `:eval_mode` and `:system_one_model` options, the optional
+    `system_one_eval_spec/2`, `system_one?/0` and `system_one_model?/0`
+    callbacks, and the measure's confidence and fallback reason on the
+    result.
+  - The `use` option `requires_chatbot_role: true` sets
+    `requires_chatbot_role?/0`, deepeval's `_requires_chatbot_role`.
+  - Its `validate_test_case/1` checks `required_params/0` (multi-turn
+    params) with the new
+    **`DeepEvalEx.ConversationalTestCase.validate_params/3`**, deepeval's
+    `check_conversational_test_case_params`: in deepeval's order, a
+    required `:expected_outcome`, `:scenario`, `:metadata` or `:tags` that
+    is `nil`, a missing `:chatbot_role` when required, empty turns, and a
+    required `:provider_transcript` or `:audio` that no turn has. A test
+    case that is not conversational returns
+    `{:error, :not_conversational_test_case}`.
+  - `DeepEvalEx.Result.error/3` renders these errors with deepeval's
+    messages (e.g. `"'scenario' in a conversational test case cannot be
+    empty for the 'Role Adherence' metric."`), and `DeepEvalEx.Evaluator`
+    treats all but the last as missing params: raised as
+    `DeepEvalEx.MissingTestCaseParamsError`, or skipped with
+    `skip_on_missing_params`.
 - **`DeepEvalEx.Evaluator.check_valid_test_cases_type!/1`**, deepeval's
   `check_valid_test_cases_type`: raises `ArgumentError` with deepeval's
   message when a list mixes `DeepEvalEx.TestCase`s and conversational test

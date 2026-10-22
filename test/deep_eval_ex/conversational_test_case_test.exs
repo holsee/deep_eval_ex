@@ -178,6 +178,85 @@ defmodule DeepEvalEx.ConversationalTestCaseTest do
     end
   end
 
+  describe "validate_params/3" do
+    # deepeval's check_conversational_test_case_params, in its order.
+    defp conversation(attrs \\ []),
+      do: ConversationalTestCase.new!(Keyword.put_new(attrs, :turns, @turns))
+
+    test "checks only the case-level params deepeval checks, in deepeval's order" do
+      test_case = conversation()
+
+      assert ConversationalTestCase.validate_params(test_case, [:tags, :expected_outcome]) ==
+               {:error, {:missing_conversational_param, :expected_outcome}}
+
+      for param <- [:scenario, :metadata, :tags] do
+        assert ConversationalTestCase.validate_params(test_case, [param]) ==
+                 {:error, {:missing_conversational_param, param}}
+      end
+
+      # Turn-level params and context or user description are not checked.
+      assert ConversationalTestCase.validate_params(
+               test_case,
+               [:role, :content, :retrieval_context, :tools_called, :context, :user_description]
+             ) == :ok
+    end
+
+    test "present params pass" do
+      test_case =
+        conversation(
+          scenario: "s",
+          expected_outcome: "o",
+          metadata: %{},
+          tags: [],
+          chatbot_role: "r"
+        )
+
+      assert ConversationalTestCase.validate_params(
+               test_case,
+               [:scenario, :expected_outcome, :metadata, :tags],
+               requires_chatbot_role: true
+             ) == :ok
+    end
+
+    test "checks the chatbot role only when required, after the params" do
+      test_case = conversation()
+      assert ConversationalTestCase.validate_params(test_case, []) == :ok
+
+      assert ConversationalTestCase.validate_params(test_case, [], requires_chatbot_role: true) ==
+               {:error, {:missing_conversational_param, :chatbot_role}}
+
+      assert ConversationalTestCase.validate_params(test_case, [:scenario],
+               requires_chatbot_role: true
+             ) == {:error, {:missing_conversational_param, :scenario}}
+    end
+
+    test "rejects empty turns" do
+      test_case = %{conversation() | turns: []}
+      assert ConversationalTestCase.validate_params(test_case, []) == {:error, :empty_turns}
+    end
+
+    test "needs one turn with a provider transcript or audio when required" do
+      test_case = conversation()
+
+      assert ConversationalTestCase.validate_params(test_case, [:provider_transcript]) ==
+               {:error, {:no_turn_with, :provider_transcript}}
+
+      assert ConversationalTestCase.validate_params(test_case, [:audio]) ==
+               {:error, {:no_turn_with, :audio}}
+
+      voiced =
+        conversation(
+          turns: [
+            %{role: "user", content: "Hi", audio: %{"url" => "a.wav"}},
+            %{role: "assistant", content: "Hello!", provider_transcript: "hi"}
+          ]
+        )
+
+      assert ConversationalTestCase.validate_params(voiced, [:provider_transcript, :audio]) ==
+               :ok
+    end
+  end
+
   describe "new!/1" do
     test "raises on an invalid test case" do
       assert_raise RuntimeError, ~r/Invalid conversational test case/, fn ->
