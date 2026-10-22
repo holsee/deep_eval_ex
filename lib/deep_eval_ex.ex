@@ -120,7 +120,12 @@ defmodule DeepEvalEx do
   - `:strict_mode` - Force every metric's threshold to `1` (default: false)
   - `:flaky` - Report every metric without letting it decide success
   - `:model` - LLM model to use for evaluation
-  - `:concurrency` - Max test cases evaluated at once (default: schedulers * 2)
+  - `:max_concurrent` - Max test cases evaluated at once (default: 20);
+    `:concurrency` is an alias
+  - `:throttle_value` - Seconds to wait between launching test cases
+    (default: 0)
+  - `:run_async` - `false` evaluates test cases and their metrics one at a
+    time (default: `true`); see "Concurrency" in `DeepEvalEx.Evaluator`
   - `:metric_concurrency` - Max metrics run at once within a test case
     (default: the number of metrics)
   - `:timeout` - Timeout in milliseconds (default: 60_000); the default for
@@ -149,7 +154,7 @@ defmodule DeepEvalEx do
         DeepEvalEx.evaluate(test_cases, [metric],
           threshold: 0.7,
           model: {:openai, "gpt-4o"},
-          concurrency: 20
+          max_concurrent: 10
         )
 
   ## Deprecated: a single test case

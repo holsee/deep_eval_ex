@@ -145,7 +145,7 @@ test_cases = [
 ]
 
 {:ok, %DeepEvalEx.EvaluationResult{test_results: test_results}} =
-  DeepEvalEx.evaluate(test_cases, [Metrics.ExactMatch], concurrency: 20)
+  DeepEvalEx.evaluate(test_cases, [Metrics.ExactMatch], max_concurrent: 10)
 
 # One DeepEvalEx.TestResult per test case, in order
 Enum.map(test_results, &{&1.name, &1.success})

@@ -299,9 +299,23 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   The scripted parity fixtures gain `g_eval_logprobs` and
   `g_eval_logprobs_missing`, recorded with a scripted judge that answers
   deepeval's `generate_raw_response`.
+- **deepeval's `AsyncConfig` evaluation options.** `DeepEvalEx.evaluate/3`,
+  `evaluate_run/3` and `DeepEvalEx.Evaluator` take `:max_concurrent` (test
+  cases evaluated at once, default `20`), `:throttle_value` (seconds to wait
+  between launching test cases, default `0`) and `:run_async` (`false`
+  evaluates test cases and their metrics one at a time, unthrottled, as
+  deepeval's synchronous executor). A `:max_concurrent` below `1` or a
+  `:throttle_value` below `0` raises `ArgumentError` with deepeval's
+  `ValueError` message (`"'max_concurrent' must be at least 1"`,
+  `"'throttle_value' must be at least 0"`). `:concurrency` stays as an alias
+  of `:max_concurrent`, and `:metric_concurrency` still bounds the metrics
+  of a test case.
 
 ### Changed
 
+- **The default number of test cases evaluated at once is now 20**, deepeval's
+  `AsyncConfig.max_concurrent` default, instead of twice the number of
+  schedulers. Pass `max_concurrent:` (or `concurrency:`) to choose another.
 - **BREAKING: metric errors raise by default, as deepeval's `ErrorConfig()`.**
   `DeepEvalEx.evaluate/3`, `evaluate_run/3` and `DeepEvalEx.Evaluator` take
   deepeval's `ErrorConfig` as `:ignore_errors` and `:skip_on_missing_params`,

@@ -12,12 +12,17 @@ defmodule DeepEvalEx.Evaluator do
 
       # Multiple test cases (concurrent)
       all_results = DeepEvalEx.Evaluator.evaluate(test_cases, metrics,
-        concurrency: 20
+        max_concurrent: 10
       )
 
   ## Options
 
-  - `:concurrency` - Maximum test cases evaluated at once (default: schedulers * 2)
+  - `:max_concurrent` - Maximum test cases evaluated at once (default: `20`,
+    at least `1`); `:concurrency` is an alias, see "Concurrency"
+  - `:throttle_value` - Seconds to wait between launching test cases
+    (default: `0`, at least `0`), see "Concurrency"
+  - `:run_async` - Evaluate concurrently (default: `true`); `false`
+    evaluates test cases and their metrics one at a time, see "Concurrency"
   - `:metric_concurrency` - Maximum metrics run at once within a single test
     case (default: the number of metrics, i.e. all of them)
   - `:timeout` - Timeout in milliseconds (default: 60_000). Bounds each
@@ -43,6 +48,34 @@ defmodule DeepEvalEx.Evaluator do
   when the run sets `threshold: 0.5`. A struct's `:threshold` is its
   configuration even when `nil`: like deepeval's `threshold=None`, it makes
   that metric score-only whatever the run sets.
+
+  ## Concurrency
+
+  `:max_concurrent`, `:throttle_value` and `:run_async` are deepeval's
+  `AsyncConfig(max_concurrent=..., throttle_value=..., run_async=...)`, with
+  its defaults and its validation: a `:max_concurrent` below `1` raises
+  `ArgumentError` with `"'max_concurrent' must be at least 1"`, a
+  `:throttle_value` below `0` with `"'throttle_value' must be at least 0"`.
+
+  As in deepeval, `:max_concurrent` bounds the test cases being evaluated,
+  while each test case's metrics all run at once unless `:metric_concurrency`
+  bounds them. `:concurrency` is the older name of `:max_concurrent` and is
+  still accepted (`"'concurrency' must be at least 1"`); `:max_concurrent`
+  wins when both are given.
+
+  With `:throttle_value` the evaluation waits that many seconds after
+  launching a test case before launching the next, as deepeval sleeps
+  between creating its tasks; the wait is not counted in the test case's
+  duration or timeout.
+
+  `run_async: false` is deepeval's synchronous executor: test cases and their
+  metrics are evaluated one at a time, whatever `:max_concurrent` and
+  `:metric_concurrency` say, and `:throttle_value` is not applied (deepeval's
+  synchronous executor does not throttle). Each metric still runs in its own
+  process, so `:metric_timeout` applies. An error recorded with
+  `ignore_errors: true` still keeps the message alone, as deepeval's
+  asynchronous executor records it, not the synchronous executor's
+  `DeepEvalEx.Result.format_error_text/2`.
 
   ## Timeouts
 
@@ -97,7 +130,9 @@ defmodule DeepEvalEx.Evaluator do
   alias DeepEvalEx.{MetricError, MissingTestCaseParamsError, Result, TestCase}
   alias DeepEvalEx.Metrics.BaseMetric
 
-  @default_concurrency System.schedulers_online() * 2
+  # deepeval's AsyncConfig defaults.
+  @default_max_concurrent 20
+  @default_throttle_value 0
   @default_timeout 60_000
 
   # Headroom the per-test-case timeout keeps over its metrics' own timeouts,
@@ -134,7 +169,8 @@ defmodule DeepEvalEx.Evaluator do
   @spec evaluate_with_durations([TestCase.t()], [module() | struct()], keyword()) ::
           {[[Result.t()]], [float()]}
   def evaluate_with_durations(test_cases, metrics, opts \\ []) do
-    concurrency = Keyword.get(opts, :concurrency, @default_concurrency)
+    {opts, throttle_value} = async_config!(opts)
+    concurrency = Keyword.fetch!(opts, :concurrency)
     timeout = case_timeout(metrics, opts)
 
     :telemetry.execute(
@@ -150,6 +186,7 @@ defmodule DeepEvalEx.Evaluator do
 
     {results, durations} =
       test_cases
+      |> throttled(throttle_value)
       |> Task.async_stream(
         fn test_case ->
           started = System.monotonic_time()
@@ -202,6 +239,7 @@ defmodule DeepEvalEx.Evaluator do
   """
   @spec evaluate_single(TestCase.t(), [module() | struct()], keyword()) :: [Result.t()]
   def evaluate_single(test_case, metrics, opts \\ []) do
+    {opts, _throttle_value} = async_config!(opts)
     test_case |> run_single(metrics, opts) |> unwrap!()
   end
 
@@ -385,6 +423,62 @@ defmodule DeepEvalEx.Evaluator do
       end
 
     has_threshold? and not Keyword.get(merged_opts, :flaky, false)
+  end
+
+  # deepeval's AsyncConfig: validates :max_concurrent (or its :concurrency
+  # alias) and :throttle_value, and resolves them onto :concurrency,
+  # :metric_concurrency and the throttle in seconds. run_async: false is
+  # deepeval's synchronous executor: one test case and one metric at a time,
+  # unthrottled.
+  defp async_config!(opts) do
+    concurrency = max_concurrent!(opts)
+    throttle_value = throttle_value!(opts)
+
+    if Keyword.get(opts, :run_async, true) do
+      {Keyword.put(opts, :concurrency, concurrency), throttle_value}
+    else
+      {Keyword.merge(opts, concurrency: 1, metric_concurrency: 1), 0}
+    end
+  end
+
+  defp max_concurrent!(opts) do
+    {name, value} =
+      cond do
+        Keyword.has_key?(opts, :max_concurrent) -> {:max_concurrent, opts[:max_concurrent]}
+        Keyword.has_key?(opts, :concurrency) -> {:concurrency, opts[:concurrency]}
+        true -> {:max_concurrent, @default_max_concurrent}
+      end
+
+    if is_integer(value) and value >= 1,
+      do: value,
+      else: raise(ArgumentError, "'#{name}' must be at least 1")
+  end
+
+  defp throttle_value!(opts) do
+    value = Keyword.get(opts, :throttle_value, @default_throttle_value)
+
+    if is_number(value) and value >= 0,
+      do: value,
+      else: raise(ArgumentError, "'throttle_value' must be at least 0")
+  end
+
+  # Waits `seconds` before yielding each test case but the first, so that
+  # Task.async_stream/3 launches them that far apart.
+  defp throttled(test_cases, seconds) when seconds == 0, do: test_cases
+
+  defp throttled(test_cases, seconds) do
+    wait = round(seconds * 1_000)
+
+    test_cases
+    |> Stream.with_index()
+    |> Stream.map(fn
+      {test_case, 0} ->
+        test_case
+
+      {test_case, _index} ->
+        Process.sleep(wait)
+        test_case
+    end)
   end
 
   defp seconds_since(started) do

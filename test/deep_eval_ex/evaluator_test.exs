@@ -38,6 +38,26 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
   end
 
+  # Reports to `pid` how many probes are running when it starts, and when.
+  defmodule ProbeMetric do
+    @moduledoc false
+
+    defstruct pid: nil, running: nil, sleep: 50, label: nil
+
+    def metric_name, do: "ProbeMetric"
+
+    def measure(_test_case, opts) do
+      running = Keyword.fetch!(opts, :running)
+      level = :atomics.add_get(running, 1, 1)
+      send(Keyword.fetch!(opts, :pid), {:probe, Keyword.get(opts, :label), level, now()})
+      Process.sleep(Keyword.fetch!(opts, :sleep))
+      :atomics.sub(running, 1, 1)
+      {:ok, %Result{metric: metric_name(), score: 1.0, success: true, threshold: 0.5}}
+    end
+
+    defp now, do: System.monotonic_time(:millisecond)
+  end
+
   defmodule FailingMetric do
     @moduledoc false
 
@@ -710,6 +730,110 @@ defmodule DeepEvalEx.EvaluatorTest do
       assert %Result{metric: "Scored", score: 1.0} = measured
       assert [%{metrics_data: [%{name: "Scored"}]}] = test_run.test_cases
       assert [%{metric: "Scored"}] = test_run.metrics_scores
+    end
+  end
+
+  describe "AsyncConfig options (deepeval's max_concurrent, throttle_value, run_async)" do
+    defp probe(opts \\ []) do
+      struct!(%ProbeMetric{pid: self(), running: :atomics.new(1, [])}, opts)
+    end
+
+    defp test_cases(count) do
+      for i <- 1..count, do: %{test_case() | name: "case #{i}"}
+    end
+
+    # The highest number of probes seen running at once, and the probes' start
+    # times in the order they started.
+    defp probe_report do
+      probes = receive_probes([])
+      {probes |> Enum.map(&elem(&1, 1)) |> Enum.max(), probes |> Enum.map(&elem(&1, 2))}
+    end
+
+    defp receive_probes(acc) do
+      receive do
+        {:probe, label, level, at} -> receive_probes([{label, level, at} | acc])
+      after
+        0 -> Enum.reverse(acc)
+      end
+    end
+
+    test "max_concurrent defaults to 20 test cases at once, as deepeval's" do
+      Evaluator.evaluate(test_cases(25), [probe()])
+
+      assert {20, _starts} = probe_report()
+    end
+
+    test ":max_concurrent bounds how many test cases are evaluated at once" do
+      Evaluator.evaluate(test_cases(5), [probe()], max_concurrent: 2)
+
+      assert {2, _starts} = probe_report()
+    end
+
+    test ":concurrency is kept as an alias for :max_concurrent" do
+      Evaluator.evaluate(test_cases(5), [probe()], concurrency: 2)
+
+      assert {2, _starts} = probe_report()
+    end
+
+    test "metrics of a test case still all run at once by default" do
+      running = :atomics.new(1, [])
+      metrics = for _ <- 1..3, do: probe(running: running)
+
+      Evaluator.evaluate([test_case()], metrics, max_concurrent: 1)
+
+      assert {3, _starts} = probe_report()
+    end
+
+    test "max_concurrent below 1 raises deepeval's error" do
+      assert_raise ArgumentError, "'max_concurrent' must be at least 1", fn ->
+        Evaluator.evaluate([test_case()], [ExactMatch], max_concurrent: 0)
+      end
+
+      assert_raise ArgumentError, "'concurrency' must be at least 1", fn ->
+        Evaluator.evaluate([test_case()], [ExactMatch], concurrency: 0)
+      end
+    end
+
+    test "throttle_value below 0 raises deepeval's error" do
+      assert_raise ArgumentError, "'throttle_value' must be at least 0", fn ->
+        Evaluator.evaluate([test_case()], [ExactMatch], throttle_value: -0.1)
+      end
+    end
+
+    test ":throttle_value waits that many seconds between test case launches" do
+      Evaluator.evaluate(test_cases(3), [probe(sleep: 0)], throttle_value: 0.1)
+
+      {_peak, [first, second, third]} = probe_report()
+      assert second - first >= 100
+      assert third - second >= 100
+    end
+
+    test "run_async: false evaluates test cases and their metrics one at a time" do
+      running = :atomics.new(1, [])
+      metrics = [probe(running: running), probe(running: running)]
+
+      Evaluator.evaluate(test_cases(3), metrics,
+        run_async: false,
+        max_concurrent: 10,
+        metric_concurrency: 10
+      )
+
+      assert {1, starts} = probe_report()
+      assert length(starts) == 6
+    end
+
+    test "run_async: false runs evaluate_single's metrics one at a time" do
+      running = :atomics.new(1, [])
+      metrics = [probe(running: running, label: "a"), probe(running: running, label: "b")]
+
+      assert [_a, _b] = Evaluator.evaluate_single(test_case(), metrics, run_async: false)
+      assert {1, _starts} = probe_report()
+    end
+
+    test "DeepEvalEx.evaluate/3 honours the AsyncConfig options" do
+      {:ok, _evaluation} = DeepEvalEx.evaluate(test_cases(4), [probe()], max_concurrent: 2)
+
+      assert {2, _starts} = probe_report()
     end
   end
 end
