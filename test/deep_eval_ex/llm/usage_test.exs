@@ -3,6 +3,8 @@ defmodule DeepEvalEx.LLM.UsageTest do
 
   alias DeepEvalEx.LLM.{Adapter, Usage}
 
+  doctest Usage
+
   describe "new/3" do
     test "prices the call from the model's pricing" do
       usage = Usage.new("gpt-4o-mini", 1_000_000, 0)
@@ -79,6 +81,29 @@ defmodule DeepEvalEx.LLM.UsageTest do
     end
   end
 
+  describe "seed/1" do
+    test "zeroes cost and tokens for a native LLM, as deepeval's prepare_measure" do
+      assert Usage.seed(true) == %Usage{
+               source: :seed,
+               cost: 0.0,
+               input_tokens: 0,
+               output_tokens: 0
+             }
+    end
+
+    test "leaves them nil otherwise, which voids the summed cost but adds no tokens" do
+      assert Usage.seed(false) == %Usage{source: :seed}
+
+      summary =
+        Usage.summarize([
+          Usage.seed(false),
+          %Usage{model: "fake-jev", source: :system_one, cost: 4.2e-05, input_tokens: 1000}
+        ])
+
+      assert %{evaluation_cost: nil, input_tokens: 1000, output_tokens: nil} = summary
+    end
+  end
+
   describe "summarize/1" do
     test "is nil when no LLM call was made" do
       assert Usage.summarize([]) == nil
@@ -108,6 +133,29 @@ defmodule DeepEvalEx.LLM.UsageTest do
 
       assert summary.evaluation_cost == nil
       assert summary.input_tokens == 11
+    end
+
+    test "takes the evaluation model from LLM usages only" do
+      summary =
+        Usage.summarize([
+          %Usage{source: :seed, cost: 0.0, input_tokens: 0, output_tokens: 0},
+          %Usage{model: "fake-jev", source: :system_one, cost: 4.2e-05, input_tokens: 1000},
+          %Usage{model: "scripted-judge", cost: 0.0}
+        ])
+
+      assert summary == %{
+               evaluation_model: "scripted-judge",
+               input_tokens: 1000,
+               output_tokens: 0,
+               evaluation_cost: 4.2e-05
+             }
+    end
+
+    test "has no evaluation model when no LLM usage was recorded" do
+      summary = Usage.summarize([%Usage{model: "fake-jev", source: :system_one, cost: 0.0}])
+
+      assert summary.evaluation_model == nil
+      assert summary.evaluation_cost == 0.0
     end
 
     test "token counts are nil when no call reported them" do

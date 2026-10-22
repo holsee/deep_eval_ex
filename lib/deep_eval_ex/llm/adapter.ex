@@ -65,6 +65,16 @@ defmodule DeepEvalEx.LLM.Adapter do
   Adapters that report nothing still get their `model_name/1` recorded as the
   result's `:evaluation_model`. See `DeepEvalEx.LLM.Usage`.
 
+  ## Native Adapters and Cost
+
+  As in deepeval, a metric's cost is only reported for a *native* judge:
+  the OpenAI, Anthropic and Ollama adapters, whose `c:native?/0` is `true`.
+  A measure with a native judge starts from zero cost and token counts;
+  one with a custom judge (any adapter whose `c:native?/0` is `false`, the
+  default, `DeepEvalEx.LLM.Adapters.Mock` included) starts from `nil`, so
+  its cost is `nil` whatever its calls report, while their token counts
+  are kept. See `DeepEvalEx.LLM.Usage.seed/1`.
+
   ## Using a Custom Adapter
 
       DeepEvalEx.evaluate([test_case], [metric],
@@ -189,7 +199,21 @@ defmodule DeepEvalEx.LLM.Adapter do
   """
   @callback supports_json_mode?() :: boolean()
 
+  @doc """
+  Returns whether the adapter is one of deepeval's *native* models, whose
+  cost a metric reports: deepeval's `using_native_model`.
+
+  A metric with a native judge seeds its cost and token counts with zero,
+  one with a custom judge with `nil`, which voids its cost (see
+  `DeepEvalEx.LLM.Usage.seed/1`). Defaults to `false`; the OpenAI,
+  Anthropic and Ollama adapters return `true`. A custom adapter that
+  prices its calls with `DeepEvalEx.LLM.Usage.new/3` returns `true` to
+  have their cost reported.
+  """
+  @callback native?() :: boolean()
+
   @optional_callbacks [
+    native?: 0,
     supports_multimodal?: 0,
     supports_temperature?: 1,
     supports_json_mode?: 0,
@@ -203,6 +227,9 @@ defmodule DeepEvalEx.LLM.Adapter do
       @behaviour DeepEvalEx.LLM.Adapter
 
       @impl true
+      def native?, do: false
+
+      @impl true
       def supports_multimodal?, do: false
 
       @impl true
@@ -211,7 +238,10 @@ defmodule DeepEvalEx.LLM.Adapter do
       @impl true
       def supports_json_mode?, do: false
 
-      defoverridable supports_multimodal?: 0, supports_temperature?: 1, supports_json_mode?: 0
+      defoverridable native?: 0,
+                     supports_multimodal?: 0,
+                     supports_temperature?: 1,
+                     supports_json_mode?: 0
     end
   end
 
@@ -232,6 +262,25 @@ defmodule DeepEvalEx.LLM.Adapter do
   @spec supports_json_mode?(module()) :: boolean()
   def supports_json_mode?(adapter) do
     capability(get_adapter(adapter), :supports_json_mode?, [], false)
+  end
+
+  @doc """
+  Whether the judge `opts` resolve to (`:adapter`, else the configured
+  default) is native: its `c:native?/0`, or `false` when it does not
+  implement it.
+
+  ## Examples
+
+      DeepEvalEx.LLM.Adapter.native?(adapter: :openai)
+      #=> true
+
+      DeepEvalEx.LLM.Adapter.native?(adapter: :mock)
+      #=> false
+  """
+  @spec native?(opts()) :: boolean()
+  def native?(opts) when is_list(opts) do
+    {adapter, _model} = resolve_adapter(opts)
+    capability(adapter, :native?, [], false)
   end
 
   defp capability(adapter, name, args, default) do

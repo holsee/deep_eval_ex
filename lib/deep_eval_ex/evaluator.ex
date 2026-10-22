@@ -696,11 +696,12 @@ defmodule DeepEvalEx.Evaluator do
     |> Enum.reject(fn {key, value} -> is_nil(value) and key != :threshold end)
   end
 
-  # Errored results carry the metric's judge model even when the metric was
-  # killed or made no call, and the usage of the calls it made before erroring.
+  # Errored results carry the metric's judge model (its System One model
+  # under :system_one) even when the metric was killed or made no call, and
+  # the usage of the calls it made before erroring.
   defp error_result(reason, metric, opts, usages) do
     module = metric_module(metric)
-    merged_opts = metric_opts(metric, opts)
+    merged_opts = metric |> metric_opts(opts) |> put_context(metric, opts)
     usage_fields = BaseMetric.usage_fields(module, merged_opts, usages)
 
     Result.error(

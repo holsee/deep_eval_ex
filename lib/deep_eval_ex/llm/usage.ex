@@ -25,6 +25,15 @@ defmodule DeepEvalEx.LLM.Usage do
   They carry the caller's `DeepEvalEx.SystemOne.Ledger` the same way: the
   task sees it, and what the task records in it is folded back on `await/2`.
 
+  ## Cost seed
+
+  As deepeval's `prepare_measure`, every measure of a metric with a judge
+  starts from a `:seed` usage (see `seed/1`): zero for a native judge, or
+  under the `:system_one` eval mode, where there is no LLM; `nil` for a
+  custom one, whose cost is then never reported. A custom adapter that
+  prices its calls declares itself native with
+  `c:DeepEvalEx.LLM.Adapter.native?/0`.
+
   ## Reporting usage from a custom adapter
 
       def generate(prompt, opts) do
@@ -42,11 +51,14 @@ defmodule DeepEvalEx.LLM.Usage do
   alias DeepEvalEx.SystemOne.Ledger
 
   @typedoc """
-  Where a usage comes from: `:llm` for an LLM judge call (the default), or
+  Where a usage comes from: `:llm` for an LLM judge call (the default),
   `:system_one` for a System One request (stamped by
-  `DeepEvalEx.SystemOne.decide/3`).
+  `DeepEvalEx.SystemOne.decide/3`), or `:seed` for the starting values a
+  measure is seeded with (see `seed/1`).
+
+  Only `:llm` usages name the evaluation model (see `summarize/1`).
   """
-  @type source :: :llm | :system_one
+  @type source :: :llm | :system_one | :seed
 
   @type t :: %__MODULE__{
           model: String.t() | nil,
@@ -81,6 +93,29 @@ defmodule DeepEvalEx.LLM.Usage do
       cost: Pricing.cost(model, input_tokens, output_tokens)
     }
   end
+
+  @doc """
+  The usage a measure starts from, deepeval's `prepare_measure`: zero cost
+  and token counts when the metric's judge is `native?` (see
+  `DeepEvalEx.LLM.Adapter.native?/1`) or the metric has no LLM at all, as
+  under the `:system_one` eval mode; otherwise all `nil`.
+
+  A `nil` seed voids the measure's summed cost, as deepeval's
+  `_accrue_cost` keeps `None` once it is `None`, while adding nothing to
+  the token counts. `DeepEvalEx.Metrics.BaseMetric` records it before
+  `do_measure/2` runs.
+
+  ## Examples
+
+      iex> DeepEvalEx.LLM.Usage.seed(true)
+      %DeepEvalEx.LLM.Usage{model: nil, input_tokens: 0, output_tokens: 0, cost: 0.0, source: :seed}
+
+      iex> DeepEvalEx.LLM.Usage.seed(false)
+      %DeepEvalEx.LLM.Usage{model: nil, input_tokens: nil, output_tokens: nil, cost: nil, source: :seed}
+  """
+  @spec seed(boolean()) :: t()
+  def seed(true), do: %__MODULE__{cost: 0.0, input_tokens: 0, output_tokens: 0, source: :seed}
+  def seed(false), do: %__MODULE__{source: :seed}
 
   @doc """
   Records `usage` in the current process's scope.
@@ -158,14 +193,17 @@ defmodule DeepEvalEx.LLM.Usage do
 
   Token counts add up the calls that reported them and are `nil` when none
   did. As in deepeval, the cost is `nil` as soon as one call could not be
-  priced. The evaluation model is the first model recorded.
+  priced. The evaluation model is the first model an `:llm` usage
+  recorded, so a System One request never names it; without one it is
+  `nil`, and `DeepEvalEx.Metrics.BaseMetric` reports the metric's judge
+  instead.
   """
   @spec summarize([t()]) :: summary() | nil
   def summarize([]), do: nil
 
   def summarize(usages) do
     %{
-      evaluation_model: Enum.find_value(usages, & &1.model),
+      evaluation_model: Enum.find_value(usages, &(&1.source == :llm and &1.model)),
       input_tokens: sum(usages, :input_tokens),
       output_tokens: sum(usages, :output_tokens),
       evaluation_cost: total_cost(usages)

@@ -59,6 +59,21 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
       @impl true
       defdelegate evaluation_model(opts), to: DeepEvalEx.LLM.Adapter, as: :model_name
 
+  Implementing it also marks the metric as having a judge, so each measure
+  is seeded as deepeval's `prepare_measure` seeds it, once the test case is
+  validated: zero cost and token counts for a native judge
+  (`DeepEvalEx.LLM.Adapter.native?/1`), `nil` for a custom one, which
+  leaves its cost `nil` (see `DeepEvalEx.LLM.Usage.seed/1`).
+
+  ## System One
+
+  Under the `:system_one` eval mode the metric has no LLM: it is seeded
+  with zero cost and token counts, which the System One requests add to,
+  and its `:evaluation_model` is the System One model's name, as deepeval's
+  `(self.model or self.system_one_model).get_model_name()`. Under
+  `:hybrid` it stays the LLM judge's name even when only System One was
+  asked, and the judge's seed decides whether a cost is reported.
+
   ## Strict mode, score-only and flaky
 
   Every metric accepts these options, with the semantics of deepeval's
@@ -114,9 +129,9 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   You can override any of these defaults.
   """
 
-  alias DeepEvalEx.LLM.Usage
+  alias DeepEvalEx.LLM.{Adapter, Usage}
   alias DeepEvalEx.{Result, TestCase}
-  alias DeepEvalEx.SystemOne.{Context, Ledger}
+  alias DeepEvalEx.SystemOne.{Context, Ledger, Model}
 
   @type test_case :: TestCase.t()
   @type opts :: keyword()
@@ -258,7 +273,8 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
         been passed on to the caller's scope; `DeepEvalEx.Evaluator` turns
         it into an errored result
       - LLM usage tracking: the judge model, token counts and cost of every
-        LLM call made by `do_measure/2` are set on the result
+        LLM call and System One request made by `do_measure/2`, added to
+        the measure's seed, are set on the result
         (see `DeepEvalEx.LLM.Usage`)
       """
       @spec measure(TestCase.t(), keyword()) ::
@@ -284,7 +300,10 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
 
         {outcome, usages, ledger} =
           unquote(__MODULE__).track_measure(fn ->
-            with :ok <- validate_test_case(test_case), do: do_measure(test_case, opts)
+            with :ok <- validate_test_case(test_case) do
+              unquote(__MODULE__).seed_usage(__MODULE__, opts)
+              do_measure(test_case, opts)
+            end
           end)
 
         case outcome do
@@ -460,6 +479,26 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   end
 
   @doc false
+  # Records the usage a measure of `module` with `opts` starts from,
+  # deepeval's `prepare_measure` (see `DeepEvalEx.LLM.Usage.seed/1`): zero
+  # when the metric has no LLM (`:system_one`), else for a metric with a
+  # judge (`c:evaluation_model/1`) zero when the judge is native and nil
+  # when it is custom. A metric without a judge is not seeded.
+  @spec seed_usage(module(), keyword()) :: :ok
+  def seed_usage(module, opts) do
+    cond do
+      match?(%Context{llm?: false}, Keyword.get(opts, :system_one)) ->
+        Usage.record(Usage.seed(true))
+
+      judge?(module) ->
+        Usage.record(Usage.seed(Adapter.native?(opts)))
+
+      true ->
+        :ok
+    end
+  end
+
+  @doc false
   # Emits `[:deep_eval_ex, :metric, :exception]` for a measurement started at
   # `start_time` (monotonic milliseconds) that failed with `error`.
   @spec emit_exception(integer(), [Usage.t()], map(), term()) :: :ok
@@ -474,16 +513,25 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   @doc false
   # The evaluation model, token counts and cost to report for a measurement
   # of `module` with `opts` that recorded `usages`, as `DeepEvalEx.Result`
-  # fields. Without recorded usage the model is the metric's configured judge
-  # (`c:evaluation_model/1`), as deepeval reports it for every LLM metric; it
-  # stays nil for metrics that call no LLM.
+  # fields. Without recorded LLM usage the model is deepeval's
+  # `(self.model or self.system_one_model).get_model_name()`: the metric's
+  # configured judge (`c:evaluation_model/1`), as deepeval reports it for
+  # every LLM metric, or, when the metric has no LLM (`:system_one`), its
+  # System One model. It stays nil for metrics that call no LLM.
   @spec usage_fields(module(), keyword(), [Usage.t()]) :: Usage.summary()
   def usage_fields(module, opts, usages) do
     summary =
       Usage.summarize(usages) ||
         %{evaluation_model: nil, input_tokens: nil, output_tokens: nil, evaluation_cost: nil}
 
-    Map.update!(summary, :evaluation_model, &(&1 || evaluation_model(module, opts)))
+    Map.update!(summary, :evaluation_model, &(&1 || configured_model(module, opts)))
+  end
+
+  defp configured_model(module, opts) do
+    case Keyword.get(opts, :system_one) do
+      %Context{llm?: false, model: %Model{name: name}} -> name
+      _context -> evaluation_model(module, opts)
+    end
   end
 
   @doc false
@@ -512,10 +560,12 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   end
 
   defp evaluation_model(module, opts) do
-    if Code.ensure_loaded?(module) and function_exported?(module, :evaluation_model, 1) do
-      module.evaluation_model(opts)
-    end
+    if judge?(module), do: module.evaluation_model(opts)
   end
+
+  # Whether the metric has an LLM judge: it reports one (`c:evaluation_model/1`).
+  defp judge?(module),
+    do: Code.ensure_loaded?(module) and function_exported?(module, :evaluation_model, 1)
 
   @doc false
   # Measurements of the `[:deep_eval_ex, :metric, :exception]` event: the

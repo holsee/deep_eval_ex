@@ -81,6 +81,27 @@ defmodule DeepEvalEx.Metrics.BaseMetricTest do
     end
   end
 
+  defmodule PricedJudge do
+    @moduledoc false
+    # Records the judge calls opts[:calls] lists, then passes.
+
+    use DeepEvalEx.Metrics.BaseMetric
+
+    @impl true
+    def metric_name, do: "PricedJudge"
+
+    @impl true
+    def required_params, do: [:input]
+
+    @impl true
+    defdelegate evaluation_model(opts), to: DeepEvalEx.LLM.Adapter, as: :model_name
+
+    def do_measure(_test_case, opts) do
+      Usage.record_all(Keyword.get(opts, :calls, []))
+      {:ok, Result.new(metric: metric_name(), score: 1.0)}
+    end
+  end
+
   defp test_case, do: TestCase.new!(input: "Q", actual_output: "A")
 
   describe "measure/2 evaluation model" do
@@ -115,6 +136,65 @@ defmodule DeepEvalEx.Metrics.BaseMetricTest do
     test "usage of an errored measurement is passed on to the enclosing scope" do
       assert {{:error, :bad_json}, [%Usage{model: "gpt-4o-mini", input_tokens: 1_000}]} =
                Usage.track(fn -> JudgeThenFail.measure(test_case(), []) end)
+    end
+  end
+
+  # deepeval's prepare_measure seeds evaluation_cost and the token counts
+  # with 0 for a native judge and None for a custom one.
+  describe "measure/2 cost seed" do
+    test "a native judge that made no call reports zero cost and tokens" do
+      assert {:ok,
+              %Result{
+                evaluation_model: "gpt-4o",
+                evaluation_cost: +0.0,
+                input_tokens: 0,
+                output_tokens: 0
+              }} = NoCallJudge.measure(test_case(), adapter: :openai, model: "gpt-4o")
+    end
+
+    test "a native judge's priced calls add up from zero" do
+      calls = [Usage.new("gpt-4o-mini", 1_000, 200), Usage.new("gpt-4o-mini", 0, 0)]
+
+      assert {:ok, %Result{input_tokens: 1_000, output_tokens: 200} = result} =
+               PricedJudge.measure(test_case(),
+                 adapter: :openai,
+                 model: "gpt-4o-mini",
+                 calls: calls
+               )
+
+      assert_in_delta result.evaluation_cost, (1_000 * 0.15 + 200 * 0.60) / 1_000_000, 1.0e-12
+    end
+
+    test "a custom judge has no cost, even for priced calls, but keeps its tokens" do
+      calls = [Usage.new("gpt-4o-mini", 1_000, 200)]
+
+      assert {:ok,
+              %Result{
+                evaluation_model: "gpt-4o-mini",
+                evaluation_cost: nil,
+                input_tokens: 1_000,
+                output_tokens: 200
+              }} = PricedJudge.measure(test_case(), adapter: :mock, calls: calls)
+
+      assert {:ok, %Result{evaluation_cost: nil, input_tokens: nil, output_tokens: nil}} =
+               NoCallJudge.measure(test_case(), adapter: :mock)
+    end
+
+    test "a metric without a judge is not seeded" do
+      assert {{:ok, %Result{evaluation_cost: nil, input_tokens: nil}}, []} =
+               Usage.track(fn -> FixedScore.measure(test_case(), adapter: :openai, score: 1) end)
+    end
+
+    test "a test case missing params is rejected before the seed" do
+      assert {{:error, {:missing_params, [:input]}}, []} =
+               Usage.track(fn ->
+                 PricedJudge.measure(%TestCase{actual_output: "A"}, adapter: :openai)
+               end)
+    end
+
+    test "is passed on to the enclosing scope as a :seed usage" do
+      assert {{:ok, _result}, [%Usage{source: :seed, cost: +0.0}]} =
+               Usage.track(fn -> NoCallJudge.measure(test_case(), adapter: :openai) end)
     end
   end
 

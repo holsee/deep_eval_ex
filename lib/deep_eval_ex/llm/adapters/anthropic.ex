@@ -168,6 +168,10 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
   def supports_temperature?(opts),
     do: not MapSet.member?(@temperature_rejecting_models, model_name(opts))
 
+  # A native model, as deepeval's `AnthropicModel`: its cost is reported.
+  @impl true
+  def native?, do: true
+
   # Every entry of deepeval's ANTHROPIC_MODELS_DATA has `supports_json=True`.
   @impl true
   def supports_json_mode?, do: true

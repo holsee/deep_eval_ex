@@ -594,6 +594,30 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
     end
   end
 
+  defmodule NativeMock do
+    @moduledoc false
+    # The Mock adapter declared native, so a measure reports its cost.
+    use DeepEvalEx.LLM.Adapter
+
+    @impl true
+    defdelegate generate(prompt, opts), to: Mock
+
+    @impl true
+    defdelegate generate_with_schema(prompt, schema, opts), to: Mock
+
+    @impl true
+    defdelegate model_name(opts), to: Mock
+
+    @impl true
+    defdelegate supports_structured_outputs?, to: Mock
+
+    @impl true
+    defdelegate supports_log_probs?, to: Mock
+
+    @impl true
+    def native?, do: true
+  end
+
   describe "measure/2 usage" do
     setup do
       saved = Application.get_env(:deep_eval_ex, :model_pricing)
@@ -625,7 +649,7 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
 
       assert {:ok, result} =
                Faithfulness.measure(test_case,
-                 adapter: :mock,
+                 adapter: NativeMock,
                  mock_usage: [input_tokens: 100_000, output_tokens: 10_000]
                )
 
@@ -634,6 +658,13 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       assert result.input_tokens == 400_000
       assert result.output_tokens == 40_000
       assert_in_delta result.evaluation_cost, 4 * (0.1 + 0.02), 1.0e-9
+
+      # A custom judge, as deepeval's, reports its tokens but no cost.
+      assert {:ok, %{input_tokens: 400_000, output_tokens: 40_000, evaluation_cost: nil}} =
+               Faithfulness.measure(test_case,
+                 adapter: :mock,
+                 mock_usage: [input_tokens: 100_000, output_tokens: 10_000]
+               )
     end
 
     test "reports the judge model with unknown tokens and cost when usage is not reported" do

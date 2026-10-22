@@ -3,6 +3,7 @@ defmodule DeepEvalEx.LLM.AdapterTest do
   use ExUnit.Case, async: false
 
   alias DeepEvalEx.LLM.{Adapter, Usage}
+  alias DeepEvalEx.LLM.Adapters.{Anthropic, Mock, Ollama, OpenAI}
 
   @var "DEEP_EVAL_EX_ADAPTER_TEST"
   @key :adapter_test_value
@@ -162,6 +163,59 @@ defmodule DeepEvalEx.LLM.AdapterTest do
 
       refute Adapter.supports_temperature?(DeepEvalEx.LLM.Adapters.OpenAI, model: "o3-mini")
       assert Adapter.supports_json_mode?(DeepEvalEx.LLM.Adapters.OpenAI)
+    end
+  end
+
+  # A custom judge implementing the behaviour without `use`.
+  defmodule BareJudge do
+    @behaviour DeepEvalEx.LLM.Adapter
+
+    @impl true
+    def generate(_prompt, _opts), do: {:ok, "text"}
+
+    @impl true
+    def generate_with_schema(_prompt, _schema, _opts), do: {:ok, %{}}
+
+    @impl true
+    def model_name(_opts), do: "bare-judge"
+
+    @impl true
+    def supports_structured_outputs?, do: true
+
+    @impl true
+    def supports_log_probs?, do: false
+  end
+
+  describe "native?/1" do
+    test "is true for the built-in provider adapters, as deepeval's native models" do
+      assert OpenAI.native?()
+      assert Anthropic.native?()
+      assert Ollama.native?()
+
+      for provider <- [:openai, :anthropic, :ollama] do
+        assert Adapter.native?(adapter: provider), "#{provider} is not native"
+      end
+
+      assert Adapter.native?(adapter: {:anthropic, "claude-sonnet-4-5"})
+    end
+
+    test "is false for the Mock and for custom adapters, used or not" do
+      refute Mock.native?()
+      refute TextJudge.native?()
+      refute Adapter.native?(adapter: :mock)
+      refute Adapter.native?(adapter: TextJudge)
+      refute Adapter.native?(adapter: BareJudge)
+    end
+
+    test "resolves the default adapter when opts name none" do
+      default = Application.fetch_env!(:deep_eval_ex, :default_model)
+      on_exit(fn -> Application.put_env(:deep_eval_ex, :default_model, default) end)
+
+      Application.put_env(:deep_eval_ex, :default_model, {:mock, "test-model"})
+      refute Adapter.native?([])
+
+      Application.put_env(:deep_eval_ex, :default_model, {:openai, "gpt-4o-mini"})
+      assert Adapter.native?([])
     end
   end
 

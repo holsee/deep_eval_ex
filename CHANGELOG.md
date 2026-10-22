@@ -293,6 +293,36 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   The `<metric>_system_one`, `faithfulness_system_one_strict` and `jev_eval`
   fixtures replayed through the runner send deepeval's requests and reach
   its scores, reasons, confidences and score breakdowns byte for byte.
+- **Export semantics under the System One eval modes** (ADR-0009), as
+  deepeval 4.3.1's `prepare_measure`, `_accrue_cost` and
+  `(self.model or self.system_one_model).get_model_name()`:
+  - Every measure of a metric with a judge (one that implements
+    `c:BaseMetric.evaluation_model/1`) or under `:system_one` now starts
+    from a seed usage (`DeepEvalEx.LLM.Usage.seed/1`, source `:seed`),
+    recorded once the test case is validated: zero cost and token counts
+    when the judge is native or there is no LLM (`:system_one`), `nil`
+    for a custom judge. System One requests add to it, so a `:system_one`
+    measure exports Jev's input-token cost and token counts (`0.0`, `0`
+    and `0` when no request was priced or made), while a `:hybrid` measure
+    with a custom judge exports System One's token counts and no cost.
+  - `DeepEvalEx.LLM.Usage.summarize/1` takes the evaluation model from
+    `:llm` usages only. Without one, the result names the metric's LLM
+    judge, or under `:system_one` its System One model (`"fake-jev"`,
+    `"jev-latest (TypeSafe AI)"`), errored results included. A `:hybrid`
+    measure therefore names its LLM judge even when only System One was
+    asked.
+  - The optional `DeepEvalEx.LLM.Adapter` callback `native?/0` (default
+    `false`, `true` for the OpenAI, Anthropic and Ollama adapters, as
+    deepeval's native models) and `DeepEvalEx.LLM.Adapter.native?/1`,
+    which resolves the judge from the options.
+  - `DeepEvalEx.LLM.Usage`'s `:source` gains `:seed`.
+
+  The `<metric>_system_one`, `faithfulness_system_one_strict`, `jev_eval`
+  and `jev_eval_strict_not_applicable` fixtures, and every `<metric>_hybrid`
+  and `<metric>_hybrid_fallback` fixture (System One requests replayed by a
+  stand-in metric until the built-in metrics gain their hybrid paths),
+  export deepeval's `test_run.json` byte for byte. Confidence, the
+  fallback reason and the score breakdown are not exported.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in
@@ -629,6 +659,16 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Changed
 
+- **BREAKING:** a custom LLM judge's cost is no longer reported, as in
+  deepeval, which seeds a metric's cost with `None` unless its model is native,
+  so a custom judge's metric has no `evaluationCost` whatever its calls
+  report. DeepEvalEx now does the same: a judge adapter whose
+  `c:DeepEvalEx.LLM.Adapter.native?/0` is `false` (the default, the Mock
+  adapter included) gives results a `nil` `:evaluation_cost`, though their
+  token counts are still reported. A custom adapter that prices its calls
+  returns `true` from `native?/0` to keep its cost. A metric with a native
+  judge that makes no call now reports a cost of `0.0` and token counts of
+  `0` instead of `nil`, as deepeval's.
 - **BREAKING:** a test case loaded without `success` keeps `success: nil`,
   as deepeval's `LLMApiTestCase` leaves it `None`, instead of having it
   computed from its metric data; it is not written back, and when the file

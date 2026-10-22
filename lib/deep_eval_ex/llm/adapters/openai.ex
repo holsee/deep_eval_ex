@@ -198,6 +198,10 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
     not Regex.match?(@reasoning_model_pattern, base_model(model_name(opts)))
   end
 
+  # A native model, as deepeval's `GPTModel`: its cost is reported.
+  @impl true
+  def native?, do: true
+
   @impl true
   def supports_json_mode?, do: true
 

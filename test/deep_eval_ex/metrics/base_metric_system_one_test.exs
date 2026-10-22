@@ -244,6 +244,142 @@ defmodule DeepEvalEx.Metrics.BaseMetricSystemOneTest do
     end
   end
 
+  defmodule Asking do
+    @moduledoc false
+    # A metric with an LLM judge that asks System One one question, through
+    # the facade, and books its usage as the decision helpers do.
+    use DeepEvalEx.Metrics.BaseMetric
+
+    alias DeepEvalEx.LLM.Usage
+    alias DeepEvalEx.SystemOne
+    alias DeepEvalEx.SystemOne.Question
+
+    @impl true
+    def metric_name, do: "Asking"
+
+    @impl true
+    def required_params, do: []
+
+    @impl true
+    defdelegate evaluation_model(opts), to: DeepEvalEx.LLM.Adapter, as: :model_name
+
+    @impl true
+    def system_one_eval_spec(_test_case, _opts), do: nil
+
+    def do_measure(_test_case, opts) do
+      %Context{model: model} = opts[:system_one]
+      question = [{"q_0", %Question.Noul{instructions: "Holds."}}]
+
+      case SystemOne.decide(%{}, question, system_one_model: model) do
+        {:ok, _answers, usage} -> Usage.record(usage || %Usage{source: :system_one})
+        {:error, error} -> raise error
+      end
+
+      {:ok, Result.new(metric: metric_name(), score: 1.0)}
+    end
+  end
+
+  describe "export under System One" do
+    test ":system_one reports the System One model and its cost from a zero seed" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.9), cost: {4.2e-05, 1000, 0})
+
+      assert {:ok,
+              %Result{
+                evaluation_model: "fake-jev",
+                evaluation_cost: 4.2e-05,
+                input_tokens: 1000,
+                output_tokens: 0
+              }} =
+               Asking.measure(test_case(),
+                 eval_mode: :system_one,
+                 system_one_model: mock,
+                 adapter: :mock
+               )
+    end
+
+    test ":system_one seeds zero even without a System One call" do
+      assert {:ok,
+              %Result{
+                evaluation_model: "fake-jev",
+                evaluation_cost: +0.0,
+                input_tokens: 0,
+                output_tokens: 0
+              }} =
+               Probe.measure(test_case(), eval_mode: :system_one, system_one_model: Mock.new())
+    end
+
+    test ":system_one with an unpriced request has no cost but zero tokens" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.9), cost: nil)
+
+      assert {:ok,
+              %Result{
+                evaluation_model: "fake-jev",
+                evaluation_cost: nil,
+                input_tokens: 0,
+                output_tokens: 0
+              }} = Asking.measure(test_case(), eval_mode: :system_one, system_one_model: mock)
+    end
+
+    test ":hybrid names the LLM judge and adds Jev's tokens to a custom judge's nil seed" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.9), cost: {4.2e-05, 1000, 0})
+
+      assert {:ok,
+              %Result{
+                evaluation_model: "mock-model",
+                evaluation_cost: nil,
+                input_tokens: 1000,
+                output_tokens: 0
+              }} =
+               Asking.measure(test_case(),
+                 eval_mode: :hybrid,
+                 system_one_model: mock,
+                 adapter: :mock
+               )
+    end
+
+    test ":hybrid with a native judge adds Jev's cost to zero" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.9), cost: {4.2e-05, 1000, 0})
+
+      assert {:ok,
+              %Result{
+                evaluation_model: "gpt-4o",
+                evaluation_cost: 4.2e-05,
+                input_tokens: 1000,
+                output_tokens: 0
+              }} =
+               Asking.measure(test_case(),
+                 eval_mode: :hybrid,
+                 system_one_model: mock,
+                 adapter: :openai,
+                 model: "gpt-4o"
+               )
+    end
+
+    test "an errored :system_one result keeps the System One model and the seed" do
+      down = %DeepEvalEx.SystemOne.Error{
+        reason: :connection,
+        type: "ConnectionError",
+        message: "Jev is down"
+      }
+
+      [[result]] =
+        Evaluator.evaluate([test_case()], [Asking],
+          eval_mode: :system_one,
+          system_one_model: Mock.new(raises: down),
+          ignore_errors: true
+        )
+
+      assert Result.errored?(result)
+
+      assert %Result{
+               evaluation_model: "exploding-jev",
+               evaluation_cost: +0.0,
+               input_tokens: 0,
+               output_tokens: 0
+             } = result
+    end
+  end
+
   test "confidence, fallback reason and strict_applied are not exported" do
     {:ok, result} =
       Probe.measure(test_case(), confidences: [0.3], fallbacks: ["x"], strict_applied: true)

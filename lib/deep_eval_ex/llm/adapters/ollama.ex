@@ -115,6 +115,10 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
   @impl true
   def supports_structured_outputs?, do: true
 
+  # A native model, as deepeval's `OllamaModel`: its cost is reported.
+  @impl true
+  def native?, do: true
+
   # Ollama's `format: "json"`; nearly every entry of deepeval's
   # OLLAMA_MODELS_DATA has `supports_json=True`.
   @impl true

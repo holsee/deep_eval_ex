@@ -310,14 +310,100 @@ defmodule DeepEvalEx.SystemOne.RunnerTest do
           assert result.verbose_logs == measured["verbose_logs"]
         end
 
-        # Without token counts from the model, the seed (P3-11) sets them.
-        if is_map(fixture.input["system_one"]["cost"]) do
-          assert result.evaluation_cost == measured["evaluation_cost"]
-          assert result.input_tokens == measured["input_tokens"]
-          assert result.output_tokens == measured["output_tokens"]
-        end
+        # Without token counts from the model, the seed sets them.
+        assert result.evaluation_cost === measured["evaluation_cost"]
+        assert result.input_tokens === measured["input_tokens"]
+        assert result.output_tokens === measured["output_tokens"]
       end
     end
+  end
+
+  defmodule Golden do
+    @moduledoc false
+    # WholeChain configured as a struct, so the Evaluator runs it under the
+    # fixture metric's name and options.
+    use DeepEvalEx.Metrics.BaseMetric
+
+    alias DeepEvalEx.SystemOne.Runner
+
+    defstruct [
+      :name,
+      :test_spec,
+      :eval_mode,
+      :system_one_model,
+      :verbose_logs,
+      threshold: 0.5,
+      strict_mode: false
+    ]
+
+    @impl true
+    def metric_name, do: "Golden"
+
+    @impl true
+    def metric_name(%__MODULE__{name: name}), do: name
+
+    @impl true
+    def required_params, do: []
+
+    @impl true
+    def system_one_eval_spec(_test_case, opts), do: Keyword.get(opts, :test_spec)
+
+    def do_measure(test_case, opts) do
+      {:ok, result} = Runner.run(__MODULE__, test_case, opts)
+      verbose_logs = Keyword.get(opts, :verbose_logs) || result.verbose_logs
+      {:ok, %{result | metric: Keyword.fetch!(opts, :name), verbose_logs: verbose_logs}}
+    end
+  end
+
+  # The export of a whole-chain measure is deepeval's test_run.json, byte
+  # for byte: evaluationModel is the System One model, and cost and token
+  # counts add up from the zero seed of a metric with no LLM.
+  describe "System One fixture exports" do
+    @describetag :tmp_dir
+
+    for scenario <-
+          ~w(faithfulness_system_one faithfulness_system_one_strict hallucination_system_one
+             answer_relevancy_system_one contextual_precision_system_one
+             contextual_recall_system_one jev_eval jev_eval_strict_not_applicable) do
+      test "#{scenario} exports deepeval's test_run.json", %{tmp_dir: tmp_dir} do
+        fixture = fixture(unquote(scenario))
+        [metric] = fixture.input["metrics"]
+        theirs = File.read!(Path.join([@fixtures, unquote(scenario), "test_run.json"]))
+        [[measured_name]] = metric_names(theirs)
+
+        golden =
+          struct!(
+            Golden,
+            [
+              name: measured_name,
+              test_spec: fixture.spec,
+              eval_mode: :system_one,
+              system_one_model: Mock.from_fixture(fixture.input["system_one"]),
+              # JevEval writes its own verbose logs (P4-6).
+              verbose_logs:
+                if(metric["kind"] == "jev_eval", do: hd(fixture.measure)["verbose_logs"])
+            ] ++ metric_opts(metric["params"])
+          )
+
+        {_results, _test_run, path} =
+          DeepEvalEx.evaluate_run([TestCase.new!(fixture.input["test_case"])], [golden],
+            results_folder: tmp_dir
+          )
+
+        assert normalise(File.read!(path)) == normalise(theirs)
+      end
+    end
+  end
+
+  defp metric_names(test_run) do
+    for test_case <- Jason.decode!(test_run)["testCases"],
+        do: Enum.map(test_case["metricsData"], & &1["name"])
+  end
+
+  # The run-level runDuration, the wall-clock time of the whole run, is the
+  # only key following testFailed.
+  defp normalise(json) do
+    String.replace(json, ~r/("testFailed": \d+, "runDuration": )[^,}]+/, "\\1\"<normalised>\"")
   end
 
   defp metric_opts(params) do
