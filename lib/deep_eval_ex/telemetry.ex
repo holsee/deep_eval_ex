@@ -94,9 +94,7 @@ defmodule DeepEvalEx.Telemetry do
   ## Example: Custom Handler
 
       defmodule MyApp.DeepEvalHandler do
-        alias DeepEvalEx.SystemOne.Error
-
-  require Logger
+        require Logger
 
         def handle_event([:deep_eval_ex, :metric, :stop], measurements, metadata, _config) do
           Logger.info("Metric \#{metadata.metric} completed",

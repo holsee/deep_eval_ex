@@ -212,6 +212,15 @@ defmodule DeepEvalEx.TelemetryTest do
     end
   end
 
+  describe "moduledoc" do
+    test "keeps the custom handler example free of the module's own aliases" do
+      {:docs_v1, _, :elixir, _, %{"en" => moduledoc}, _, _} = Code.fetch_docs(Telemetry)
+
+      assert moduledoc =~ "    defmodule MyApp.DeepEvalHandler do\n      require Logger\n\n"
+      refute moduledoc =~ "alias DeepEvalEx.SystemOne.Error"
+    end
+  end
+
   describe "handle_event/4 for System One events" do
     test "logs a request with its model, metrics and duration" do
       log =
@@ -259,6 +268,43 @@ defmodule DeepEvalEx.TelemetryTest do
         end)
 
       assert log =~ "Faithfulness fell back to the LLM: ConnectionError: Jev is down"
+    end
+
+    test "logs a raising request with its reason" do
+      log =
+        capture_log(fn ->
+          Telemetry.handle_event(
+            [:deep_eval_ex, :system_one, :request, :exception],
+            %{duration: System.convert_time_unit(5, :millisecond, :native)},
+            %{
+              model: "jev-1",
+              metrics: ["Faithfulness", "Hallucination"],
+              question_count: 2,
+              kind: :error,
+              reason: %RuntimeError{message: "boom"},
+              stacktrace: []
+            },
+            nil
+          )
+        end)
+
+      assert log =~
+               "System One request raised: jev-1, Faithfulness, Hallucination, " <>
+                 "%RuntimeError{message: \"boom\"}, duration: 5ms"
+    end
+
+    test "logs a fallback without a metric name" do
+      log =
+        capture_log(fn ->
+          Telemetry.handle_event(
+            [:deep_eval_ex, :system_one, :fallback],
+            %{system_time: 0},
+            %{metric: nil, reason: "ConnectionError: Jev is down"},
+            nil
+          )
+        end)
+
+      assert log =~ "A metric fell back to the LLM: ConnectionError: Jev is down"
     end
 
     test "are attached by the default logger" do
