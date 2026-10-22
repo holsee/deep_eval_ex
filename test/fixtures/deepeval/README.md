@@ -113,7 +113,7 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | ExactMatch | `exact_match_pass`, `exact_match_fail` |
 | GEval | `g_eval_criteria_pass` (steps generated from criteria), `g_eval_steps_fail` (given steps), `g_eval_strict` |
 | Faithfulness | `faithfulness_pass`, `faithfulness_fail`, `faithfulness_borderline`, `faithfulness_no_claims` (empty list), `faithfulness_strict` |
-| Hallucination | `hallucination_pass`, `hallucination_fail`, `hallucination_strict` |
+| Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_strict` |
 | AnswerRelevancy | `answer_relevancy_pass`, `answer_relevancy_fail`, `answer_relevancy_no_statements` (empty list), `answer_relevancy_strict` |
 | ContextualPrecision | `contextual_precision_pass`, `contextual_precision_fail`, `contextual_precision_strict` |
 | ContextualRecall | `contextual_recall_pass`, `contextual_recall_fail`, `contextual_recall_strict` |
@@ -138,7 +138,7 @@ rows here.
 | Facet | Scenarios | Fails because | Tag |
 | --- | --- | --- | --- |
 | prompts | every scenario that calls the judge (all but `exact_match_*` and `tool_correctness_pass`, `_fail`, `_strict`) | Prompt templates are paraphrased, not 4.3.1's Jinja templates (P1.6) | P1.6 |
-| measure | `hallucination_pass` | Score direction inverted: 0.0 where deepeval scores 1.0 (P1.1) | P1.1 |
+| measure | `hallucination_pass`, `hallucination_fail` | Score direction inverted: 0.0 where deepeval scores 1.0, 0.67 where it scores 0.33 (P1.1) | P1.1 |
 | measure | `answer_relevancy_no_statements`, `faithfulness_no_claims` | No verdicts scores the float `1.0`; deepeval's shared QAG scoring returns the integer `1` (P1.2) | P1.2 |
 | measure | `answer_relevancy_strict`, `contextual_precision_strict`, `contextual_recall_strict`, `faithfulness_strict` | `strict_mode` ignored: threshold not forced to 1, score not clamped to 0 (P1.3) | P1.3 |
 | measure | `hallucination_strict` | `strict_mode` ignored (P1.3) and score direction inverted (P1.1) | P1.3 |
