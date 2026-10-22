@@ -228,6 +228,32 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     between is `:borderline`; without it, `0.5` and above is `:yes`.
   - `Decision.split_sentences/1`, deepeval's `split_sentences`: splits after
     `.`, `!` or `?` and whitespace, trimming and dropping empty sentences.
+- **`DeepEvalEx.SystemOne.Scored`, the Noul, Score and Choice question
+  primitives** (ADR-0009), ports of deepeval 4.3.1's
+  `metrics/jev_eval/questions.py` and `parse_questions`. Nothing builds a
+  whole-metric System One request from them yet.
+  - `Scored.Noul` (a statement, optional `true` / `false` criteria),
+    `Scored.Score` (a question over 2 to 10 unique levels, worst first) and
+    `Scored.Choice` (a question over ordered `{name, credit}` options,
+    credits in `0..1` or `nil` for not applicable, at least one credited),
+    each with a `weight` greater than 0, `1.0` by default. Their `new!/1`
+    raises `ArgumentError` with deepeval's messages, such as
+    `"Score levels must be unique."`; weights and credits become floats.
+    `Choice.applicable_options/1` and `not_applicable_options/1` split the
+    options.
+  - `Scored.to_question/1` builds the wire question a provider is sent; a
+    Choice sends its option names only, never credits. `Scored.text/1`
+    gives the question's text.
+  - `Scored.parse!/1` parses a rendered `_experimental_system_one_questions`
+    JSON array discriminated on `"type"`, keeping option order and ignoring
+    unknown keys. Anything else raises deepeval's
+    `"_experimental_system_one_questions must render to a JSON array of
+    Noul / Score / Choice questions: ..."` `DeepEvalError`.
+  - `Scored.Outcome`, deepeval's `QuestionOutcome` (one `score_breakdown`
+    entry), with `to_dump/1` in `model_dump()` key order. Every
+    `score_breakdown` of the System One fixtures dumps byte for byte, and
+    the `jev_eval` fixtures' questions parse and go on the wire as deepeval
+    sent them.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in
