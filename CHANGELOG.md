@@ -64,6 +64,22 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     ports of deepeval's exceptions of the same names.
   - `DeepEvalEx.LLM.Usage` has a new `:source` field, `:llm` (the default)
     or `:system_one`.
+- **`DeepEvalEx.SystemOne.Mode`, eval-mode resolution** (ADR-0009), a port
+  of deepeval 4.3.1's `config/eval_mode.py` and `effective_eval_mode`. No
+  metric reads the mode yet.
+  - `resolve/1` takes a metric's `:eval_mode` option (`:llm`, `:hybrid` or
+    `:system_one`, as an atom or a string, case-insensitive), then the
+    `:eval_mode` setting (application config, then `DEEPEVAL_EVAL_MODE`),
+    then `:llm`. An unrecognised option raises `ArgumentError` with
+    deepeval's "Unsupported eval_mode 'x'. Valid values: llm, hybrid,
+    system_one." message; an unrecognised setting is ignored.
+  - `for_classifier/1` runs `:hybrid` as `:llm`, as
+    `resolve_classifier_eval_mode`.
+  - `effective/2` runs `:system_one` as `:hybrid` for a metric module that
+    does not export `system_one_eval_spec/2` (deepeval's
+    `has_whole_metric_form`).
+  - `uses_system_one?/1`, `normalize/1` (deepeval's `normalize_eval_mode`,
+    which `DeepEvalEx.Config` now uses for `:eval_mode`) and `modes/0`.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in

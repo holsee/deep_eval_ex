@@ -53,8 +53,9 @@ defmodule DeepEvalEx.Config do
     setting accepts a zero fraction (`"2.0"`), and a value that is not a
     number or breaks the setting's bound raises an `ArgumentError` naming
     the variable, where deepeval fails to load its settings.
-  - `:eval_mode` case-insensitively, as `normalize_eval_mode`; an
-    unrecognised value counts as unset.
+  - `:eval_mode` with `DeepEvalEx.SystemOne.Mode.normalize/1`, as
+    `normalize_eval_mode`: case-insensitively, and an unrecognised value
+    counts as unset.
   - `:file_system` case-insensitively: `READ_ONLY`, `READ-ONLY`, `READONLY`
     and `RO` are `:read_only`, and any other value raises an
     `ArgumentError`, as deepeval's settings validator rejects it.
@@ -68,7 +69,7 @@ defmodule DeepEvalEx.Config do
   variable therefore reads as its default.
   """
 
-  @eval_modes ~w(llm hybrid system_one)a
+  alias DeepEvalEx.SystemOne.Mode
 
   # deepeval's outer per-task budget when neither its per-task nor its
   # per-attempt timeout override is set (`_calc_auto_outer_timeout`).
@@ -217,7 +218,7 @@ defmodule DeepEvalEx.Config do
   end
 
   defp parse(value, :boolean, _source), do: parse_bool(value)
-  defp parse(value, :eval_mode, _source), do: normalize_eval_mode(value)
+  defp parse(value, :eval_mode, _source), do: Mode.normalize(value)
   defp parse(:read_only, :file_system, _source), do: :read_only
 
   defp parse(value, :file_system, source) when is_binary(value) do
@@ -272,17 +273,6 @@ defmodule DeepEvalEx.Config do
 
   defp describe_op(:>=), do: "greater than or equal to"
   defp describe_op(:>), do: "greater than"
-
-  # deepeval's normalize_eval_mode: case-insensitive, whitespace ignored,
-  # anything else unset.
-  defp normalize_eval_mode(mode) when mode in @eval_modes, do: mode
-
-  defp normalize_eval_mode(value) when is_binary(value) or is_atom(value) do
-    text = value |> to_string() |> String.trim() |> String.downcase()
-    Enum.find(@eval_modes, &(Atom.to_string(&1) == text))
-  end
-
-  defp normalize_eval_mode(_value), do: nil
 
   @doc """
   Reads a value as a boolean, as deepeval's `parse_bool`.
