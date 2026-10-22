@@ -101,11 +101,114 @@ defmodule DeepEvalEx.LLM.StrictSchemaTest do
                ["string", "null"]
     end
 
-    test "leaves an already strict schema unchanged" do
+    test "returns an already strict schema unchanged" do
       schema = MetricOutputs.GEval.reason_score_schema()
 
-      assert StrictSchema.to_strict(StrictSchema.to_strict(schema)) ==
-               StrictSchema.to_strict(schema)
+      assert StrictSchema.to_strict(schema) == schema
+      assert StrictSchema.to_strict(StrictSchema.to_strict(schema)) == schema
+    end
+
+    test "is idempotent on a schema it had to rewrite" do
+      schema = %{
+        "type" => "object",
+        "properties" => %{"reason" => %{"type" => "string"}}
+      }
+
+      strict = StrictSchema.to_strict(schema)
+      assert StrictSchema.to_strict(strict) == strict
+    end
+
+    test "recurses into nullable objects and arrays whose type is a list" do
+      schema = %{
+        "type" => "object",
+        "properties" => %{
+          "detail" => %{
+            "type" => ["object", "null"],
+            "properties" => %{"reason" => %{"type" => "string"}}
+          },
+          "verdicts" => %{
+            "type" => ["array", "null"],
+            "items" => %{
+              "type" => "object",
+              "properties" => %{"verdict" => %{"type" => "string"}}
+            }
+          }
+        },
+        "required" => ["detail", "verdicts"]
+      }
+
+      strict = StrictSchema.to_strict(schema)
+
+      assert strict["properties"]["detail"]["additionalProperties"] == false
+      assert strict["properties"]["detail"]["required"] == ["reason"]
+      assert strict["properties"]["verdicts"]["items"]["additionalProperties"] == false
+      assert strict["properties"]["verdicts"]["items"]["required"] == ["verdict"]
+    end
+
+    test "recurses into $defs and definitions" do
+      schema = %{
+        "type" => "object",
+        "properties" => %{"verdict" => %{"$ref" => "#/$defs/Verdict"}},
+        "required" => ["verdict"],
+        "$defs" => %{
+          "Verdict" => %{"type" => "object", "properties" => %{"reason" => %{"type" => "string"}}}
+        },
+        "definitions" => %{
+          "Claim" => %{"type" => "object", "properties" => %{"text" => %{"type" => "string"}}}
+        }
+      }
+
+      strict = StrictSchema.to_strict(schema)
+
+      assert strict["$defs"]["Verdict"]["additionalProperties"] == false
+      assert strict["$defs"]["Verdict"]["required"] == ["reason"]
+      assert strict["definitions"]["Claim"]["additionalProperties"] == false
+      assert strict["definitions"]["Claim"]["required"] == ["text"]
+      assert strict["properties"]["verdict"] == %{"$ref" => "#/$defs/Verdict"}
+    end
+
+    test "recurses into allOf and oneOf branches" do
+      branch = %{"type" => "object", "properties" => %{"reason" => %{"type" => "string"}}}
+      schema = %{"allOf" => [branch], "oneOf" => [branch, %{"type" => "string"}]}
+
+      strict = StrictSchema.to_strict(schema)
+      strict_branch = StrictSchema.to_strict(branch)
+
+      assert strict_branch["additionalProperties"] == false
+      assert strict["allOf"] == [strict_branch]
+      assert strict["oneOf"] == [strict_branch, %{"type" => "string"}]
+    end
+
+    test "rejects a free-form dictionary object instead of closing it" do
+      schema = %{
+        "type" => "object",
+        "properties" => %{
+          "scores" => %{"type" => "object", "additionalProperties" => %{"type" => "number"}}
+        },
+        "required" => ["scores"]
+      }
+
+      assert_raise ArgumentError, ~r/strict mode cannot express.*additionalProperties/s, fn ->
+        StrictSchema.to_strict(schema)
+      end
+    end
+
+    test "rejects an object that explicitly allows additional properties" do
+      schema = %{
+        "type" => "object",
+        "properties" => %{"reason" => %{"type" => "string"}},
+        "additionalProperties" => true
+      }
+
+      assert_raise ArgumentError, ~r/additionalProperties/, fn ->
+        StrictSchema.to_strict(schema)
+      end
+    end
+
+    test "rejects a schema with atom keys" do
+      schema = %{type: "object", properties: %{reason: %{type: "string"}}}
+
+      assert_raise ArgumentError, ~r/string keys/, fn -> StrictSchema.to_strict(schema) end
     end
   end
 

@@ -13,18 +13,79 @@ defmodule DeepEvalEx.LLM.StrictSchema do
   - a property that was optional becomes nullable (`"null"` is added to its
     type, and `nil` to its enum)
 
-  Arrays, nested objects and `anyOf` branches are converted recursively.
-  The response then carries `null` where the model had nothing to say, which
-  reads the same as a missing key through `Map.get/2`.
+  The conversion recurses into array `items`, nested objects (including a
+  nullable one typed `["object", "null"]`), `$defs` and `definitions`, and
+  `anyOf`, `allOf` and `oneOf` branches, following the OpenAI SDK's
+  `to_strict_json_schema`. The response then carries `null` where the model
+  had nothing to say, which reads the same as a missing key through
+  `Map.get/2`.
+
+  Schemas must use string keys, as they would after decoding JSON; a schema
+  with atom keys raises `ArgumentError`.
+
+  Strict mode has no way to express an object that accepts keys beyond its
+  declared `properties`, such as a free-form dictionary
+  (`"additionalProperties" => %{"type" => "string"}`). Rather than close such
+  an object, which would leave the model only `{}` to return, `to_strict/1`
+  raises `ArgumentError`; declare the keys as properties instead.
   """
+
+  @branch_keys ["anyOf", "allOf", "oneOf"]
+  @definition_keys ["$defs", "definitions"]
 
   @doc """
   Returns `schema` rewritten for OpenAI strict mode.
 
-  An already strict schema is returned unchanged.
+  An already strict schema is returned unchanged, and converting twice gives
+  the same result as converting once.
+
+  Raises `ArgumentError` for a schema with atom keys, or with an object whose
+  `additionalProperties` is anything other than `false`.
   """
   @spec to_strict(map()) :: map()
-  def to_strict(%{"type" => "object"} = schema) do
+  def to_strict(schema) when is_map(schema) do
+    if Enum.any?(Map.keys(schema), &is_atom/1) do
+      raise ArgumentError,
+            "strict JSON schemas must use string keys, got: #{inspect(schema)}"
+    end
+
+    schema
+    |> strict_definitions()
+    |> strict_object()
+    |> strict_items()
+    |> strict_branches()
+  end
+
+  defp strict_definitions(schema) do
+    Enum.reduce(@definition_keys, schema, fn key, schema ->
+      case schema do
+        %{^key => defs} when is_map(defs) ->
+          %{schema | key => Map.new(defs, fn {name, def} -> {name, to_strict(def)} end)}
+
+        _ ->
+          schema
+      end
+    end)
+  end
+
+  defp strict_object(schema) do
+    if object?(schema), do: close_object(schema), else: schema
+  end
+
+  defp close_object(schema) do
+    case Map.get(schema, "additionalProperties", false) do
+      false ->
+        require_properties(schema)
+
+      additional ->
+        raise ArgumentError,
+              "OpenAI strict mode cannot express an object with " <>
+                "additionalProperties #{inspect(additional)}; declare its keys under " <>
+                "\"properties\" instead. Schema: #{inspect(schema)}"
+    end
+  end
+
+  defp require_properties(schema) do
     properties = Map.get(schema, "properties", %{})
     required = Map.get(schema, "required", [])
     optional = properties |> Map.keys() |> Enum.reject(&(&1 in required)) |> Enum.sort()
@@ -41,13 +102,27 @@ defmodule DeepEvalEx.LLM.StrictSchema do
     |> Map.put("additionalProperties", false)
   end
 
-  def to_strict(%{"type" => "array", "items" => items} = schema),
+  defp strict_items(%{"items" => items} = schema) when is_map(items),
     do: %{schema | "items" => to_strict(items)}
 
-  def to_strict(%{"anyOf" => branches} = schema),
-    do: %{schema | "anyOf" => Enum.map(branches, &to_strict/1)}
+  defp strict_items(schema), do: schema
 
-  def to_strict(schema), do: schema
+  defp strict_branches(schema) do
+    Enum.reduce(@branch_keys, schema, fn key, schema ->
+      case schema do
+        %{^key => branches} when is_list(branches) ->
+          %{schema | key => Enum.map(branches, &to_strict/1)}
+
+        _ ->
+          schema
+      end
+    end)
+  end
+
+  defp object?(%{"type" => "object"}), do: true
+  defp object?(%{"type" => types}) when is_list(types), do: "object" in types
+  defp object?(%{"properties" => properties}) when is_map(properties), do: true
+  defp object?(_schema), do: false
 
   defp nullable(%{"type" => types} = schema) when is_list(types) do
     schema |> Map.put("type", Enum.uniq(types ++ ["null"])) |> nullable_enum()
