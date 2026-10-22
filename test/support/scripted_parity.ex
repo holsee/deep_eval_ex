@@ -23,6 +23,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     AnswerRelevancy,
     ContextualPrecision,
     ContextualRecall,
+    ContextualRelevancy,
     ExactMatch,
     Faithfulness,
     GEval,
@@ -44,6 +45,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "answer_relevancy" => AnswerRelevancy,
     "contextual_precision" => ContextualPrecision,
     "contextual_recall" => ContextualRecall,
+    "contextual_relevancy" => ContextualRelevancy,
     "tool_correctness" => ToolCorrectness
   }
 

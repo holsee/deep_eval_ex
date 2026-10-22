@@ -112,6 +112,7 @@ from deepeval.metrics import (  # noqa: E402
     AnswerRelevancyMetric,
     ContextualPrecisionMetric,
     ContextualRecallMetric,
+    ContextualRelevancyMetric,
     FaithfulnessMetric,
     HallucinationMetric,
     JevEval,
@@ -144,6 +145,7 @@ METRICS = {
     "answer_relevancy": AnswerRelevancyMetric,
     "contextual_precision": ContextualPrecisionMetric,
     "contextual_recall": ContextualRecallMetric,
+    "contextual_relevancy": ContextualRelevancyMetric,
     "tool_correctness": ToolCorrectnessMetric,
     "jev_eval": JevEval,
 }
@@ -490,6 +492,18 @@ RANKING = {
     ],
 }
 
+# The first node mixes an irrelevant and a relevant sentence. Under hybrid,
+# Jev is asked once per node with the node's sentences keyed statement_<i>,
+# so both nodes' statement_0 share one canned answer.
+RELEVANCY = {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris.",
+    "retrieval_context": [
+        "Rome is the capital of Italy. Paris is the capital of France.",
+        "The Louvre is in Paris.",
+    ],
+}
+
 WEATHER_TOOLS = [
     {"name": "get_weather", "description": "Fetch current weather for a city"},
     {"name": "search_web", "description": "Search the web"},
@@ -567,6 +581,24 @@ RECALL_VERDICTS = {
         {"verdict": "yes", "reason": "The 1st node gives 20 days of PTO."},
         {"verdict": "no", "reason": "The 2nd node allows 5 carry-over days."},
     ]}],
+}
+
+RELEVANCY_REASON = {
+    "reason": [{"reason": "The score is 0.33 because only 'Paris is the capital of France.' "
+                          "addresses the input; Rome and the Louvre do not."}],
+}
+RELEVANCY_NODE_VERDICTS = {
+    "verdicts": [
+        {"verdicts": [
+            {"statement": "Rome is the capital of Italy.", "verdict": "no",
+             "reason": "'Rome is the capital of Italy.' is about Italy."},
+            {"statement": "Paris is the capital of France.", "verdict": "yes"},
+        ]},
+        {"verdicts": [
+            {"statement": "The Louvre is in Paris.", "verdict": "no",
+             "reason": "'The Louvre is in Paris.' does not name the capital."},
+        ]},
+    ],
 }
 
 SCENARIOS = {
@@ -702,6 +734,31 @@ SCENARIOS = {
         "judge_model": JUDGE,
         "responses": {"contextual_recall": {**RECALL_REASON, **RECALL_VERDICTS}},
     },
+    # ContextualRelevancy
+    "contextual_relevancy_system_one": {
+        "description": "ContextualRelevancy decided by Jev in one request",
+        "metrics": [metric("contextual_relevancy", "system_one")],
+        "test_case": RELEVANCY,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.2, 0.75, 1, {"0": 0.1, "1": 0.55, "2": 0.3, "3": 0.05}, 0.45)},
+    },
+    "contextual_relevancy_hybrid": {
+        "description": "ContextualRelevancy in hybrid mode: Jev judges each sentence of each node, one request per node",
+        "metrics": [metric("contextual_relevancy", "hybrid")],
+        "test_case": RELEVANCY,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"statement_0": noul(0.04), "statement_1": noul(0.97)}}},
+        "judge_model": JUDGE,
+        "responses": {"contextual_relevancy": RELEVANCY_REASON},
+    },
+    "contextual_relevancy_hybrid_fallback": {
+        "description": "ContextualRelevancy in hybrid mode with Jev down: the LLM takes each node's verdicts",
+        "metrics": [metric("contextual_relevancy", "hybrid")],
+        "test_case": RELEVANCY,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"contextual_relevancy": {**RELEVANCY_REASON, **RELEVANCY_NODE_VERDICTS}},
+    },
     # ToolCorrectness: no whole-metric form, so `system_one` runs as `hybrid`;
     # its one Jev decision is the tool-selection Score (with available_tools).
     "tool_correctness_system_one": {
@@ -799,6 +856,26 @@ SCENARIOS = {
                                "m0.q_2": score(1, FOUR_LEVELS_LOW, 0.4),
                                "m1.q_2": score(2, {"0": 0.0, "1": 0.2, "2": 0.7, "3": 0.1}, 0.6),
                                "m2.q_2": score(2, {"0": 0.1, "1": 0.3, "2": 0.5, "3": 0.1}, 0.33),
+                           },
+                       }},
+    },
+    "batch_system_one_retrieval": {
+        "description": "ContextualRelevancy and ContextualPrecision batched into one request by evaluate()",
+        "batched": True,
+        "metrics": [
+            metric("contextual_relevancy", "system_one"),
+            metric("contextual_precision", "system_one"),
+        ],
+        "test_case": VACATION,
+        "system_one": {"model": JEV, "cost": {"value": 0.000084, "input_tokens": 2000, "output_tokens": 0},
+                       "answers": {
+                           "nouls": {
+                               "m0.q_0": noul(0.9), "m0.q_1": noul(0.95),
+                               "m1.q_0": noul(0.85), "m1.q_1": noul(0.6),
+                           },
+                           "scores": {
+                               "m0.q_2": score(3, FOUR_LEVELS_HIGH, 0.8),
+                               "m1.q_2": score(2, {"0": 0.05, "1": 0.15, "2": 0.6, "3": 0.2}, 0.45),
                            },
                        }},
     },

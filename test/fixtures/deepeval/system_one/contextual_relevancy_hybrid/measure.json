@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.3333333333333333,
+    "success": false,
+    "reason": "The score is 0.33 because only 'Paris is the capital of France.' addresses the input; Rome and the Louvre do not.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 2000,
+    "output_tokens": 0,
+    "verbose_logs": "Verdicts:\n[\n    {\n        \"verdicts\": [\n            {\n                \"statement\": \"Rome is the capital of Italy.\",\n                \"verdict\": \"no\",\n                \"reason\": \"'Rome is the capital of Italy.' is not relevant to the input (P(yes)=0.04).\"\n            },\n            {\n                \"statement\": \"Paris is the capital of France.\",\n                \"verdict\": \"yes\",\n                \"reason\": \"P(yes)=0.97\"\n            }\n        ]\n    },\n    {\n        \"verdicts\": [\n            {\n                \"statement\": \"The Louvre is in Paris.\",\n                \"verdict\": \"no\",\n                \"reason\": \"'The Louvre is in Paris.' is not relevant to the input (P(yes)=0.04).\"\n            }\n        ]\n    }\n]",
+    "confidence": 0.92,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

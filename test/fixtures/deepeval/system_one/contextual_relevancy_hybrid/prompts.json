@@ -1,0 +1,8 @@
+[
+  [
+    {
+      "step": "reason",
+      "prompt": "Based on the given input, reasons for why the retrieval context is irrelevant to the input, the statements in the retrieval context that is actually relevant to the retrieval context, and the contextual relevancy score (the closer to 1 the better), please generate a CONCISE reason for the score.\nIn your reason, you should quote data provided in the reasons for irrelevancy and relevant statements to support your point.\n\n** \nIMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason.\nExample JSON:\n{\n  \"reason\": \"The score is <contextual_relevancy_score> because <your_reason>.\"\n}\n\nIf the score is 1, keep it short and say something positive with an upbeat encouraging tone (but don't overdo it otherwise it gets annoying).\n**\n\n\nContextual Relevancy Score:\n0.33\n\nInput:\nWhat is the capital of France?\n\nReasons for why the retrieval context is irrelevant to the input:\n[\"'Rome is the capital of Italy.' is not relevant to the input (P(yes)=0.04).\", \"'The Louvre is in Paris.' is not relevant to the input (P(yes)=0.04).\"]\n\nStatement in the retrieval context that is relevant to the input:\n['Paris is the capital of France.']\n\nJSON:"
+    }
+  ]
+]

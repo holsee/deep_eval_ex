@@ -76,7 +76,7 @@ As in deepeval 4.3.1, `context` and `retrieval_context` are separate fields,
 and neither stands in for the other:
 
 - `retrieval_context` is what your retriever returned at run time. Faithfulness,
-  ContextualPrecision and ContextualRecall read it
+  ContextualPrecision, ContextualRecall and ContextualRelevancy read it
 - `context` is the ideal, ground-truth context for the input. Hallucination
   reads it
 
@@ -110,6 +110,7 @@ Different metrics require different fields:
 | AnswerRelevancy | `input`, `actual_output` |
 | ContextualPrecision | `input`, `retrieval_context`, `expected_output` |
 | ContextualRecall | `input`, `retrieval_context`, `expected_output` |
+| ContextualRelevancy | `input`, `retrieval_context` |
 
 ## Helper Functions
 

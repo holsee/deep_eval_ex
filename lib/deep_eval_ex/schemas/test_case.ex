@@ -12,7 +12,7 @@ defmodule DeepEvalEx.TestCase do
   - `:expected_output` - The expected/ground truth output (optional)
   - `:retrieval_context` - List of context chunks your retriever returned at
     run time, for RAG metrics (Faithfulness, ContextualPrecision,
-    ContextualRecall)
+    ContextualRecall, ContextualRelevancy)
   - `:context` - List of ideal, ground-truth context for the input, for
     Hallucination
   - `:tools_called` - List of tool calls made by the LLM

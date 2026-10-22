@@ -121,6 +121,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/AnswerRelevancy.md",
         "wiki/metrics/ContextualPrecision.md",
         "wiki/metrics/ContextualRecall.md",
+        "wiki/metrics/ContextualRelevancy.md",
         "wiki/metrics/ToolCorrectness.md",
         # API
         "wiki/api/TestCase.md",

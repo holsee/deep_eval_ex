@@ -18,6 +18,7 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 - [AnswerRelevancy](metrics/AnswerRelevancy.md)
 - [ContextualPrecision](metrics/ContextualPrecision.md)
 - [ContextualRecall](metrics/ContextualRecall.md)
+- [ContextualRelevancy](metrics/ContextualRelevancy.md)
 - [ToolCorrectness](metrics/ToolCorrectness.md) - Agent tool call evaluation
 
 ### API Reference

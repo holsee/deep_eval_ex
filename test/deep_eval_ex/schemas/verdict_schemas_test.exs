@@ -8,6 +8,7 @@ defmodule DeepEvalEx.Schemas.VerdictSchemasTest do
     AnswerRelevancy,
     ContextualPrecision,
     ContextualRecall,
+    ContextualRelevancy,
     Faithfulness,
     Hallucination
   }
@@ -19,7 +20,8 @@ defmodule DeepEvalEx.Schemas.VerdictSchemasTest do
     {Faithfulness, ["yes", "no", "borderline"]},
     {Hallucination, ["yes", "no"]},
     {ContextualRecall, ["yes", "no"]},
-    {ContextualPrecision, ["yes", "no"]}
+    {ContextualPrecision, ["yes", "no"]},
+    {ContextualRelevancy, ["yes", "no"]}
   ]
 
   for {schema, vocabulary} <- @vocabularies do

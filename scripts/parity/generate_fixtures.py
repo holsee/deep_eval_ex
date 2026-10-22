@@ -46,7 +46,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the seven LLM-judged metrics, the way the metric itself renders it
+uses for the eight LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -115,6 +115,7 @@ from deepeval.metrics import (  # noqa: E402
     BaseMetric,
     ContextualPrecisionMetric,
     ContextualRecallMetric,
+    ContextualRelevancyMetric,
     ExactMatchMetric,
     FaithfulnessMetric,
     GEval,
@@ -126,6 +127,9 @@ from deepeval.metrics.contextual_precision.contextual_precision import (  # noqa
 )
 from deepeval.metrics.contextual_recall.contextual_recall import (  # noqa: E402
     _contextual_recall_verdict_kwargs,
+)
+from deepeval.metrics.contextual_relevancy.contextual_relevancy import (  # noqa: E402
+    _contextual_relevancy_verdict_kwargs,
 )
 from deepeval.metrics.faithfulness.faithfulness import (  # noqa: E402
     _faithfulness_claims_multimodal_instruction,
@@ -542,6 +546,7 @@ SCRIPTED_METRICS = {
     "answer_relevancy": AnswerRelevancyMetric,
     "contextual_precision": ContextualPrecisionMetric,
     "contextual_recall": ContextualRecallMetric,
+    "contextual_relevancy": ContextualRelevancyMetric,
     "tool_correctness": ToolCorrectnessMetric,
 }
 
@@ -753,6 +758,20 @@ PROMPT_RENDERERS = {
         score=_score(i),
         content_type="sentence",
     ),
+    # One prompt per retrieval context node, as the metric judges each alone.
+    "ContextualRelevancyMetric.generate_verdicts": lambda i: _prompt(
+        ContextualRelevancyMetric, "generate_verdicts",
+        input=i["input"],
+        context=i["context"],
+        **_contextual_relevancy_verdict_kwargs(False),
+    ),
+    "ContextualRelevancyMetric.generate_reason": lambda i: _prompt(
+        ContextualRelevancyMetric, "generate_reason",
+        input=i["input"],
+        irrelevant_statements=i["irrelevant_statements"],
+        relevant_statements=i["relevant_statements"],
+        score=_score(i),
+    ),
     # System One (`eval_mode`) templates: the questions of the whole metric
     # under `system_one`, and the question asked about each item under
     # `hybrid`. They take no arguments.
@@ -779,6 +798,12 @@ PROMPT_RENDERERS = {
     ),
     "ContextualRecallMetric._experimental_system_one_verdict": lambda i: _prompt(
         ContextualRecallMetric, "_experimental_system_one_verdict",
+    ),
+    "ContextualRelevancyMetric._experimental_system_one_questions": lambda i: _prompt(
+        ContextualRelevancyMetric, "_experimental_system_one_questions",
+    ),
+    "ContextualRelevancyMetric._experimental_system_one_verdict": lambda i: _prompt(
+        ContextualRelevancyMetric, "_experimental_system_one_verdict",
     ),
     "HallucinationMetric._experimental_system_one_questions": lambda i: _prompt(
         HallucinationMetric, "_experimental_system_one_questions",
@@ -998,6 +1023,25 @@ PROMPT_CASES = {
             "unsupportive_reasons": ["No node mentions the metro."],
         },
     },
+    "contextual_relevancy_generate_verdicts": {
+        "template": "ContextualRelevancyMetric.generate_verdicts",
+        "inputs": {
+            "input": "What is the capital of France?",
+            "context": "Paris is the capital of France. There was a cat.",
+        },
+    },
+    "contextual_relevancy_generate_reason": {
+        "template": "ContextualRelevancyMetric.generate_reason",
+        "inputs": {
+            "score": 0.3333,
+            "input": "What is the capital of France?",
+            "irrelevant_statements": [
+                "The context mentions 'There was a cat', which is unrelated.",
+                None,
+            ],
+            "relevant_statements": ["Paris is the capital of France."],
+        },
+    },
     "faithfulness_experimental_system_one_questions": {
         "template": "FaithfulnessMetric._experimental_system_one_questions",
         "inputs": {},
@@ -1030,6 +1074,14 @@ PROMPT_CASES = {
         "template": "ContextualRecallMetric._experimental_system_one_verdict",
         "inputs": {},
     },
+    "contextual_relevancy_experimental_system_one_questions": {
+        "template": "ContextualRelevancyMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "contextual_relevancy_experimental_system_one_verdict": {
+        "template": "ContextualRelevancyMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
     "hallucination_experimental_system_one_questions": {
         "template": "HallucinationMetric._experimental_system_one_questions",
         "inputs": {},
@@ -1057,7 +1109,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the seven metrics is rendered
+    """Fails unless every bundled template of the eight metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()

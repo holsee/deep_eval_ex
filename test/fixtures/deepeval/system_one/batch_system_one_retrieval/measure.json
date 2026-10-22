@@ -1,0 +1,118 @@
+[
+  {
+    "score": 0.9375,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.80.\n1. Every statement in `retrieval_context` is relevant to addressing `input`. -> clearly holds (P(yes)=0.90, confidence=0.80, weight=2)\n2. Every node in `retrieval_context` contains at least one statement relevant to addressing `input`. -> clearly holds (P(yes)=0.95, confidence=0.90)\n3. How much of `retrieval_context` is relevant to addressing `input`? -> \"All of it\" (expected level=1.00 of 1.00, confidence=0.80)\nScore: 0.94 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 8.4e-05,
+    "input_tokens": 2000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every statement in `retrieval_context` is relevant to addressing `input`.\n   value=0.900 applicable=True probabilities={'true': 0.9, 'false': 0.1} confidence=0.800\n2. [noul, weight=1] Every node in `retrieval_context` contains at least one statement relevant to addressing `input`.\n   value=0.950 applicable=True probabilities={'true': 0.95, 'false': 0.05} confidence=0.900\n3. [score, weight=1] How much of `retrieval_context` is relevant to addressing `input`?\n   value=1.000 applicable=True probabilities={'None of it': 0.0, 'Less than half': 0.05, 'Most of it': 0.15, 'All of it': 0.8} confidence=0.800",
+    "confidence": 0.8,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every statement in `retrieval_context` is relevant to addressing `input`.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.9,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.9,
+          "false": 0.09999999999999998
+        },
+        "confidence": 0.8,
+        "passed": null
+      },
+      {
+        "question": "Every node in `retrieval_context` contains at least one statement relevant to addressing `input`.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.95,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.95,
+          "false": 0.050000000000000044
+        },
+        "confidence": 0.8999999999999999,
+        "passed": null
+      },
+      {
+        "question": "How much of `retrieval_context` is relevant to addressing `input`?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 1.0,
+        "applicable": true,
+        "probabilities": {
+          "None of it": 0.0,
+          "Less than half": 0.05,
+          "Most of it": 0.15,
+          "All of it": 0.8
+        },
+        "confidence": 0.8,
+        "passed": null
+      }
+    ],
+    "raised": null
+  },
+  {
+    "score": 0.7416666666666666,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.20.\n1. In `retrieval_context`, every document useful for arriving at `expected_output` for `input` is listed before every document that is not useful. -> clearly holds (P(yes)=0.85, confidence=0.70, weight=2)\n2. The first document in `retrieval_context` is useful for arriving at `expected_output` for `input`. -> unclear (P(yes)=0.60, confidence=0.20)\n3. How well are the documents in `retrieval_context` ordered, with the ones useful for arriving at `expected_output` for `input` first? -> \"Useful documents are mostly first\" (expected level=0.67 of 1.00, confidence=0.45)\nScore: 0.74 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 8.4e-05,
+    "input_tokens": 2000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] In `retrieval_context`, every document useful for arriving at `expected_output` for `input` is listed before every document that is not useful.\n   value=0.850 applicable=True probabilities={'true': 0.85, 'false': 0.15} confidence=0.700\n2. [noul, weight=1] The first document in `retrieval_context` is useful for arriving at `expected_output` for `input`.\n   value=0.600 applicable=True probabilities={'true': 0.6, 'false': 0.4} confidence=0.200\n3. [score, weight=1] How well are the documents in `retrieval_context` ordered, with the ones useful for arriving at `expected_output` for `input` first?\n   value=0.667 applicable=True probabilities={'Useful documents are all at the end': 0.05, 'Useful documents are mixed with irrelevant ones': 0.15, 'Useful documents are mostly first': 0.6, 'Useful documents are all first': 0.2} confidence=0.450",
+    "confidence": 0.19999999999999996,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "In `retrieval_context`, every document useful for arriving at `expected_output` for `input` is listed before every document that is not useful.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.85,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.85,
+          "false": 0.15000000000000002
+        },
+        "confidence": 0.7,
+        "passed": null
+      },
+      {
+        "question": "The first document in `retrieval_context` is useful for arriving at `expected_output` for `input`.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.6,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.6,
+          "false": 0.4
+        },
+        "confidence": 0.19999999999999996,
+        "passed": null
+      },
+      {
+        "question": "How well are the documents in `retrieval_context` ordered, with the ones useful for arriving at `expected_output` for `input` first?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.6666666666666666,
+        "applicable": true,
+        "probabilities": {
+          "Useful documents are all at the end": 0.05,
+          "Useful documents are mixed with irrelevant ones": 0.15,
+          "Useful documents are mostly first": 0.6,
+          "Useful documents are all first": 0.2
+        },
+        "confidence": 0.45,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

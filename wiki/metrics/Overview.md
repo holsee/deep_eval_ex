@@ -28,6 +28,7 @@ Evaluate Retrieval-Augmented Generation pipelines:
 | [AnswerRelevancy](AnswerRelevancy.md) | Response relevance to question | `input`, `actual_output` |
 | [ContextualPrecision](ContextualPrecision.md) | Retrieval ranking quality | `retrieval_context`, `expected_output` |
 | [ContextualRecall](ContextualRecall.md) | Coverage of ground truth | `retrieval_context`, `expected_output` |
+| [ContextualRelevancy](ContextualRelevancy.md) | Relevance of the retrieved context to the input | `input`, `retrieval_context` |
 
 ### Agent Metrics
 Evaluate tool-using agents:
@@ -87,6 +88,7 @@ Every metric also takes deepeval's `BaseMetric` options:
 - **Faithfulness** - Ensure answers are grounded in retrieved context
 - **Hallucination** - Detect fabricated information
 - **ContextualPrecision/Recall** - Evaluate retrieval quality
+- **ContextualRelevancy** - Measure how much of the retrieved context is noise
 
 ### For Agents
 - **ToolCorrectness** - Check the agent called the right tools

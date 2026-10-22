@@ -61,6 +61,10 @@ defmodule DeepEvalEx.PromptGoldenTest do
       {Prompts.ContextualPrecision, :generate_reason},
     "ContextualRecallMetric.generate_verdicts" => {Prompts.ContextualRecall, :generate_verdicts},
     "ContextualRecallMetric.generate_reason" => {Prompts.ContextualRecall, :generate_reason},
+    "ContextualRelevancyMetric.generate_verdicts" =>
+      {Prompts.ContextualRelevancy, :generate_verdicts},
+    "ContextualRelevancyMetric.generate_reason" =>
+      {Prompts.ContextualRelevancy, :generate_reason},
     "ToolCorrectnessMetric.get_tool_selection_score" =>
       {Prompts.ToolCorrectness, :get_tool_selection_score},
     "FaithfulnessMetric._experimental_system_one_questions" =>
@@ -79,6 +83,10 @@ defmodule DeepEvalEx.PromptGoldenTest do
       {Prompts.ContextualRecall, :system_one_questions},
     "ContextualRecallMetric._experimental_system_one_verdict" =>
       {Prompts.ContextualRecall, :system_one_verdict},
+    "ContextualRelevancyMetric._experimental_system_one_questions" =>
+      {Prompts.ContextualRelevancy, :system_one_questions},
+    "ContextualRelevancyMetric._experimental_system_one_verdict" =>
+      {Prompts.ContextualRelevancy, :system_one_verdict},
     "HallucinationMetric._experimental_system_one_questions" =>
       {Prompts.Hallucination, :system_one_questions},
     "HallucinationMetric._experimental_system_one_verdict" =>
@@ -101,7 +109,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the seven LLM metrics" do
+  test "covers every template of the eight LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -113,6 +121,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.AnswerRelevancy,
             Prompts.ContextualPrecision,
             Prompts.ContextualRecall,
+            Prompts.ContextualRelevancy,
             Prompts.Faithfulness,
             Prompts.GEval,
             Prompts.Hallucination,
@@ -251,6 +260,19 @@ defmodule DeepEvalEx.PromptGoldenTest do
       expected_output: inputs["expected_output"],
       supportive_reasons: inputs["supportive_reasons"],
       unsupportive_reasons: inputs["unsupportive_reasons"]
+    ]
+  end
+
+  defp options("ContextualRelevancyMetric.generate_verdicts", inputs) do
+    [input: inputs["input"], context: inputs["context"]]
+  end
+
+  defp options("ContextualRelevancyMetric.generate_reason", inputs) do
+    [
+      score: inputs["score"],
+      input: inputs["input"],
+      irrelevant_statements: inputs["irrelevant_statements"],
+      relevant_statements: inputs["relevant_statements"]
     ]
   end
 

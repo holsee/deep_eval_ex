@@ -1,0 +1,50 @@
+{
+  "description": "ContextualRelevancy in strict mode",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "contextual_relevancy",
+    "params": {
+      "strict_mode": true
+    }
+  },
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris.",
+    "retrieval_context": [
+      "Paris is the capital of France. Paris hosts the national government.",
+      "Rome is the capital of Italy."
+    ]
+  },
+  "responses": {
+    "contextual_relevancy": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "statement": "Paris is the capital of France.",
+              "verdict": "yes"
+            },
+            {
+              "statement": "Paris hosts the national government.",
+              "verdict": "yes"
+            }
+          ]
+        },
+        {
+          "verdicts": [
+            {
+              "statement": "Rome is the capital of Italy.",
+              "reason": "'Rome is the capital of Italy' does not concern France.",
+              "verdict": "no"
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.67 because Rome is irrelevant to the capital of France."
+        }
+      ]
+    }
+  }
+}

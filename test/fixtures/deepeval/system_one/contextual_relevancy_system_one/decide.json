@@ -1,0 +1,126 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "What is the capital of France?",
+            "retrieval_context": [
+              "Rome is the capital of Italy. Paris is the capital of France.",
+              "The Louvre is in Paris."
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every statement in `retrieval_context` is relevant to addressing `input`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "Every node in `retrieval_context` contains at least one statement relevant to addressing `input`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `retrieval_context` is relevant to addressing `input`?",
+            "criteria": [
+              "None of it",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.2
+            },
+            "q_1": {
+              "probability": 0.75
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 1.0,
+              "probabilities": {
+                "0": 0.1,
+                "1": 0.55,
+                "2": 0.3,
+                "3": 0.05
+              },
+              "confidence": 0.45
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "input": "What is the capital of France?",
+          "retrieval_context": [
+            "Rome is the capital of Italy. Paris is the capital of France.",
+            "The Louvre is in Paris."
+          ]
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "Every statement in `retrieval_context` is relevant to addressing `input`."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "Every node in `retrieval_context` contains at least one statement relevant to addressing `input`."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "How much of `retrieval_context` is relevant to addressing `input`?",
+          "criteria": [
+            "None of it",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.2
+          },
+          "q_1": {
+            "probability": 0.75
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 1.0,
+            "probabilities": {
+              "0": 0.1,
+              "1": 0.55,
+              "2": 0.3,
+              "3": 0.05
+            },
+            "confidence": 0.45
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

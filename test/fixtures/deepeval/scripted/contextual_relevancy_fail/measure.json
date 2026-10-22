@@ -1,0 +1,12 @@
+{
+  "score": 0.25,
+  "success": false,
+  "reason": "The score is 0.25 because only 'Paris is the capital of France.' addresses the input, while the cat and Rome are unrelated.",
+  "threshold": 0.7,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Verdicts:\n[\n    {\n        \"verdicts\": [\n            {\n                \"statement\": \"Paris is the capital of France.\",\n                \"verdict\": \"yes\",\n                \"reason\": null\n            },\n            {\n                \"statement\": \"There was a cat.\",\n                \"verdict\": \"no\",\n                \"reason\": \"The context mentions 'There was a cat', which has nothing to do with the capital of France.\"\n            }\n        ]\n    },\n    {\n        \"verdicts\": [\n            {\n                \"statement\": \"Rome is the capital of Italy.\",\n                \"verdict\": \"no\",\n                \"reason\": \"'Rome is the capital of Italy' is about Italy, not France.\"\n            }\n        ]\n    },\n    {\n        \"verdicts\": [\n            {\n                \"statement\": \"The Louvre opened in 1793.\",\n                \"verdict\": \"no\",\n                \"reason\": null\n            }\n        ]\n    }\n]"
+}

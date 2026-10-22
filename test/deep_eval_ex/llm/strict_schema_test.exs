@@ -217,6 +217,7 @@ defmodule DeepEvalEx.LLM.StrictSchemaTest do
       {MetricOutputs.AnswerRelevancy, [:statements_schema, :verdicts_schema, :reason_schema]},
       {MetricOutputs.ContextualPrecision, [:verdicts_schema, :reason_schema]},
       {MetricOutputs.ContextualRecall, [:verdicts_schema, :reason_schema]},
+      {MetricOutputs.ContextualRelevancy, [:verdicts_schema, :reason_schema]},
       {MetricOutputs.Faithfulness,
        [:claims_schema, :truths_schema, :verdicts_schema, :reason_schema]},
       {MetricOutputs.GEval, [:steps_schema, :reason_score_schema]},

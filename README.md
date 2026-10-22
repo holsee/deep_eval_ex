@@ -70,6 +70,7 @@ config :deep_eval_ex,
 | **AnswerRelevancy** | Response relevance to input question |
 | **ContextualPrecision** | RAG retrieval ranking quality |
 | **ContextualRecall** | RAG coverage of ground truth |
+| **ContextualRelevancy** | RAG relevance of the retrieved context to the input |
 | **ToolCorrectness** | Agent tool calls against the expected tools |
 | **JevEval** | Your own weighted Noul, Score and Choice questions, decided by a System One model (Jev) |
 

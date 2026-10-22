@@ -25,6 +25,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     AnswerRelevancy,
     ContextualPrecision,
     ContextualRecall,
+    ContextualRelevancy,
     Faithfulness,
     Hallucination,
     JevEval,
@@ -44,6 +45,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     "answer_relevancy" => AnswerRelevancy,
     "contextual_precision" => ContextualPrecision,
     "contextual_recall" => ContextualRecall,
+    "contextual_relevancy" => ContextualRelevancy,
     "hallucination" => Hallucination,
     "tool_correctness" => ToolCorrectness
   }

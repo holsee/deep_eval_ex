@@ -1,0 +1,108 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "input": "What is the capital of France?",
+          "statements": [
+            "Rome is the capital of Italy.",
+            "Paris is the capital of France."
+          ]
+        },
+        "questions": {
+          "statement_0": {
+            "type": "noul",
+            "instructions": {
+              "statement": "Rome is the capital of Italy.",
+              "question": "Is `statement` relevant to addressing `input`?"
+            }
+          },
+          "statement_1": {
+            "type": "noul",
+            "instructions": {
+              "statement": "Paris is the capital of France.",
+              "question": "Is `statement` relevant to addressing `input`?"
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      },
+      {
+        "state": {
+          "input": "What is the capital of France?",
+          "statements": [
+            "The Louvre is in Paris."
+          ]
+        },
+        "questions": {
+          "statement_0": {
+            "type": "noul",
+            "instructions": {
+              "statement": "The Louvre is in Paris.",
+              "question": "Is `statement` relevant to addressing `input`?"
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "input": "What is the capital of France?",
+        "statements": [
+          "Rome is the capital of Italy.",
+          "Paris is the capital of France."
+        ]
+      },
+      "questions": {
+        "statement_0": {
+          "type": "noul",
+          "instructions": {
+            "statement": "Rome is the capital of Italy.",
+            "question": "Is `statement` relevant to addressing `input`?"
+          }
+        },
+        "statement_1": {
+          "type": "noul",
+          "instructions": {
+            "statement": "Paris is the capital of France.",
+            "question": "Is `statement` relevant to addressing `input`?"
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    },
+    {
+      "state": {
+        "input": "What is the capital of France?",
+        "statements": [
+          "The Louvre is in Paris."
+        ]
+      },
+      "questions": {
+        "statement_0": {
+          "type": "noul",
+          "instructions": {
+            "statement": "The Louvre is in Paris.",
+            "question": "Is `statement` relevant to addressing `input`?"
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}
