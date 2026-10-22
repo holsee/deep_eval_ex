@@ -32,7 +32,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   also runs deepeval 4.3.1's real ExactMatch, GEval, Faithfulness,
   Hallucination, AnswerRelevancy, ContextualPrecision, ContextualRecall and
   ToolCorrectness (including `available_tools`) against a judge that replays
-  committed scripts, over 28 scenarios (pass, fail, empty lists, strict mode).
+  committed scripts, over 29 scenarios (pass, fail, empty lists, strict mode).
   It records the prompts deepeval sent, the metric's state after `measure()`
   and the exported test run. A new parity suite replays the same scripts
   through DeepEvalEx and compares prompts and exports byte for byte. Known
@@ -92,6 +92,13 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `assert_evaluation` does not count a score-only result as a failure, and
   `assert_passes`/`assert_fails` report that a score-only metric has no
   threshold.
+- **Faithfulness `:penalize_ambiguous_claims`**, deepeval 4.3.1's
+  `penalize_ambiguous_claims`. When `true`, a `borderline` verdict (a claim
+  the retrieval context neither supports nor contradicts) counts against the
+  score instead of as faithful, and the reason prompt lists it, in verdict
+  order, as an `(Ambiguous) <reason>` contradiction. It defaults to `false`,
+  which keeps the current scoring. A new scripted-judge scenario,
+  `faithfulness_penalize_ambiguous`, checks it against deepeval byte for byte.
 - **deepeval test case keys.** `DeepEvalEx.TestCase.new/1` accepts the keys
   deepeval 4.3.1's `LLMTestCase` accepts, as atoms or strings: the camelCase
   aliases (`actualOutput`, `expectedOutput`, `retrievalContext`,

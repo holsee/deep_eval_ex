@@ -267,6 +267,58 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       assert [%{verdict: :no}, %{verdict: :borderline}] = result.metadata.verdicts
     end
 
+    test "counts borderline verdicts as unfaithful with penalize_ambiguous_claims", %{
+      test_case: test_case
+    } do
+      Mock.set_schema_response(
+        ~r/indicate whether EACH claim contradicts/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{
+              "verdict" => "borderline",
+              "reason" => "XML support is not mentioned in the context."
+            }
+          ]
+        }
+      )
+
+      assert {:ok, result} =
+               Faithfulness.measure(test_case, adapter: :mock, penalize_ambiguous_claims: true)
+
+      assert result.score === 0.5
+    end
+
+    test "lists ambiguous claims as contradictions in the reason prompt only when penalized", %{
+      test_case: test_case
+    } do
+      Mock.set_schema_response(
+        ~r/indicate whether EACH claim contradicts/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "borderline", "reason" => "XML is not mentioned."},
+            %{"verdict" => "no", "reason" => "Contradicts."},
+            %{"verdict" => "borderline"}
+          ]
+        }
+      )
+
+      reason_prompt = fn opts ->
+        Mock.clear_recorded_prompts()
+        assert {:ok, _result} = Faithfulness.measure(test_case, [adapter: :mock] ++ opts)
+        Enum.find(Mock.get_recorded_prompts(), &(&1 =~ "CONCISELY summarize"))
+      end
+
+      penalized = reason_prompt.(penalize_ambiguous_claims: true)
+
+      # In verdict order, with deepeval's f-string of a missing reason.
+      assert penalized =~
+               ~s"['(Ambiguous) XML is not mentioned.', 'Contradicts.', '(Ambiguous) None']"
+
+      assert reason_prompt.([]) =~ ~s"['Contradicts.']"
+      refute reason_prompt.([]) =~ "Ambiguous"
+    end
+
     test "drops unknown verdicts instead of counting them as faithful", %{
       test_case: test_case
     } do

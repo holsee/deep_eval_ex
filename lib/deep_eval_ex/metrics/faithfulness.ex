@@ -22,7 +22,9 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
      - `borderline` - Cannot be verified (not mentioned); a judge's legacy
        `idk` reads as `borderline`, and other verdicts are dropped
   4. **Calculate score** - (supported + borderline claims) / total verdicts,
-     or `1` when there are none
+     or `1` when there are none. With `penalize_ambiguous_claims: true`,
+     borderline claims count against the score: supported claims / total
+     verdicts
 
   ## Usage
 
@@ -50,6 +52,9 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:truths_extraction_limit` - Max truths to extract per doc (default: nil = all)
+  - `:penalize_ambiguous_claims` - Count borderline (unverifiable) claims as
+    unfaithful, and list them as `(Ambiguous)` contradictions in the reason
+    (default: false)
   - `:model` - LLM model for evaluation
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
@@ -82,6 +87,8 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
   - `:threshold` - Score threshold for pass/fail (default: 0.5)
   - `:include_reason` - Whether to generate a reason (default: true)
   - `:truths_extraction_limit` - Max truths to extract (default: nil)
+  - `:penalize_ambiguous_claims` - Count borderline claims as unfaithful
+    (default: false)
   - `:adapter` - LLM adapter to use
   - `:model` - Model name
   """
@@ -183,11 +190,13 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
     end
   end
 
-  # Borderline claims count as faithful, as in deepeval 4.3.1 without
-  # `penalize_ambiguous_claims`
+  # Borderline claims count as faithful unless `penalize_ambiguous_claims`
+  # is set, as in deepeval 4.3.1's `_calculate_score`
   defp calculate_score(verdicts, threshold, opts) do
+    passing = if penalize_ambiguous_claims?(opts), do: [:yes], else: [:yes, :borderline]
+
     QAG.score_qag_verdicts(verdicts,
-      passing: [:yes, :borderline],
+      passing: passing,
       strict_mode: Keyword.get(opts, :strict_mode, false),
       threshold: threshold
     )
@@ -196,11 +205,22 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
   defp maybe_generate_reason(_score, _verdicts, false, _opts), do: {:ok, nil}
 
   defp maybe_generate_reason(score, verdicts, true, opts) do
+    penalize_ambiguous_claims = penalize_ambiguous_claims?(opts)
+
+    # In verdict order; a penalized borderline claim is an ambiguous
+    # contradiction, its reason formatted as deepeval's f-string does
+    # (`None` when the judge gave none).
     contradictions =
-      verdicts
-      |> Enum.filter(fn %{verdict: v} -> v == :no end)
-      |> Enum.map(fn %{reason: r} -> r end)
-      |> Enum.reject(&is_nil/1)
+      Enum.flat_map(verdicts, fn
+        %{verdict: :no, reason: reason} when not is_nil(reason) ->
+          [reason]
+
+        %{verdict: :borderline, reason: reason} when penalize_ambiguous_claims ->
+          ["(Ambiguous) " <> Verbose.to_str(reason)]
+
+        _verdict ->
+          []
+      end)
 
     prompt =
       Template.generate_reason(
@@ -213,4 +233,6 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
       {:error, _} = error -> error
     end
   end
+
+  defp penalize_ambiguous_claims?(opts), do: Keyword.get(opts, :penalize_ambiguous_claims, false)
 end

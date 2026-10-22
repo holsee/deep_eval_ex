@@ -59,6 +59,7 @@ result.success # => true (score >= threshold)
 | `:threshold` | float | 0.5 | Pass/fail threshold |
 | `:include_reason` | boolean | true | Generate explanation |
 | `:truths_extraction_limit` | integer | nil | Max truths per doc |
+| `:penalize_ambiguous_claims` | boolean | false | Count borderline claims as unfaithful |
 | `:adapter` | atom | :openai | LLM adapter to use |
 | `:model` | string | default | Model name |
 
@@ -100,6 +101,16 @@ Claim cannot be verified from context (not mentioned).
 # Context: "The API supports JSON responses"
 # Output: "The API also supports XML"
 # Verdict: borderline (not contradicting, so counted as faithful)
+```
+
+To count unverifiable claims against the score, as deepeval's
+`penalize_ambiguous_claims=True` does, pass `penalize_ambiguous_claims: true`.
+Borderline claims then fail, and the reason lists them as `(Ambiguous)`
+contradictions:
+
+```elixir
+{:ok, result} = Faithfulness.measure(test_case, penalize_ambiguous_claims: true)
+# One supported claim and one borderline claim: score 0.5 instead of 1.0
 ```
 
 ## Context Is Not Retrieval Context
