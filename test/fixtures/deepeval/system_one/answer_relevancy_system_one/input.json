@@ -1,0 +1,46 @@
+{
+  "description": "AnswerRelevancy decided by Jev in one request",
+  "metrics": [
+    {
+      "kind": "answer_relevancy",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris is the capital of France. It is known for café culture."
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.55
+        },
+        "q_1": {
+          "probability": 0.92
+        }
+      },
+      "scores": {
+        "q_2": {
+          "score": 2,
+          "probabilities": {
+            "0": 0.05,
+            "1": 0.25,
+            "2": 0.6,
+            "3": 0.1
+          },
+          "confidence": 0.47
+        }
+      }
+    }
+  }
+}

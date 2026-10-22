@@ -1,0 +1,120 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "What is the capital of France?",
+            "actual_output": "Paris is the capital of France. It is known for café culture."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every statement in `actual_output` is relevant to addressing `input`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "`actual_output` directly addresses what `input` asks for, rather than a different or broader topic."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `actual_output` is relevant to addressing `input`?",
+            "criteria": [
+              "None of it",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.55
+            },
+            "q_1": {
+              "probability": 0.92
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 2.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.25,
+                "2": 0.6,
+                "3": 0.1
+              },
+              "confidence": 0.47
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "input": "What is the capital of France?",
+          "actual_output": "Paris is the capital of France. It is known for café culture."
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "Every statement in `actual_output` is relevant to addressing `input`."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "`actual_output` directly addresses what `input` asks for, rather than a different or broader topic."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "How much of `actual_output` is relevant to addressing `input`?",
+          "criteria": [
+            "None of it",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.55
+          },
+          "q_1": {
+            "probability": 0.92
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 2.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.25,
+              "2": 0.6,
+              "3": 0.1
+            },
+            "confidence": 0.47
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

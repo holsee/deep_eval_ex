@@ -1,0 +1,51 @@
+{
+  "description": "ContextualPrecision decided by Jev in one request",
+  "metrics": [
+    {
+      "kind": "contextual_precision",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris.",
+    "expected_output": "Paris is the capital of France.",
+    "retrieval_context": [
+      "Rome is the capital of Italy.",
+      "Paris is the capital and largest city of France."
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.1
+        },
+        "q_1": {
+          "probability": 0.05
+        }
+      },
+      "scores": {
+        "q_2": {
+          "score": 1,
+          "probabilities": {
+            "0": 0.3,
+            "1": 0.5,
+            "2": 0.15,
+            "3": 0.05
+          },
+          "confidence": 0.33
+        }
+      }
+    }
+  }
+}

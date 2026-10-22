@@ -1,0 +1,61 @@
+[
+  {
+    "score": 0.7913157894736842,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.27.\n1. `actual_output` answers `input`. -> clearly holds (P(yes)=0.88, confidence=0.76, weight=2)\n2. How complete is `actual_output`? -> \"Fully\" (expected level=0.80 of 1.00, confidence=0.48)\n3. What tone does `actual_output` take? -> \"neutral\", leaning \"friendly\" (P=0.45, confidence=0.27)\nScore: 0.79 (weighted mean of 3 applicable questions).",
+    "threshold": 0.6,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Questions:\n1. [noul, weight=2] `actual_output` answers `input`.\n   value=0.880 applicable=True probabilities={'true': 0.88, 'false': 0.12} confidence=0.760\n2. [score, weight=1] How complete is `actual_output`?\n   value=0.800 applicable=True probabilities={'Not at all': 0.05, 'Partly': 0.3, 'Fully': 0.65} confidence=0.480\n3. [choice, weight=1] What tone does `actual_output` take?\n   value=0.605 applicable=True probabilities={'friendly': 0.35, 'neutral': 0.45, 'rude': 0.15, 'no_reply': 0.05} confidence=0.270 \n \nScore: 0.7913157894736842\nConfidence: 0.27",
+    "confidence": 0.27,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "`actual_output` answers `input`.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.88,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.88,
+          "false": 0.12
+        },
+        "confidence": 0.76,
+        "passed": null
+      },
+      {
+        "question": "How complete is `actual_output`?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.8,
+        "applicable": true,
+        "probabilities": {
+          "Not at all": 0.05,
+          "Partly": 0.3,
+          "Fully": 0.65
+        },
+        "confidence": 0.48,
+        "passed": null
+      },
+      {
+        "question": "What tone does `actual_output` take?",
+        "type": "choice",
+        "weight": 1.0,
+        "value": 0.6052631578947367,
+        "applicable": true,
+        "probabilities": {
+          "friendly": 0.35,
+          "neutral": 0.45,
+          "rude": 0.15,
+          "no_reply": 0.05
+        },
+        "confidence": 0.27,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

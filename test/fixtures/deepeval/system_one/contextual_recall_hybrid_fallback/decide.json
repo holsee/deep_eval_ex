@@ -1,0 +1,72 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "retrieval_context": [
+            "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+            "Section 3.3: Up to 5 unused days can be carried over to the next year."
+          ],
+          "sentences": [
+            "Employees get 20 days of PTO a year.",
+            "Up to 5 days carry over."
+          ]
+        },
+        "questions": {
+          "sentence_0": {
+            "type": "noul",
+            "instructions": {
+              "sentence": "Employees get 20 days of PTO a year.",
+              "question": "Can `sentence` be attributed to the facts in `retrieval_context`?"
+            }
+          },
+          "sentence_1": {
+            "type": "noul",
+            "instructions": {
+              "sentence": "Up to 5 days carry over.",
+              "question": "Can `sentence` be attributed to the facts in `retrieval_context`?"
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "retrieval_context": [
+          "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+          "Section 3.3: Up to 5 unused days can be carried over to the next year."
+        ],
+        "sentences": [
+          "Employees get 20 days of PTO a year.",
+          "Up to 5 days carry over."
+        ]
+      },
+      "questions": {
+        "sentence_0": {
+          "type": "noul",
+          "instructions": {
+            "sentence": "Employees get 20 days of PTO a year.",
+            "question": "Can `sentence` be attributed to the facts in `retrieval_context`?"
+          }
+        },
+        "sentence_1": {
+          "type": "noul",
+          "instructions": {
+            "sentence": "Up to 5 days carry over.",
+            "question": "Can `sentence` be attributed to the facts in `retrieval_context`?"
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

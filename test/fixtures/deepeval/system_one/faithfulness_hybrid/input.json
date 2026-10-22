@@ -1,0 +1,65 @@
+{
+  "description": "Faithfulness in hybrid mode: the LLM extracts and explains, Jev judges each claim",
+  "metrics": [
+    {
+      "kind": "faithfulness",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What is the vacation policy?",
+    "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+    "expected_output": "Employees get 20 days of PTO a year. Up to 5 days carry over.",
+    "retrieval_context": [
+      "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+      "Section 3.3: Up to 5 unused days can be carried over to the next year."
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "claim_0": {
+          "probability": 0.95
+        },
+        "claim_1": {
+          "probability": 0.1
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "faithfulness": {
+      "truths": [
+        {
+          "truths": [
+            "Full-time employees receive 20 days of paid time off per year.",
+            "Up to 5 unused days can be carried over to the next year."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": [
+            "Employees get 20 days of PTO per year.",
+            "Employees can carry over 10 days."
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.50 because the output claims 10 carry-over days where the context allows 5."
+        }
+      ]
+    }
+  }
+}

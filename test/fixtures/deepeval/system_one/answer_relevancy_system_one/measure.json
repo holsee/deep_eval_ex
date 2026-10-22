@@ -1,0 +1,60 @@
+[
+  {
+    "score": 0.6716666666666666,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.10.\n1. Every statement in `actual_output` is relevant to addressing `input`. -> unclear (P(yes)=0.55, confidence=0.10, weight=2)\n2. `actual_output` directly addresses what `input` asks for, rather than a different or broader topic. -> clearly holds (P(yes)=0.92, confidence=0.84)\n3. How much of `actual_output` is relevant to addressing `input`? -> \"Most of it\" (expected level=0.67 of 1.00, confidence=0.47)\nScore: 0.67 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every statement in `actual_output` is relevant to addressing `input`.\n   value=0.550 applicable=True probabilities={'true': 0.55, 'false': 0.45} confidence=0.100\n2. [noul, weight=1] `actual_output` directly addresses what `input` asks for, rather than a different or broader topic.\n   value=0.920 applicable=True probabilities={'true': 0.92, 'false': 0.08} confidence=0.840\n3. [score, weight=1] How much of `actual_output` is relevant to addressing `input`?\n   value=0.667 applicable=True probabilities={'None of it': 0.05, 'Less than half': 0.25, 'Most of it': 0.6, 'All of it': 0.1} confidence=0.470",
+    "confidence": 0.10000000000000009,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every statement in `actual_output` is relevant to addressing `input`.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.55,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.55,
+          "false": 0.44999999999999996
+        },
+        "confidence": 0.10000000000000009,
+        "passed": null
+      },
+      {
+        "question": "`actual_output` directly addresses what `input` asks for, rather than a different or broader topic.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.92,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.92,
+          "false": 0.07999999999999996
+        },
+        "confidence": 0.8400000000000001,
+        "passed": null
+      },
+      {
+        "question": "How much of `actual_output` is relevant to addressing `input`?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.6666666666666666,
+        "applicable": true,
+        "probabilities": {
+          "None of it": 0.05,
+          "Less than half": 0.25,
+          "Most of it": 0.6,
+          "All of it": 0.1
+        },
+        "confidence": 0.47,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

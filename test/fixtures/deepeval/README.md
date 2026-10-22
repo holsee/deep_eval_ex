@@ -1,8 +1,9 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in three sets:
+Fixtures written by **deepeval 4.3.1**, in four sets:
 
-- export scenarios (the directories below, except `scripted/`), used by
+- export scenarios (the directories below, except `scripted/`, `prompts/`
+  and `system_one/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
@@ -13,6 +14,11 @@ Fixtures written by **deepeval 4.3.1**, in three sets:
   `test/deep_eval_ex/prompt_golden_test.exs` to check that each
   `DeepEvalEx.Prompts` function renders the same prompt as the deepeval
   template it stands for, for the same inputs
+- [System One fixtures](#system-one-fixtures) (`system_one/`), recording what
+  deepeval asks System One (TypeSafe AI's Jev) and does with its answers under
+  the `system_one` and `hybrid` eval modes, for the eval-mode units (P3, P4).
+  `test/deep_eval_ex/system_one_fixtures_test.exs` only checks their
+  structure for now
 
 ## Export scenarios
 
@@ -254,3 +260,113 @@ list, GEval's rubric as `- Score n: ...` lines sorted high to low, tools as
 JSON in another key order and indentation, with a lower-case `type` and no
 `null` fields, and a trailing newline deepeval's prompts lack. P1.6 removes
 the tag.
+
+## System One fixtures
+
+deepeval 4.3.1 can route a metric's decisions to a System One model, which
+answers typed questions about a JSON state with probabilities rather than
+text: a **Noul** (P(true) of a proposition), a **Score** (a level among
+ordered levels) or a **Choice** (one of a closed set of options). A metric's
+`eval_mode` picks who decides:
+
+- `system_one` - one `decide(state, questions)` request answers the whole
+  metric: the state is the test case's fields, the questions come from the
+  metric's `_experimental_system_one_questions` template (two Nouls and a
+  four-level Score for each of the five RAG metrics). The score is the
+  weighted mean of the answers, the reason deterministic text built from
+  them, and no LLM is called. A Jev error is not caught.
+- `hybrid` - the LLM extracts and writes the reason; Jev takes the decisions,
+  one Noul per claim (`claim_<i>`), statement, node, sentence or context. A
+  Jev call that fails hands that decision to the LLM and is recorded in
+  `system_one_fallback_reason` (`"ConnectionError: Jev is down"`).
+
+ToolCorrectness has no whole-metric form, so under `system_one` it runs as
+`hybrid`; its only Jev decision is the tool-selection Score (five levels,
+`verdict`) when `available_tools` is given. GEval never asks Jev (its score
+is LLM-only by design in 4.3.1), so it has no fixture here. `JevEval` asks
+the user's own Noul / Score / Choice questions (`q_<i>`) and always decides
+with Jev; classifiers ask one Choice over their labels (`label`). Under
+`evaluate()`, two or more `system_one` metrics on a test case are merged into
+one request (`system_one_batch`): each metric's question keys are prefixed
+`m<j>.`, the states merged, and the cost split by question count.
+
+### Generating
+
+`scripts/parity/generate_system_one_fixtures.py` writes them, from the
+scenarios in its `SCENARIOS`. It needs deepeval's source at `_ref/deepeval`
+(tag `v4.3.1`, not committed): the System One models are deepeval's own test
+doubles from `_ref/deepeval/tests/test_metrics/system_one_fakes.py`,
+imported from there rather than copied, `FakeSystemOneModel` (canned answers)
+and `ExplodingSystemOneModel` (raises on every call). Where a mode needs an
+LLM, it is the scripted-judge generator's `ScriptedJudge`; elsewhere it is
+the fakes' `ExplodingLLM`, so an unexpected LLM call fails the run.
+
+```sh
+devcontainer exec --workspace-folder . \
+  env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_system_one_fixtures.py
+```
+
+`typesafe-sdk` is not installed and is not needed: deepeval imports it only
+when a `TypeSafeModel` builds its client. The generator never builds one; to
+record the questions in the SDK's wire shape it calls
+`TypeSafeModel._to_sdk_questions` on an instance created without `__init__`
+(constructing one would load the client). No stub module is involved.
+
+The generator refuses a question without a canned answer and a canned answer
+no question used, checks that `evaluate()` sent the same `decide()` calls
+and judge prompts as `measure()` (or exactly one call for a batched
+scenario), and is deterministic but for the run-level `runDuration`.
+
+### Files
+
+Each `system_one/<scenario>/` holds:
+
+- `input.json` - the scenario: `description`; `metrics` (each with `kind`,
+  `eval_mode` and constructor `params`) or `classifier`; one `test_case`;
+  `system_one`, the fake: its `model` name and either the `cost` it reports
+  (a float, `null`, or `{value, input_tokens, output_tokens}` for an
+  `EvaluationCost`) and its canned `answers` (by type - `nouls`, `scores`,
+  `choices` - then question key), or the error it `raises`; `batched` when
+  `evaluate()` merges the metrics; and, when an LLM is involved,
+  `judge_model` and the scripted judge's `responses`, as in `scripted/`
+- `decide.json` - every `decide()` call: `measure` holds one list per
+  metric, each measured alone; `evaluate` the calls of the `evaluate()` run.
+  A call has the `state` sent, the `questions` in the SDK's shape (`type`,
+  `instructions`, and `criteria`: a Noul's `{true, false}` when it has any,
+  a Choice's options, a Score's levels; question weights and Choice credits
+  stay in deepeval and are not sent), then either the `answers` returned
+  (`nouls`, `choices`, `scores`, as `SystemOneAnswers` dumps them, Score
+  probabilities keyed by the level index as a string) with the `cost`
+  reported, or the `error` raised
+- `measure.json` - per metric, its state after `measure()`, as in
+  `scripted/` plus `confidence` (the least decisive answer),
+  `system_one_fallback_reason`, `score_breakdown` (one outcome per question,
+  `system_one` and `JevEval` only) and `raised`, the error `measure()` raised
+  (under `system_one`, Jev errors are not caught). For a classifier, its
+  state after `classify()`: `label`, `reason`, `error`, evaluation model,
+  cost, tokens, `confidence` and `system_one_fallback_reason`
+- `prompts.json` - per metric, the prompts the scripted judge received during
+  `measure()`, with their steps (only for scenarios with `responses`)
+- `test_run.json` - the file `deepeval.evaluate()` wrote, unchanged. A
+  classifiers-only run writes none (classifications are local-only), so the
+  classifier scenario has `classifications.json` instead: the
+  `Classification`s `evaluate()` returned, with their export aliases
+
+| Scenario | Covers |
+| --- | --- |
+| `<metric>_system_one` | Faithfulness, Hallucination, AnswerRelevancy, ContextualPrecision, ContextualRecall: the whole metric in one request; ToolCorrectness: runs as `hybrid`, Jev scores tool selection |
+| `faithfulness_system_one_strict` | Strict mode on Jev: one question misses the strict bar, score 0 |
+| `<metric>_hybrid` | The same six metrics in `hybrid`: the LLM extracts and explains (`prompts.json`), Jev decides each item |
+| `<metric>_hybrid_fallback` | `hybrid` with `ExplodingSystemOneModel`: each Jev call fails, the scripted judge takes the decisions, `system_one_fallback_reason` set |
+| `jev_eval` | `JevEval` with a weighted Noul, a Score and a Choice (credits and a not-applicable option) |
+| `jev_eval_strict_not_applicable` | `JevEval` in strict mode without the `[JevEval]` suffix, a Noul with `true` / `false` criteria, a Choice judged not applicable |
+| `batch_system_one` | Faithfulness, AnswerRelevancy and ContextualRecall batched into one request by `evaluate()`; cost and tokens split by question count |
+| `batch_system_one_down` | Two batched metrics with Jev down: no fallback, `measure()` raises and `evaluate()` records the error on each metric |
+| `refusal_classifier_system_one` | `RefusalClassifier` on Jev: one Choice over its labels, deterministic reason |
+
+The Elixir test checks that every scenario has its files, that each call's
+questions are well formed and answered under their own type and nothing
+else, that a batched request prefixes its keys per metric (and an unbatched
+`evaluate()` repeats `measure()`'s calls), that fallbacks, raised errors and
+confidence appear exactly when Jev failed or answered, and that the export
+agrees with `measure()` on evaluation model and reason.

@@ -46,6 +46,18 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   exactly; the fixtures' README maps each prompt function to its 4.3.1
   template. Every comparison diverges today, as the prompts are paraphrased,
   and is tagged `known_divergence: "P1.6"`.
+- **System One (Jev) fixtures.** A second generator,
+  `scripts/parity/generate_system_one_fixtures.py`, records what deepeval
+  4.3.1 sends System One and does with its answers, using deepeval's own
+  fake Jev models (no `typesafe-sdk`, no network): 24 scenarios covering
+  Faithfulness, Hallucination, AnswerRelevancy, ContextualPrecision,
+  ContextualRecall and ToolCorrectness in the `system_one` and `hybrid` eval
+  modes and with Jev down (LLM fallback), JevEval with Noul, Score and Choice
+  questions, `evaluate()` batching several metrics into one request, and
+  RefusalClassifier. Each records the `decide()` payloads in the SDK's wire
+  shape, the answers, the measured state (including `confidence` and
+  `system_one_fallback_reason`) and the exported test run. A new test checks
+  their structure; DeepEvalEx does not implement eval modes yet.
 - **Scripted mode for the Mock adapter.** `Mock.script/2` replays judge
   responses keyed by step (named by the requested schema's fields, see
   `Mock.step_key/1`) and call index, reports the script's judge model and

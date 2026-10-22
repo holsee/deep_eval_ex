@@ -1,0 +1,68 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "input": "What is the capital of France?",
+          "expected_output": "Paris is the capital of France.",
+          "nodes": [
+            "Rome is the capital of Italy.",
+            "Paris is the capital and largest city of France."
+          ]
+        },
+        "questions": {
+          "node_0": {
+            "type": "noul",
+            "instructions": {
+              "node": "Rome is the capital of Italy.",
+              "question": "Was the retrieval context `node` remotely useful in arriving at `expected_output` for `input`?"
+            }
+          },
+          "node_1": {
+            "type": "noul",
+            "instructions": {
+              "node": "Paris is the capital and largest city of France.",
+              "question": "Was the retrieval context `node` remotely useful in arriving at `expected_output` for `input`?"
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "input": "What is the capital of France?",
+        "expected_output": "Paris is the capital of France.",
+        "nodes": [
+          "Rome is the capital of Italy.",
+          "Paris is the capital and largest city of France."
+        ]
+      },
+      "questions": {
+        "node_0": {
+          "type": "noul",
+          "instructions": {
+            "node": "Rome is the capital of Italy.",
+            "question": "Was the retrieval context `node` remotely useful in arriving at `expected_output` for `input`?"
+          }
+        },
+        "node_1": {
+          "type": "noul",
+          "instructions": {
+            "node": "Paris is the capital and largest city of France.",
+            "question": "Was the retrieval context `node` remotely useful in arriving at `expected_output` for `input`?"
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+[
+  {
+    "score": 0.0,
+    "success": false,
+    "reason": "Decided by fake-jev, minimum confidence 0.20.\n1. Every factual claim in `actual_output` is supported by the facts in `retrieval_context`. -> clearly holds (P(yes)=0.90, confidence=0.80, weight=2) strict=pass\n2. No claim in `actual_output` contradicts the facts in `retrieval_context`. -> unclear (P(yes)=0.40, confidence=0.20) strict=fail\n3. How much of `actual_output` is grounded in the facts in `retrieval_context`? -> \"Fully grounded\" (expected level=1.00 of 1.00, confidence=0.75) strict=pass\nScore: 0.00 (strict mode: at least one applicable question failed).",
+    "threshold": 1,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 0.0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every factual claim in `actual_output` is supported by the facts in `retrieval_context`.\n   value=0.900 applicable=True probabilities={'true': 0.9, 'false': 0.1} confidence=0.800 strict_pass=True\n2. [noul, weight=1] No claim in `actual_output` contradicts the facts in `retrieval_context`.\n   value=0.400 applicable=True probabilities={'true': 0.4, 'false': 0.6} confidence=0.200 strict_pass=False\n3. [score, weight=1] How much of `actual_output` is grounded in the facts in `retrieval_context`?\n   value=1.000 applicable=True probabilities={'Fabricated': 0.0, 'Mostly fabricated': 0.05, 'Mostly grounded': 0.15, 'Fully grounded': 0.8} confidence=0.750 strict_pass=True",
+    "confidence": 0.19999999999999996,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every factual claim in `actual_output` is supported by the facts in `retrieval_context`.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.9,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.9,
+          "false": 0.09999999999999998
+        },
+        "confidence": 0.8,
+        "passed": true
+      },
+      {
+        "question": "No claim in `actual_output` contradicts the facts in `retrieval_context`.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.4,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.4,
+          "false": 0.6
+        },
+        "confidence": 0.19999999999999996,
+        "passed": false
+      },
+      {
+        "question": "How much of `actual_output` is grounded in the facts in `retrieval_context`?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 1.0,
+        "applicable": true,
+        "probabilities": {
+          "Fabricated": 0.0,
+          "Mostly fabricated": 0.05,
+          "Mostly grounded": 0.15,
+          "Fully grounded": 0.8
+        },
+        "confidence": 0.75,
+        "passed": true
+      }
+    ],
+    "raised": null
+  }
+]

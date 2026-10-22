@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.5,
+    "success": true,
+    "reason": "The score is 0.50 because the output claims 10 carry-over days where the context allows 5.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Truths (limit=None):\n[\n    \"Full-time employees receive 20 days of paid time off per year.\",\n    \"Up to 5 unused days can be carried over to the next year.\"\n] \n \nClaims:\n[\n    \"Employees get 20 days of PTO per year.\",\n    \"Employees can carry over 10 days.\"\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.95\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"P(yes)=0.10\"\n    }\n]",
+    "confidence": 0.8,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

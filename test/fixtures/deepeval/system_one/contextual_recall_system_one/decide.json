@@ -1,0 +1,126 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "expected_output": "Employees get 20 days of PTO a year. Up to 5 days carry over.",
+            "retrieval_context": [
+              "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+              "Section 3.3: Up to 5 unused days can be carried over to the next year."
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every sentence in `expected_output` can be attributed to the facts in `retrieval_context`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "`retrieval_context` contains the key facts needed to write `expected_output`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `expected_output` can be attributed to the facts in `retrieval_context`?",
+            "criteria": [
+              "None of it",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.85
+            },
+            "q_1": {
+              "probability": 0.9
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 3.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.05,
+                "2": 0.15,
+                "3": 0.8
+              },
+              "confidence": 0.6
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "expected_output": "Employees get 20 days of PTO a year. Up to 5 days carry over.",
+          "retrieval_context": [
+            "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+            "Section 3.3: Up to 5 unused days can be carried over to the next year."
+          ]
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "Every sentence in `expected_output` can be attributed to the facts in `retrieval_context`."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "`retrieval_context` contains the key facts needed to write `expected_output`."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "How much of `expected_output` can be attributed to the facts in `retrieval_context`?",
+          "criteria": [
+            "None of it",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.85
+          },
+          "q_1": {
+            "probability": 0.9
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.05,
+              "2": 0.15,
+              "3": 0.8
+            },
+            "confidence": 0.6
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

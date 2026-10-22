@@ -1,0 +1,315 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+            "retrieval_context": [
+              "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+              "Section 3.3: Up to 5 unused days can be carried over to the next year."
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every factual claim in `actual_output` is supported by the facts in `retrieval_context`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "No claim in `actual_output` contradicts the facts in `retrieval_context`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `actual_output` is grounded in the facts in `retrieval_context`?",
+            "criteria": [
+              "Fabricated",
+              "Mostly fabricated",
+              "Mostly grounded",
+              "Fully grounded"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.3
+            },
+            "q_1": {
+              "probability": 0.2
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 1.0,
+              "probabilities": {
+                "0": 0.1,
+                "1": 0.6,
+                "2": 0.2,
+                "3": 0.1
+              },
+              "confidence": 0.4
+            }
+          }
+        },
+        "cost": {
+          "value": 0.000126,
+          "input_tokens": 3001,
+          "output_tokens": 0
+        }
+      }
+    ],
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "What is the vacation policy?",
+            "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every statement in `actual_output` is relevant to addressing `input`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "`actual_output` directly addresses what `input` asks for, rather than a different or broader topic."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `actual_output` is relevant to addressing `input`?",
+            "criteria": [
+              "None of it",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.6
+            },
+            "q_1": {
+              "probability": 0.95
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 2.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.2,
+                "2": 0.7,
+                "3": 0.1
+              },
+              "confidence": 0.6
+            }
+          }
+        },
+        "cost": {
+          "value": 0.000126,
+          "input_tokens": 3001,
+          "output_tokens": 0
+        }
+      }
+    ],
+    [
+      {
+        "state": {
+          "test_case": {
+            "expected_output": "Employees get 20 days of PTO a year. Up to 5 days carry over.",
+            "retrieval_context": [
+              "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+              "Section 3.3: Up to 5 unused days can be carried over to the next year."
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every sentence in `expected_output` can be attributed to the facts in `retrieval_context`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "`retrieval_context` contains the key facts needed to write `expected_output`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `expected_output` can be attributed to the facts in `retrieval_context`?",
+            "criteria": [
+              "None of it",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.4
+            },
+            "q_1": {
+              "probability": 0.7
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 2.0,
+              "probabilities": {
+                "0": 0.1,
+                "1": 0.3,
+                "2": 0.5,
+                "3": 0.1
+              },
+              "confidence": 0.33
+            }
+          }
+        },
+        "cost": {
+          "value": 0.000126,
+          "input_tokens": 3001,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+          "retrieval_context": [
+            "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+            "Section 3.3: Up to 5 unused days can be carried over to the next year."
+          ],
+          "input": "What is the vacation policy?",
+          "expected_output": "Employees get 20 days of PTO a year. Up to 5 days carry over."
+        }
+      },
+      "questions": {
+        "m0.q_0": {
+          "type": "noul",
+          "instructions": "Every factual claim in `actual_output` is supported by the facts in `retrieval_context`."
+        },
+        "m0.q_1": {
+          "type": "noul",
+          "instructions": "No claim in `actual_output` contradicts the facts in `retrieval_context`."
+        },
+        "m0.q_2": {
+          "type": "score",
+          "instructions": "How much of `actual_output` is grounded in the facts in `retrieval_context`?",
+          "criteria": [
+            "Fabricated",
+            "Mostly fabricated",
+            "Mostly grounded",
+            "Fully grounded"
+          ]
+        },
+        "m1.q_0": {
+          "type": "noul",
+          "instructions": "Every statement in `actual_output` is relevant to addressing `input`."
+        },
+        "m1.q_1": {
+          "type": "noul",
+          "instructions": "`actual_output` directly addresses what `input` asks for, rather than a different or broader topic."
+        },
+        "m1.q_2": {
+          "type": "score",
+          "instructions": "How much of `actual_output` is relevant to addressing `input`?",
+          "criteria": [
+            "None of it",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        },
+        "m2.q_0": {
+          "type": "noul",
+          "instructions": "Every sentence in `expected_output` can be attributed to the facts in `retrieval_context`."
+        },
+        "m2.q_1": {
+          "type": "noul",
+          "instructions": "`retrieval_context` contains the key facts needed to write `expected_output`."
+        },
+        "m2.q_2": {
+          "type": "score",
+          "instructions": "How much of `expected_output` can be attributed to the facts in `retrieval_context`?",
+          "criteria": [
+            "None of it",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "m0.q_0": {
+            "probability": 0.3
+          },
+          "m0.q_1": {
+            "probability": 0.2
+          },
+          "m1.q_0": {
+            "probability": 0.6
+          },
+          "m1.q_1": {
+            "probability": 0.95
+          },
+          "m2.q_0": {
+            "probability": 0.4
+          },
+          "m2.q_1": {
+            "probability": 0.7
+          }
+        },
+        "choices": {},
+        "scores": {
+          "m0.q_2": {
+            "score": 1.0,
+            "probabilities": {
+              "0": 0.1,
+              "1": 0.6,
+              "2": 0.2,
+              "3": 0.1
+            },
+            "confidence": 0.4
+          },
+          "m1.q_2": {
+            "score": 2.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.2,
+              "2": 0.7,
+              "3": 0.1
+            },
+            "confidence": 0.6
+          },
+          "m2.q_2": {
+            "score": 2.0,
+            "probabilities": {
+              "0": 0.1,
+              "1": 0.3,
+              "2": 0.5,
+              "3": 0.1
+            },
+            "confidence": 0.33
+          }
+        }
+      },
+      "cost": {
+        "value": 0.000126,
+        "input_tokens": 3001,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

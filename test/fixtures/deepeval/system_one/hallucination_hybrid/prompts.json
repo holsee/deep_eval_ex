@@ -1,0 +1,8 @@
+[
+  [
+    {
+      "step": "reason",
+      "prompt": "Given a list of factual alignments and contradictions, which highlights alignment/contradictions between the `actual output` and `contexts, use it to provide a reason for the hallucination score in a CONCISELY. Note that the hallucination score ranges from 0 - 1 and measures how well the `actual output` aligns with the `contexts`, and the higher the better.\n\n\n--- MULTIMODAL INPUT RULES ---\n- Treat image content as factual evidence.\n- Only reference visual details that are explicitly and clearly visible.\n- Do not infer or guess objects, text, or details not visibly present.\n- If an image is unclear or ambiguous, mark uncertainty explicitly.\n\n\n** \nIMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason.\nExample JSON:\n{\n  \"reason\": \"The score is <hallucination_score> because <your_reason>.\"\n}\n**\n\nFactual Alignments:\n['P(yes)=0.90']\n\nContradictions:\n['P(yes)=0.05']\n\nHallucination Score:\n0.50\n\nJSON:"
+    }
+  ]
+]

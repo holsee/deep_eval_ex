@@ -1,0 +1,48 @@
+{
+  "description": "Hallucination in hybrid mode: Jev judges each context",
+  "metrics": [
+    {
+      "kind": "hallucination",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Tell me about Paris.",
+    "actual_output": "Paris is the capital of France. The Louvre opened in 1893.",
+    "context": [
+      "Paris is the capital and largest city of France.",
+      "The Louvre, the world's most-visited museum, opened in 1793."
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "context_0": {
+          "probability": 0.9
+        },
+        "context_1": {
+          "probability": 0.05
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "hallucination": {
+      "reason": [
+        {
+          "reason": "The score is 0.50 because the output dates the Louvre to 1893, not 1793."
+        }
+      ]
+    }
+  }
+}

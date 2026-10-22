@@ -1,0 +1,108 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+            "retrieval_context": [
+              "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+              "Section 3.3: Up to 5 unused days can be carried over to the next year."
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every fact in `actual_output` is in `retrieval_context`.",
+            "criteria": {
+              "true": "All facts are sourced.",
+              "false": "Some fact is unsourced."
+            }
+          },
+          "q_1": {
+            "type": "choice",
+            "instructions": "Does `actual_output` cite its sources?",
+            "criteria": {
+              "cites": null,
+              "does_not_cite": null,
+              "nothing_to_cite": null
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.7
+            }
+          },
+          "choices": {
+            "q_1": {
+              "choice": "nothing_to_cite",
+              "probabilities": {
+                "cites": 0.1,
+                "does_not_cite": 0.2,
+                "nothing_to_cite": 0.7
+              },
+              "confidence": 0.55
+            }
+          },
+          "scores": {}
+        },
+        "cost": null
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+          "retrieval_context": [
+            "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+            "Section 3.3: Up to 5 unused days can be carried over to the next year."
+          ]
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "Every fact in `actual_output` is in `retrieval_context`.",
+          "criteria": {
+            "true": "All facts are sourced.",
+            "false": "Some fact is unsourced."
+          }
+        },
+        "q_1": {
+          "type": "choice",
+          "instructions": "Does `actual_output` cite its sources?",
+          "criteria": {
+            "cites": null,
+            "does_not_cite": null,
+            "nothing_to_cite": null
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.7
+          }
+        },
+        "choices": {
+          "q_1": {
+            "choice": "nothing_to_cite",
+            "probabilities": {
+              "cites": 0.1,
+              "does_not_cite": 0.2,
+              "nothing_to_cite": 0.7
+            },
+            "confidence": 0.55
+          }
+        },
+        "scores": {}
+      },
+      "cost": null
+    }
+  ]
+}

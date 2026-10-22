@@ -1,0 +1,48 @@
+{
+  "description": "Faithfulness on Jev in strict mode: one question misses the strict bar",
+  "metrics": [
+    {
+      "kind": "faithfulness",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5,
+        "strict_mode": true
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What is the vacation policy?",
+    "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+    "expected_output": "Employees get 20 days of PTO a year. Up to 5 days carry over.",
+    "retrieval_context": [
+      "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+      "Section 3.3: Up to 5 unused days can be carried over to the next year."
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": 0.0,
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.9
+        },
+        "q_1": {
+          "probability": 0.4
+        }
+      },
+      "scores": {
+        "q_2": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.0,
+            "1": 0.05,
+            "2": 0.15,
+            "3": 0.8
+          },
+          "confidence": 0.75
+        }
+      }
+    }
+  }
+}
