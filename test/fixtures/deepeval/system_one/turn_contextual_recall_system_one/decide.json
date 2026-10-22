@@ -1,0 +1,168 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "role": "user",
+              "content": "Where is order 42?"
+            },
+            {
+              "role": "assistant",
+              "content": "It shipped on 1 October from Zürich.",
+              "retrieval_context": [
+                "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+                "Our café is open late."
+              ]
+            },
+            {
+              "role": "user",
+              "content": "How long does a refund take?"
+            },
+            {
+              "role": "assistant",
+              "content": "Refunds take 2 business days.",
+              "retrieval_context": [
+                "Refunds take 5 business days."
+              ]
+            }
+          ],
+          "test_case": {
+            "expected_outcome": "Order 42 shipped on 1 October. Refunds take 5 business days."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every sentence in `expected_outcome` can be attributed to the facts in the `retrieval_context` of the assistant turns in `turns`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "The `retrieval_context` of the assistant turns in `turns` contains the key facts needed to reach `expected_outcome`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `expected_outcome` can be attributed to the facts in the `retrieval_context` of the assistant turns in `turns`?",
+            "criteria": [
+              "None of it",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.35
+            },
+            "q_1": {
+              "probability": 0.2
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 1.0,
+              "probabilities": {
+                "0": 0.1,
+                "1": 0.55,
+                "2": 0.25,
+                "3": 0.1
+              },
+              "confidence": 0.3
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "turns": [
+          {
+            "role": "user",
+            "content": "Where is order 42?"
+          },
+          {
+            "role": "assistant",
+            "content": "It shipped on 1 October from Zürich.",
+            "retrieval_context": [
+              "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+              "Our café is open late."
+            ]
+          },
+          {
+            "role": "user",
+            "content": "How long does a refund take?"
+          },
+          {
+            "role": "assistant",
+            "content": "Refunds take 2 business days.",
+            "retrieval_context": [
+              "Refunds take 5 business days."
+            ]
+          }
+        ],
+        "test_case": {
+          "expected_outcome": "Order 42 shipped on 1 October. Refunds take 5 business days."
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "Every sentence in `expected_outcome` can be attributed to the facts in the `retrieval_context` of the assistant turns in `turns`."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "The `retrieval_context` of the assistant turns in `turns` contains the key facts needed to reach `expected_outcome`."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "How much of `expected_outcome` can be attributed to the facts in the `retrieval_context` of the assistant turns in `turns`?",
+          "criteria": [
+            "None of it",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.35
+          },
+          "q_1": {
+            "probability": 0.2
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 1.0,
+            "probabilities": {
+              "0": 0.1,
+              "1": 0.55,
+              "2": 0.25,
+              "3": 0.1
+            },
+            "confidence": 0.3
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+[
+  {
+    "score": 0.5516666666666666,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.24.\n1. Every factual claim made in an assistant turn in `turns` is supported by the `retrieval_context` of that turn or of an earlier assistant turn. -> unclear (P(yes)=0.62, confidence=0.24, weight=2)\n2. No assistant turn in `turns` contradicts the `retrieval_context` available to it. -> likely fails (P(yes)=0.30, confidence=0.40)\n3. Across `turns`, how much of what the assistant states is grounded in the `retrieval_context` available to it? -> \"Mostly grounded\" (expected level=0.67 of 1.00, confidence=0.40)\nScore: 0.55 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every factual claim made in an assistant turn in `turns` is supported by the `retrieval_context` of that turn or of an earlier assistant turn.\n   value=0.620 applicable=True probabilities={'true': 0.62, 'false': 0.38} confidence=0.240\n2. [noul, weight=1] No assistant turn in `turns` contradicts the `retrieval_context` available to it.\n   value=0.300 applicable=True probabilities={'true': 0.3, 'false': 0.7} confidence=0.400\n3. [score, weight=1] Across `turns`, how much of what the assistant states is grounded in the `retrieval_context` available to it?\n   value=0.667 applicable=True probabilities={'Fabricated': 0.05, 'Mostly fabricated': 0.25, 'Mostly grounded': 0.55, 'Fully grounded': 0.15} confidence=0.400",
+    "confidence": 0.24,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every factual claim made in an assistant turn in `turns` is supported by the `retrieval_context` of that turn or of an earlier assistant turn.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.62,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.62,
+          "false": 0.38
+        },
+        "confidence": 0.24,
+        "passed": null
+      },
+      {
+        "question": "No assistant turn in `turns` contradicts the `retrieval_context` available to it.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.3,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.3,
+          "false": 0.7
+        },
+        "confidence": 0.4,
+        "passed": null
+      },
+      {
+        "question": "Across `turns`, how much of what the assistant states is grounded in the `retrieval_context` available to it?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.6666666666666666,
+        "applicable": true,
+        "probabilities": {
+          "Fabricated": 0.05,
+          "Mostly fabricated": 0.25,
+          "Mostly grounded": 0.55,
+          "Fully grounded": 0.15
+        },
+        "confidence": 0.4,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

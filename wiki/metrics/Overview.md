@@ -37,6 +37,10 @@ Evaluate Retrieval-Augmented Generation pipelines:
 | [ContextualPrecision](ContextualPrecision.md) | Retrieval ranking quality | `retrieval_context`, `expected_output` |
 | [ContextualRecall](ContextualRecall.md) | Coverage of ground truth | `retrieval_context`, `expected_output` |
 | [ContextualRelevancy](ContextualRelevancy.md) | Relevance of the retrieved context to the input | `input`, `retrieval_context` |
+| [TurnFaithfulness](TurnFaithfulness.md) | Faithfulness of each turn of a conversation | turns' `retrieval_context` |
+| [TurnContextualPrecision](TurnContextualPrecision.md) | Retrieval ranking quality, turn by turn | turns' `retrieval_context`, `expected_outcome` |
+| [TurnContextualRecall](TurnContextualRecall.md) | Coverage of the expected outcome, turn by turn | turns' `retrieval_context`, `expected_outcome` |
+| [TurnContextualRelevancy](TurnContextualRelevancy.md) | Relevance of each turn's retrieved context to the user | turns' `retrieval_context` |
 
 ### Safety Metrics
 Judge the opinions and statements in an output; higher scores mean safer outputs:

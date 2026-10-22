@@ -36,7 +36,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     batch_system_one batch_system_one_agent batch_system_one_conversational batch_system_one_down
     batch_system_one_json batch_system_one_retention_role
     batch_system_one_pii_alignment batch_system_one_retrieval batch_system_one_safety
-    batch_system_one_summarization
+    batch_system_one_summarization batch_system_one_turn_rag
     bias_hybrid bias_hybrid_fallback bias_system_one
     contextual_precision_hybrid contextual_precision_hybrid_fallback
     contextual_precision_system_one
@@ -60,6 +60,14 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     toxicity_hybrid toxicity_hybrid_fallback toxicity_system_one
     turn_relevancy_hybrid turn_relevancy_hybrid_fallback turn_relevancy_system_one
     turn_relevancy_system_one_strict
+    turn_contextual_precision_hybrid turn_contextual_precision_hybrid_fallback
+    turn_contextual_precision_system_one
+    turn_contextual_recall_hybrid turn_contextual_recall_hybrid_fallback
+    turn_contextual_recall_system_one
+    turn_contextual_relevancy_hybrid turn_contextual_relevancy_hybrid_fallback
+    turn_contextual_relevancy_system_one
+    turn_faithfulness_hybrid turn_faithfulness_hybrid_fallback turn_faithfulness_system_one
+    turn_faithfulness_system_one_strict
   )
 
   @answer_kinds %{"noul" => "nouls", "score" => "scores", "choice" => "choices"}
@@ -83,7 +91,8 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
           ~w(faithfulness hallucination answer_relevancy contextual_precision contextual_recall
              contextual_relevancy bias toxicity pii_leakage prompt_alignment summarization
              argument_correctness tool_correctness turn_relevancy conversation_completeness
-             knowledge_retention role_adherence),
+             knowledge_retention role_adherence turn_faithfulness turn_contextual_precision
+             turn_contextual_recall turn_contextual_relevancy),
         suffix <- ~w(system_one hybrid hybrid_fallback) do
       assert "#{kind}_#{suffix}" in @scenarios
     end

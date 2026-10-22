@@ -1,0 +1,60 @@
+[
+  {
+    "score": 0.6166666666666667,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.10.\n1. Every statement in the `retrieval_context` of each assistant turn in `turns` is relevant to addressing the user turns before it. -> unclear (P(yes)=0.55, confidence=0.10, weight=2)\n2. Every node in the `retrieval_context` of each assistant turn in `turns` contains at least one statement relevant to addressing the user turns before it. -> likely holds (P(yes)=0.70, confidence=0.40)\n3. Across `turns`, how much of the `retrieval_context` of the assistant turns is relevant to addressing the user turns before it? -> \"Most of it\" (expected level=0.67 of 1.00, confidence=0.42)\nScore: 0.62 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every statement in the `retrieval_context` of each assistant turn in `turns` is relevant to addressing the user turns before it.\n   value=0.550 applicable=True probabilities={'true': 0.55, 'false': 0.45} confidence=0.100\n2. [noul, weight=1] Every node in the `retrieval_context` of each assistant turn in `turns` contains at least one statement relevant to addressing the user turns before it.\n   value=0.700 applicable=True probabilities={'true': 0.7, 'false': 0.3} confidence=0.400\n3. [score, weight=1] Across `turns`, how much of the `retrieval_context` of the assistant turns is relevant to addressing the user turns before it?\n   value=0.667 applicable=True probabilities={'None of it': 0.05, 'Less than half': 0.3, 'Most of it': 0.5, 'All of it': 0.15} confidence=0.420",
+    "confidence": 0.10000000000000009,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every statement in the `retrieval_context` of each assistant turn in `turns` is relevant to addressing the user turns before it.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.55,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.55,
+          "false": 0.44999999999999996
+        },
+        "confidence": 0.10000000000000009,
+        "passed": null
+      },
+      {
+        "question": "Every node in the `retrieval_context` of each assistant turn in `turns` contains at least one statement relevant to addressing the user turns before it.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.7,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.7,
+          "false": 0.30000000000000004
+        },
+        "confidence": 0.3999999999999999,
+        "passed": null
+      },
+      {
+        "question": "Across `turns`, how much of the `retrieval_context` of the assistant turns is relevant to addressing the user turns before it?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.6666666666666666,
+        "applicable": true,
+        "probabilities": {
+          "None of it": 0.05,
+          "Less than half": 0.3,
+          "Most of it": 0.5,
+          "All of it": 0.15
+        },
+        "confidence": 0.42,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

@@ -1,0 +1,70 @@
+{
+  "description": "TurnContextualPrecision decided by Jev in one request about the turns and the expected outcome",
+  "metrics": [
+    {
+      "kind": "turn_contextual_precision",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "expected_outcome": "Order 42 shipped on 1 October. Refunds take 5 business days.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Where is order 42?"
+      },
+      {
+        "role": "assistant",
+        "content": "It shipped on 1 October from Zürich.",
+        "retrieval_context": [
+          "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+          "Our café is open late."
+        ]
+      },
+      {
+        "role": "user",
+        "content": "How long does a refund take?"
+      },
+      {
+        "role": "assistant",
+        "content": "Refunds take 2 business days.",
+        "retrieval_context": [
+          "Refunds take 5 business days."
+        ]
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.81
+        },
+        "q_1": {
+          "probability": 0.62
+        }
+      },
+      "scores": {
+        "q_2": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.0,
+            "1": 0.05,
+            "2": 0.15,
+            "3": 0.8
+          },
+          "confidence": 0.6
+        }
+      }
+    }
+  }
+}

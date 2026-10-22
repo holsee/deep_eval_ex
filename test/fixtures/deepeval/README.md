@@ -7,7 +7,7 @@ Fixtures written by **deepeval 4.3.1**, in six sets:
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
-  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's twenty-three
+  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's twenty-seven
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
 - [prompt goldens](#prompt-goldens) (`prompts/`), used by
@@ -141,8 +141,9 @@ calling an LLM. A script holds:
   `contextual_relevancy`, `bias`, `toxicity`, `pii_leakage`, `prompt_alignment`,
   `summarization`, `argument_correctness`, `json_correctness`, `tool_correctness`,
   `pattern_match`, `tool_permission`, `conversational_g_eval`, `turn_relevancy`,
-  `conversation_completeness`, `knowledge_retention` or `role_adherence`) and the
-  metric's constructor
+  `conversation_completeness`, `knowledge_retention`, `role_adherence`,
+  `turn_faithfulness`, `turn_contextual_precision`, `turn_contextual_recall` or
+  `turn_contextual_relevancy`) and the metric's constructor
   `params`. JsonCorrectness's `expected_schema` is a pydantic model's
   `model_json_schema()`: the generator rebuilds the model from it
   (`build_expected_schema`) and fails unless the model's own schema is the
@@ -201,6 +202,10 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | ConversationCompleteness | `conversation_completeness_pass`, `conversation_completeness_fail` (an unmet intention, a raw-text verdict outside yes and no dropped; turns with every field, printed as `model_dump()` JSON in the verbose logs; an unused `window_size`), `conversation_completeness_strict` (an unmet intention without a reason, `None` in the reason prompt), `conversation_completeness_no_intentions` (no verdict, the integer score `1`) |
 | KnowledgeRetention | `knowledge_retention_pass`, `knowledge_retention_fail` (an opening assistant turn, and one after a user turn whose facts are `{}`, get no verdict; a forgotten destination fails; a raw-text verdict in a code fence; a dict of several facts, its keys in sorted order), `knowledge_retention_strict` (a forgotten fact without a reason, `None` in the reason prompt, the integer `0`), `knowledge_retention_no_verdicts` (facts `null`: no verdict, the integer score `1`). The reason prompt prints the score to two decimals |
 | RoleAdherence | `role_adherence_pass` (turns with `retrieval_context` and `tools_called`, of which the prompt shows `content` and `role`), `role_adherence_fail` (one turn out of character, and a verdict whose index names no turn keeps the judge's `ai_message`: 1 of 3), `role_adherence_strict` (index `-1` counts from the end, `(turn #0)`; non-ASCII escaped in the verbose logs; the integer `0`), `role_adherence_no_assistant_turns` (the integer score `1`). The reason prompt prints the score unformatted |
+| TurnFaithfulness | `turn_faithfulness_pass` (two windows of one and two unit interactions, a borderline claim passing), `turn_faithfulness_fail` (`window_size` 1, `penalize_ambiguous_claims`, `truths_extraction_limit` 2; two user turns in one window; a raw-text verdict list in a code fence, `"No, it takes 5"` read as `no` and `maybe` dropped; a window without retrieval context or claims, `<no claims to verify>`), `turn_faithfulness_strict` (a contradicted window clamped to `0.0`, the mean `0.5` kept; no reasons), `turn_faithfulness_no_windows` (a leading assistant turn and an unanswered user turn: the integer score `1`). A window's reason prompt prints its score to two decimals, the final one unformatted |
+| TurnContextualPrecision | `turn_contextual_precision_pass`, `turn_contextual_precision_fail` (`window_size` 1; a `RetrievedContextData` node printed as its repr; a window without retrieval context, explained without the judge; a raw-text verdict out of vocabulary dropped), `turn_contextual_precision_strict` (a window's `0`, its reason prompt `0.00`), `turn_contextual_precision_no_windows` (no reason) |
+| TurnContextualRecall | `turn_contextual_recall_pass`, `turn_contextual_recall_fail` (`window_size` 1; a `RetrievedContextData` node; a window without retrieval context; a raw-text verdict out of vocabulary dropped), `turn_contextual_recall_strict` (no reasons), `turn_contextual_recall_no_windows` |
+| TurnContextualRelevancy | `turn_contextual_relevancy_pass` (one request per node), `turn_contextual_relevancy_fail` (`window_size` 1; an irrelevant statement without a reason, `: None` in the reason prompt; a raw-text verdict out of vocabulary dropped), `turn_contextual_relevancy_strict`, `turn_contextual_relevancy_no_windows`. deepeval 4.3.1 raises on a `RetrievedContextData` node, so no scenario has one |
 | Faithfulness | `faithfulness_pass`, `faithfulness_fail`, `faithfulness_borderline`, `faithfulness_penalize_ambiguous` (`penalize_ambiguous_claims`: the borderline verdict fails and is an `(Ambiguous)` contradiction), `faithfulness_no_claims` (empty list), `faithfulness_strict` |
 | Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_no_verdicts` (empty list), `hallucination_strict`, `hallucination_messy_json` (raw-text answers: prose, a code fence and trailing commas around the verdicts, a reason missing its closing brace), `hallucination_invalid_json` (a raw-text answer with no JSON: the metric errors) |
 | AnswerRelevancy | `answer_relevancy_pass`, `answer_relevancy_fail`, `answer_relevancy_no_statements` (empty list), `answer_relevancy_strict` |
@@ -248,7 +253,7 @@ scenarios, why it fails and its tag.
 ## Prompt goldens
 
 `prompts/<case>/` holds one prompt deepeval 4.3.1 renders for one of the
-twenty LLM-judged metrics, for fixed inputs:
+twenty-four LLM-judged metrics, for fixed inputs:
 
 - `input.json` - `template`, deepeval's template class key and method (e.g.
   `FaithfulnessMetric.generate_truths`, from
@@ -365,6 +370,24 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.RoleAdherence.generate_reason/1` | `RoleAdherenceMetric.generate_reason` (`role_adherence/templates/generate_reason.txt`) | `score` (unformatted), `role`, `out_of_character_responses` (list, `None` included; the multimodal rules always included) | `role_adherence_generate_reason`, `_in_character` |
 | `Prompts.RoleAdherence.system_one_questions/0` | `RoleAdherenceMetric._experimental_system_one_questions` (`role_adherence/templates/_experimental_system_one_questions.txt`) | none | `role_adherence_experimental_system_one_questions` |
 | `Prompts.RoleAdherence.system_one_verdict/0` | `RoleAdherenceMetric._experimental_system_one_verdict` (`role_adherence/templates/_experimental_system_one_verdict.txt`) | none | `role_adherence_experimental_system_one_verdict` |
+| `Prompts.TurnFaithfulness.generate_truths/1` | `TurnFaithfulnessMetric.generate_truths` (`turn_faithfulness/templates/generate_truths.txt`) | `reference_context` (joined with blank lines), `extraction_limit` (`_turn_faithfulness_limit_description`), `multimodal` | `turn_faithfulness_generate_truths`, `_limit_one`, `_multimodal` |
+| `Prompts.TurnFaithfulness.generate_claims/1` | `TurnFaithfulnessMetric.generate_claims` (`turn_faithfulness/templates/generate_claims.txt`) | `input`, `assistant_output` (the window's turns), `multimodal` | `turn_faithfulness_generate_claims`, `_multimodal` |
+| `Prompts.TurnFaithfulness.generate_verdicts/1` | `TurnFaithfulnessMetric.generate_verdicts` (`turn_faithfulness/templates/generate_verdicts.txt`) | `claims` (list), `reference_context` (the truths joined with blank lines), `multimodal` | `turn_faithfulness_generate_verdicts`, `_multimodal` |
+| `Prompts.TurnFaithfulness.generate_reason/1` | `TurnFaithfulnessMetric.generate_reason` (`turn_faithfulness/templates/generate_reason.txt`) | `score` (`format(score, ".2f")`), `contradictions` (list, `None` included), `multimodal` | `turn_faithfulness_generate_reason`, `_multimodal` |
+| `Prompts.TurnFaithfulness.generate_final_reason/1` | `TurnFaithfulnessMetric.generate_final_reason` (`turn_faithfulness/templates/generate_final_reason.txt`) | `final_score` (unformatted), `success`, `reasons` (list, `None` included) | `turn_faithfulness_generate_final_reason`, `_failed` |
+| `Prompts.TurnFaithfulness.system_one_questions/0`, `system_one_verdict/0` | `TurnFaithfulnessMetric._experimental_system_one_questions`, `_experimental_system_one_verdict` | none | `turn_faithfulness_experimental_system_one_questions`, `_verdict` |
+| `Prompts.TurnContextualPrecision.generate_verdicts/1` | `TurnContextualPrecisionMetric.generate_verdicts` (`turn_contextual_precision/templates/generate_verdicts.txt`) | `input`, `expected_outcome`, `retrieval_context` (list; `Node <n>: ` prefixes and the multimodal note when `multimodal`) | `turn_contextual_precision_generate_verdicts`, `_one_document`, `_multimodal` |
+| `Prompts.TurnContextualPrecision.generate_reason/1` | `TurnContextualPrecisionMetric.generate_reason` (`turn_contextual_precision/templates/generate_reason.txt`) | `score` (`format(score, ".2f")`), `input`, `verdicts` (`Verdict` members with their `Node <n>`), `multimodal` | `turn_contextual_precision_generate_reason`, `_multimodal` |
+| `Prompts.TurnContextualPrecision.generate_final_reason/1` | `TurnContextualPrecisionMetric.generate_final_reason` | as TurnFaithfulness's | `turn_contextual_precision_generate_final_reason` |
+| `Prompts.TurnContextualPrecision.system_one_questions/0`, `system_one_verdict/0` | `TurnContextualPrecisionMetric._experimental_system_one_questions`, `_experimental_system_one_verdict` | none | `turn_contextual_precision_experimental_system_one_questions`, `_verdict` |
+| `Prompts.TurnContextualRecall.generate_verdicts/1` | `TurnContextualRecallMetric.generate_verdicts` (`turn_contextual_recall/templates/generate_verdicts.txt`) | `expected_outcome`, `retrieval_context` (list; `Node <n>: ` prefixes when `multimodal`), `multimodal` | `turn_contextual_recall_generate_verdicts`, `_multimodal` |
+| `Prompts.TurnContextualRecall.generate_reason/1` | `TurnContextualRecallMetric.generate_reason` (`turn_contextual_recall/templates/generate_reason.txt`) | `score` (`format(score, ".2f")`), `expected_outcome`, `supportive_reasons`, `unsupportive_reasons` (lists, `None` included), `multimodal` | `turn_contextual_recall_generate_reason`, `_multimodal` |
+| `Prompts.TurnContextualRecall.generate_final_reason/1` | `TurnContextualRecallMetric.generate_final_reason` | as TurnFaithfulness's | `turn_contextual_recall_generate_final_reason` |
+| `Prompts.TurnContextualRecall.system_one_questions/0`, `system_one_verdict/0` | `TurnContextualRecallMetric._experimental_system_one_questions`, `_experimental_system_one_verdict` | none | `turn_contextual_recall_experimental_system_one_questions`, `_verdict` |
+| `Prompts.TurnContextualRelevancy.generate_verdicts/1` | `TurnContextualRelevancyMetric.generate_verdicts` (`turn_contextual_relevancy/templates/generate_verdicts.txt`) | `input`, `context` (one node), `multimodal` | `turn_contextual_relevancy_generate_verdicts`, `_multimodal` |
+| `Prompts.TurnContextualRelevancy.generate_reason/1` | `TurnContextualRelevancyMetric.generate_reason` (`turn_contextual_relevancy/templates/generate_reason.txt`) | `score` (`format(score, ".2f")`), `input`, `irrelevant_statements` (`"<statement>: <reason>"`), `relevant_statements`, `multimodal` | `turn_contextual_relevancy_generate_reason`, `_multimodal` |
+| `Prompts.TurnContextualRelevancy.generate_final_reason/1` | `TurnContextualRelevancyMetric.generate_final_reason` | as TurnFaithfulness's | `turn_contextual_relevancy_generate_final_reason` |
+| `Prompts.TurnContextualRelevancy.system_one_questions/0`, `system_one_verdict/0` | `TurnContextualRelevancyMetric._experimental_system_one_questions`, `_experimental_system_one_verdict` | none | `turn_contextual_relevancy_experimental_system_one_questions`, `_verdict` |
 | `Prompts.ToolCorrectness.system_one_tool_selection_score/0` | `ToolCorrectnessMetric._experimental_system_one_tool_selection_score` (`tool_correctness/templates/_experimental_system_one_tool_selection_score.txt`) | none | `tool_correctness_experimental_system_one_tool_selection_score` |
 
 Templates of these metrics without a DeepEvalEx counterpart, so without a
@@ -567,6 +590,10 @@ Each `system_one/<scenario>/` holds:
 | `batch_system_one_summarization` | Summarization and AnswerRelevancy batched into one request about `input` and `actual_output` by `evaluate()` |
 | `batch_system_one_agent` | ArgumentCorrectness and AnswerRelevancy batched into one request by `evaluate()`, the state merging `input`, `tools_called` and `actual_output` |
 | `batch_system_one_conversational` | TurnRelevancy and ConversationCompleteness batched into one request about the turns by `evaluate()` |
+| `turn_faithfulness_system_one`, `turn_faithfulness_system_one_strict`, `turn_contextual_precision_system_one`, `turn_contextual_recall_system_one`, `turn_contextual_relevancy_system_one` | The whole-metric request of the Turn RAG metrics: the turns with their `role`, `content` and `retrieval_context`, and `expected_outcome` under `test_case` for precision and recall |
+| `turn_faithfulness_hybrid`, `turn_contextual_precision_hybrid`, `turn_contextual_recall_hybrid`, `turn_contextual_relevancy_hybrid` | `hybrid` over two sliding windows: one request per window about its claims (`claim_<i>`, the truths as `reference_context`), nodes (`node_<i>`, with `user_message` and `assistant_output`) or the expected outcome's sentences (`sentence_<i>`, with the window's `retrieval_context`); TurnContextualRelevancy one request per node of each window (`statement_<i>`, with `user_message`). The LLM extracts and writes each window's and the final reason |
+| `turn_faithfulness_hybrid_fallback`, `turn_contextual_precision_hybrid_fallback`, `turn_contextual_recall_hybrid_fallback`, `turn_contextual_relevancy_hybrid_fallback` | The same with Jev down: each window (node) falls back to the LLM, the reasons joined in `system_one_fallback_reason` |
+| `batch_system_one_turn_rag` | The four Turn RAG metrics batched into one request by `evaluate()`, the state holding the turns and the `expected_outcome` |
 | `batch_system_one_retention_role` | KnowledgeRetention and RoleAdherence batched into one request by `evaluate()`, the state holding the turns and the `chatbot_role` |
 | `batch_system_one_down` | Two batched metrics with Jev down: no fallback, `measure()` raises and `evaluate()` records the error on each metric |
 | `refusal_classifier_system_one` | `RefusalClassifier` on Jev: one Choice over its labels, deterministic reason |

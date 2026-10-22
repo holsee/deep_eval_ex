@@ -172,7 +172,47 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "RoleAdherenceMetric._experimental_system_one_questions" =>
       {Prompts.RoleAdherence, :system_one_questions},
     "RoleAdherenceMetric._experimental_system_one_verdict" =>
-      {Prompts.RoleAdherence, :system_one_verdict}
+      {Prompts.RoleAdherence, :system_one_verdict},
+    "TurnFaithfulnessMetric.generate_truths" => {Prompts.TurnFaithfulness, :generate_truths},
+    "TurnFaithfulnessMetric.generate_claims" => {Prompts.TurnFaithfulness, :generate_claims},
+    "TurnFaithfulnessMetric.generate_verdicts" => {Prompts.TurnFaithfulness, :generate_verdicts},
+    "TurnFaithfulnessMetric.generate_reason" => {Prompts.TurnFaithfulness, :generate_reason},
+    "TurnFaithfulnessMetric.generate_final_reason" =>
+      {Prompts.TurnFaithfulness, :generate_final_reason},
+    "TurnFaithfulnessMetric._experimental_system_one_questions" =>
+      {Prompts.TurnFaithfulness, :system_one_questions},
+    "TurnFaithfulnessMetric._experimental_system_one_verdict" =>
+      {Prompts.TurnFaithfulness, :system_one_verdict},
+    "TurnContextualPrecisionMetric.generate_verdicts" =>
+      {Prompts.TurnContextualPrecision, :generate_verdicts},
+    "TurnContextualPrecisionMetric.generate_reason" =>
+      {Prompts.TurnContextualPrecision, :generate_reason},
+    "TurnContextualPrecisionMetric.generate_final_reason" =>
+      {Prompts.TurnContextualPrecision, :generate_final_reason},
+    "TurnContextualPrecisionMetric._experimental_system_one_questions" =>
+      {Prompts.TurnContextualPrecision, :system_one_questions},
+    "TurnContextualPrecisionMetric._experimental_system_one_verdict" =>
+      {Prompts.TurnContextualPrecision, :system_one_verdict},
+    "TurnContextualRecallMetric.generate_verdicts" =>
+      {Prompts.TurnContextualRecall, :generate_verdicts},
+    "TurnContextualRecallMetric.generate_reason" =>
+      {Prompts.TurnContextualRecall, :generate_reason},
+    "TurnContextualRecallMetric.generate_final_reason" =>
+      {Prompts.TurnContextualRecall, :generate_final_reason},
+    "TurnContextualRecallMetric._experimental_system_one_questions" =>
+      {Prompts.TurnContextualRecall, :system_one_questions},
+    "TurnContextualRecallMetric._experimental_system_one_verdict" =>
+      {Prompts.TurnContextualRecall, :system_one_verdict},
+    "TurnContextualRelevancyMetric.generate_verdicts" =>
+      {Prompts.TurnContextualRelevancy, :generate_verdicts},
+    "TurnContextualRelevancyMetric.generate_reason" =>
+      {Prompts.TurnContextualRelevancy, :generate_reason},
+    "TurnContextualRelevancyMetric.generate_final_reason" =>
+      {Prompts.TurnContextualRelevancy, :generate_final_reason},
+    "TurnContextualRelevancyMetric._experimental_system_one_questions" =>
+      {Prompts.TurnContextualRelevancy, :system_one_questions},
+    "TurnContextualRelevancyMetric._experimental_system_one_verdict" =>
+      {Prompts.TurnContextualRelevancy, :system_one_verdict}
   }
 
   # {the ROADMAP unit that removes the tag, cases}. The fixtures' README
@@ -189,7 +229,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the twenty LLM metrics" do
+  test "covers every template of the twenty-four LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -217,6 +257,10 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.Summarization,
             Prompts.ToolCorrectness,
             Prompts.Toxicity,
+            Prompts.TurnContextualPrecision,
+            Prompts.TurnContextualRecall,
+            Prompts.TurnContextualRelevancy,
+            Prompts.TurnFaithfulness,
             Prompts.TurnRelevancy
           ],
           {fun, arity} <- module.__info__(:functions),
@@ -566,6 +610,109 @@ defmodule DeepEvalEx.PromptGoldenTest do
       out_of_character_responses: inputs["out_of_character_responses"]
     ]
   end
+
+  # The Turn RAG metrics pass the test case's multimodal flag to their
+  # window templates.
+  defp options("TurnFaithfulnessMetric.generate_truths", inputs) do
+    [
+      reference_context: Enum.join(inputs["retrieval_context"], "\n\n"),
+      extraction_limit: inputs["truths_extraction_limit"],
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options("TurnFaithfulnessMetric.generate_claims", inputs) do
+    [
+      input: inputs["input"],
+      assistant_output: inputs["assistant_output"],
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options("TurnFaithfulnessMetric.generate_verdicts", inputs) do
+    [
+      claims: inputs["claims"],
+      reference_context: Enum.join(inputs["truths"], "\n\n"),
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options("TurnFaithfulnessMetric.generate_reason", inputs) do
+    [
+      score: inputs["score"],
+      contradictions: inputs["contradictions"],
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options("TurnContextualPrecisionMetric.generate_verdicts", inputs) do
+    [
+      input: inputs["input"],
+      expected_outcome: inputs["expected_outcome"],
+      retrieval_context: inputs["retrieval_context"],
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options("TurnContextualPrecisionMetric.generate_reason", inputs) do
+    [
+      score: inputs["score"],
+      input: inputs["input"],
+      verdicts:
+        Enum.map(inputs["verdicts"], fn verdict ->
+          %{verdict: String.to_existing_atom(verdict["verdict"]), reason: verdict["reason"]}
+        end),
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options("TurnContextualRecallMetric.generate_verdicts", inputs) do
+    [
+      expected_outcome: inputs["expected_outcome"],
+      retrieval_context: inputs["retrieval_context"],
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options("TurnContextualRecallMetric.generate_reason", inputs) do
+    [
+      score: inputs["score"],
+      expected_outcome: inputs["expected_outcome"],
+      supportive_reasons: inputs["supportive_reasons"],
+      unsupportive_reasons: inputs["unsupportive_reasons"],
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options("TurnContextualRelevancyMetric.generate_verdicts", inputs) do
+    [
+      input: inputs["input"],
+      context: inputs["context"],
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options("TurnContextualRelevancyMetric.generate_reason", inputs) do
+    [
+      score: inputs["score"],
+      input: inputs["input"],
+      irrelevant_statements: inputs["irrelevant_statements"],
+      relevant_statements: inputs["relevant_statements"],
+      multimodal: Map.get(inputs, "multimodal", false)
+    ]
+  end
+
+  defp options(
+         "Turn" <> _ = template,
+         %{"final_score" => final_score, "success" => success, "reasons" => reasons}
+       )
+       when template in [
+              "TurnFaithfulnessMetric.generate_final_reason",
+              "TurnContextualPrecisionMetric.generate_final_reason",
+              "TurnContextualRecallMetric.generate_final_reason",
+              "TurnContextualRelevancyMetric.generate_final_reason"
+            ],
+       do: [final_score: final_score, success: success, reasons: reasons]
 
   defp options("ToolCorrectnessMetric.get_tool_selection_score", inputs) do
     [

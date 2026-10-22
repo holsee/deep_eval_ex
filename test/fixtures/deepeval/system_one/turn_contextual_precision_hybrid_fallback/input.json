@@ -1,0 +1,93 @@
+{
+  "description": "TurnContextualPrecision in hybrid mode with Jev down: the LLM judges every window's nodes",
+  "metrics": [
+    {
+      "kind": "turn_contextual_precision",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "expected_outcome": "Order 42 shipped on 1 October. Refunds take 5 business days.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Where is order 42?"
+      },
+      {
+        "role": "assistant",
+        "content": "It shipped on 1 October from Zürich.",
+        "retrieval_context": [
+          "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+          "Our café is open late."
+        ]
+      },
+      {
+        "role": "user",
+        "content": "How long does a refund take?"
+      },
+      {
+        "role": "assistant",
+        "content": "Refunds take 2 business days.",
+        "retrieval_context": [
+          "Refunds take 5 business days."
+        ]
+      }
+    ]
+  },
+  "system_one": {
+    "model": "exploding-jev",
+    "raises": {
+      "type": "ConnectionError",
+      "message": "Jev is down"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "turn_contextual_precision": {
+      "reason": [
+        {
+          "reason": "The score is 1.00 because the first window is fine."
+        },
+        {
+          "reason": "The score is 0.83 because of the second window."
+        },
+        {
+          "reason": "The score is 0.9 because the windows mostly pass."
+        }
+      ],
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes",
+              "reason": "It gives the shipping date."
+            },
+            {
+              "verdict": "no",
+              "reason": "The café is irrelevant."
+            }
+          ]
+        },
+        {
+          "verdicts": [
+            {
+              "verdict": "yes",
+              "reason": "It gives the shipping date."
+            },
+            {
+              "verdict": "no",
+              "reason": "The café is irrelevant."
+            },
+            {
+              "verdict": "yes",
+              "reason": "It gives the refund time."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "reference_context": [
+            "Order 42 shipped on 1 October.",
+            "Rome is the capital of Italy.",
+            "Our café is open late."
+          ],
+          "claims": [
+            "Order 42 shipped on 1 October.",
+            "Order 42 shipped from Zürich."
+          ]
+        },
+        "questions": {
+          "claim_0": {
+            "type": "noul",
+            "instructions": {
+              "claim": "Order 42 shipped on 1 October.",
+              "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+            }
+          },
+          "claim_1": {
+            "type": "noul",
+            "instructions": {
+              "claim": "Order 42 shipped from Zürich.",
+              "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      },
+      {
+        "state": {
+          "reference_context": [
+            "Order 42 shipped on 1 October.",
+            "Rome is the capital of Italy.",
+            "Our café is open late.",
+            "Refunds take 5 business days."
+          ],
+          "claims": [
+            "Order 42 shipped on 1 October.",
+            "Order 42 shipped from Zürich.",
+            "Refunds take 2 business days."
+          ]
+        },
+        "questions": {
+          "claim_0": {
+            "type": "noul",
+            "instructions": {
+              "claim": "Order 42 shipped on 1 October.",
+              "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+            }
+          },
+          "claim_1": {
+            "type": "noul",
+            "instructions": {
+              "claim": "Order 42 shipped from Zürich.",
+              "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+            }
+          },
+          "claim_2": {
+            "type": "noul",
+            "instructions": {
+              "claim": "Refunds take 2 business days.",
+              "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "reference_context": [
+          "Order 42 shipped on 1 October.",
+          "Rome is the capital of Italy.",
+          "Our café is open late."
+        ],
+        "claims": [
+          "Order 42 shipped on 1 October.",
+          "Order 42 shipped from Zürich."
+        ]
+      },
+      "questions": {
+        "claim_0": {
+          "type": "noul",
+          "instructions": {
+            "claim": "Order 42 shipped on 1 October.",
+            "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+          }
+        },
+        "claim_1": {
+          "type": "noul",
+          "instructions": {
+            "claim": "Order 42 shipped from Zürich.",
+            "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    },
+    {
+      "state": {
+        "reference_context": [
+          "Order 42 shipped on 1 October.",
+          "Rome is the capital of Italy.",
+          "Our café is open late.",
+          "Refunds take 5 business days."
+        ],
+        "claims": [
+          "Order 42 shipped on 1 October.",
+          "Order 42 shipped from Zürich.",
+          "Refunds take 2 business days."
+        ]
+      },
+      "questions": {
+        "claim_0": {
+          "type": "noul",
+          "instructions": {
+            "claim": "Order 42 shipped on 1 October.",
+            "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+          }
+        },
+        "claim_1": {
+          "type": "noul",
+          "instructions": {
+            "claim": "Order 42 shipped from Zürich.",
+            "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+          }
+        },
+        "claim_2": {
+          "type": "noul",
+          "instructions": {
+            "claim": "Refunds take 2 business days.",
+            "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

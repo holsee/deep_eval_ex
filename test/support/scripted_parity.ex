@@ -42,6 +42,10 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     ToolCorrectness,
     ToolPermission,
     Toxicity,
+    TurnContextualPrecision,
+    TurnContextualRecall,
+    TurnContextualRelevancy,
+    TurnFaithfulness,
     TurnRelevancy
   }
 
@@ -74,7 +78,11 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "turn_relevancy" => TurnRelevancy,
     "conversation_completeness" => ConversationCompleteness,
     "knowledge_retention" => KnowledgeRetention,
-    "role_adherence" => RoleAdherence
+    "role_adherence" => RoleAdherence,
+    "turn_faithfulness" => TurnFaithfulness,
+    "turn_contextual_precision" => TurnContextualPrecision,
+    "turn_contextual_recall" => TurnContextualRecall,
+    "turn_contextual_relevancy" => TurnContextualRelevancy
   }
 
   # Pairs of steps that need not keep deepeval's relative order, as neither

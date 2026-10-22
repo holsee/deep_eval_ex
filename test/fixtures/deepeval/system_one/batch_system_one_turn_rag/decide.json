@@ -1,0 +1,510 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "role": "user",
+              "content": "Where is order 42?"
+            },
+            {
+              "role": "assistant",
+              "content": "It shipped on 1 October from Zürich.",
+              "retrieval_context": [
+                "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+                "Our café is open late."
+              ]
+            },
+            {
+              "role": "user",
+              "content": "How long does a refund take?"
+            },
+            {
+              "role": "assistant",
+              "content": "Refunds take 2 business days.",
+              "retrieval_context": [
+                "Refunds take 5 business days."
+              ]
+            }
+          ]
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every factual claim made in an assistant turn in `turns` is supported by the `retrieval_context` of that turn or of an earlier assistant turn."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "No assistant turn in `turns` contradicts the `retrieval_context` available to it."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "Across `turns`, how much of what the assistant states is grounded in the `retrieval_context` available to it?",
+            "criteria": [
+              "Fabricated",
+              "Mostly fabricated",
+              "Mostly grounded",
+              "Fully grounded"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.7
+            },
+            "q_1": {
+              "probability": 0.4
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 2.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.25,
+                "2": 0.6,
+                "3": 0.1
+              },
+              "confidence": 0.45
+            }
+          }
+        },
+        "cost": {
+          "value": 0.000168,
+          "input_tokens": 4002,
+          "output_tokens": 0
+        }
+      }
+    ],
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "role": "user",
+              "content": "Where is order 42?"
+            },
+            {
+              "role": "assistant",
+              "content": "It shipped on 1 October from Zürich.",
+              "retrieval_context": [
+                "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+                "Our café is open late."
+              ]
+            },
+            {
+              "role": "user",
+              "content": "How long does a refund take?"
+            },
+            {
+              "role": "assistant",
+              "content": "Refunds take 2 business days.",
+              "retrieval_context": [
+                "Refunds take 5 business days."
+              ]
+            }
+          ],
+          "test_case": {
+            "expected_outcome": "Order 42 shipped on 1 October. Refunds take 5 business days."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "In every assistant turn in `turns` that has a `retrieval_context`, the documents useful for answering the preceding user message towards `expected_outcome` are listed before the documents that are not useful."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "In every assistant turn in `turns` that has a `retrieval_context`, the first document is useful for answering the preceding user message."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "Across the assistant turns in `turns`, how well are the `retrieval_context` documents ordered, with the ones useful for answering the preceding user message first?",
+            "criteria": [
+              "Useful documents are all at the end",
+              "Useful documents are mixed with irrelevant ones",
+              "Useful documents are mostly first",
+              "Useful documents are all first"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.9
+            },
+            "q_1": {
+              "probability": 0.85
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 3.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.05,
+                "2": 0.15,
+                "3": 0.8
+              },
+              "confidence": 0.8
+            }
+          }
+        },
+        "cost": {
+          "value": 0.000168,
+          "input_tokens": 4002,
+          "output_tokens": 0
+        }
+      }
+    ],
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "role": "user",
+              "content": "Where is order 42?"
+            },
+            {
+              "role": "assistant",
+              "content": "It shipped on 1 October from Zürich.",
+              "retrieval_context": [
+                "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+                "Our café is open late."
+              ]
+            },
+            {
+              "role": "user",
+              "content": "How long does a refund take?"
+            },
+            {
+              "role": "assistant",
+              "content": "Refunds take 2 business days.",
+              "retrieval_context": [
+                "Refunds take 5 business days."
+              ]
+            }
+          ],
+          "test_case": {
+            "expected_outcome": "Order 42 shipped on 1 October. Refunds take 5 business days."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every sentence in `expected_outcome` can be attributed to the facts in the `retrieval_context` of the assistant turns in `turns`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "The `retrieval_context` of the assistant turns in `turns` contains the key facts needed to reach `expected_outcome`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `expected_outcome` can be attributed to the facts in the `retrieval_context` of the assistant turns in `turns`?",
+            "criteria": [
+              "None of it",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.3
+            },
+            "q_1": {
+              "probability": 0.6
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 1.0,
+              "probabilities": {
+                "0": 0.1,
+                "1": 0.5,
+                "2": 0.3,
+                "3": 0.1
+              },
+              "confidence": 0.4
+            }
+          }
+        },
+        "cost": {
+          "value": 0.000168,
+          "input_tokens": 4002,
+          "output_tokens": 0
+        }
+      }
+    ],
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "role": "user",
+              "content": "Where is order 42?"
+            },
+            {
+              "role": "assistant",
+              "content": "It shipped on 1 October from Zürich.",
+              "retrieval_context": [
+                "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+                "Our café is open late."
+              ]
+            },
+            {
+              "role": "user",
+              "content": "How long does a refund take?"
+            },
+            {
+              "role": "assistant",
+              "content": "Refunds take 2 business days.",
+              "retrieval_context": [
+                "Refunds take 5 business days."
+              ]
+            }
+          ]
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every statement in the `retrieval_context` of each assistant turn in `turns` is relevant to addressing the user turns before it."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "Every node in the `retrieval_context` of each assistant turn in `turns` contains at least one statement relevant to addressing the user turns before it."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "Across `turns`, how much of the `retrieval_context` of the assistant turns is relevant to addressing the user turns before it?",
+            "criteria": [
+              "None of it",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.5
+            },
+            "q_1": {
+              "probability": 0.75
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 2.0,
+              "probabilities": {
+                "0": 0.1,
+                "1": 0.2,
+                "2": 0.6,
+                "3": 0.1
+              },
+              "confidence": 0.5
+            }
+          }
+        },
+        "cost": {
+          "value": 0.000168,
+          "input_tokens": 4002,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "turns": [
+          {
+            "role": "user",
+            "content": "Where is order 42?"
+          },
+          {
+            "role": "assistant",
+            "content": "It shipped on 1 October from Zürich.",
+            "retrieval_context": [
+              "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+              "Our café is open late."
+            ]
+          },
+          {
+            "role": "user",
+            "content": "How long does a refund take?"
+          },
+          {
+            "role": "assistant",
+            "content": "Refunds take 2 business days.",
+            "retrieval_context": [
+              "Refunds take 5 business days."
+            ]
+          }
+        ],
+        "test_case": {
+          "expected_outcome": "Order 42 shipped on 1 October. Refunds take 5 business days."
+        }
+      },
+      "questions": {
+        "m0.q_0": {
+          "type": "noul",
+          "instructions": "Every factual claim made in an assistant turn in `turns` is supported by the `retrieval_context` of that turn or of an earlier assistant turn."
+        },
+        "m0.q_1": {
+          "type": "noul",
+          "instructions": "No assistant turn in `turns` contradicts the `retrieval_context` available to it."
+        },
+        "m0.q_2": {
+          "type": "score",
+          "instructions": "Across `turns`, how much of what the assistant states is grounded in the `retrieval_context` available to it?",
+          "criteria": [
+            "Fabricated",
+            "Mostly fabricated",
+            "Mostly grounded",
+            "Fully grounded"
+          ]
+        },
+        "m1.q_0": {
+          "type": "noul",
+          "instructions": "In every assistant turn in `turns` that has a `retrieval_context`, the documents useful for answering the preceding user message towards `expected_outcome` are listed before the documents that are not useful."
+        },
+        "m1.q_1": {
+          "type": "noul",
+          "instructions": "In every assistant turn in `turns` that has a `retrieval_context`, the first document is useful for answering the preceding user message."
+        },
+        "m1.q_2": {
+          "type": "score",
+          "instructions": "Across the assistant turns in `turns`, how well are the `retrieval_context` documents ordered, with the ones useful for answering the preceding user message first?",
+          "criteria": [
+            "Useful documents are all at the end",
+            "Useful documents are mixed with irrelevant ones",
+            "Useful documents are mostly first",
+            "Useful documents are all first"
+          ]
+        },
+        "m2.q_0": {
+          "type": "noul",
+          "instructions": "Every sentence in `expected_outcome` can be attributed to the facts in the `retrieval_context` of the assistant turns in `turns`."
+        },
+        "m2.q_1": {
+          "type": "noul",
+          "instructions": "The `retrieval_context` of the assistant turns in `turns` contains the key facts needed to reach `expected_outcome`."
+        },
+        "m2.q_2": {
+          "type": "score",
+          "instructions": "How much of `expected_outcome` can be attributed to the facts in the `retrieval_context` of the assistant turns in `turns`?",
+          "criteria": [
+            "None of it",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        },
+        "m3.q_0": {
+          "type": "noul",
+          "instructions": "Every statement in the `retrieval_context` of each assistant turn in `turns` is relevant to addressing the user turns before it."
+        },
+        "m3.q_1": {
+          "type": "noul",
+          "instructions": "Every node in the `retrieval_context` of each assistant turn in `turns` contains at least one statement relevant to addressing the user turns before it."
+        },
+        "m3.q_2": {
+          "type": "score",
+          "instructions": "Across `turns`, how much of the `retrieval_context` of the assistant turns is relevant to addressing the user turns before it?",
+          "criteria": [
+            "None of it",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "m0.q_0": {
+            "probability": 0.7
+          },
+          "m0.q_1": {
+            "probability": 0.4
+          },
+          "m1.q_0": {
+            "probability": 0.9
+          },
+          "m1.q_1": {
+            "probability": 0.85
+          },
+          "m2.q_0": {
+            "probability": 0.3
+          },
+          "m2.q_1": {
+            "probability": 0.6
+          },
+          "m3.q_0": {
+            "probability": 0.5
+          },
+          "m3.q_1": {
+            "probability": 0.75
+          }
+        },
+        "choices": {},
+        "scores": {
+          "m0.q_2": {
+            "score": 2.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.25,
+              "2": 0.6,
+              "3": 0.1
+            },
+            "confidence": 0.45
+          },
+          "m1.q_2": {
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.05,
+              "2": 0.15,
+              "3": 0.8
+            },
+            "confidence": 0.8
+          },
+          "m2.q_2": {
+            "score": 1.0,
+            "probabilities": {
+              "0": 0.1,
+              "1": 0.5,
+              "2": 0.3,
+              "3": 0.1
+            },
+            "confidence": 0.4
+          },
+          "m3.q_2": {
+            "score": 2.0,
+            "probabilities": {
+              "0": 0.1,
+              "1": 0.2,
+              "2": 0.6,
+              "3": 0.1
+            },
+            "confidence": 0.5
+          }
+        }
+      },
+      "cost": {
+        "value": 0.000168,
+        "input_tokens": 4002,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

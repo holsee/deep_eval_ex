@@ -1,0 +1,11 @@
+{
+  "template": "TurnFaithfulnessMetric.generate_truths",
+  "inputs": {
+    "multimodal": true,
+    "retrieval_context": [
+      "Refunds take 5 business days.",
+      "Returns are free."
+    ],
+    "truths_extraction_limit": 3
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "template": "TurnFaithfulnessMetric.generate_final_reason",
+  "inputs": {
+    "final_score": 0.0,
+    "success": false,
+    "reasons": [
+      "Zürich is wrong."
+    ]
+  }
+}

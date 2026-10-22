@@ -1,0 +1,10 @@
+{
+  "template": "TurnFaithfulnessMetric.generate_truths",
+  "inputs": {
+    "retrieval_context": [
+      "Refunds take 5 business days.",
+      "Order 42 shipped on 1 October from Zürich."
+    ],
+    "truths_extraction_limit": null
+  }
+}

@@ -127,6 +127,10 @@ from deepeval.metrics import (  # noqa: E402
     SummarizationMetric,
     ToolCorrectnessMetric,
     ToxicityMetric,
+    TurnContextualPrecisionMetric,
+    TurnContextualRecallMetric,
+    TurnContextualRelevancyMetric,
+    TurnFaithfulnessMetric,
     TurnRelevancyMetric,
 )
 from deepeval.metrics.jev_eval import Choice, Noul, Score  # noqa: E402
@@ -170,6 +174,10 @@ METRICS = {
     "conversation_completeness": ConversationCompletenessMetric,
     "knowledge_retention": KnowledgeRetentionMetric,
     "role_adherence": RoleAdherenceMetric,
+    "turn_faithfulness": TurnFaithfulnessMetric,
+    "turn_contextual_precision": TurnContextualPrecisionMetric,
+    "turn_contextual_recall": TurnContextualRecallMetric,
+    "turn_contextual_relevancy": TurnContextualRelevancyMetric,
 }
 
 # Metrics that follow their eval mode but never build a System One model, so
@@ -723,6 +731,89 @@ ROLE_VERDICTS = {
     "verdicts": [{"verdicts": [
         {"index": 1, "reason": "A cheerful agent would not forget the destination."},
     ]}],
+}
+
+# A RAG conversation for the Turn RAG metrics: two unit interactions, so two
+# sliding windows (the first interaction, then both), each assistant turn
+# with its retrieval context, and the case's expected outcome. The first
+# node holds two sentences, so TurnContextualRelevancy asks statement_0 and
+# statement_1 about it under hybrid.
+RAG_CHAT = {
+    "expected_outcome": "Order 42 shipped on 1 October. Refunds take 5 business days.",
+    "turns": [
+        {"role": "user", "content": "Where is order 42?"},
+        {"role": "assistant", "content": "It shipped on 1 October from Zürich.",
+         "retrieval_context": ["Order 42 shipped on 1 October. Rome is the capital of Italy.",
+                               "Our café is open late."]},
+        {"role": "user", "content": "How long does a refund take?"},
+        {"role": "assistant", "content": "Refunds take 2 business days.",
+         "retrieval_context": ["Refunds take 5 business days."]},
+    ],
+}
+RAG_CHAT_CLAIMS = ["Order 42 shipped on 1 October.", "Order 42 shipped from Zürich."]
+RAG_CHAT_TRUTHS = ["Order 42 shipped on 1 October.", "Rome is the capital of Italy.",
+                   "Our café is open late."]
+
+TURN_FAITHFULNESS_LLM = {
+    "truths": [{"truths": RAG_CHAT_TRUTHS},
+               {"truths": RAG_CHAT_TRUTHS + ["Refunds take 5 business days."]}],
+    "claims": [{"claims": RAG_CHAT_CLAIMS},
+               {"claims": RAG_CHAT_CLAIMS + ["Refunds take 2 business days."]}],
+    "reason": [
+        {"reason": "No contradictions were found."},
+        {"reason": "Refunds take 5 business days, not 2."},
+        {"reason": "The score is 0.83 because the refund time contradicts the context."},
+    ],
+}
+TURN_FAITHFULNESS_VERDICTS = {
+    "verdicts": [
+        {"verdicts": [{"verdict": "yes"},
+                      {"verdict": "borderline", "reason": "Zürich is not mentioned."}]},
+        {"verdicts": [{"verdict": "yes"},
+                      {"verdict": "borderline", "reason": "Zürich is not mentioned."},
+                      {"verdict": "no", "reason": "Refunds take 5 business days."}]},
+    ],
+}
+
+# The reasons of each window, then the final reason.
+TURN_RAG_REASONS = {
+    "reason": [
+        {"reason": "The score is 1.00 because the first window is fine."},
+        {"reason": "The score is 0.83 because of the second window."},
+        {"reason": "The score is 0.9 because the windows mostly pass."},
+    ],
+}
+TURN_PRECISION_VERDICTS = {
+    "verdicts": [
+        {"verdicts": [{"verdict": "yes", "reason": "It gives the shipping date."},
+                      {"verdict": "no", "reason": "The café is irrelevant."}]},
+        {"verdicts": [{"verdict": "yes", "reason": "It gives the shipping date."},
+                      {"verdict": "no", "reason": "The café is irrelevant."},
+                      {"verdict": "yes", "reason": "It gives the refund time."}]},
+    ],
+}
+TURN_RECALL_VERDICTS = {
+    "verdicts": [
+        {"verdicts": [{"verdict": "yes", "reason": "The 1st node gives the date."},
+                      {"verdict": "no", "reason": "No node mentions refunds."}]},
+        {"verdicts": [{"verdict": "yes", "reason": "The 1st node gives the date."},
+                      {"verdict": "yes", "reason": "The 3rd node gives the refund time."}]},
+    ],
+}
+TURN_RELEVANCY_NODE_VERDICTS = {
+    "verdicts": [
+        {"verdicts": [{"statement": "Order 42 shipped on 1 October.", "verdict": "yes"},
+                      {"statement": "Rome is the capital of Italy.", "verdict": "no",
+                       "reason": "It is about Italy."}]},
+        {"verdicts": [{"statement": "Our café is open late.", "verdict": "no",
+                       "reason": "It is about the café."}]},
+        {"verdicts": [{"statement": "Order 42 shipped on 1 October.", "verdict": "yes"},
+                      {"statement": "Rome is the capital of Italy.", "verdict": "no",
+                       "reason": "It is about Italy."}]},
+        {"verdicts": [{"statement": "Our café is open late.", "verdict": "no",
+                       "reason": "It is about the café."}]},
+        {"verdicts": [{"statement": "Refunds take 5 business days.", "verdict": "yes"}]},
+    ],
 }
 
 FAITHFULNESS_LLM = {
@@ -1353,6 +1444,123 @@ SCENARIOS = {
         "judge_model": JUDGE,
         "responses": {"role_adherence": {**ROLE_VERDICTS, **ROLE_REASON}},
     },
+    # TurnFaithfulness
+    "turn_faithfulness_system_one": {
+        "description": "TurnFaithfulness decided by Jev in one request about the turns and their "
+                       "retrieval context",
+        "metrics": [metric("turn_faithfulness", "system_one")],
+        "test_case": RAG_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.62, 0.3, 2, {"0": 0.05, "1": 0.25, "2": 0.55, "3": 0.15}, 0.4)},
+    },
+    "turn_faithfulness_system_one_strict": {
+        "description": "TurnFaithfulness decided by Jev in strict mode",
+        "metrics": [metric("turn_faithfulness", "system_one", strict_mode=True)],
+        "test_case": RAG_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.62, 0.3, 2, {"0": 0.05, "1": 0.25, "2": 0.55, "3": 0.15}, 0.4)},
+    },
+    "turn_faithfulness_hybrid": {
+        "description": "TurnFaithfulness in hybrid mode: the LLM extracts each window's truths and "
+                       "claims, Jev judges the claims, one request per window",
+        "metrics": [metric("turn_faithfulness", "hybrid")],
+        "test_case": RAG_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"claim_0": noul(0.9), "claim_1": noul(0.5),
+                                             "claim_2": noul(0.1)}}},
+        "judge_model": JUDGE,
+        "responses": {"turn_faithfulness": TURN_FAITHFULNESS_LLM},
+    },
+    "turn_faithfulness_hybrid_fallback": {
+        "description": "TurnFaithfulness in hybrid mode with Jev down: the LLM judges every window's claims",
+        "metrics": [metric("turn_faithfulness", "hybrid")],
+        "test_case": RAG_CHAT,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"turn_faithfulness": {**TURN_FAITHFULNESS_LLM, **TURN_FAITHFULNESS_VERDICTS}},
+    },
+    # TurnContextualPrecision
+    "turn_contextual_precision_system_one": {
+        "description": "TurnContextualPrecision decided by Jev in one request about the turns and "
+                       "the expected outcome",
+        "metrics": [metric("turn_contextual_precision", "system_one")],
+        "test_case": RAG_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.81, 0.62, 3, FOUR_LEVELS_HIGH, 0.6)},
+    },
+    "turn_contextual_precision_hybrid": {
+        "description": "TurnContextualPrecision in hybrid mode: Jev judges each window's nodes "
+                       "(node_<i>), one request per window",
+        "metrics": [metric("turn_contextual_precision", "hybrid")],
+        "test_case": RAG_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"node_0": noul(0.8), "node_1": noul(0.2),
+                                             "node_2": noul(0.7)}}},
+        "judge_model": JUDGE,
+        "responses": {"turn_contextual_precision": TURN_RAG_REASONS},
+    },
+    "turn_contextual_precision_hybrid_fallback": {
+        "description": "TurnContextualPrecision in hybrid mode with Jev down: the LLM judges every "
+                       "window's nodes",
+        "metrics": [metric("turn_contextual_precision", "hybrid")],
+        "test_case": RAG_CHAT,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"turn_contextual_precision": {**TURN_RAG_REASONS, **TURN_PRECISION_VERDICTS}},
+    },
+    # TurnContextualRecall
+    "turn_contextual_recall_system_one": {
+        "description": "TurnContextualRecall decided by Jev in one request about the turns and the "
+                       "expected outcome",
+        "metrics": [metric("turn_contextual_recall", "system_one")],
+        "test_case": RAG_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.35, 0.2, 1, {"0": 0.1, "1": 0.55, "2": 0.25, "3": 0.1}, 0.3)},
+    },
+    "turn_contextual_recall_hybrid": {
+        "description": "TurnContextualRecall in hybrid mode: Jev judges each sentence of the expected "
+                       "outcome (sentence_<i>) against each window's retrieval context",
+        "metrics": [metric("turn_contextual_recall", "hybrid")],
+        "test_case": RAG_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"sentence_0": noul(0.9), "sentence_1": noul(0.3)}}},
+        "judge_model": JUDGE,
+        "responses": {"turn_contextual_recall": TURN_RAG_REASONS},
+    },
+    "turn_contextual_recall_hybrid_fallback": {
+        "description": "TurnContextualRecall in hybrid mode with Jev down: the LLM judges every window",
+        "metrics": [metric("turn_contextual_recall", "hybrid")],
+        "test_case": RAG_CHAT,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"turn_contextual_recall": {**TURN_RAG_REASONS, **TURN_RECALL_VERDICTS}},
+    },
+    # TurnContextualRelevancy
+    "turn_contextual_relevancy_system_one": {
+        "description": "TurnContextualRelevancy decided by Jev in one request about the turns",
+        "metrics": [metric("turn_contextual_relevancy", "system_one")],
+        "test_case": RAG_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.55, 0.7, 2, {"0": 0.05, "1": 0.3, "2": 0.5, "3": 0.15}, 0.42)},
+    },
+    "turn_contextual_relevancy_hybrid": {
+        "description": "TurnContextualRelevancy in hybrid mode: Jev judges the sentences of each "
+                       "node (statement_<i>), one request per node of each window",
+        "metrics": [metric("turn_contextual_relevancy", "hybrid")],
+        "test_case": RAG_CHAT,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"statement_0": noul(0.8), "statement_1": noul(0.2)}}},
+        "judge_model": JUDGE,
+        "responses": {"turn_contextual_relevancy": TURN_RAG_REASONS},
+    },
+    "turn_contextual_relevancy_hybrid_fallback": {
+        "description": "TurnContextualRelevancy in hybrid mode with Jev down: the LLM judges every node",
+        "metrics": [metric("turn_contextual_relevancy", "hybrid")],
+        "test_case": RAG_CHAT,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"turn_contextual_relevancy": {**TURN_RAG_REASONS, **TURN_RELEVANCY_NODE_VERDICTS}},
+    },
     "jev_eval": {
         "description": "JevEval with a weighted Noul, a Score and a Choice whose N/A option stays unlikely",
         "metrics": [{"kind": "jev_eval", "params": {
@@ -1550,6 +1758,27 @@ SCENARIOS = {
                                      "m1.q_0": noul(0.88), "m1.q_1": noul(0.9)},
                            "scores": {"m0.q_2": score(1, {"0": 0.1, "1": 0.5, "2": 0.3, "3": 0.1}, 0.4),
                                       "m1.q_2": score(3, FOUR_LEVELS_HIGH, 0.8)},
+                       }},
+    },
+    "batch_system_one_turn_rag": {
+        "description": "The four Turn RAG metrics batched into one request about the turns, their "
+                       "retrieval context and the expected outcome by evaluate()",
+        "batched": True,
+        "metrics": [metric("turn_faithfulness", "system_one"),
+                    metric("turn_contextual_precision", "system_one"),
+                    metric("turn_contextual_recall", "system_one"),
+                    metric("turn_contextual_relevancy", "system_one")],
+        "test_case": RAG_CHAT,
+        "system_one": {"model": JEV, "cost": {"value": 0.000168, "input_tokens": 4002, "output_tokens": 0},
+                       "answers": {
+                           "nouls": {"m0.q_0": noul(0.7), "m0.q_1": noul(0.4),
+                                     "m1.q_0": noul(0.9), "m1.q_1": noul(0.85),
+                                     "m2.q_0": noul(0.3), "m2.q_1": noul(0.6),
+                                     "m3.q_0": noul(0.5), "m3.q_1": noul(0.75)},
+                           "scores": {"m0.q_2": score(2, {"0": 0.05, "1": 0.25, "2": 0.6, "3": 0.1}, 0.45),
+                                      "m1.q_2": score(3, FOUR_LEVELS_HIGH, 0.8),
+                                      "m2.q_2": score(1, {"0": 0.1, "1": 0.5, "2": 0.3, "3": 0.1}, 0.4),
+                                      "m3.q_2": score(2, {"0": 0.1, "1": 0.2, "2": 0.6, "3": 0.1}, 0.5)},
                        }},
     },
     "batch_system_one_down": {

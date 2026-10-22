@@ -1,0 +1,12 @@
+{
+  "template": "TurnContextualPrecisionMetric.generate_verdicts",
+  "inputs": {
+    "multimodal": true,
+    "input": "\nWhat is in the picture? ",
+    "expected_outcome": "A red bicycle.",
+    "retrieval_context": [
+      "The picture shows a red bicycle.",
+      "Bicycles have two wheels."
+    ]
+  }
+}

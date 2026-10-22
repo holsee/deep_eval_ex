@@ -1,0 +1,12 @@
+{
+  "template": "TurnFaithfulnessMetric.generate_verdicts",
+  "inputs": {
+    "multimodal": true,
+    "claims": [
+      "The bicycle is red."
+    ],
+    "truths": [
+      "The picture shows a red bicycle."
+    ]
+  }
+}

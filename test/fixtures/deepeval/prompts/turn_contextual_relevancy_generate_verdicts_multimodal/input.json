@@ -1,0 +1,8 @@
+{
+  "template": "TurnContextualRelevancyMetric.generate_verdicts",
+  "inputs": {
+    "multimodal": true,
+    "input": "\nWhat is in the picture? ",
+    "context": "The picture shows a red bicycle."
+  }
+}

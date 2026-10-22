@@ -1,0 +1,53 @@
+{
+  "description": "TurnContextualPrecision in strict mode: a window ranked below 1 scores the integer 0, its reason prompt 0.00",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "turn_contextual_precision",
+    "params": {
+      "strict_mode": true
+    }
+  },
+  "test_case": {
+    "expected_outcome": "The assistant says order 42 shipped on 1 October and refunds take 5 business days.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Where is order 42?"
+      },
+      {
+        "role": "assistant",
+        "content": "It shipped on 1 October.",
+        "retrieval_context": [
+          "Rome is the capital of Italy.",
+          "Order 42 shipped on 1 October."
+        ]
+      }
+    ]
+  },
+  "responses": {
+    "turn_contextual_precision": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "no",
+              "reason": "Rome is irrelevant."
+            },
+            {
+              "verdict": "yes",
+              "reason": "It gives the shipping date."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.00 because Rome is ranked first."
+        },
+        {
+          "reason": "The score is 0.0 because the only window ranks Rome first."
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "template": "TurnContextualRecallMetric.generate_verdicts",
+  "inputs": {
+    "expected_outcome": "Order 42 ships today. A refund takes 5 days.",
+    "retrieval_context": [
+      "Order 42 ships today from Zürich.",
+      "Returns are free."
+    ]
+  }
+}

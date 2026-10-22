@@ -1,0 +1,10 @@
+{
+  "template": "TurnContextualRecallMetric.generate_verdicts",
+  "inputs": {
+    "multimodal": true,
+    "expected_outcome": "A red bicycle.",
+    "retrieval_context": [
+      "The picture shows a red bicycle."
+    ]
+  }
+}

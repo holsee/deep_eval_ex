@@ -1,0 +1,10 @@
+{
+  "template": "TurnContextualRecallMetric.generate_final_reason",
+  "inputs": {
+    "final_score": 1.0,
+    "success": true,
+    "reasons": [
+      "Every sentence is attributed to the café's notes."
+    ]
+  }
+}

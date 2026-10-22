@@ -1,0 +1,74 @@
+{
+  "description": "TurnContextualRecall in hybrid mode: Jev judges each sentence of the expected outcome (sentence_<i>) against each window's retrieval context",
+  "metrics": [
+    {
+      "kind": "turn_contextual_recall",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "expected_outcome": "Order 42 shipped on 1 October. Refunds take 5 business days.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Where is order 42?"
+      },
+      {
+        "role": "assistant",
+        "content": "It shipped on 1 October from Zürich.",
+        "retrieval_context": [
+          "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+          "Our café is open late."
+        ]
+      },
+      {
+        "role": "user",
+        "content": "How long does a refund take?"
+      },
+      {
+        "role": "assistant",
+        "content": "Refunds take 2 business days.",
+        "retrieval_context": [
+          "Refunds take 5 business days."
+        ]
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "sentence_0": {
+          "probability": 0.9
+        },
+        "sentence_1": {
+          "probability": 0.3
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "turn_contextual_recall": {
+      "reason": [
+        {
+          "reason": "The score is 1.00 because the first window is fine."
+        },
+        {
+          "reason": "The score is 0.83 because of the second window."
+        },
+        {
+          "reason": "The score is 0.9 because the windows mostly pass."
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,144 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "user_message": "\nWhere is order 42? ",
+          "assistant_output": "Order 42 shipped on 1 October. Refunds take 5 business days.",
+          "nodes": [
+            "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+            "Our café is open late."
+          ]
+        },
+        "questions": {
+          "node_0": {
+            "type": "noul",
+            "instructions": {
+              "node": "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+              "question": "Was the retrieval context `node` remotely useful in arriving at `assistant_output` for `user_message`?"
+            }
+          },
+          "node_1": {
+            "type": "noul",
+            "instructions": {
+              "node": "Our café is open late.",
+              "question": "Was the retrieval context `node` remotely useful in arriving at `assistant_output` for `user_message`?"
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      },
+      {
+        "state": {
+          "user_message": "\nWhere is order 42? \nHow long does a refund take? ",
+          "assistant_output": "Order 42 shipped on 1 October. Refunds take 5 business days.",
+          "nodes": [
+            "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+            "Our café is open late.",
+            "Refunds take 5 business days."
+          ]
+        },
+        "questions": {
+          "node_0": {
+            "type": "noul",
+            "instructions": {
+              "node": "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+              "question": "Was the retrieval context `node` remotely useful in arriving at `assistant_output` for `user_message`?"
+            }
+          },
+          "node_1": {
+            "type": "noul",
+            "instructions": {
+              "node": "Our café is open late.",
+              "question": "Was the retrieval context `node` remotely useful in arriving at `assistant_output` for `user_message`?"
+            }
+          },
+          "node_2": {
+            "type": "noul",
+            "instructions": {
+              "node": "Refunds take 5 business days.",
+              "question": "Was the retrieval context `node` remotely useful in arriving at `assistant_output` for `user_message`?"
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "user_message": "\nWhere is order 42? ",
+        "assistant_output": "Order 42 shipped on 1 October. Refunds take 5 business days.",
+        "nodes": [
+          "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+          "Our café is open late."
+        ]
+      },
+      "questions": {
+        "node_0": {
+          "type": "noul",
+          "instructions": {
+            "node": "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+            "question": "Was the retrieval context `node` remotely useful in arriving at `assistant_output` for `user_message`?"
+          }
+        },
+        "node_1": {
+          "type": "noul",
+          "instructions": {
+            "node": "Our café is open late.",
+            "question": "Was the retrieval context `node` remotely useful in arriving at `assistant_output` for `user_message`?"
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    },
+    {
+      "state": {
+        "user_message": "\nWhere is order 42? \nHow long does a refund take? ",
+        "assistant_output": "Order 42 shipped on 1 October. Refunds take 5 business days.",
+        "nodes": [
+          "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+          "Our café is open late.",
+          "Refunds take 5 business days."
+        ]
+      },
+      "questions": {
+        "node_0": {
+          "type": "noul",
+          "instructions": {
+            "node": "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+            "question": "Was the retrieval context `node` remotely useful in arriving at `assistant_output` for `user_message`?"
+          }
+        },
+        "node_1": {
+          "type": "noul",
+          "instructions": {
+            "node": "Our café is open late.",
+            "question": "Was the retrieval context `node` remotely useful in arriving at `assistant_output` for `user_message`?"
+          }
+        },
+        "node_2": {
+          "type": "noul",
+          "instructions": {
+            "node": "Refunds take 5 business days.",
+            "question": "Was the retrieval context `node` remotely useful in arriving at `assistant_output` for `user_message`?"
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

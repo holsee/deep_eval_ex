@@ -1,0 +1,216 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "reference_context": [
+            "Order 42 shipped on 1 October.",
+            "Rome is the capital of Italy.",
+            "Our café is open late."
+          ],
+          "claims": [
+            "Order 42 shipped on 1 October.",
+            "Order 42 shipped from Zürich."
+          ]
+        },
+        "questions": {
+          "claim_0": {
+            "type": "noul",
+            "instructions": {
+              "claim": "Order 42 shipped on 1 October.",
+              "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+            }
+          },
+          "claim_1": {
+            "type": "noul",
+            "instructions": {
+              "claim": "Order 42 shipped from Zürich.",
+              "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "claim_0": {
+              "probability": 0.9
+            },
+            "claim_1": {
+              "probability": 0.5
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "reference_context": [
+            "Order 42 shipped on 1 October.",
+            "Rome is the capital of Italy.",
+            "Our café is open late.",
+            "Refunds take 5 business days."
+          ],
+          "claims": [
+            "Order 42 shipped on 1 October.",
+            "Order 42 shipped from Zürich.",
+            "Refunds take 2 business days."
+          ]
+        },
+        "questions": {
+          "claim_0": {
+            "type": "noul",
+            "instructions": {
+              "claim": "Order 42 shipped on 1 October.",
+              "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+            }
+          },
+          "claim_1": {
+            "type": "noul",
+            "instructions": {
+              "claim": "Order 42 shipped from Zürich.",
+              "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+            }
+          },
+          "claim_2": {
+            "type": "noul",
+            "instructions": {
+              "claim": "Refunds take 2 business days.",
+              "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "claim_0": {
+              "probability": 0.9
+            },
+            "claim_1": {
+              "probability": 0.5
+            },
+            "claim_2": {
+              "probability": 0.1
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "reference_context": [
+          "Order 42 shipped on 1 October.",
+          "Rome is the capital of Italy.",
+          "Our café is open late."
+        ],
+        "claims": [
+          "Order 42 shipped on 1 October.",
+          "Order 42 shipped from Zürich."
+        ]
+      },
+      "questions": {
+        "claim_0": {
+          "type": "noul",
+          "instructions": {
+            "claim": "Order 42 shipped on 1 October.",
+            "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+          }
+        },
+        "claim_1": {
+          "type": "noul",
+          "instructions": {
+            "claim": "Order 42 shipped from Zürich.",
+            "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "claim_0": {
+            "probability": 0.9
+          },
+          "claim_1": {
+            "probability": 0.5
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "reference_context": [
+          "Order 42 shipped on 1 October.",
+          "Rome is the capital of Italy.",
+          "Our café is open late.",
+          "Refunds take 5 business days."
+        ],
+        "claims": [
+          "Order 42 shipped on 1 October.",
+          "Order 42 shipped from Zürich.",
+          "Refunds take 2 business days."
+        ]
+      },
+      "questions": {
+        "claim_0": {
+          "type": "noul",
+          "instructions": {
+            "claim": "Order 42 shipped on 1 October.",
+            "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+          }
+        },
+        "claim_1": {
+          "type": "noul",
+          "instructions": {
+            "claim": "Order 42 shipped from Zürich.",
+            "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+          }
+        },
+        "claim_2": {
+          "type": "noul",
+          "instructions": {
+            "claim": "Refunds take 2 business days.",
+            "question": "Is `claim` supported by at least one truth in `reference_context`? Answer no if it contradicts them."
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "claim_0": {
+            "probability": 0.9
+          },
+          "claim_1": {
+            "probability": 0.5
+          },
+          "claim_2": {
+            "probability": 0.1
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

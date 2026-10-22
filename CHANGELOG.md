@@ -1631,6 +1631,57 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   scenarios (`system_one`, `hybrid` and `hybrid` fallback for each, and a
   batched pair) check their prompts, decisions, scores, verbose logs and
   exported `conversationalTestCases` byte for byte against deepeval's.
+- **Turn RAG metrics**, deepeval 4.3.1's `TurnFaithfulnessMetric`,
+  `TurnContextualPrecisionMetric`, `TurnContextualRecallMetric` and
+  `TurnContextualRelevancyMetric`: `DeepEvalEx.Metrics.TurnFaithfulness`,
+  `TurnContextualPrecision`, `TurnContextualRecall` (both requiring the
+  conversation's `expected_outcome`) and `TurnContextualRelevancy` judge
+  each sliding window of a `DeepEvalEx.ConversationalTestCase` (at most
+  `:window_size` unit interactions, default 10) as their single-turn
+  counterparts judge a test case: the window's user turns are the input,
+  its assistant turns the output and their `retrieval_context` the context.
+  Each window's score (a float; `1.0` without claims or retrieval context)
+  and reason are kept in the result's `metadata.windows`; the score is
+  their mean, `1` without a window, and the judge explains it from every
+  window's reason (`generate_final_reason`). `:strict_mode` clamps each
+  window's score, never the mean. TurnFaithfulness also takes
+  `:truths_extraction_limit` and `:penalize_ambiguous_claims`. Results are
+  named `"Turn Faithfulness"`, `"Turn Contextual Precision"`,
+  `"Turn Contextual Recall"` and `"Turn Contextual Relevancy"`.
+  `DeepEvalEx.Metrics.Utils.TurnWindows` is the loop they share.
+- Their prompts are `DeepEvalEx.Prompts.TurnFaithfulness`,
+  `TurnContextualPrecision`, `TurnContextualRecall` and
+  `TurnContextualRelevancy`, overridable with `:evaluation_template`; a
+  multimodal conversation adds deepeval's multimodal wording and the turn
+  metrics' multimodal input rules (`DeepEvalEx.Prompts.Fragments`). A
+  window's reason prompt prints its score to two decimals, the final one
+  prints the score unformatted.
+- **System One for the four** (ADR-0009), as deepeval's:
+  - `:hybrid` asks a `DeepEvalEx.SystemOne.Spec.Verdicts` per window:
+    TurnFaithfulness one Noul per claim about the window's truths
+    (`reference_context`, yes/no/borderline); TurnContextualPrecision one
+    per node about the window's `user_message` and the expected outcome as
+    `assistant_output`; TurnContextualRecall one per sentence of the
+    expected outcome about the window's `retrieval_context`;
+    TurnContextualRelevancy one request per node, one Noul per sentence
+    about the `user_message`. A failed request falls back to the LLM for
+    that window (node), noted in `system_one_fallback_reason`.
+  - `:system_one` answers the whole metric from one request about the turns'
+    `role`, `content` and `retrieval_context` (and the `expected_outcome`
+    for precision and recall); the four batch with the test case's other
+    `system_one` conversational metrics.
+  - A multimodal conversation has no System One form (TurnFaithfulness and
+    TurnContextualPrecision still ask System One per window under
+    `:hybrid`, as deepeval does).
+- A `RetrievedContextData` in a turn's `retrieval_context` is joined as its
+  `"source: context"` text by TurnFaithfulness and judged as Python's
+  `str()` of it by TurnContextualRelevancy, where deepeval 4.3.1 raises.
+- New prompt goldens for every template of the four metrics (their System
+  One templates and multimodal variants included), sixteen scripted-judge
+  scenarios and fourteen System One scenarios (`system_one`, `hybrid` and
+  `hybrid` fallback for each, a strict TurnFaithfulness, and the four
+  batched) check their prompts, decisions, scores, verbose logs and
+  exported `conversationalTestCases` byte for byte against deepeval's.
 
 ### Changed
 

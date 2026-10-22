@@ -1,0 +1,162 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "role": "user",
+              "content": "Where is order 42?"
+            },
+            {
+              "role": "assistant",
+              "content": "It shipped on 1 October from Zürich.",
+              "retrieval_context": [
+                "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+                "Our café is open late."
+              ]
+            },
+            {
+              "role": "user",
+              "content": "How long does a refund take?"
+            },
+            {
+              "role": "assistant",
+              "content": "Refunds take 2 business days.",
+              "retrieval_context": [
+                "Refunds take 5 business days."
+              ]
+            }
+          ]
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every statement in the `retrieval_context` of each assistant turn in `turns` is relevant to addressing the user turns before it."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "Every node in the `retrieval_context` of each assistant turn in `turns` contains at least one statement relevant to addressing the user turns before it."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "Across `turns`, how much of the `retrieval_context` of the assistant turns is relevant to addressing the user turns before it?",
+            "criteria": [
+              "None of it",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.55
+            },
+            "q_1": {
+              "probability": 0.7
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 2.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.3,
+                "2": 0.5,
+                "3": 0.15
+              },
+              "confidence": 0.42
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "turns": [
+          {
+            "role": "user",
+            "content": "Where is order 42?"
+          },
+          {
+            "role": "assistant",
+            "content": "It shipped on 1 October from Zürich.",
+            "retrieval_context": [
+              "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+              "Our café is open late."
+            ]
+          },
+          {
+            "role": "user",
+            "content": "How long does a refund take?"
+          },
+          {
+            "role": "assistant",
+            "content": "Refunds take 2 business days.",
+            "retrieval_context": [
+              "Refunds take 5 business days."
+            ]
+          }
+        ]
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "Every statement in the `retrieval_context` of each assistant turn in `turns` is relevant to addressing the user turns before it."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "Every node in the `retrieval_context` of each assistant turn in `turns` contains at least one statement relevant to addressing the user turns before it."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "Across `turns`, how much of the `retrieval_context` of the assistant turns is relevant to addressing the user turns before it?",
+          "criteria": [
+            "None of it",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.55
+          },
+          "q_1": {
+            "probability": 0.7
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 2.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.3,
+              "2": 0.5,
+              "3": 0.15
+            },
+            "confidence": 0.42
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

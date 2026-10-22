@@ -78,6 +78,10 @@ config :deep_eval_ex,
 | **ContextualPrecision** | RAG retrieval ranking quality |
 | **ContextualRecall** | RAG coverage of ground truth |
 | **ContextualRelevancy** | RAG relevance of the retrieved context to the input |
+| **TurnFaithfulness** | Multi-turn RAG: each window's claims supported by its turns' retrieval context |
+| **TurnContextualPrecision** | Multi-turn RAG retrieval ranking quality towards the `expected_outcome` |
+| **TurnContextualRecall** | Multi-turn RAG coverage of the `expected_outcome` |
+| **TurnContextualRelevancy** | Multi-turn RAG relevance of each window's retrieved context to the user |
 | **Bias** | Gender, political, racial/ethnic and geographical bias in the output |
 | **Toxicity** | Personal attacks, mockery, hate and threats in the output |
 | **PIILeakage** | Personally identifiable information and privacy-sensitive data in the output |

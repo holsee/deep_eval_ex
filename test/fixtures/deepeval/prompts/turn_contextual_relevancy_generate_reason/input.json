@@ -1,0 +1,14 @@
+{
+  "template": "TurnContextualRelevancyMetric.generate_reason",
+  "inputs": {
+    "input": "\nWhere's my café au lait set? ",
+    "score": 0.5,
+    "irrelevant_statements": [
+      "Rome is the capital of Italy.: It is about Italy.",
+      "Returns are free.: None"
+    ],
+    "relevant_statements": [
+      "Order 42 ships today."
+    ]
+  }
+}

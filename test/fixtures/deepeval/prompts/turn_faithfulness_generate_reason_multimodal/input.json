@@ -1,0 +1,8 @@
+{
+  "template": "TurnFaithfulnessMetric.generate_reason",
+  "inputs": {
+    "multimodal": true,
+    "score": 1,
+    "contradictions": []
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "description": "TurnFaithfulness: two windows of one and two unit interactions, every claim supported or borderline",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "turn_faithfulness",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order 42 is late."
+      },
+      {
+        "role": "assistant",
+        "content": "Order 42 shipped on 1 October.",
+        "retrieval_context": [
+          "Order 42 shipped on 1 October.",
+          "Refunds take 5 business days."
+        ]
+      },
+      {
+        "role": "user",
+        "content": "How long does a refund take?"
+      },
+      {
+        "role": "assistant",
+        "content": "Refunds take 5 business days.",
+        "retrieval_context": [
+          "Refunds take 5 business days at the café."
+        ]
+      }
+    ]
+  },
+  "responses": {
+    "turn_faithfulness": {
+      "truths": [
+        {
+          "truths": [
+            "Order 42 shipped on 1 October.",
+            "Refunds take 5 business days."
+          ]
+        },
+        {
+          "truths": [
+            "Order 42 shipped on 1 October.",
+            "Refunds take 5 business days.",
+            "The café handles refunds."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": [
+            "Order 42 shipped on 1 October."
+          ]
+        },
+        {
+          "claims": [
+            "Order 42 shipped on 1 October.",
+            "Refunds take 5 business days.",
+            "Refunds are free."
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            }
+          ]
+        },
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "borderline",
+              "reason": "The truths do not say whether refunds are free."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "No contradictions were found."
+        },
+        {
+          "reason": "No contradictions were found."
+        },
+        {
+          "reason": "The score is 1.0 because every claim agrees with the retrieved context."
+        }
+      ]
+    }
+  }
+}

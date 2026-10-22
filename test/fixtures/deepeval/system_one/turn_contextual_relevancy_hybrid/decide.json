@@ -1,0 +1,362 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "user_message": "\nWhere is order 42? ",
+          "statements": [
+            "Order 42 shipped on 1 October.",
+            "Rome is the capital of Italy."
+          ]
+        },
+        "questions": {
+          "statement_0": {
+            "type": "noul",
+            "instructions": {
+              "statement": "Order 42 shipped on 1 October.",
+              "question": "Is `statement` relevant to addressing `user_message`?"
+            }
+          },
+          "statement_1": {
+            "type": "noul",
+            "instructions": {
+              "statement": "Rome is the capital of Italy.",
+              "question": "Is `statement` relevant to addressing `user_message`?"
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "statement_0": {
+              "probability": 0.8
+            },
+            "statement_1": {
+              "probability": 0.2
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "user_message": "\nWhere is order 42? ",
+          "statements": [
+            "Our café is open late."
+          ]
+        },
+        "questions": {
+          "statement_0": {
+            "type": "noul",
+            "instructions": {
+              "statement": "Our café is open late.",
+              "question": "Is `statement` relevant to addressing `user_message`?"
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "statement_0": {
+              "probability": 0.8
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "user_message": "\nWhere is order 42? \nHow long does a refund take? ",
+          "statements": [
+            "Order 42 shipped on 1 October.",
+            "Rome is the capital of Italy."
+          ]
+        },
+        "questions": {
+          "statement_0": {
+            "type": "noul",
+            "instructions": {
+              "statement": "Order 42 shipped on 1 October.",
+              "question": "Is `statement` relevant to addressing `user_message`?"
+            }
+          },
+          "statement_1": {
+            "type": "noul",
+            "instructions": {
+              "statement": "Rome is the capital of Italy.",
+              "question": "Is `statement` relevant to addressing `user_message`?"
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "statement_0": {
+              "probability": 0.8
+            },
+            "statement_1": {
+              "probability": 0.2
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "user_message": "\nWhere is order 42? \nHow long does a refund take? ",
+          "statements": [
+            "Our café is open late."
+          ]
+        },
+        "questions": {
+          "statement_0": {
+            "type": "noul",
+            "instructions": {
+              "statement": "Our café is open late.",
+              "question": "Is `statement` relevant to addressing `user_message`?"
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "statement_0": {
+              "probability": 0.8
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "user_message": "\nWhere is order 42? \nHow long does a refund take? ",
+          "statements": [
+            "Refunds take 5 business days."
+          ]
+        },
+        "questions": {
+          "statement_0": {
+            "type": "noul",
+            "instructions": {
+              "statement": "Refunds take 5 business days.",
+              "question": "Is `statement` relevant to addressing `user_message`?"
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "statement_0": {
+              "probability": 0.8
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "user_message": "\nWhere is order 42? ",
+        "statements": [
+          "Order 42 shipped on 1 October.",
+          "Rome is the capital of Italy."
+        ]
+      },
+      "questions": {
+        "statement_0": {
+          "type": "noul",
+          "instructions": {
+            "statement": "Order 42 shipped on 1 October.",
+            "question": "Is `statement` relevant to addressing `user_message`?"
+          }
+        },
+        "statement_1": {
+          "type": "noul",
+          "instructions": {
+            "statement": "Rome is the capital of Italy.",
+            "question": "Is `statement` relevant to addressing `user_message`?"
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "statement_0": {
+            "probability": 0.8
+          },
+          "statement_1": {
+            "probability": 0.2
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "user_message": "\nWhere is order 42? ",
+        "statements": [
+          "Our café is open late."
+        ]
+      },
+      "questions": {
+        "statement_0": {
+          "type": "noul",
+          "instructions": {
+            "statement": "Our café is open late.",
+            "question": "Is `statement` relevant to addressing `user_message`?"
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "statement_0": {
+            "probability": 0.8
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "user_message": "\nWhere is order 42? \nHow long does a refund take? ",
+        "statements": [
+          "Order 42 shipped on 1 October.",
+          "Rome is the capital of Italy."
+        ]
+      },
+      "questions": {
+        "statement_0": {
+          "type": "noul",
+          "instructions": {
+            "statement": "Order 42 shipped on 1 October.",
+            "question": "Is `statement` relevant to addressing `user_message`?"
+          }
+        },
+        "statement_1": {
+          "type": "noul",
+          "instructions": {
+            "statement": "Rome is the capital of Italy.",
+            "question": "Is `statement` relevant to addressing `user_message`?"
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "statement_0": {
+            "probability": 0.8
+          },
+          "statement_1": {
+            "probability": 0.2
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "user_message": "\nWhere is order 42? \nHow long does a refund take? ",
+        "statements": [
+          "Our café is open late."
+        ]
+      },
+      "questions": {
+        "statement_0": {
+          "type": "noul",
+          "instructions": {
+            "statement": "Our café is open late.",
+            "question": "Is `statement` relevant to addressing `user_message`?"
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "statement_0": {
+            "probability": 0.8
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "user_message": "\nWhere is order 42? \nHow long does a refund take? ",
+        "statements": [
+          "Refunds take 5 business days."
+        ]
+      },
+      "questions": {
+        "statement_0": {
+          "type": "noul",
+          "instructions": {
+            "statement": "Refunds take 5 business days.",
+            "question": "Is `statement` relevant to addressing `user_message`?"
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "statement_0": {
+            "probability": 0.8
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

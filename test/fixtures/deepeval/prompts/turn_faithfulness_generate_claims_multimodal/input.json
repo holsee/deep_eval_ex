@@ -1,0 +1,8 @@
+{
+  "template": "TurnFaithfulnessMetric.generate_claims",
+  "inputs": {
+    "multimodal": true,
+    "input": "\nWhat is in the picture? ",
+    "assistant_output": "\nA red bicycle."
+  }
+}

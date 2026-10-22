@@ -1,0 +1,162 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "role": "user",
+              "content": "Where is order 42?"
+            },
+            {
+              "role": "assistant",
+              "content": "It shipped on 1 October from Zürich.",
+              "retrieval_context": [
+                "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+                "Our café is open late."
+              ]
+            },
+            {
+              "role": "user",
+              "content": "How long does a refund take?"
+            },
+            {
+              "role": "assistant",
+              "content": "Refunds take 2 business days.",
+              "retrieval_context": [
+                "Refunds take 5 business days."
+              ]
+            }
+          ]
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every factual claim made in an assistant turn in `turns` is supported by the `retrieval_context` of that turn or of an earlier assistant turn."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "No assistant turn in `turns` contradicts the `retrieval_context` available to it."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "Across `turns`, how much of what the assistant states is grounded in the `retrieval_context` available to it?",
+            "criteria": [
+              "Fabricated",
+              "Mostly fabricated",
+              "Mostly grounded",
+              "Fully grounded"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.62
+            },
+            "q_1": {
+              "probability": 0.3
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 2.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.25,
+                "2": 0.55,
+                "3": 0.15
+              },
+              "confidence": 0.4
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "turns": [
+          {
+            "role": "user",
+            "content": "Where is order 42?"
+          },
+          {
+            "role": "assistant",
+            "content": "It shipped on 1 October from Zürich.",
+            "retrieval_context": [
+              "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+              "Our café is open late."
+            ]
+          },
+          {
+            "role": "user",
+            "content": "How long does a refund take?"
+          },
+          {
+            "role": "assistant",
+            "content": "Refunds take 2 business days.",
+            "retrieval_context": [
+              "Refunds take 5 business days."
+            ]
+          }
+        ]
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "Every factual claim made in an assistant turn in `turns` is supported by the `retrieval_context` of that turn or of an earlier assistant turn."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "No assistant turn in `turns` contradicts the `retrieval_context` available to it."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "Across `turns`, how much of what the assistant states is grounded in the `retrieval_context` available to it?",
+          "criteria": [
+            "Fabricated",
+            "Mostly fabricated",
+            "Mostly grounded",
+            "Fully grounded"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.62
+          },
+          "q_1": {
+            "probability": 0.3
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 2.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.25,
+              "2": 0.55,
+              "3": 0.15
+            },
+            "confidence": 0.4
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

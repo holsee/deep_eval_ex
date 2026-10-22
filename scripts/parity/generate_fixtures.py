@@ -47,7 +47,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the twenty LLM-judged metrics, the way the metric itself renders it
+uses for the twenty-four LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -136,8 +136,13 @@ from deepeval.metrics import (  # noqa: E402
     ToolCorrectnessMetric,
     ToolPermissionMetric,
     ToxicityMetric,
+    TurnContextualPrecisionMetric,
+    TurnContextualRecallMetric,
+    TurnContextualRelevancyMetric,
+    TurnFaithfulnessMetric,
     TurnRelevancyMetric,
 )
+from deepeval.metrics.base_metric import Verdict  # noqa: E402
 from deepeval.metrics.contextual_precision.contextual_precision import (  # noqa: E402
     _contextual_precision_verdict_fields,
 )
@@ -151,6 +156,18 @@ from deepeval.metrics.faithfulness.faithfulness import (  # noqa: E402
     _faithfulness_claims_multimodal_instruction,
     _faithfulness_truths_limit_phrase,
     _faithfulness_truths_multimodal_instruction,
+)
+from deepeval.metrics.turn_contextual_precision.turn_contextual_precision import (  # noqa: E402
+    _contextual_precision_verdict_fields as _turn_contextual_precision_verdict_fields,
+)
+from deepeval.metrics.turn_contextual_recall.turn_contextual_recall import (  # noqa: E402
+    _contextual_recall_verdict_kwargs as _turn_contextual_recall_verdict_kwargs,
+)
+from deepeval.metrics.turn_contextual_relevancy.turn_contextual_relevancy import (  # noqa: E402
+    _contextual_relevancy_verdict_kwargs as _turn_contextual_relevancy_verdict_kwargs,
+)
+from deepeval.metrics.turn_faithfulness.turn_faithfulness import (  # noqa: E402
+    _turn_faithfulness_limit_description,
 )
 from deepeval.metrics.g_eval.utils import (  # noqa: E402
     Rubric,
@@ -732,6 +749,10 @@ SCRIPTED_METRICS = {
     "conversation_completeness": ConversationCompletenessMetric,
     "knowledge_retention": KnowledgeRetentionMetric,
     "role_adherence": RoleAdherenceMetric,
+    "turn_faithfulness": TurnFaithfulnessMetric,
+    "turn_contextual_precision": TurnContextualPrecisionMetric,
+    "turn_contextual_recall": TurnContextualRecallMetric,
+    "turn_contextual_relevancy": TurnContextualRelevancyMetric,
 }
 
 # Metrics that call no LLM and take no `model`.
@@ -931,6 +952,34 @@ def _role_adherence(method, **kwargs):
     # RoleAdherenceMetric passes no multimodal flag; its LLM templates print
     # the multimodal rules regardless.
     return RoleAdherenceMetric(model=_prompt_judge())._get_prompt(method, **kwargs)
+
+
+def _turn_rag(metric_cls, method, inputs, **kwargs):
+    # The Turn RAG metrics pass the test case's multimodal flag, except to
+    # generate_final_reason, which takes none.
+    return metric_cls(model=_prompt_judge())._get_prompt(
+        method, multimodal=inputs.get("multimodal", False), **kwargs
+    )
+
+
+def _turn_final_reason(metric_cls, inputs):
+    # generate_final_reason: the final score unformatted, as the metric
+    # passes it, and no multimodal flag.
+    return metric_cls(model=_prompt_judge())._get_prompt(
+        "generate_final_reason",
+        final_score=inputs["final_score"],
+        success=inputs["success"],
+        reasons=inputs["reasons"],
+    )
+
+
+def _turn_contextual_precision_reason_verdicts(verdicts):
+    # The node verdicts as the metric passes them: Verdict members, each
+    # with its node's rank.
+    return [
+        {"verdict": Verdict(v["verdict"]), "reason": v["reason"], "node": f"Node {i + 1}"}
+        for i, v in enumerate(verdicts)
+    ]
 
 
 def _prompt_alignment(method, inputs, **kwargs):
@@ -1305,6 +1354,101 @@ PROMPT_RENDERERS = {
     "RoleAdherenceMetric._experimental_system_one_verdict": lambda i: _role_adherence(
         "_experimental_system_one_verdict",
     ),
+    # The Turn RAG metrics format a window's reason score to two decimals
+    # and print the final score unformatted, as the metric passes them.
+    "TurnFaithfulnessMetric.generate_truths": lambda i: _turn_rag(
+        TurnFaithfulnessMetric, "generate_truths", i,
+        reference_context="\n\n".join(i["retrieval_context"]),
+        limit_description=_turn_faithfulness_limit_description(i["truths_extraction_limit"]),
+    ),
+    "TurnFaithfulnessMetric.generate_claims": lambda i: _turn_rag(
+        TurnFaithfulnessMetric, "generate_claims", i,
+        input=i["input"], assistant_output=i["assistant_output"],
+    ),
+    "TurnFaithfulnessMetric.generate_verdicts": lambda i: _turn_rag(
+        TurnFaithfulnessMetric, "generate_verdicts", i,
+        claims=i["claims"], reference_context="\n\n".join(i["truths"]),
+    ),
+    "TurnFaithfulnessMetric.generate_reason": lambda i: _turn_rag(
+        TurnFaithfulnessMetric, "generate_reason", i,
+        contradictions=i["contradictions"], score=_score(i),
+    ),
+    "TurnFaithfulnessMetric.generate_final_reason": lambda i: _turn_final_reason(
+        TurnFaithfulnessMetric, i,
+    ),
+    "TurnFaithfulnessMetric._experimental_system_one_questions": lambda i: _prompt(
+        TurnFaithfulnessMetric, "_experimental_system_one_questions",
+    ),
+    "TurnFaithfulnessMetric._experimental_system_one_verdict": lambda i: _prompt(
+        TurnFaithfulnessMetric, "_experimental_system_one_verdict",
+    ),
+    "TurnContextualPrecisionMetric.generate_verdicts": lambda i: _turn_rag(
+        TurnContextualPrecisionMetric, "generate_verdicts", i,
+        input=i["input"], expected_outcome=i["expected_outcome"],
+        **dict(zip(
+            ("document_count_str", "context_to_display", "multimodal_note"),
+            _turn_contextual_precision_verdict_fields(
+                i["retrieval_context"], i.get("multimodal", False)
+            ),
+        )),
+    ),
+    "TurnContextualPrecisionMetric.generate_reason": lambda i: _turn_rag(
+        TurnContextualPrecisionMetric, "generate_reason", i,
+        input=i["input"], score=_score(i),
+        verdicts=_turn_contextual_precision_reason_verdicts(i["verdicts"]),
+    ),
+    "TurnContextualPrecisionMetric.generate_final_reason": lambda i: _turn_final_reason(
+        TurnContextualPrecisionMetric, i,
+    ),
+    "TurnContextualPrecisionMetric._experimental_system_one_questions": lambda i: _prompt(
+        TurnContextualPrecisionMetric, "_experimental_system_one_questions",
+    ),
+    "TurnContextualPrecisionMetric._experimental_system_one_verdict": lambda i: _prompt(
+        TurnContextualPrecisionMetric, "_experimental_system_one_verdict",
+    ),
+    "TurnContextualRecallMetric.generate_verdicts": lambda i: _turn_rag(
+        TurnContextualRecallMetric, "generate_verdicts", i,
+        expected_outcome=i["expected_outcome"],
+        **_turn_contextual_recall_verdict_kwargs(i["retrieval_context"], i.get("multimodal", False)),
+    ),
+    "TurnContextualRecallMetric.generate_reason": lambda i: _turn_rag(
+        TurnContextualRecallMetric, "generate_reason", i,
+        expected_outcome=i["expected_outcome"],
+        supportive_reasons=i["supportive_reasons"],
+        unsupportive_reasons=i["unsupportive_reasons"],
+        score=_score(i),
+        content_type="sentence or image" if i.get("multimodal", False) else "sentence",
+    ),
+    "TurnContextualRecallMetric.generate_final_reason": lambda i: _turn_final_reason(
+        TurnContextualRecallMetric, i,
+    ),
+    "TurnContextualRecallMetric._experimental_system_one_questions": lambda i: _prompt(
+        TurnContextualRecallMetric, "_experimental_system_one_questions",
+    ),
+    "TurnContextualRecallMetric._experimental_system_one_verdict": lambda i: _prompt(
+        TurnContextualRecallMetric, "_experimental_system_one_verdict",
+    ),
+    "TurnContextualRelevancyMetric.generate_verdicts": lambda i: _turn_rag(
+        TurnContextualRelevancyMetric, "generate_verdicts", i,
+        input=i["input"], context=i["context"],
+        **_turn_contextual_relevancy_verdict_kwargs(i.get("multimodal", False)),
+    ),
+    "TurnContextualRelevancyMetric.generate_reason": lambda i: _turn_rag(
+        TurnContextualRelevancyMetric, "generate_reason", i,
+        input=i["input"],
+        irrelevant_statements=i["irrelevant_statements"],
+        relevant_statements=i["relevant_statements"],
+        score=_score(i),
+    ),
+    "TurnContextualRelevancyMetric.generate_final_reason": lambda i: _turn_final_reason(
+        TurnContextualRelevancyMetric, i,
+    ),
+    "TurnContextualRelevancyMetric._experimental_system_one_questions": lambda i: _prompt(
+        TurnContextualRelevancyMetric, "_experimental_system_one_questions",
+    ),
+    "TurnContextualRelevancyMetric._experimental_system_one_verdict": lambda i: _prompt(
+        TurnContextualRelevancyMetric, "_experimental_system_one_verdict",
+    ),
     "ToolCorrectnessMetric._experimental_system_one_tool_selection_score": lambda i: _prompt(
         ToolCorrectnessMetric, "_experimental_system_one_tool_selection_score",
     ),
@@ -1657,6 +1801,245 @@ PROMPT_CASES = {
     },
     "role_adherence_experimental_system_one_verdict": {
         "template": "RoleAdherenceMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "turn_faithfulness_generate_truths": {
+        "template": "TurnFaithfulnessMetric.generate_truths",
+        "inputs": {
+            "retrieval_context": [
+                "Refunds take 5 business days.",
+                "Order 42 shipped on 1 October from Zürich.",
+            ],
+            "truths_extraction_limit": None,
+        },
+    },
+    "turn_faithfulness_generate_truths_limit_one": {
+        "template": "TurnFaithfulnessMetric.generate_truths",
+        "inputs": {"retrieval_context": ["Refunds take 5 business days."],
+                   "truths_extraction_limit": 1},
+    },
+    "turn_faithfulness_generate_truths_multimodal": {
+        "template": "TurnFaithfulnessMetric.generate_truths",
+        "inputs": {
+            "multimodal": True,
+            "retrieval_context": ["Refunds take 5 business days.", "Returns are free."],
+            "truths_extraction_limit": 3,
+        },
+    },
+    "turn_faithfulness_generate_claims": {
+        "template": "TurnFaithfulnessMetric.generate_claims",
+        "inputs": {
+            "input": "\nMy order is late. \nWhere's my café au lait set? ",
+            "assistant_output": "\nIt's \"on its way\": order 42 shipped on 1 October."
+                                "\nRefunds take 5 days.",
+        },
+    },
+    "turn_faithfulness_generate_claims_multimodal": {
+        "template": "TurnFaithfulnessMetric.generate_claims",
+        "inputs": {"multimodal": True, "input": "\nWhat is in the picture? ",
+                   "assistant_output": "\nA red bicycle."},
+    },
+    "turn_faithfulness_generate_verdicts": {
+        "template": "TurnFaithfulnessMetric.generate_verdicts",
+        "inputs": {
+            "claims": ["Order 42 shipped on 1 October.", "Refunds take 2 days.",
+                       "The café is open late."],
+            "truths": ["Refunds take 5 business days.", "Order 42 shipped on 1 October."],
+        },
+    },
+    "turn_faithfulness_generate_verdicts_multimodal": {
+        "template": "TurnFaithfulnessMetric.generate_verdicts",
+        "inputs": {"multimodal": True, "claims": ["The bicycle is red."],
+                   "truths": ["The picture shows a red bicycle."]},
+    },
+    "turn_faithfulness_generate_reason": {
+        "template": "TurnFaithfulnessMetric.generate_reason",
+        "inputs": {
+            "score": 0.3333333333333333,
+            "contradictions": ["Refunds take 5 business days, not 2.", None],
+        },
+    },
+    "turn_faithfulness_generate_reason_multimodal": {
+        "template": "TurnFaithfulnessMetric.generate_reason",
+        "inputs": {"multimodal": True, "score": 1, "contradictions": []},
+    },
+    "turn_faithfulness_generate_final_reason": {
+        "template": "TurnFaithfulnessMetric.generate_final_reason",
+        "inputs": {
+            "final_score": 0.6666666666666666,
+            "success": True,
+            "reasons": ["The refund time contradicts the context.", None, "<no claims to verify>"],
+        },
+    },
+    "turn_faithfulness_generate_final_reason_failed": {
+        "template": "TurnFaithfulnessMetric.generate_final_reason",
+        "inputs": {"final_score": 0.0, "success": False, "reasons": ["Zürich is wrong."]},
+    },
+    "turn_faithfulness_experimental_system_one_questions": {
+        "template": "TurnFaithfulnessMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "turn_faithfulness_experimental_system_one_verdict": {
+        "template": "TurnFaithfulnessMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "turn_contextual_precision_generate_verdicts": {
+        "template": "TurnContextualPrecisionMetric.generate_verdicts",
+        "inputs": {
+            "input": "\nWhere's my café au lait set? ",
+            "expected_outcome": "The assistant says order 42 ships today.",
+            "retrieval_context": ["Rome is the capital of Italy.",
+                                  "Order 42 ships today from Zürich."],
+        },
+    },
+    "turn_contextual_precision_generate_verdicts_one_document": {
+        "template": "TurnContextualPrecisionMetric.generate_verdicts",
+        "inputs": {
+            "input": "\nWhen does it ship? ",
+            "expected_outcome": "It ships today.",
+            "retrieval_context": ["Order 42 ships today."],
+        },
+    },
+    "turn_contextual_precision_generate_verdicts_multimodal": {
+        "template": "TurnContextualPrecisionMetric.generate_verdicts",
+        "inputs": {
+            "multimodal": True,
+            "input": "\nWhat is in the picture? ",
+            "expected_outcome": "A red bicycle.",
+            "retrieval_context": ["The picture shows a red bicycle.", "Bicycles have two wheels."],
+        },
+    },
+    "turn_contextual_precision_generate_reason": {
+        "template": "TurnContextualPrecisionMetric.generate_reason",
+        "inputs": {
+            "input": "\nWhere's my café au lait set? ",
+            "score": 0.5,
+            "verdicts": [
+                {"verdict": "no", "reason": "Rome is irrelevant to the order."},
+                {"verdict": "yes", "reason": "It says 'Order 42 ships today'."},
+            ],
+        },
+    },
+    "turn_contextual_precision_generate_reason_multimodal": {
+        "template": "TurnContextualPrecisionMetric.generate_reason",
+        "inputs": {
+            "multimodal": True,
+            "input": "\nWhat is in the picture? ",
+            "score": 1,
+            "verdicts": [{"verdict": "yes", "reason": "It describes the picture."}],
+        },
+    },
+    "turn_contextual_precision_generate_final_reason": {
+        "template": "TurnContextualPrecisionMetric.generate_final_reason",
+        "inputs": {
+            "final_score": 0.75,
+            "success": True,
+            "reasons": ["The relevant node is ranked second.",
+                        "There were no retrieval contexts in the given turns to evaluate the "
+                        "contextual precision."],
+        },
+    },
+    "turn_contextual_precision_experimental_system_one_questions": {
+        "template": "TurnContextualPrecisionMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "turn_contextual_precision_experimental_system_one_verdict": {
+        "template": "TurnContextualPrecisionMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "turn_contextual_recall_generate_verdicts": {
+        "template": "TurnContextualRecallMetric.generate_verdicts",
+        "inputs": {
+            "expected_outcome": "Order 42 ships today. A refund takes 5 days.",
+            "retrieval_context": ["Order 42 ships today from Zürich.", "Returns are free."],
+        },
+    },
+    "turn_contextual_recall_generate_verdicts_multimodal": {
+        "template": "TurnContextualRecallMetric.generate_verdicts",
+        "inputs": {
+            "multimodal": True,
+            "expected_outcome": "A red bicycle.",
+            "retrieval_context": ["The picture shows a red bicycle."],
+        },
+    },
+    "turn_contextual_recall_generate_reason": {
+        "template": "TurnContextualRecallMetric.generate_reason",
+        "inputs": {
+            "expected_outcome": "Order 42 ships today. A refund takes 5 days.",
+            "score": 0.5,
+            "supportive_reasons": ["The 1st node says 'Order 42 ships today'."],
+            "unsupportive_reasons": ["No node mentions refunds.", None],
+        },
+    },
+    "turn_contextual_recall_generate_reason_multimodal": {
+        "template": "TurnContextualRecallMetric.generate_reason",
+        "inputs": {
+            "multimodal": True,
+            "expected_outcome": "A red bicycle.",
+            "score": 1,
+            "supportive_reasons": ["The 1st node shows the bicycle."],
+            "unsupportive_reasons": [],
+        },
+    },
+    "turn_contextual_recall_generate_final_reason": {
+        "template": "TurnContextualRecallMetric.generate_final_reason",
+        "inputs": {"final_score": 1.0, "success": True,
+                   "reasons": ["Every sentence is attributed to the café's notes."]},
+    },
+    "turn_contextual_recall_experimental_system_one_questions": {
+        "template": "TurnContextualRecallMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "turn_contextual_recall_experimental_system_one_verdict": {
+        "template": "TurnContextualRecallMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "turn_contextual_relevancy_generate_verdicts": {
+        "template": "TurnContextualRelevancyMetric.generate_verdicts",
+        "inputs": {
+            "input": "\nWhere's my café au lait set? \nIs it late? ",
+            "context": "Order 42 ships today. Rome is the capital of Italy.",
+        },
+    },
+    "turn_contextual_relevancy_generate_verdicts_multimodal": {
+        "template": "TurnContextualRelevancyMetric.generate_verdicts",
+        "inputs": {
+            "multimodal": True,
+            "input": "\nWhat is in the picture? ",
+            "context": "The picture shows a red bicycle.",
+        },
+    },
+    "turn_contextual_relevancy_generate_reason": {
+        "template": "TurnContextualRelevancyMetric.generate_reason",
+        "inputs": {
+            "input": "\nWhere's my café au lait set? ",
+            "score": 0.5,
+            "irrelevant_statements": ["Rome is the capital of Italy.: It is about Italy.",
+                                      "Returns are free.: None"],
+            "relevant_statements": ["Order 42 ships today."],
+        },
+    },
+    "turn_contextual_relevancy_generate_reason_multimodal": {
+        "template": "TurnContextualRelevancyMetric.generate_reason",
+        "inputs": {
+            "multimodal": True,
+            "input": "\nWhat is in the picture? ",
+            "score": 1,
+            "irrelevant_statements": [],
+            "relevant_statements": ["A red bicycle."],
+        },
+    },
+    "turn_contextual_relevancy_generate_final_reason": {
+        "template": "TurnContextualRelevancyMetric.generate_final_reason",
+        "inputs": {"final_score": 0.25, "success": False,
+                   "reasons": ["Most statements are about Rome.", None]},
+    },
+    "turn_contextual_relevancy_experimental_system_one_questions": {
+        "template": "TurnContextualRelevancyMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "turn_contextual_relevancy_experimental_system_one_verdict": {
+        "template": "TurnContextualRelevancyMetric._experimental_system_one_verdict",
         "inputs": {},
     },
     "faithfulness_generate_claims": {
@@ -2107,7 +2490,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the twenty metrics is rendered
+    """Fails unless every bundled template of the twenty-four metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()

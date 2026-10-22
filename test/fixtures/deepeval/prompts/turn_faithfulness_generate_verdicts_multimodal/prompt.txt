@@ -1,0 +1,52 @@
+
+For each claim, determine whether it is supported, contradicted, or not addressed by the reference context.
+
+DEFINITIONS:
+- "yes"  = The claim is directly supported by at least one truth.
+- "no"   = The claim directly contradicts at least one truth.
+- "borderline"  = The context does not confirm or contradict the claim.
+
+RULES:
+- One verdict per claim, in the same order.
+- Do NOT use prior knowledge.
+- Only use the explicit truths provided.
+- A "yes" verdict must not include a reason.
+- A "no" or "borderline" verdict must include a concise reason that quotes or paraphrases only the truths.
+- If a claim references an image and the visibility is unclear or ambiguous, use "borderline".
+- Do not create new facts or explanations.
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+- When evaluating claims, compare them to BOTH textual and visual evidence.
+- If the claim references something not clearly visible, respond with 'borderline'.
+
+
+Output MUST be ONLY valid JSON:
+
+{
+  "verdicts": [
+    {
+      "verdict": "yes"
+    },
+    {
+      "verdict": "no",
+      "reason": "<explanation>"
+    },
+    {
+      "verdict": "borderline",
+      "reason": "<explanation>"
+    }
+  ]
+}
+
+REFERENCE CONTEXT:
+The picture shows a red bicycle.
+
+CLAIMS:
+['The bicycle is red.']
+
+JSON:

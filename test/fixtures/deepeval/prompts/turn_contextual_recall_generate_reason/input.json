@@ -1,0 +1,14 @@
+{
+  "template": "TurnContextualRecallMetric.generate_reason",
+  "inputs": {
+    "expected_outcome": "Order 42 ships today. A refund takes 5 days.",
+    "score": 0.5,
+    "supportive_reasons": [
+      "The 1st node says 'Order 42 ships today'."
+    ],
+    "unsupportive_reasons": [
+      "No node mentions refunds.",
+      null
+    ]
+  }
+}

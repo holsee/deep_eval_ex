@@ -1,0 +1,12 @@
+{
+  "score": 0.5,
+  "success": false,
+  "reason": "The score is 0.5 because the refund sentence is never supported.",
+  "threshold": 0.6,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Window 1 \n \n \nVerdicts: [\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"The 1st node gives the date.\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"No node mentions refunds.\"\n    }\n] \n \n \nScore: 0.5 \n \n \nReason: The score is 0.50 because refunds are not covered. \n \n \nWindow 2 \n \n \nVerdicts: [] \n \n \nScore: 1.0 \n \n \nReason: There were no retrieval contexts in the given turns to evaluate the contextual recall. \n \n \nWindow 3 \n \n \nVerdicts: [\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"The caf\\u00e9 node says nothing about order 42.\"\n    }\n] \n \n \nScore: 0.0 \n \n \nReason: The score is 0.00 because nothing is covered. \n \n \nFinal Score: 0.5\n"
+}

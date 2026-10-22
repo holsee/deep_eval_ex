@@ -1,0 +1,17 @@
+{
+  "template": "TurnContextualPrecisionMetric.generate_reason",
+  "inputs": {
+    "input": "\nWhere's my café au lait set? ",
+    "score": 0.5,
+    "verdicts": [
+      {
+        "verdict": "no",
+        "reason": "Rome is irrelevant to the order."
+      },
+      {
+        "verdict": "yes",
+        "reason": "It says 'Order 42 ships today'."
+      }
+    ]
+  }
+}

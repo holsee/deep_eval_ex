@@ -1,0 +1,12 @@
+{
+  "score": 0.0,
+  "success": false,
+  "reason": "The score is 0.0 because the only window ranks Rome first.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Window 1 \n \n \nVerdicts: [\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"Rome is irrelevant.\"\n    },\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"It gives the shipping date.\"\n    }\n] \n \n \nScore: 0.0 \n \n \nReason: The score is 0.00 because Rome is ranked first. \n \n \nFinal Score: 0.0\n"
+}

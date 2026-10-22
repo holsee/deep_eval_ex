@@ -1,0 +1,12 @@
+{
+  "template": "TurnContextualRelevancyMetric.generate_reason",
+  "inputs": {
+    "multimodal": true,
+    "input": "\nWhat is in the picture? ",
+    "score": 1,
+    "irrelevant_statements": [],
+    "relevant_statements": [
+      "A red bicycle."
+    ]
+  }
+}

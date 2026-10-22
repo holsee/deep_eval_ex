@@ -1,0 +1,12 @@
+{
+  "score": 0.7777777777777777,
+  "success": false,
+  "reason": "The score is 0.7777777777777777 because one window retrieves Rome and the café.",
+  "threshold": 0.8,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Window 1 \n \n \nVerdicts: [\n    {\n        \"statement\": \"Order 42 shipped on 1 October.\",\n        \"verdict\": \"yes\",\n        \"reason\": null\n    },\n    {\n        \"statement\": \"Rome is the capital of Italy.\",\n        \"verdict\": \"no\",\n        \"reason\": \"'Rome is the capital of Italy.' is about Italy.\"\n    },\n    {\n        \"statement\": \"Our caf\\u00e9 is open late.\",\n        \"verdict\": \"no\",\n        \"reason\": null\n    }\n] \n \n \nScore: 0.3333333333333333 \n \n \nReason: The score is 0.33 because Rome and the café are irrelevant. \n \n \nWindow 2 \n \n \nVerdicts: [] \n \n \nScore: 1.0 \n \n \nReason: There were no retrieval contexts in the given turns to evaluate the contextual relevancy. \n \n \nWindow 3 \n \n \nVerdicts: [\n    {\n        \"statement\": \"Refunds take 5 business days.\",\n        \"verdict\": \"yes\",\n        \"reason\": null\n    }\n] \n \n \nScore: 1.0 \n \n \nReason: The score is 1.00 because the refund time is relevant. \n \n \nFinal Score: 0.7777777777777777\n"
+}
