@@ -20,7 +20,10 @@ defmodule DeepEvalEx.Prompts.ContextualPrecision do
   text-only test case (`multimodal=False`): the multimodal wording and note
   are left out, as DeepEvalEx has no multimodal test cases. Lists are
   printed as Python lists and scores as `format(score, ".2f")` (see
-  `DeepEvalEx.Prompts.Python`).
+  `DeepEvalEx.Prompts.Python`). `system_one_verdict/0` and
+  `system_one_questions/0` are its System One templates,
+  `_experimental_system_one_verdict` and `_experimental_system_one_questions`,
+  which take no arguments.
   """
 
   alias DeepEvalEx.Prompts.Python
@@ -134,6 +137,47 @@ defmodule DeepEvalEx.Prompts.ContextualPrecision do
     #{verdicts}
 
     JSON:\
+    """
+  end
+
+  @doc """
+  The question a System One model is asked about each retrieval context
+  node under the `:hybrid` eval mode, deepeval's
+  `_experimental_system_one_verdict` template: a Noul whose instructions
+  pair it with the node, about a state holding the `input` and
+  `expected_output` (see `DeepEvalEx.SystemOne.Spec.Verdicts`).
+  """
+  @spec system_one_verdict() :: String.t()
+  def system_one_verdict do
+    "Was the retrieval context `node` remotely useful in arriving at `expected_output` for `input`?"
+  end
+
+  @doc """
+  The questions a System One model answers about the whole test case under
+  the `:system_one` eval mode, deepeval's `_experimental_system_one_questions`
+  template: a JSON array of two Nouls and a four-level Score about how
+  `retrieval_context` is ordered for `input` and `expected_output`, which
+  `DeepEvalEx.SystemOne.Scored.parse!/1` reads.
+  """
+  @spec system_one_questions() :: String.t()
+  def system_one_questions do
+    """
+    [
+      {
+        "type": "noul",
+        "statement": "In `retrieval_context`, every document useful for arriving at `expected_output` for `input` is listed before every document that is not useful.",
+        "weight": 2
+      },
+      {
+        "type": "noul",
+        "statement": "The first document in `retrieval_context` is useful for arriving at `expected_output` for `input`."
+      },
+      {
+        "type": "score",
+        "question": "How well are the documents in `retrieval_context` ordered, with the ones useful for arriving at `expected_output` for `input` first?",
+        "levels": ["Useful documents are all at the end", "Useful documents are mixed with irrelevant ones", "Useful documents are mostly first", "Useful documents are all first"]
+      }
+    ]\
     """
   end
 

@@ -6,6 +6,8 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
 
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.ContextualPrecision
+  alias DeepEvalEx.SystemOne.Adapters.Mock, as: SystemOneMock
+  alias DeepEvalEx.SystemOne.{EvalSpec, Scored}
   alias DeepEvalEx.TestCase
 
   setup do
@@ -414,6 +416,59 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
 
       assert {:error, {:missing_params, [:retrieval_context]}} =
                ContextualPrecision.measure(test_case, adapter: :mock)
+    end
+  end
+
+  describe "System One" do
+    test "system_one_eval_spec/2 asks deepeval's questions about the input, context and expected output" do
+      assert %EvalSpec{
+               evaluation_params: [:input, :retrieval_context, :expected_output],
+               questions: [
+                 %Scored.Noul{
+                   statement: "In `retrieval_context`, every document" <> _,
+                   weight: 2.0
+                 },
+                 %Scored.Noul{statement: "The first document" <> _, weight: 1.0},
+                 %Scored.Score{
+                   levels: [
+                     "Useful documents are all at the end",
+                     "Useful documents are mixed with irrelevant ones",
+                     "Useful documents are mostly first",
+                     "Useful documents are all first"
+                   ]
+                 }
+               ]
+             } = ContextualPrecision.system_one_eval_spec(%TestCase{}, [])
+    end
+
+    test "hybrid judges each node yes or no, never borderline" do
+      Mock.set_schema_response(~r/provide a CONCISE summary for the score/i, %{
+        "reason" => "The score is 1.00 because both nodes are useful."
+      })
+
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.5))
+
+      test_case =
+        TestCase.new!(
+          input: "What is the capital of France?",
+          expected_output: "Paris is the capital of France.",
+          retrieval_context: ["Paris is in France.", "Paris is the capital."]
+        )
+
+      assert {:ok, result} =
+               ContextualPrecision.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one
+               )
+
+      assert result.score == 1.0
+
+      assert [%{verdict: :yes, reason: "P(yes)=0.50"}, %{verdict: :yes}] =
+               result.metadata.verdicts
+
+      assert [%SystemOneMock.Call{questions: questions}] = SystemOneMock.calls(system_one)
+      assert Enum.map(questions, &elem(&1, 0)) == ["node_0", "node_1"]
     end
   end
 end

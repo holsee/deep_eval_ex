@@ -768,6 +768,18 @@ PROMPT_RENDERERS = {
     "AnswerRelevancyMetric._experimental_system_one_verdict": lambda i: _prompt(
         AnswerRelevancyMetric, "_experimental_system_one_verdict",
     ),
+    "ContextualPrecisionMetric._experimental_system_one_questions": lambda i: _prompt(
+        ContextualPrecisionMetric, "_experimental_system_one_questions",
+    ),
+    "ContextualPrecisionMetric._experimental_system_one_verdict": lambda i: _prompt(
+        ContextualPrecisionMetric, "_experimental_system_one_verdict",
+    ),
+    "ContextualRecallMetric._experimental_system_one_questions": lambda i: _prompt(
+        ContextualRecallMetric, "_experimental_system_one_questions",
+    ),
+    "ContextualRecallMetric._experimental_system_one_verdict": lambda i: _prompt(
+        ContextualRecallMetric, "_experimental_system_one_verdict",
+    ),
     "ToolCorrectnessMetric.get_tool_selection_score": lambda i: _prompt(
         ToolCorrectnessMetric, "get_tool_selection_score",
         user_input=i["input"],
@@ -991,6 +1003,22 @@ PROMPT_CASES = {
     },
     "answer_relevancy_experimental_system_one_verdict": {
         "template": "AnswerRelevancyMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "contextual_precision_experimental_system_one_questions": {
+        "template": "ContextualPrecisionMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "contextual_precision_experimental_system_one_verdict": {
+        "template": "ContextualPrecisionMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "contextual_recall_experimental_system_one_questions": {
+        "template": "ContextualRecallMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "contextual_recall_experimental_system_one_verdict": {
+        "template": "ContextualRecallMetric._experimental_system_one_verdict",
         "inputs": {},
     },
     "tool_correctness_get_tool_selection_score": {

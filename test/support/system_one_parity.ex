@@ -17,7 +17,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
 
   alias DeepEvalEx.{Evaluator, MetricError, TestCase}
   alias DeepEvalEx.LLM.Adapters.Mock, as: LLMMock
-  alias DeepEvalEx.Metrics.{AnswerRelevancy, Faithfulness}
+  alias DeepEvalEx.Metrics.{AnswerRelevancy, ContextualPrecision, ContextualRecall, Faithfulness}
   alias DeepEvalEx.SystemOne.Adapters.Mock
   alias DeepEvalEx.Test.{JSONDiff, ScriptedParity}
   alias DeepEvalEx.TestRun.JSON
@@ -26,7 +26,9 @@ defmodule DeepEvalEx.Test.SystemOneParity do
 
   @modules %{
     "faithfulness" => Faithfulness,
-    "answer_relevancy" => AnswerRelevancy
+    "answer_relevancy" => AnswerRelevancy,
+    "contextual_precision" => ContextualPrecision,
+    "contextual_recall" => ContextualRecall
   }
 
   @eval_modes %{"llm" => :llm, "hybrid" => :hybrid, "system_one" => :system_one}

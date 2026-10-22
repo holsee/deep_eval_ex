@@ -62,14 +62,34 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   - `:model` - LLM model for evaluation
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
+  - `:eval_mode` and `:system_one_model` - who decides, see "System One"
+
+  ## System One
+
+  Like deepeval 4.3.1's `ContextualPrecisionMetric`, the metric can route
+  its decisions to a System One model (see `DeepEvalEx.SystemOne.Mode`):
+
+  - `:hybrid` - the System One model judges each retrieval context node
+    against `input` and `expected_output`, one Noul per node
+    (`DeepEvalEx.Prompts.ContextualPrecision.system_one_verdict/0`), whose
+    P(yes) is a verdict: `0.5` and above `yes`, else `no`, with the reason
+    `"P(yes)=0.91"`. The LLM still writes the reason. If the model fails,
+    the LLM judges the nodes and the result's
+    `:system_one_fallback_reason` says why
+  - `:system_one` - one request about `input`, `retrieval_context` and
+    `expected_output` answers the whole metric
+    (`DeepEvalEx.Prompts.ContextualPrecision.system_one_questions/0`, see
+    `DeepEvalEx.SystemOne.Runner`): no LLM call is made, and the score and
+    reason are built from the answers
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Result}
+  alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Metrics.QAG, Result}
   alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.ContextualPrecision, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.ContextualPrecision, as: Schema
+  alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
 
   @impl true
   def metric_name, do: "Contextual Precision"
@@ -84,6 +104,20 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   defdelegate evaluation_model(opts), to: Adapter, as: :model_name
 
   @doc """
+  The whole metric as one System One request under the `:system_one` eval
+  mode, deepeval's `_system_one_eval_spec`: its questions about the test
+  case's `input`, `retrieval_context` (in its order) and `expected_output`
+  (the metric's required params).
+  """
+  @impl true
+  def system_one_eval_spec(_test_case, _opts) do
+    %EvalSpec{
+      evaluation_params: required_params(),
+      questions: Scored.parse!(Template.system_one_questions())
+    }
+  end
+
+  @doc """
   Measures contextual precision of the retrieval context ranking.
 
   ## Options
@@ -94,6 +128,13 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   - `:model` - Model name
   """
   def do_measure(test_case, opts) do
+    case Runner.run(__MODULE__, test_case, opts) do
+      {:ok, result} -> {:ok, result}
+      :continue -> measure_with_llm(test_case, opts)
+    end
+  end
+
+  defp measure_with_llm(test_case, opts) do
     threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
@@ -137,7 +178,25 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
     {:ok, []}
   end
 
+  # Under :hybrid the System One model judges the nodes; the LLM does when
+  # it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_verdicts(input, expected_output, retrieval_context, opts) do
+    spec = %Spec.Verdicts{
+      instructions: Template.system_one_verdict(),
+      items: retrieval_context,
+      item_key: "node",
+      state: [input: input, expected_output: expected_output]
+    }
+
+    decision_opts = Keyword.put_new(opts, :metric_name, metric_name())
+
+    case Decision.verdicts(spec, QAG.yes_no(), decision_opts) do
+      {:ok, verdicts} -> {:ok, verdicts}
+      :llm -> llm_verdicts(input, expected_output, retrieval_context, opts)
+    end
+  end
+
+  defp llm_verdicts(input, expected_output, retrieval_context, opts) do
     prompt =
       Template.generate_verdicts(
         input: input,

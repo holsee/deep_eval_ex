@@ -6,6 +6,8 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
 
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.ContextualRecall
+  alias DeepEvalEx.SystemOne.Adapters.Mock, as: SystemOneMock
+  alias DeepEvalEx.SystemOne.{EvalSpec, Scored}
   alias DeepEvalEx.TestCase
 
   setup do
@@ -358,6 +360,49 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
 
       assert {:error, {:missing_params, [:retrieval_context]}} =
                ContextualRecall.measure(test_case, adapter: :mock)
+    end
+  end
+
+  describe "System One" do
+    test "system_one_eval_spec/2 asks deepeval's questions about the expected output and context" do
+      assert %EvalSpec{
+               evaluation_params: [:expected_output, :retrieval_context],
+               questions: [
+                 %Scored.Noul{statement: "Every sentence in" <> _, weight: 2.0},
+                 %Scored.Noul{statement: "`retrieval_context` contains" <> _, weight: 1.0},
+                 %Scored.Score{
+                   levels: ["None of it", "Less than half", "Most of it", "All of it"]
+                 }
+               ]
+             } = ContextualRecall.system_one_eval_spec(%TestCase{}, [])
+    end
+
+    test "hybrid judges each sentence of the expected output yes or no" do
+      Mock.set_schema_response(~r/summarize a CONCISE reason for the score/i, %{
+        "reason" => "The score is 0.00 because no sentence is supported."
+      })
+
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.49))
+
+      test_case =
+        TestCase.new!(
+          input: "What is the vacation policy?",
+          expected_output: "Employees get 20 days. Up to 5 days carry over!",
+          retrieval_context: ["Employees receive 20 days of paid time off."]
+        )
+
+      assert {:ok, result} =
+               ContextualRecall.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one
+               )
+
+      assert result.score === 0.0
+      assert [%{verdict: :no, reason: "P(yes)=0.49"}, %{verdict: :no}] = result.metadata.verdicts
+
+      assert [%SystemOneMock.Call{questions: questions}] = SystemOneMock.calls(system_one)
+      assert Enum.map(questions, &elem(&1, 0)) == ["sentence_0", "sentence_1"]
     end
   end
 end

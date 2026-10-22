@@ -30,6 +30,9 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
     faithfulness_system_one faithfulness_system_one_strict faithfulness_hybrid
     faithfulness_hybrid_fallback
     answer_relevancy_system_one answer_relevancy_hybrid answer_relevancy_hybrid_fallback
+    contextual_precision_system_one contextual_precision_hybrid
+    contextual_precision_hybrid_fallback
+    contextual_recall_system_one contextual_recall_hybrid contextual_recall_hybrid_fallback
   )
 
   for scenario <- @scenarios,

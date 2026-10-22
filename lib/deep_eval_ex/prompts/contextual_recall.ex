@@ -21,6 +21,9 @@ defmodule DeepEvalEx.Prompts.ContextualRecall do
   images", and no multimodal node instruction, as DeepEvalEx has no
   multimodal test cases. Lists are printed as Python lists and scores as
   `format(score, ".2f")` (see `DeepEvalEx.Prompts.Python`).
+  `system_one_verdict/0` and `system_one_questions/0` are its System One
+  templates, `_experimental_system_one_verdict` and
+  `_experimental_system_one_questions`, which take no arguments.
   """
 
   alias DeepEvalEx.Prompts.Python
@@ -118,6 +121,45 @@ defmodule DeepEvalEx.Prompts.ContextualRecall do
     #{unsupportive_reasons}
 
     JSON:\
+    """
+  end
+
+  @doc """
+  The question a System One model is asked about each sentence of the
+  expected output under the `:hybrid` eval mode, deepeval's
+  `_experimental_system_one_verdict` template: a Noul whose instructions
+  pair it with the sentence, about a state holding the
+  `retrieval_context` (see `DeepEvalEx.SystemOne.Spec.Verdicts`).
+  """
+  @spec system_one_verdict() :: String.t()
+  def system_one_verdict, do: "Can `sentence` be attributed to the facts in `retrieval_context`?"
+
+  @doc """
+  The questions a System One model answers about the whole test case under
+  the `:system_one` eval mode, deepeval's `_experimental_system_one_questions`
+  template: a JSON array of two Nouls and a four-level Score about
+  `expected_output` and `retrieval_context`, which
+  `DeepEvalEx.SystemOne.Scored.parse!/1` reads.
+  """
+  @spec system_one_questions() :: String.t()
+  def system_one_questions do
+    """
+    [
+      {
+        "type": "noul",
+        "statement": "Every sentence in `expected_output` can be attributed to the facts in `retrieval_context`.",
+        "weight": 2
+      },
+      {
+        "type": "noul",
+        "statement": "`retrieval_context` contains the key facts needed to write `expected_output`."
+      },
+      {
+        "type": "score",
+        "question": "How much of `expected_output` can be attributed to the facts in `retrieval_context`?",
+        "levels": ["None of it", "Less than half", "Most of it", "All of it"]
+      }
+    ]\
     """
   end
 end

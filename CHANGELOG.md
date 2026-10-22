@@ -386,6 +386,33 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   measured state (including confidence, fallback reason and score
   breakdown), the judge's prompts and the exported test run all match
   deepeval byte for byte.
+- **ContextualPrecision and ContextualRecall run on System One**
+  (ADR-0009), as deepeval 4.3.1's `ContextualPrecisionMetric` and
+  `ContextualRecallMetric` do with `eval_mode`:
+  - `:hybrid`: the System One model judges each retrieval context node
+    against `input` and `expected_output` (`node_<i>`), or each sentence of
+    `expected_output`, split as deepeval's `split_sentences` does, against
+    `retrieval_context` (`sentence_<i>`), one Noul per item in one request.
+    Each P(yes) becomes a `yes` (`0.5` and above) or `no` verdict, never
+    `borderline`, with the reason `"P(yes)=0.91"`; the LLM still writes the
+    metric's reason. When the request fails, the LLM judges instead and the
+    result's `:system_one_fallback_reason` says why.
+  - `:system_one`: each metric implements
+    `c:BaseMetric.system_one_eval_spec/2` and calls
+    `DeepEvalEx.SystemOne.Runner.run/3`, so one request about `input`,
+    `retrieval_context` and `expected_output` (ContextualPrecision) or
+    `expected_output` and `retrieval_context` (ContextualRecall) answers the
+    whole metric, with no LLM call.
+  - `system_one_verdict/0` and `system_one_questions/0` on
+    `DeepEvalEx.Prompts.ContextualPrecision` and
+    `DeepEvalEx.Prompts.ContextualRecall` render deepeval's
+    `_experimental_system_one_verdict` and
+    `_experimental_system_one_questions` templates. Four new prompt goldens
+    check them byte for byte.
+
+  The System One parity test now also measures the `contextual_precision_*`
+  and `contextual_recall_*` fixtures (`system_one`, `hybrid` and
+  `hybrid_fallback`), which match deepeval byte for byte.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in

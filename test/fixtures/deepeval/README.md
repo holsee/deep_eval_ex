@@ -268,6 +268,10 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.Faithfulness.system_one_verdict/0` | `FaithfulnessMetric._experimental_system_one_verdict` (`faithfulness/templates/_experimental_system_one_verdict.txt`) | none | `faithfulness_experimental_system_one_verdict` |
 | `Prompts.AnswerRelevancy.system_one_questions/0` | `AnswerRelevancyMetric._experimental_system_one_questions` (`answer_relevancy/templates/_experimental_system_one_questions.txt`) | none | `answer_relevancy_experimental_system_one_questions` |
 | `Prompts.AnswerRelevancy.system_one_verdict/0` | `AnswerRelevancyMetric._experimental_system_one_verdict` (`answer_relevancy/templates/_experimental_system_one_verdict.txt`) | none | `answer_relevancy_experimental_system_one_verdict` |
+| `Prompts.ContextualPrecision.system_one_questions/0` | `ContextualPrecisionMetric._experimental_system_one_questions` (`contextual_precision/templates/_experimental_system_one_questions.txt`) | none | `contextual_precision_experimental_system_one_questions` |
+| `Prompts.ContextualPrecision.system_one_verdict/0` | `ContextualPrecisionMetric._experimental_system_one_verdict` (`contextual_precision/templates/_experimental_system_one_verdict.txt`) | none | `contextual_precision_experimental_system_one_verdict` |
+| `Prompts.ContextualRecall.system_one_questions/0` | `ContextualRecallMetric._experimental_system_one_questions` (`contextual_recall/templates/_experimental_system_one_questions.txt`) | none | `contextual_recall_experimental_system_one_questions` |
+| `Prompts.ContextualRecall.system_one_verdict/0` | `ContextualRecallMetric._experimental_system_one_verdict` (`contextual_recall/templates/_experimental_system_one_verdict.txt`) | none | `contextual_recall_experimental_system_one_verdict` |
 
 Templates of these metrics without a DeepEvalEx counterpart, so without a
 case:
@@ -276,9 +280,8 @@ case:
   and `generate_strict_trace_evaluation_results`: GEval on a trace (no
   `evaluation_params`), which needs tracing (P9)
 - the `_experimental_system_one_*` templates (`_questions`, `_verdict`,
-  `_tool_selection_score`) of Hallucination, ContextualPrecision,
-  ContextualRecall and ToolCorrectness, whose System One eval modes come
-  in later units (P4). The generator cannot find these private templates
+  `_tool_selection_score`) of Hallucination and ToolCorrectness, whose
+  System One eval modes come in later units (P4). The generator cannot find these private templates
   by itself, so a case must be added for each
 
 `DeepEvalEx.Prompts.GEval.format_evaluation_steps/1`, `format_params/1`,
@@ -417,6 +420,6 @@ that run on System One with the real DeepEvalEx metric, the fake answered
 by `DeepEvalEx.SystemOne.Adapters.Mock.from_fixture/2` and the judge by the
 Mock adapter's script, and compares the `decide()` calls of `measure()` and
 `evaluate()`, the measured state, the judge's prompts and the test run with
-the fixture, byte for byte. It covers Faithfulness and AnswerRelevancy:
-each one's `system_one`, `hybrid` and `hybrid_fallback` scenarios, and
-`faithfulness_system_one_strict`.
+the fixture, byte for byte. It covers Faithfulness, AnswerRelevancy,
+ContextualPrecision and ContextualRecall: each one's `system_one`, `hybrid`
+and `hybrid_fallback` scenarios, and `faithfulness_system_one_strict`.
