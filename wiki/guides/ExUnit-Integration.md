@@ -57,18 +57,20 @@ test "response is faithful to context" do
 end
 ```
 
+`assert_passes(test_case, metric)` is deepeval's `assert_test(test_case, [metric])`:
+the test case is evaluated by `DeepEvalEx.Evaluator` (concurrency, timeouts and
+`ignore_errors` / `skip_on_missing_params` included, with `assert_test`'s
+`max_concurrent: 100` and `throttle_value: 0` unless you pass them), and it
+raises `ArgumentError` when the metric has no threshold or is flaky, as
+`assert_test` does.
+
 ### Failure Output
 
-When an assertion fails, you get detailed output:
+When an assertion fails, the message is deepeval's `assert_test` message, with
+each field printed as Python prints it:
 
 ```
-Metric evaluation failed unexpectedly.
-
-Metric:    Faithfulness
-Score:     0.4 (40.0%)
-Threshold: 0.5 (50.0%)
-Status:    FAIL (expected PASS)
-Reason:    2 out of 5 claims are not supported by the context.
+Metrics: Faithfulness (score: 0.4, threshold: 0.5, strict: False, error: None, reason: 2 out of 5 claims are not supported by the context.) failed.
 ```
 
 ## `assert_fails/2,3`
@@ -199,21 +201,23 @@ assert_evaluation(test_case, [
 
 ### Failure Output
 
-When multiple metrics fail:
+`assert_evaluation(test_case, metrics)` is deepeval's `assert_test(test_case,
+metrics)`. The test case fails when a non-flaky metric fails; the message then
+lists every errored or unsuccessful metric, flaky and score-only ones included,
+in the order given:
 
 ```
-Multiple metric evaluations failed.
+Metrics: Faithfulness (score: 0.4, threshold: 0.5, strict: False, error: None, reason: Not all claims are supported), Answer Relevancy (score: 0.3, threshold: 0.5, strict: False, error: None, reason: Response contains irrelevant information) failed.
+```
 
-Failures:
-  Faithfulness:
-    Score:     0.4 (40.0%)
-    Threshold: 0.5 (50.0%)
-    Reason:    Not all claims are supported
+### Flaky Metrics and Test Cases
 
-  AnswerRelevancy:
-    Score:     0.3 (30.0%)
-    Threshold: 0.5 (50.0%)
-    Reason:    Response contains irrelevant information
+A failing metric marked `flaky` never fails the test case on its own. A test
+case marked `flaky: true` does not fail the assertion at all: as deepeval's
+`warnings.warn`, a warning is printed instead and the results are returned:
+
+```
+warning: Flaky test case failed (no assertion raised): Metrics: Exact Match (score: 0.0, threshold: 1.0, strict: False, error: None, reason: The actual and expected outputs are different.) failed.
 ```
 
 ## Complete Test Example
@@ -339,9 +343,18 @@ end
 
 ## Error Handling
 
-A metric that cannot produce a score is *errored*, not failed. Every
-assertion (including `assert_fails`) flunks on an errored metric and reports
-the error distinctly instead of a low score:
+A metric that cannot produce a score is *errored*, not failed. As in
+deepeval's `assert_test`, the error is raised unless `IGNORE_DEEPEVAL_ERRORS`
+(or `config :deep_eval_ex, ignore_errors: true`, or the `ignore_errors: true`
+option) is set. With it, `assert_passes` and `assert_evaluation` report the
+error in deepeval's message, with no score or reason:
+
+```
+Metrics: Faithfulness (score: None, threshold: 0.5, strict: False, error: 'retrieval_context' cannot be None for the 'Faithfulness' metric, reason: None) failed.
+```
+
+`assert_fails` and `assert_score`, which have no deepeval counterpart, flunk on
+an errored metric with their own message instead of a low score:
 
 ### Missing Parameters
 

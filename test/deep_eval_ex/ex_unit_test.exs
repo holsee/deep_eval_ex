@@ -32,6 +32,51 @@ defmodule DeepEvalEx.ExUnitTest do
     end
   end
 
+  # A configurable metric that fails, flaky when its struct says so.
+  defmodule FailingMetric do
+    @moduledoc false
+
+    defstruct threshold: 0.5, flaky: nil
+
+    def metric_name, do: "Failing"
+
+    def measure(_test_case, opts) do
+      threshold = Keyword.get(opts, :threshold, 0.5)
+      {:ok, Result.new(metric: metric_name(), score: 0.25, threshold: threshold, reason: "Low.")}
+    end
+  end
+
+  # Reports that it is running to `:test_pid`, then waits to be released, so a
+  # test can see which metrics run at once.
+  defmodule BlockingMetric do
+    @moduledoc false
+
+    defstruct [:name]
+
+    def metric_name, do: "Blocking"
+    def metric_name(%__MODULE__{name: name}), do: name
+
+    def measure(_test_case, opts) do
+      send(Keyword.fetch!(opts, :test_pid), {:running, Keyword.fetch!(opts, :name), self()})
+
+      receive do
+        :release -> {:ok, Result.new(metric: opts[:name], score: 1.0, threshold: 0.5)}
+      end
+    end
+  end
+
+  # Takes longer than any timeout the tests set, then passes.
+  defmodule SlowMetric do
+    @moduledoc false
+
+    def metric_name, do: "Slow"
+
+    def measure(_test_case, _opts) do
+      Process.sleep(2_000)
+      {:ok, Result.new(metric: metric_name(), score: 1.0, threshold: 0.5)}
+    end
+  end
+
   defp missing_output_case do
     %TestCase{input: "Question", actual_output: nil, expected_output: "Answer"}
   end
@@ -63,7 +108,7 @@ defmodule DeepEvalEx.ExUnitTest do
           expected_output: "4"
         )
 
-      assert_raise ExUnit.AssertionError, ~r/Metric evaluation failed unexpectedly/i, fn ->
+      assert_raise ExUnit.AssertionError, ~r/Metrics: Exact Match \(score: 0\.0/, fn ->
         assert_passes(test_case, ExactMatch)
       end
     end
@@ -80,8 +125,8 @@ defmodule DeepEvalEx.ExUnitTest do
           assert_passes(test_case, ExactMatch, ignore_errors: true)
         end
 
-      assert error.message =~ "'actual_output' cannot be None for the 'Exact Match' metric"
-      assert error.message =~ "Ensure your TestCase includes all required fields for this metric."
+      assert error.message =~
+               "error: 'actual_output' cannot be None for the 'Exact Match' metric, reason: None"
     end
 
     test "fails with an empty actual_output error and the missing params hint" do
@@ -92,8 +137,8 @@ defmodule DeepEvalEx.ExUnitTest do
           assert_passes(test_case, ExactMatch, ignore_errors: true)
         end
 
-      assert error.message =~ "'actual_output' cannot be empty for the 'Exact Match' metric"
-      assert error.message =~ "Ensure your TestCase includes all required fields for this metric."
+      assert error.message =~
+               "error: 'actual_output' cannot be empty for the 'Exact Match' metric, reason: None"
     end
   end
 
@@ -155,7 +200,7 @@ defmodule DeepEvalEx.ExUnitTest do
       )
 
       # Score of 0.5 fails with threshold 0.8
-      assert_raise ExUnit.AssertionError, ~r/FAIL.*expected PASS/i, fn ->
+      assert_raise ExUnit.AssertionError, ~r/threshold: 0\.8, strict: False/, fn ->
         assert_passes(test_case, Faithfulness, adapter: :mock, threshold: 0.8)
       end
     end
@@ -374,7 +419,7 @@ defmodule DeepEvalEx.ExUnitTest do
           expected_output: "4"
         )
 
-      assert_raise ExUnit.AssertionError, ~r/Multiple metric evaluations failed/i, fn ->
+      assert_raise ExUnit.AssertionError, ~r/Metrics: Exact Match \(.*\) failed\./, fn ->
         assert_evaluation(test_case, [ExactMatch])
       end
     end
@@ -386,7 +431,7 @@ defmodule DeepEvalEx.ExUnitTest do
         expected_output: "A"
       }
 
-      assert_raise ExUnit.AssertionError, ~r/Multiple metric evaluations failed/i, fn ->
+      assert_raise ExUnit.AssertionError, ~r/score: None, .* error: 'actual_output'/, fn ->
         assert_evaluation(test_case, [ExactMatch], ignore_errors: true)
       end
     end
@@ -410,12 +455,14 @@ defmodule DeepEvalEx.ExUnitTest do
       end
     end
 
-    test "assert_passes and assert_fails report that the metric has no threshold",
+    test "assert_passes raises like deepeval's assert_test when the metric has no threshold",
          %{test_case: test_case} do
-      assert_raise ExUnit.AssertionError, ~r/ScoreOnly has no threshold/, fn ->
+      assert_raise ArgumentError, ~r/at least one non-flaky metric with a 'threshold'/, fn ->
         assert_passes(test_case, ScoreOnlyMetric)
       end
+    end
 
+    test "assert_fails reports that the metric has no threshold", %{test_case: test_case} do
       assert_raise ExUnit.AssertionError, ~r/ScoreOnly has no threshold/, fn ->
         assert_fails(test_case, ScoreOnlyMetric)
       end
@@ -468,9 +515,7 @@ defmodule DeepEvalEx.ExUnitTest do
           assert_passes(test_case, ExactMatch)
         end
 
-      assert error.message =~ "Exact Match"
-      assert error.message =~ "0.0"
-      assert error.message =~ "0%"
+      assert error.message =~ "Exact Match (score: 0.0, threshold: 1.0"
     end
 
     test "includes reason when available" do
@@ -486,7 +531,7 @@ defmodule DeepEvalEx.ExUnitTest do
           assert_passes(test_case, ExactMatch)
         end
 
-      assert error.message =~ "Reason:"
+      assert error.message =~ "reason: The actual and expected outputs are different.)"
     end
   end
 
@@ -497,11 +542,10 @@ defmodule DeepEvalEx.ExUnitTest do
           assert_passes(missing_output_case(), ExactMatch, ignore_errors: true)
         end
 
-      assert error.message =~
-               "metric errored: 'actual_output' cannot be None for the 'Exact Match' metric"
-
-      assert error.message =~ "ERROR"
-      refute error.message =~ "Score:"
+      assert error.message ==
+               "Metrics: Exact Match (score: None, threshold: 1.0, strict: False, " <>
+                 "error: 'actual_output' cannot be None for the 'Exact Match' metric, " <>
+                 "reason: None) failed."
     end
 
     test "assert_passes reports an errored result returned by the metric" do
@@ -510,7 +554,9 @@ defmodule DeepEvalEx.ExUnitTest do
           assert_passes(missing_output_case(), ErroredMetric)
         end
 
-      assert error.message =~ "metric errored: LLM returned invalid JSON"
+      assert error.message ==
+               "Metrics: ErroredMetric (score: None, threshold: 0.5, strict: False, " <>
+                 "error: LLM returned invalid JSON, reason: None) failed."
     end
 
     test "assert_fails does not treat an errored result as an expected failure" do
@@ -548,10 +594,11 @@ defmodule DeepEvalEx.ExUnitTest do
           )
         end
 
-      assert error.message =~
-               "metric errored: 'actual_output' cannot be None for the 'Exact Match' metric"
-
-      assert error.message =~ "metric errored: LLM returned invalid JSON"
+      assert error.message ==
+               "Metrics: Exact Match (score: None, threshold: 1.0, strict: False, " <>
+                 "error: 'actual_output' cannot be None for the 'Exact Match' metric, " <>
+                 "reason: None), ErroredMetric (score: None, threshold: 0.5, strict: False, " <>
+                 "error: LLM returned invalid JSON, reason: None) failed."
     end
   end
 
@@ -587,7 +634,7 @@ defmodule DeepEvalEx.ExUnitTest do
       System.put_env("IGNORE_DEEPEVAL_ERRORS", "true")
 
       assert_raise ExUnit.AssertionError,
-                   ~r/metric errored: 'actual_output' cannot be None/,
+                   ~r/error: 'actual_output' cannot be None/,
                    fn ->
                      assert_passes(missing_output_case(), ExactMatch)
                    end
@@ -601,7 +648,7 @@ defmodule DeepEvalEx.ExUnitTest do
         assert_passes(missing_output_case(), ExactMatch)
       end
 
-      assert_raise ExUnit.AssertionError, ~r/metric errored/, fn ->
+      assert_raise ExUnit.AssertionError, ~r/error: 'actual_output' cannot be None/, fn ->
         assert_passes(missing_output_case(), ExactMatch, ignore_errors: true)
       end
     end
@@ -684,6 +731,113 @@ defmodule DeepEvalEx.ExUnitTest do
 
       assert %Result{verbose_logs: nil} =
                assert_passes(test_case, ExactMatch, verbose_mode: false)
+    end
+  end
+
+  describe "deepeval's assert_test" do
+    setup do
+      %{
+        passing: TestCase.new!(input: "Q", actual_output: "4", expected_output: "4"),
+        failing: TestCase.new!(input: "Q", actual_output: "5", expected_output: "4")
+      }
+    end
+
+    test "fails with deepeval's message, Python's str() of each field", %{failing: failing} do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_evaluation(failing, [ExactMatch, %FailingMetric{threshold: 0.3}])
+        end
+
+      assert error.message ==
+               "Metrics: Exact Match (score: 0.0, threshold: 1.0, strict: False, error: None, " <>
+                 "reason: The actual and expected outputs are different.), " <>
+                 "Failing (score: 0.25, threshold: 0.3, strict: False, error: None, " <>
+                 "reason: Low.) failed."
+    end
+
+    test "prints strict mode's integer threshold and clamped score as floats",
+         %{failing: failing} do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_passes(failing, FailingMetric, strict_mode: true)
+        end
+
+      assert error.message ==
+               "Metrics: Failing (score: 0.0, threshold: 1.0, strict: True, error: None, " <>
+                 "reason: Low.) failed."
+    end
+
+    test "lists score-only metrics among the failures, as `not None` is true",
+         %{failing: failing} do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_evaluation(failing, [ExactMatch, ScoreOnlyMetric])
+        end
+
+      assert error.message =~
+               ~r/different\.\), ScoreOnly \(score: 0\.25, threshold: None, strict: False, error: None, reason: None\) failed\.$/
+    end
+
+    test "a failing flaky metric does not fail the test case", %{passing: passing} do
+      assert [%Result{success: true}, %Result{success: false, flaky: true}] =
+               assert_evaluation(passing, [ExactMatch, %FailingMetric{flaky: true}])
+    end
+
+    test "a failing flaky metric is listed when another metric fails", %{failing: failing} do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_evaluation(failing, [ExactMatch, %FailingMetric{flaky: true}])
+        end
+
+      assert error.message =~ ~r/, Failing \(score: 0\.25, .*\) failed\.$/
+    end
+
+    test "a flaky test case only warns, as deepeval's warnings.warn", %{failing: failing} do
+      flaky = %{failing | flaky: true}
+
+      stderr =
+        ExUnit.CaptureIO.capture_io(:stderr, fn ->
+          assert %Result{success: false} = assert_passes(flaky, ExactMatch)
+        end)
+
+      assert stderr =~
+               "Flaky test case failed (no assertion raised): Metrics: Exact Match " <>
+                 "(score: 0.0, threshold: 1.0, strict: False, error: None, " <>
+                 "reason: The actual and expected outputs are different.) failed."
+    end
+
+    test "runs the metrics concurrently through the Evaluator", %{passing: passing} do
+      metrics = [%BlockingMetric{name: "A"}, %BlockingMetric{name: "B"}]
+      test_pid = self()
+      task = Task.async(fn -> assert_evaluation(passing, metrics, test_pid: test_pid) end)
+
+      assert_receive {:running, "A", a}, 1_000
+      assert_receive {:running, "B", b}, 1_000
+      Enum.each([a, b], &send(&1, :release))
+
+      assert [%Result{metric: "A"}, %Result{metric: "B"}] = Task.await(task)
+    end
+
+    test "applies the Evaluator's metric timeout", %{passing: passing} do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_passes(passing, SlowMetric, metric_timeout: 50, ignore_errors: true)
+        end
+
+      assert error.message =~ "error: Timed out/cancelled while evaluating metric."
+    end
+
+    test "raises the timeout without ignore_errors", %{passing: passing} do
+      assert_raise DeepEvalEx.MetricError, ~r/^Timed out\/cancelled/, fn ->
+        assert_score(passing, SlowMetric, [min: 0.5], metric_timeout: 50)
+      end
+    end
+
+    test "raises like deepeval when every metric with a threshold is flaky",
+         %{passing: passing} do
+      assert_raise ArgumentError, ~r/at least one non-flaky metric/, fn ->
+        assert_passes(passing, %FailingMetric{flaky: true})
+      end
     end
   end
 

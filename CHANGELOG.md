@@ -418,17 +418,42 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   with no metric left is left out of the run. As in deepeval, `evaluate()`
   does not read the `IGNORE_DEEPEVAL_ERRORS` and `SKIP_DEEPEVAL_MISSING_PARAMS`
   settings.
+- **BREAKING: `assert_passes` and `assert_evaluation` are deepeval's
+  `assert_test`, failure message included.** They now evaluate the test case
+  through `DeepEvalEx.Evaluator.evaluate/3`, so a test case's metrics run
+  concurrently (they used to run one after another), under the Evaluator's
+  `:timeout` and `:metric_timeout` (they had none) and its `ErrorConfig`, with
+  `assert_test`'s `max_concurrent: 100` and `throttle_value: 0` unless given;
+  every Evaluator option (`:run_async`, ...) is accepted. A failure flunks with
+  deepeval 4.3.1's message instead of the "Metric evaluation failed
+  unexpectedly" / "Multiple metric evaluations failed" blocks:
+  `"Metrics: <name> (score: <score>, threshold: <threshold>, strict: <strict>,
+  error: <error>, reason: <reason>), ... failed."`, listing every errored or
+  unsuccessful metric (flaky and score-only ones too) in metric order, each
+  field as Python's `str()` (`None`, `True`/`False`, scores and thresholds as
+  Python floats, so strict mode's threshold prints `1.0`), with `score: None`
+  and `reason: None` for an errored metric. The test case fails as
+  `DeepEvalEx.TestResult` does: a failing flaky metric alone no longer fails
+  `assert_evaluation`, and a failing test case marked `flaky: true` no longer
+  flunks but prints `"Flaky test case failed (no assertion raised): <message>"`
+  with `IO.warn/1`, as `assert_test` warns, and returns the results.
+  `assert_passes` on a score-only metric, or on a flaky one, now raises
+  `ArgumentError` with deepeval's "at least one non-flaky metric with a
+  'threshold'" message, as `assert_test` does, instead of flunking.
+  `assert_fails` and `assert_score` keep their messages and also evaluate
+  through `DeepEvalEx.Evaluator.evaluate/3`, so the timeouts apply to them too.
 - **BREAKING: `DeepEvalEx.ExUnit` assertions raise metric errors unless
   `IGNORE_DEEPEVAL_ERRORS` is set**, as deepeval's `assert_test` reads its
   `ErrorConfig` from the `:ignore_errors` and `:skip_on_missing_params`
   settings (`config :deep_eval_ex` or `IGNORE_DEEPEVAL_ERRORS` and
   `SKIP_DEEPEVAL_MISSING_PARAMS`, see `DeepEvalEx.Config`); an
   `ignore_errors:` or `skip_on_missing_params:` option wins over both. With
-  `:ignore_errors` an errored metric flunks with `"metric errored: ..."` as
-  before. A skipped metric passes `assert_passes` and `assert_evaluation`,
+  `:ignore_errors` an errored metric flunks the assertion (see the
+  `assert_test` entry above for `assert_passes` and `assert_evaluation`'s
+  message; `assert_fails` and `assert_score` still report `"metric errored:
+  ..."`). A skipped metric passes `assert_passes` and `assert_evaluation`,
   which return its skipped result, and flunks `assert_fails` and
-  `assert_score`, which have no score to check. The assertions now measure
-  through `DeepEvalEx.Evaluator.evaluate_metric/3`.
+  `assert_score`, which have no score to check.
 
 - **BREAKING: `DeepEvalEx.evaluate/3` takes a list of test cases and returns
   `{:ok, %DeepEvalEx.EvaluationResult{}}`**, with one `DeepEvalEx.TestResult`
