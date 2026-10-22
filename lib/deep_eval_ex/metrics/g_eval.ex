@@ -76,9 +76,13 @@ defmodule DeepEvalEx.Metrics.GEval do
   - `:evaluation_params` - Test case parameters to evaluate (required)
   - `:evaluation_steps` - Pre-defined evaluation steps (optional)
   - `:rubric` - Scoring rubric as list of {score, description} (optional)
-  - `:threshold` - Pass/fail threshold (default: 0.5)
+  - `:threshold` - Pass/fail threshold (default: 0.5); `nil` for score-only
+    evaluation
   - `:score_range` - Min/max score range (default: {0, 10})
-  - `:strict_mode` - Binary 0/1 scoring (default: false)
+  - `:strict_mode` - Binary 0/1 scoring; forces the threshold to `1`
+    (default: false)
+  - `:flaky` - Report the result without letting it decide its test case's
+    success (default: false)
   - `:model` - LLM model to use for evaluation
   - `:include_g_eval_suffix` - Name results `"<name> [GEval]"` rather than
     just `"<name>"` (default: true, as in deepeval)
@@ -86,7 +90,7 @@ defmodule DeepEvalEx.Metrics.GEval do
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, Result}
+  alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Result}
   alias DeepEvalEx.Prompts.GEval, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.GEval, as: Schema
 
@@ -101,6 +105,7 @@ defmodule DeepEvalEx.Metrics.GEval do
     :score_range,
     :strict_mode,
     :model,
+    flaky: false,
     include_g_eval_suffix: true
   ]
 
@@ -112,9 +117,10 @@ defmodule DeepEvalEx.Metrics.GEval do
           evaluation_params: [atom()],
           evaluation_steps: [String.t()] | nil,
           rubric: [rubric_entry()] | nil,
-          threshold: float(),
+          threshold: number() | nil,
           score_range: {integer(), integer()},
           strict_mode: boolean(),
+          flaky: boolean(),
           model: tuple() | nil,
           include_g_eval_suffix: boolean()
         }
@@ -129,9 +135,11 @@ defmodule DeepEvalEx.Metrics.GEval do
   - `:evaluation_params` - Parameters to evaluate (required)
   - `:evaluation_steps` - Pre-defined steps (optional)
   - `:rubric` - Scoring rubric (optional)
-  - `:threshold` - Pass/fail threshold (default: 0.5)
+  - `:threshold` - Pass/fail threshold (default: 0.5); `nil` for score-only
   - `:score_range` - Score range (default: {0, 10})
-  - `:strict_mode` - Binary scoring (default: false)
+  - `:strict_mode` - Binary scoring; the threshold is then the integer `1`,
+    as deepeval's constructor forces it (default: false)
+  - `:flaky` - Never decide a test case's success (default: false)
   - `:model` - LLM model (optional, uses default)
   - `:include_g_eval_suffix` - Append `" [GEval]"` to the name (default: true)
   """
@@ -154,9 +162,10 @@ defmodule DeepEvalEx.Metrics.GEval do
       evaluation_params: evaluation_params,
       evaluation_steps: evaluation_steps,
       rubric: Keyword.get(opts, :rubric),
-      threshold: Keyword.get(opts, :threshold, 0.5),
+      threshold: BaseMetric.threshold(opts, default_threshold()),
       score_range: Keyword.get(opts, :score_range, {0, 10}),
       strict_mode: Keyword.get(opts, :strict_mode, false),
+      flaky: Keyword.get(opts, :flaky, false),
       model: Keyword.get(opts, :model),
       include_g_eval_suffix: Keyword.get(opts, :include_g_eval_suffix, true)
     }
@@ -256,16 +265,23 @@ defmodule DeepEvalEx.Metrics.GEval do
           # Normalize score to 0-1 range
           {min_score, max_score} = metric.score_range
           normalized_score = (score - min_score) / (max_score - min_score)
-          threshold = Keyword.get(opts, :threshold, metric.threshold)
+          strict_opts = Keyword.put_new(opts, :strict_mode, metric.strict_mode || false)
+          threshold = BaseMetric.threshold(strict_opts, metric.threshold)
 
           latency = System.monotonic_time(:millisecond) - start_time
 
           {:ok,
            Result.new(
              metric: metric_name(metric),
-             score: normalized_score,
+             score:
+               BaseMetric.strict_score(normalized_score,
+                 strict_mode: strict_opts[:strict_mode],
+                 threshold: threshold
+               ),
              threshold: threshold,
              reason: reason,
+             strict_mode: strict_opts[:strict_mode],
+             flaky: Keyword.get(opts, :flaky, metric.flaky),
              latency_ms: latency,
              metadata: %{
                raw_score: score,

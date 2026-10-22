@@ -46,6 +46,8 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
   ## Options
 
   - `:threshold` - Pass/fail threshold (default: 0.5)
+  - `:strict_mode` - Force the threshold to `1` and score below it `0`
+    (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:truths_extraction_limit` - Max truths to extract per doc (default: nil = all)
   - `:model` - LLM model for evaluation
@@ -53,7 +55,7 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, LLM.Usage, Metrics.QAG, Result}
+  alias DeepEvalEx.{LLM.Adapter, LLM.Usage, Metrics.BaseMetric, Metrics.QAG, Result}
   alias DeepEvalEx.Prompts.Faithfulness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.Faithfulness, as: Schema
 
@@ -81,7 +83,7 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
   - `:model` - Model name
   """
   def do_measure(test_case, opts) do
-    threshold = Keyword.get(opts, :threshold, default_threshold())
+    threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
     truths_limit = Keyword.get(opts, :truths_extraction_limit)
 
@@ -103,7 +105,7 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
     with {:ok, truths} <- Usage.await(truths_task, 60_000),
          {:ok, claims} <- Usage.await(claims_task, 60_000),
          {:ok, verdicts} <- generate_verdicts(claims, truths, opts),
-         score = calculate_score(verdicts),
+         score = calculate_score(verdicts, threshold, opts),
          {:ok, reason} <- maybe_generate_reason(score, verdicts, include_reason, opts) do
       {:ok,
        Result.new(
@@ -171,8 +173,12 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
 
   # Borderline claims count as faithful, as in deepeval 4.3.1 without
   # `penalize_ambiguous_claims`
-  defp calculate_score(verdicts) do
-    QAG.score_qag_verdicts(verdicts, passing: [:yes, :borderline])
+  defp calculate_score(verdicts, threshold, opts) do
+    QAG.score_qag_verdicts(verdicts,
+      passing: [:yes, :borderline],
+      strict_mode: Keyword.get(opts, :strict_mode, false),
+      threshold: threshold
+    )
   end
 
   defp maybe_generate_reason(_score, _verdicts, false, _opts), do: {:ok, nil}

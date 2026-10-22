@@ -56,13 +56,15 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   ## Options
 
   - `:threshold` - Pass/fail threshold (default: 0.5)
+  - `:strict_mode` - Force the threshold to `1` and score below it `0`
+    (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, Result}
+  alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Result}
   alias DeepEvalEx.Prompts.ContextualPrecision, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.ContextualPrecision, as: Schema
 
@@ -89,7 +91,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   - `:model` - Model name
   """
   def do_measure(test_case, opts) do
-    threshold = Keyword.get(opts, :threshold, default_threshold())
+    threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
     input = test_case.input
@@ -97,7 +99,11 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
     retrieval_context = get_retrieval_context(test_case)
 
     with {:ok, verdicts} <- generate_verdicts(input, expected_output, retrieval_context, opts),
-         score = calculate_score(verdicts),
+         score =
+           BaseMetric.strict_score(calculate_score(verdicts),
+             strict_mode: Keyword.get(opts, :strict_mode, false),
+             threshold: threshold
+           ),
          {:ok, reason} <- maybe_generate_reason(score, input, verdicts, include_reason, opts) do
       {:ok,
        Result.new(

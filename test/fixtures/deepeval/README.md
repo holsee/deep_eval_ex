@@ -165,15 +165,12 @@ rows here.
 | Facet | Scenarios | Fails because | Tag |
 | --- | --- | --- | --- |
 | prompts | every scenario that calls the judge (all but `exact_match_*` and `tool_correctness_pass`, `_fail`, `_strict`) | Prompt templates are paraphrased, not 4.3.1's Jinja templates (P1.6) | P1.6 |
-| measure | `answer_relevancy_strict`, `contextual_precision_strict`, `contextual_recall_strict`, `faithfulness_strict` | `strict_mode` ignored: threshold not forced to 1, score not clamped to 0 (P1.3) | P1.3 |
-| measure | `hallucination_strict` | `strict_mode` ignored: threshold not forced to 1 (P1.3) | P1.3 |
-| measure | `exact_match_pass`, `exact_match_fail` | Threshold is the float `1.0`; deepeval's is the integer `1` (P1.3) | P1.3 |
-| measure | `tool_correctness_pass`, `_fail`, `_strict` | No evaluation model without `available_tools`, where deepeval reports its judge (P1.3); reasons print tool names as JSON (`["get_weather"]`) rather than Python's repr (`['get_weather']`) (P1.6); in strict mode, float score and threshold where deepeval has integers (P1.3) | P1.6 |
+| measure | `tool_correctness_pass`, `_fail`, `_strict` | Reasons print tool names as JSON (`["get_weather"]`) rather than Python's repr (`['get_weather']`) (P1.6) | P1.6 |
 | measure | `tool_correctness_available_tools` | Reason prints tool names as JSON rather than Python's repr (P1.6) | P1.6 |
-| measure | `g_eval_strict` | Strict score normalised over the 0-10 range (0.1) and threshold kept at 0.5, where deepeval scores 1 against a threshold of 1 (P1.3, P1.11) | P1.11 |
+| measure | `g_eval_strict` | Strict score normalised over the 0-10 range (0.1, then clamped to 0), where deepeval takes the judge's 1 as the score (P1.11) | P1.11 |
 | verbose_logs | every scenario but `exact_match_*` | No `verbose_logs` on results (P1.7) | P1.7 |
-| test_run | every scenario but `exact_match_*` and `g_eval_strict` | No `verboseLogs` in the export (P1.7). Also, as above: strict scores (P1.3), Hallucination's `context` exported as `retrievalContext` too (P1.4), ToolCorrectness `evaluationModel` (P1.3) and reasons (P1.6) | P1.7 |
-| test_run | `g_eval_strict` | No `verboseLogs` (P1.7) and strict scoring (P1.3, P1.11) | P1.11 |
+| test_run | every scenario but `exact_match_*` and `g_eval_strict` | No `verboseLogs` in the export (P1.7). Also, as above: Hallucination's `context` exported as `retrievalContext` too (P1.4) and ToolCorrectness reasons (P1.6) | P1.7 |
+| test_run | `g_eval_strict` | No `verboseLogs` (P1.7) and strict scoring (P1.11) | P1.11 |
 
 ## Prompt goldens
 

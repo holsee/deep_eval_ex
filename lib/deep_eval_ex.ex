@@ -86,7 +86,10 @@ defmodule DeepEvalEx do
 
   ## Options
 
-  - `:threshold` - Score threshold for pass/fail (default: 0.5)
+  - `:threshold` - Score threshold for pass/fail (default: 0.5); `nil` for
+    score-only metrics
+  - `:strict_mode` - Force every metric's threshold to `1` (default: false)
+  - `:flaky` - Report every metric without letting it decide success
   - `:model` - LLM model to use for evaluation
   - `:timeout` - Timeout per metric in milliseconds (default: 60_000)
   - `:results_folder`, `:results_subfolder`, `:identifier`,
@@ -178,6 +181,16 @@ defmodule DeepEvalEx do
 
   These options are not passed on to the metrics.
 
+  ## Thresholds
+
+  As deepeval's `evaluate()`, raises `ArgumentError` before evaluating when
+  no metric has a threshold or every metric with one is `:flaky`, since no
+  test case could then pass or fail (see
+  `DeepEvalEx.Evaluator.check_at_least_one_metric_has_threshold!/2`). So do
+  `evaluate/3` and `evaluate_batch/3`. Metrics with a `nil` threshold are
+  score-only: their results have `success: nil` and never decide a test
+  case's success, nor do flaky metrics' results.
+
   ## Examples
 
       {results, test_run, path} =
@@ -193,6 +206,8 @@ defmodule DeepEvalEx do
     {export_opts, eval_opts} = Keyword.split(opts, @export_opts)
     hyperparameters = TestRun.process_hyperparameters(export_opts[:hyperparameters])
 
+    if metrics != [], do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, eval_opts)
+
     started = System.monotonic_time()
     {results, durations} = Evaluator.evaluate_with_durations(test_cases, metrics, eval_opts)
 
@@ -202,8 +217,6 @@ defmodule DeepEvalEx do
 
     test_run =
       TestRun.from_results(test_cases, results,
-        metrics: metrics,
-        strict_mode: Keyword.get(eval_opts, :strict_mode, false),
         run_durations: durations,
         run_duration: run_duration,
         identifier: export_opts[:identifier],

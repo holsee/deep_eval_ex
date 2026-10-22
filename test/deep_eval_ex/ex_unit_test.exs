@@ -20,6 +20,18 @@ defmodule DeepEvalEx.ExUnitTest do
     end
   end
 
+  # A metric without a threshold: it scores but neither passes nor fails.
+  defmodule ScoreOnlyMetric do
+    @moduledoc false
+
+    def metric_name, do: "ScoreOnly"
+    def default_threshold, do: nil
+
+    def measure(_test_case, _opts) do
+      {:ok, Result.new(metric: metric_name(), score: 0.25, threshold: nil)}
+    end
+  end
+
   defp missing_output_case do
     %TestCase{input: "Question", actual_output: nil, expected_output: "Answer"}
   end
@@ -360,6 +372,36 @@ defmodule DeepEvalEx.ExUnitTest do
 
       assert_raise ExUnit.AssertionError, ~r/Multiple metric evaluations failed/i, fn ->
         assert_evaluation(test_case, [ExactMatch])
+      end
+    end
+  end
+
+  describe "score-only metrics" do
+    setup do
+      %{test_case: TestCase.new!(input: "Q", actual_output: "4", expected_output: "4")}
+    end
+
+    test "assert_evaluation neither passes nor fails on a metric without a threshold",
+         %{test_case: test_case} do
+      assert [%Result{success: true}, %Result{success: nil}] =
+               assert_evaluation(test_case, [ExactMatch, ScoreOnlyMetric])
+    end
+
+    test "assert_evaluation raises like deepeval when no metric has a threshold",
+         %{test_case: test_case} do
+      assert_raise ArgumentError, ~r/at least one non-flaky metric with a 'threshold'/, fn ->
+        assert_evaluation(test_case, [ExactMatch], threshold: nil)
+      end
+    end
+
+    test "assert_passes and assert_fails report that the metric has no threshold",
+         %{test_case: test_case} do
+      assert_raise ExUnit.AssertionError, ~r/ScoreOnly has no threshold/, fn ->
+        assert_passes(test_case, ScoreOnlyMetric)
+      end
+
+      assert_raise ExUnit.AssertionError, ~r/ScoreOnly has no threshold/, fn ->
+        assert_fails(test_case, ScoreOnlyMetric)
       end
     end
   end

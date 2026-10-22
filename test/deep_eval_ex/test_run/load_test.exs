@@ -159,23 +159,25 @@ defmodule DeepEvalEx.TestRun.LoadTest do
                  name: "a",
                  input: "q",
                  flaky: false,
-                 success: false,
+                 success: true,
                  run_duration: 0,
                  order: 0,
                  evaluation_cost: nil,
                  metrics_data: [
-                   %MetricData{name: "M", score: 1.0, success: false, strict_mode: false}
+                   %MetricData{name: "M", score: 1.0, success: nil, strict_mode: false}
                  ]
                },
                %TestRun.TestCase{name: "b", success: true, metrics_data: [], order: 1}
              ] = test_run.test_cases
 
+      # A metric without `success` has no verdict, as deepeval's MetricData
+      # defaults it to None: it is counted as an error and fails nothing.
       assert test_run.metrics_scores == [
-               %{metric: "M", scores: [1.0], passes: 0, fails: 1, errors: 0}
+               %{metric: "M", scores: [], passes: 0, fails: 0, errors: 1}
              ]
 
-      assert test_run.test_passed == 1
-      assert test_run.test_failed == 1
+      assert test_run.test_passed == 2
+      assert test_run.test_failed == 0
       assert test_run.run_duration == 0.0
       assert test_run.evaluation_cost == nil
       assert test_run.identifier == nil

@@ -56,7 +56,7 @@ result.success # => true
 |--------|------|---------|-------------|
 | `:threshold` | float | 0.5 | Score threshold for pass/fail (higher is better) |
 | `:include_reason` | boolean | true | Generate explanation |
-| `:strict_mode` | boolean | false | Binary scoring: 1 for perfection, 0 otherwise; overrides threshold to 1.0 |
+| `:strict_mode` | boolean | false | Binary scoring: 1 for perfection, 0 otherwise; overrides threshold to the integer 1 |
 
 ### Advanced Options
 
@@ -175,7 +175,7 @@ test_case = TestCase.new!(
 
 When `available_tools` is provided, an LLM evaluates whether the tools selected by the agent were optimal given all available options. The final score is `min(tool_calling_score, tool_selection_score)`.
 
-Without `available_tools`, the metric is **fully deterministic** — no LLM calls are made.
+Without `available_tools`, the metric is **fully deterministic** — no LLM calls are made. As in deepeval, the result still reports the configured judge as `evaluation_model`.
 
 The LLM scores tool selection on a 5-point scale:
 

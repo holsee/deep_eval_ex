@@ -98,18 +98,19 @@ defmodule DeepEvalEx.TestRun do
     @moduledoc """
     One metric's result on one test case, as deepeval's `MetricData`.
 
-    Built from a `DeepEvalEx.Result` by `from_result/2`, and turned back
+    Built from a `DeepEvalEx.Result` by `from_result/1`, and turned back
     into one by `to_result/1`. An errored result keeps its threshold, error
-    and cost but has no score or reason, as in deepeval. DeepEvalEx metrics
-    are never flaky, so `:flaky` is `false` unless the data was loaded from
-    a deepeval file.
+    and cost but has no score or reason, as in deepeval. `:strict_mode` and
+    `:flaky` are the result's. A score-only metric has neither `:threshold`
+    nor `:success` (`nil`), and the export leaves both out, as deepeval's
+    `exclude_none` does.
     """
 
     @type t :: %__MODULE__{
             name: String.t(),
-            threshold: float() | nil,
-            success: boolean(),
-            score: float() | nil,
+            threshold: number() | nil,
+            success: boolean() | nil,
+            score: number() | nil,
             reason: String.t() | nil,
             strict_mode: boolean(),
             flaky: boolean(),
@@ -136,14 +137,11 @@ defmodule DeepEvalEx.TestRun do
     ]
 
     @doc """
-    Converts a result into metric data.
-
-    ## Options
-
-    - `:strict_mode` - Whether the metric ran in strict mode (default: `false`)
+    Converts a result into metric data, with the result's strict mode and
+    flakiness.
     """
-    @spec from_result(Result.t(), keyword()) :: t()
-    def from_result(%Result{} = result, opts \\ []) do
+    @spec from_result(Result.t()) :: t()
+    def from_result(%Result{} = result) do
       errored? = Result.errored?(result)
 
       %__MODULE__{
@@ -152,7 +150,8 @@ defmodule DeepEvalEx.TestRun do
         success: result.success,
         score: if(errored?, do: nil, else: result.score),
         reason: if(errored?, do: nil, else: result.reason),
-        strict_mode: Keyword.get(opts, :strict_mode, false),
+        strict_mode: result.strict_mode,
+        flaky: result.flaky,
         evaluation_model: result.evaluation_model,
         error: result.error,
         evaluation_cost: result.evaluation_cost,
@@ -162,10 +161,8 @@ defmodule DeepEvalEx.TestRun do
     end
 
     @doc """
-    Converts metric data into a result.
-
-    `:strict_mode` and `:flaky` have no `DeepEvalEx.Result` counterpart and
-    are dropped.
+    Converts metric data into a result, keeping its strict mode and
+    flakiness.
     """
     @spec to_result(t()) :: Result.t()
     def to_result(%__MODULE__{} = data) do
@@ -176,6 +173,8 @@ defmodule DeepEvalEx.TestRun do
         reason: data.reason,
         threshold: data.threshold,
         error: data.error,
+        strict_mode: data.strict_mode,
+        flaky: data.flaky,
         evaluation_model: data.evaluation_model,
         evaluation_cost: data.evaluation_cost,
         input_tokens: data.input_tokens,
@@ -189,7 +188,8 @@ defmodule DeepEvalEx.TestRun do
     One evaluated test case, as deepeval's `LLMApiTestCase`.
 
     Carries the test case's fields, the metric data of each of its results,
-    whether every metric passed (`:success`), its summed `:evaluation_cost`
+    whether no metric failed (`:success`; flaky and score-only metrics never
+    decide it, as in deepeval's `update_status`), its summed `:evaluation_cost`
     (`nil` when no metric reported one) and its `:run_duration` in seconds.
     `:name` defaults to `"test_case_<order>"` as in deepeval.
 
@@ -282,16 +282,19 @@ defmodule DeepEvalEx.TestRun do
   Builds a test run from test cases and their results.
 
   `results` holds one result list per test case, as returned by
-  `DeepEvalEx.evaluate_batch/3`. Test cases without results are left out,
-  as deepeval leaves out test cases no metric ran on; the others keep their
-  position in `test_cases` as their `order`.
+  `DeepEvalEx.evaluate_batch/3`. Skipped results (`DeepEvalEx.Result.skipped/2`)
+  are left out, and so are test cases without other results, as deepeval
+  leaves out test cases no metric ran on; the others keep their position in
+  `test_cases` as their `order`. Each metric's `strictMode` and `flaky` come
+  from its result.
+
+  A test case succeeds unless a non-flaky metric failed: score-only results
+  (`success: nil`) and flaky ones never decide it, as in deepeval's
+  `update_status`. In `metricsScores`, results without a score or a success
+  are counted as `errors`, as deepeval counts them.
 
   ## Options
 
-  - `:metrics` - The metrics that produced each result list, used to record
-    each metric's strict mode
-  - `:strict_mode` - Strict mode of metrics that do not set their own
-    (default: `false`)
   - `:run_durations` - Seconds each test case took, in `test_cases` order.
     As in deepeval, a test case that took under one second is recorded as
     the integer `0` (default: all `0`)
@@ -302,8 +305,6 @@ defmodule DeepEvalEx.TestRun do
   """
   @spec from_results([EvalTestCase.t()], [[Result.t()]], keyword()) :: t()
   def from_results(test_cases, results, opts \\ []) do
-    strict_modes = strict_modes(opts)
-
     durations =
       Keyword.get_lazy(opts, :run_durations, fn -> Enum.map(test_cases, fn _ -> 0 end) end)
 
@@ -311,9 +312,12 @@ defmodule DeepEvalEx.TestRun do
       [test_cases, results, durations]
       |> Enum.zip()
       |> Enum.with_index()
+      |> Enum.map(fn {{test_case, case_results, duration}, order} ->
+        {{test_case, Enum.reject(case_results, & &1.skipped), duration}, order}
+      end)
       |> Enum.reject(fn {{_test_case, case_results, _duration}, _order} -> case_results == [] end)
       |> Enum.map(fn {{test_case, case_results, duration}, order} ->
-        api_test_case(test_case, case_results, duration, order, strict_modes)
+        api_test_case(test_case, case_results, duration, order)
       end)
 
     %__MODULE__{
@@ -443,15 +447,16 @@ defmodule DeepEvalEx.TestRun do
 
   - a test case's `success` is computed from its metric data, as
     `from_results/3` does, and its `order` is its position in `testCases`
-  - a test case's `runDuration` is `0` and a metric's `success` is `false`
+  - a test case's `runDuration` is `0`
   - `metricsScores`, `testPassed` and `testFailed` are computed from the
     test cases
 
   An explicit JSON `null` is read like a missing key. deepeval saves with
   `exclude_none=True`, so its files never contain `null` (a test case whose
-  `success` is `None` has no `success` key); DeepEvalEx does not keep a
-  `nil` `success` because it models success as a boolean, and like deepeval
-  it never writes `null` back.
+  `success` is `None` has no `success` key). A metric without `success` is
+  read as `nil`, as deepeval's `MetricData` defaults it to `None` for a
+  score-only metric; a test case's `success` stays a boolean. Like deepeval,
+  DeepEvalEx never writes `null` back.
 
   Returns `{:error, {:invalid_test_run, message}}` when a required key is
   missing or a value has the wrong shape; the message starts with the path
@@ -493,13 +498,8 @@ defmodule DeepEvalEx.TestRun do
     }
   end
 
-  defp api_test_case(test_case, results, duration, order, strict_modes) do
-    metrics_data =
-      results
-      |> Enum.with_index()
-      |> Enum.map(fn {result, index} ->
-        MetricData.from_result(result, strict_mode: strict_modes.(index))
-      end)
+  defp api_test_case(test_case, results, duration, order) do
+    metrics_data = Enum.map(results, &MetricData.from_result/1)
 
     %TestCase{
       name: test_case.name || "test_case_#{order}",
@@ -516,7 +516,7 @@ defmodule DeepEvalEx.TestRun do
       completion_time: test_case.completion_time,
       tags: test_case.tags,
       flaky: test_case.flaky || false,
-      success: Enum.all?(metrics_data, &(&1.flaky or &1.success)),
+      success: case_success(metrics_data),
       metrics_data: metrics_data,
       run_duration: case_duration(duration),
       evaluation_cost: sum_costs(metrics_data),
@@ -532,19 +532,10 @@ defmodule DeepEvalEx.TestRun do
   defp case_duration(duration) when is_number(duration) and duration >= 1, do: duration / 1
   defp case_duration(_duration), do: 0
 
-  defp strict_modes(opts) do
-    default = Keyword.get(opts, :strict_mode, false)
-
-    modes =
-      opts
-      |> Keyword.get(:metrics, [])
-      |> Enum.map(fn
-        %{strict_mode: mode} when is_boolean(mode) -> mode
-        _metric -> default
-      end)
-      |> List.to_tuple()
-
-    fn index -> if index < tuple_size(modes), do: elem(modes, index), else: default end
+  # deepeval's update_status: a test case starts successful and fails only
+  # when a non-flaky metric's success is False; None (score-only) leaves it.
+  defp case_success(metrics_data) do
+    not Enum.any?(metrics_data, &(not &1.flaky and &1.success == false))
   end
 
   defp metrics_scores(test_cases) do
@@ -572,7 +563,11 @@ defmodule DeepEvalEx.TestRun do
     |> Enum.map(fn name -> Map.update!(scores[name], :scores, &Enum.reverse/1) end)
   end
 
-  defp add_score(entry, %MetricData{score: nil}), do: Map.update!(entry, :errors, &(&1 + 1))
+  # As deepeval's construct_metrics_scores, a result without a score or a
+  # success (errored, or score-only) counts as an error.
+  defp add_score(entry, %MetricData{score: score, success: success})
+       when is_nil(score) or is_nil(success),
+       do: Map.update!(entry, :errors, &(&1 + 1))
 
   defp add_score(entry, %MetricData{score: score, success: success}) do
     entry = Map.update!(entry, :scores, &[to_float(score) | &1])
@@ -726,7 +721,7 @@ defmodule DeepEvalEx.TestRun do
       completion_time: map["completionTime"],
       tags: map["tags"],
       flaky: value(map, "flaky", false),
-      success: value(map, "success", Enum.all?(metrics_data, &(&1.flaky or &1.success))),
+      success: value(map, "success", case_success(metrics_data)),
       metrics_data: metrics_data,
       run_duration: value(map, "runDuration", 0),
       evaluation_cost: map["evaluationCost"],
@@ -742,7 +737,7 @@ defmodule DeepEvalEx.TestRun do
     %MetricData{
       name: string!(map, "name", path),
       threshold: map["threshold"],
-      success: value(map, "success", false),
+      success: map["success"],
       score: map["score"],
       reason: map["reason"],
       strict_mode: value(map, "strictMode", false),

@@ -20,6 +20,30 @@ defmodule DeepEvalExTest do
     end
   end
 
+  defmodule ScoreOnlyMetric do
+    @moduledoc false
+
+    use DeepEvalEx.Metrics.BaseMetric, default_threshold: nil
+
+    @impl true
+    def metric_name, do: "ScoreOnly"
+
+    @impl true
+    def required_params, do: [:input]
+
+    def do_measure(_test_case, opts) do
+      {:ok,
+       Result.new(
+         metric: metric_name(),
+         score: 0.25,
+         threshold: Keyword.get(opts, :threshold, default_threshold())
+       )}
+    end
+  end
+
+  @no_threshold_message "You must provide at least one non-flaky metric with a 'threshold', " <>
+                          "otherwise test cases can never pass or fail."
+
   setup do
     previous = System.get_env("DEEPEVAL_RESULTS_FOLDER")
     System.delete_env("DEEPEVAL_RESULTS_FOLDER")
@@ -106,6 +130,43 @@ defmodule DeepEvalExTest do
       refute_received {:opts, _}
     end
 
+    test "raises like deepeval when no metric has a threshold, before evaluating" do
+      assert_raise ArgumentError, @no_threshold_message, fn ->
+        DeepEvalEx.evaluate_run(test_cases(), [OptsMetric], test_pid: self(), threshold: nil)
+      end
+
+      refute_received {:opts, _}
+
+      assert_raise ArgumentError, @no_threshold_message, fn ->
+        DeepEvalEx.evaluate_run(test_cases(), [ScoreOnlyMetric])
+      end
+    end
+
+    test "raises like deepeval when every metric with a threshold is flaky" do
+      assert_raise ArgumentError, @no_threshold_message, fn ->
+        DeepEvalEx.evaluate_run(test_cases(), [ExactMatch, ScoreOnlyMetric], flaky: true)
+      end
+    end
+
+    test "evaluates score-only metrics alongside a metric with a threshold" do
+      {[[_, score_only] | _], test_run, nil} =
+        DeepEvalEx.evaluate_run(test_cases(), [ExactMatch, ScoreOnlyMetric])
+
+      assert %Result{score: 0.25, threshold: nil, success: nil} = score_only
+      assert test_run.test_passed == 1
+      assert test_run.test_failed == 1
+
+      json = test_run |> TestRun.to_map() |> TestRun.JSON.encode!()
+      assert json =~ ~s({"name": "ScoreOnly", "score": 0.25, "strictMode": false)
+    end
+
+    test "exports each metric's strict mode, with the threshold forced to 1" do
+      {_results, test_run, nil} =
+        DeepEvalEx.evaluate_run(test_cases(), [ExactMatch], strict_mode: true, threshold: 0.2)
+
+      assert [%{metrics_data: [%{strict_mode: true, threshold: 1}]}, _] = test_run.test_cases
+    end
+
     test "writes to DEEPEVAL_RESULTS_FOLDER when no folder is given", %{tmp_dir: dir} do
       System.put_env("DEEPEVAL_RESULTS_FOLDER", dir)
 
@@ -151,6 +212,18 @@ defmodule DeepEvalExTest do
 
       assert [path] = written(dir)
       assert File.read!(path) =~ ~s("testPassed": 1, "testFailed": 0)
+    end
+
+    test "raises like deepeval when no metric has a threshold" do
+      [test_case | _] = test_cases()
+
+      assert_raise ArgumentError, @no_threshold_message, fn ->
+        DeepEvalEx.evaluate(test_case, [ScoreOnlyMetric])
+      end
+
+      assert_raise ArgumentError, @no_threshold_message, fn ->
+        DeepEvalEx.evaluate_batch(test_cases(), [ScoreOnlyMetric])
+      end
     end
 
     test "writes nothing without a results folder", %{tmp_dir: dir} do

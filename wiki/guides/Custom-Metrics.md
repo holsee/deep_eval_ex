@@ -56,7 +56,14 @@ end
 
 - `measure/2` wrapper with validation and telemetry
 - `validate_test_case/1` function
-- `default_threshold/0` function
+- `default_threshold/0` function (`default_threshold: nil` makes the metric
+  score-only by default)
+- deepeval's `strict_mode`, score-only and `flaky` semantics: with
+  `strict_mode: true` your `do_measure/2` gets `threshold: 1` and a returned
+  score below it becomes `0`; with `threshold: nil` the result's `success` is
+  `nil`; the result carries `:strict_mode` and `:flaky`. Use
+  `BaseMetric.threshold/2` and `BaseMetric.strict_score/2` when your reason
+  depends on the final score
 - Automatic telemetry instrumentation
 
 ## Implementing `do_measure/2`

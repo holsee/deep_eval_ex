@@ -48,7 +48,9 @@ results = Evaluator.evaluate(test_cases, metrics)
 |--------|------|---------|-------------|
 | `:concurrency` | integer | schedulers * 2 | Maximum concurrent evaluations |
 | `:timeout` | integer | 60_000 | Timeout per test case (ms) |
-| `:threshold` | float | 0.5 | Default threshold for all metrics |
+| `:threshold` | float | 0.5 | Default threshold for all metrics; `nil` makes them score-only |
+| `:strict_mode` | boolean | false | Default strict mode: threshold forced to `1`, lower scores clamped to `0` |
+| `:flaky` | boolean | false | Default flakiness: results never decide a test case's success |
 | `:model` | string | configured | LLM model for LLM-based metrics |
 | `:adapter` | atom | configured | LLM adapter to use |
 

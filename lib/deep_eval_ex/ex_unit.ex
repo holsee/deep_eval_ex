@@ -43,7 +43,7 @@ defmodule DeepEvalEx.ExUnit do
   low score.
   """
 
-  alias DeepEvalEx.Result
+  alias DeepEvalEx.{Evaluator, Metrics.BaseMetric, Result}
 
   @doc """
   Imports DeepEvalEx.ExUnit macros into your test module.
@@ -152,6 +152,7 @@ defmodule DeepEvalEx.ExUnit do
 
     cond do
       Result.errored?(result) -> flunk!(format_errored_message(result))
+      is_nil(result.success) -> flunk!(format_score_only_message(result))
       not result.success -> flunk!(format_failure_message(result, :expected_pass))
       true -> result
     end
@@ -163,6 +164,7 @@ defmodule DeepEvalEx.ExUnit do
 
     cond do
       Result.errored?(result) -> flunk!(format_errored_message(result))
+      is_nil(result.success) -> flunk!(format_score_only_message(result))
       result.success -> flunk!(format_failure_message(result, :expected_fail))
       true -> result
     end
@@ -199,9 +201,8 @@ defmodule DeepEvalEx.ExUnit do
   end
 
   defp resolve_threshold(metric, opts) do
-    Keyword.get_lazy(opts, :threshold, fn ->
-      if function_exported?(metric, :default_threshold, 0), do: metric.default_threshold()
-    end)
+    default = if function_exported?(metric, :default_threshold, 0), do: metric.default_threshold()
+    BaseMetric.threshold(opts, default)
   end
 
   defp validate_score!(result, score_opts) do
@@ -254,8 +255,11 @@ defmodule DeepEvalEx.ExUnit do
 
   @doc false
   def __assert_evaluation__(test_case, metrics, opts) do
+    Evaluator.check_at_least_one_metric_has_threshold!(metrics, opts)
+
     results = Enum.map(metrics, &run_metric(test_case, &1, opts))
-    failures = Enum.reject(results, & &1.success)
+    # Score-only results (success nil) neither pass nor fail.
+    failures = Enum.filter(results, &(Result.errored?(&1) or &1.success == false))
 
     if failures != [] do
       message = format_evaluation_failures(failures)
@@ -345,6 +349,18 @@ defmodule DeepEvalEx.ExUnit do
     Score:    #{format_score(result.score)}
     Maximum:  #{format_score(expected)}
     #{format_reason(result.reason)}
+    """
+  end
+
+  defp format_score_only_message(result) do
+    """
+
+    #{result.metric} has no threshold, so it can neither pass nor fail.
+
+    Metric:    #{result.metric}
+    Score:     #{format_score(result.score)}
+    Status:    SCORED (no threshold)
+    Use assert_score/3 to check the score of a score-only metric.
     """
   end
 

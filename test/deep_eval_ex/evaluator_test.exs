@@ -108,7 +108,7 @@ defmodule DeepEvalEx.EvaluatorTest do
 
     @default_threshold 0.5
 
-    defstruct threshold: nil, label: nil
+    defstruct threshold: @default_threshold, label: nil
 
     def metric_name, do: "ConfigurableMetric"
 
@@ -133,6 +133,43 @@ defmodule DeepEvalEx.EvaluatorTest do
 
   defp test_case do
     TestCase.new!(input: "What is 2 + 2?", actual_output: "4", expected_output: "4")
+  end
+
+  describe "check_at_least_one_metric_has_threshold!/2" do
+    @message "You must provide at least one non-flaky metric with a 'threshold', " <>
+               "otherwise test cases can never pass or fail."
+
+    test "passes when a non-flaky metric has a threshold" do
+      assert :ok = Evaluator.check_at_least_one_metric_has_threshold!([ExactMatch], [])
+      assert :ok = Evaluator.check_at_least_one_metric_has_threshold!([SlowMetric], [])
+
+      assert :ok =
+               Evaluator.check_at_least_one_metric_has_threshold!(
+                 [%ConfigurableMetric{threshold: nil}, ExactMatch],
+                 []
+               )
+    end
+
+    test "counts strict mode as a threshold of 1" do
+      assert :ok =
+               Evaluator.check_at_least_one_metric_has_threshold!([ExactMatch],
+                 threshold: nil,
+                 strict_mode: true
+               )
+    end
+
+    test "raises deepeval's ValueError message as an ArgumentError otherwise" do
+      for {metrics, opts} <- [
+            {[ExactMatch], [threshold: nil]},
+            {[%ConfigurableMetric{threshold: nil}], []},
+            {[ExactMatch], [flaky: true]},
+            {[SlowMetric], [threshold: nil]}
+          ] do
+        assert_raise ArgumentError, @message, fn ->
+          Evaluator.check_at_least_one_metric_has_threshold!(metrics, opts)
+        end
+      end
+    end
   end
 
   describe "evaluate_with_durations/3" do
@@ -308,7 +345,7 @@ defmodule DeepEvalEx.EvaluatorTest do
                score: nil,
                success: false,
                error: "Missing required parameters: actual_output",
-               threshold: 1.0
+               threshold: 1
              } = Evaluator.evaluate_metric(incomplete, ExactMatch, [])
     end
 
@@ -348,6 +385,20 @@ defmodule DeepEvalEx.EvaluatorTest do
       assert %Result{metric: "Correctness"} = Evaluator.evaluate_metric(incomplete, metric, [])
     end
 
+    test "errored results carry the forced strict threshold, strict mode and flakiness" do
+      assert [[%Result{threshold: 1, strict_mode: true, flaky: true, success: false}]] =
+               Evaluator.evaluate([test_case()], [FailingMetric],
+                 strict_mode: true,
+                 flaky: true,
+                 threshold: 0.3
+               )
+    end
+
+    test "errored score-only results have no success, as deepeval's is_successful" do
+      assert [[%Result{threshold: nil, success: nil, error: "{:api_error, 500}"}]] =
+               Evaluator.evaluate([test_case()], [%FailingMetric{threshold: nil}])
+    end
+
     test "errored results use a metric struct's own threshold" do
       assert [[%Result{threshold: 0.9, error: "{:api_error, 500}"}]] =
                Evaluator.evaluate([test_case()], [%FailingMetric{threshold: 0.9}], threshold: 0.3)
@@ -363,9 +414,16 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
 
     test "run-level options apply when the metric leaves a field unset" do
-      metric = %ConfigurableMetric{threshold: nil, label: "custom"}
+      metric = %ConfigurableMetric{threshold: 0.9, label: nil}
 
-      assert [[%Result{threshold: 0.7, reason: "custom"}]] =
+      assert [[%Result{threshold: 0.9, reason: "run"}]] =
+               Evaluator.evaluate([test_case()], [metric], label: "run")
+    end
+
+    test "a metric struct's nil threshold is score-only, not unset" do
+      metric = %ConfigurableMetric{threshold: nil}
+
+      assert [[%Result{threshold: nil}]] =
                Evaluator.evaluate([test_case()], [metric], threshold: 0.7)
     end
 
@@ -427,27 +485,19 @@ defmodule DeepEvalEx.EvaluatorTest do
 
       assert %Result{evaluation_model: nil} =
                Evaluator.evaluate_metric(incomplete, ExactMatch, adapter: :mock)
-
-      no_tools = %TestCase{input: "Q", actual_output: "A", tools_called: nil}
-
-      assert %Result{evaluation_model: nil} =
-               result = Evaluator.evaluate_metric(no_tools, ToolCorrectness, adapter: :mock)
-
-      assert Result.errored?(result)
     end
 
-    test "ToolCorrectness reports a judge model only when given available_tools" do
+    test "ToolCorrectness reports its judge model with or without available_tools" do
       incomplete = %TestCase{input: "Q", actual_output: "A", tools_called: nil}
       tools = [%ToolCall{name: "search"}]
 
-      assert %Result{evaluation_model: "mock-model"} =
-               result =
-               Evaluator.evaluate_metric(incomplete, ToolCorrectness,
-                 adapter: :mock,
-                 available_tools: tools
-               )
+      for opts <- [[], [available_tools: tools]] do
+        assert %Result{evaluation_model: "mock-model"} =
+                 result =
+                 Evaluator.evaluate_metric(incomplete, ToolCorrectness, [adapter: :mock] ++ opts)
 
-      assert Result.errored?(result)
+        assert Result.errored?(result)
+      end
     end
 
     test "a timed-out LLM metric still reports its configured judge model" do

@@ -6,10 +6,20 @@ defmodule DeepEvalEx.Result do
 
   - `:metric` - Name of the metric that produced this result
   - `:score` - Numeric score from 0.0 to 1.0, or `nil` when the metric errored
-  - `:success` - Whether the score meets the threshold (always `false` when errored)
+    or was skipped
+  - `:success` - Whether the score meets the threshold: `nil` without a
+    threshold, `false` when errored (see "Score-only results")
   - `:reason` - Explanation for the score (from LLM-based metrics)
-  - `:threshold` - The threshold used for pass/fail determination (`nil` if unknown)
+  - `:threshold` - The threshold used for pass/fail determination; `nil` for a
+    score-only metric (or when unknown). The integer `1` in strict mode
   - `:error` - Error message when the metric could not produce a score, else `nil`
+  - `:strict_mode` - Whether the metric ran in strict mode (default: `false`)
+  - `:flaky` - Whether the metric is flaky: its result is reported but never
+    decides a test case's success (default: `false`)
+  - `:score_breakdown` - Per-component scores of a composite metric, as
+    deepeval's `score_breakdown` (default: `nil`). Not exported
+  - `:skipped` - Whether the metric was skipped instead of measured
+    (default: `false`); skipped results are left out of the test run export
   - `:metadata` - Additional metric-specific data
   - `:evaluation_model` - The judge model, for metrics that call an LLM
   - `:evaluation_cost` - USD cost of the LLM calls for this evaluation; `nil`
@@ -49,23 +59,37 @@ defmodule DeepEvalEx.Result do
   and errored results keep the usage of the calls made before the error, as
   deepeval's `MetricData` does.
 
+  ## Score-only results
+
+  As in deepeval, a metric with a `nil` threshold only scores: its `:success`
+  is `nil` (deepeval's `is_successful()` returns `None`), it neither passes
+  nor fails its test case, and the export leaves out its `threshold` and
+  `success`. In strict mode the threshold is forced to the integer `1` and a
+  score below it becomes the integer `0` (see
+  `DeepEvalEx.Metrics.BaseMetric`).
+
   ## Errored vs failed
 
   A *failed* result has a score below the threshold. An *errored* result
   means the metric never produced a score at all (an LLM call failed, the
   test case was missing parameters, the evaluation timed out, ...). Errored
-  results have `score: nil`, `success: false` and the message in `:error`,
-  mirroring deepeval's `MetricData`. Build them with `error/3` and detect
-  them with `errored?/1`.
+  results have `score: nil`, `success: false` (`nil` for a score-only
+  metric) and the message in `:error`, mirroring deepeval's `MetricData`.
+  Build them with `error/3` and detect them with `errored?/1`. A *skipped*
+  result (`skipped/2`) has neither a score nor an error.
   """
 
   @type t :: %__MODULE__{
           metric: String.t(),
           score: number() | nil,
-          success: boolean(),
+          success: boolean() | nil,
           reason: String.t() | nil,
-          threshold: float() | nil,
+          threshold: number() | nil,
           error: String.t() | nil,
+          strict_mode: boolean(),
+          flaky: boolean(),
+          score_breakdown: map() | nil,
+          skipped: boolean(),
           metadata: map() | nil,
           evaluation_model: String.t() | nil,
           evaluation_cost: float() | nil,
@@ -87,7 +111,11 @@ defmodule DeepEvalEx.Result do
     :evaluation_cost,
     :input_tokens,
     :output_tokens,
-    :latency_ms
+    :latency_ms,
+    :score_breakdown,
+    strict_mode: false,
+    flaky: false,
+    skipped: false
   ]
 
   @doc """
@@ -97,8 +125,13 @@ defmodule DeepEvalEx.Result do
 
   - `:metric` - Name of the metric (required)
   - `:score` - Numeric score 0.0-1.0 (required)
-  - `:threshold` - Pass/fail threshold (default: 0.5)
+  - `:threshold` - Pass/fail threshold (default: 0.5); `nil` for a
+    score-only result, whose `:success` is then `nil`
+  - `:success` - Overrides `score >= threshold`
   - `:reason` - Explanation for the score
+  - `:strict_mode` / `:flaky` - See the module documentation
+    (default: `false`)
+  - `:score_breakdown` - Per-component scores
   - `:metadata` - Additional data
   - `:evaluation_model` - The judge model
   - `:evaluation_cost` - LLM API cost
@@ -121,7 +154,7 @@ defmodule DeepEvalEx.Result do
     threshold = Keyword.get(opts, :threshold, 0.5)
 
     # Allow explicit success override (for metrics where lower is better)
-    success = Keyword.get_lazy(opts, :success, fn -> score >= threshold end)
+    success = Keyword.get_lazy(opts, :success, fn -> successful?(score, threshold) end)
 
     %__MODULE__{
       metric: metric,
@@ -129,6 +162,9 @@ defmodule DeepEvalEx.Result do
       success: success,
       threshold: threshold,
       reason: Keyword.get(opts, :reason),
+      strict_mode: Keyword.get(opts, :strict_mode, false),
+      flaky: Keyword.get(opts, :flaky, false),
+      score_breakdown: Keyword.get(opts, :score_breakdown),
       metadata: Keyword.get(opts, :metadata),
       evaluation_model: Keyword.get(opts, :evaluation_model),
       evaluation_cost: Keyword.get(opts, :evaluation_cost),
@@ -141,14 +177,19 @@ defmodule DeepEvalEx.Result do
   @doc """
   Creates an errored result for a metric that could not produce a score.
 
-  The result has `score: nil` and `success: false`; `error` is stored as a
-  message string. Strings are kept as-is, an exception becomes its message
+  The result has `score: nil` and `success: false`, or `success: nil` when
+  `:threshold` is given as `nil` (a score-only metric), as deepeval's
+  `is_successful()` checks the threshold before the error; `error` is
+  stored as a message string. Strings are kept as-is, an exception becomes its message
   (as deepeval records `str(exception)`), `{:missing_params, params}` is
   rendered as a readable message and any other term is inspected.
 
   ## Options
 
-  - `:threshold` - The metric's threshold, when known (default: `nil`)
+  - `:threshold` - The metric's threshold, when known (default: `nil`,
+    unknown); an explicit `nil` marks a score-only metric
+  - `:strict_mode` / `:flaky` - See the module documentation
+    (default: `false`)
   - `:metadata` - Additional data
   - `:evaluation_model` - The judge model
   - `:evaluation_cost` - LLM API cost incurred before the error
@@ -161,12 +202,17 @@ defmodule DeepEvalEx.Result do
   """
   @spec error(String.t(), term(), keyword()) :: t()
   def error(metric, error, opts \\ []) do
+    # An explicit nil threshold is a score-only metric; a missing one unknown.
+    success = if Keyword.fetch(opts, :threshold) == {:ok, nil}, do: nil, else: false
+
     %__MODULE__{
       metric: metric,
       score: nil,
-      success: false,
+      success: success,
       threshold: Keyword.get(opts, :threshold),
       error: format_error(error),
+      strict_mode: Keyword.get(opts, :strict_mode, false),
+      flaky: Keyword.get(opts, :flaky, false),
       metadata: Keyword.get(opts, :metadata),
       evaluation_model: Keyword.get(opts, :evaluation_model),
       evaluation_cost: Keyword.get(opts, :evaluation_cost),
@@ -177,11 +223,59 @@ defmodule DeepEvalEx.Result do
   end
 
   @doc """
+  Creates a skipped result, for a metric that was not measured.
+
+  deepeval skips a metric whose test case lacks its required parameters
+  when `skip_on_missing_params` is set; the metric then has no score,
+  success or error, and is left out of the test case's `metricsData`.
+  `DeepEvalEx.TestRun.from_results/3` leaves skipped results out the same
+  way.
+
+  ## Options
+
+  - `:threshold` - The metric's threshold, when known
+  - `:strict_mode` / `:flaky` - See the module documentation
+    (default: `false`)
+  """
+  @spec skipped(String.t(), keyword()) :: t()
+  def skipped(metric, opts \\ []) do
+    %__MODULE__{
+      metric: metric,
+      score: nil,
+      success: nil,
+      threshold: Keyword.get(opts, :threshold),
+      strict_mode: Keyword.get(opts, :strict_mode, false),
+      flaky: Keyword.get(opts, :flaky, false),
+      skipped: true
+    }
+  end
+
+  @doc """
+  Whether `score` meets `threshold`, as deepeval's `is_successful()`.
+
+  Returns `nil` without a threshold (score-only), `false` without a numeric
+  score and `score >= threshold` otherwise.
+
+  ## Examples
+
+      iex> DeepEvalEx.Result.successful?(0.7, 0.5)
+      true
+
+      iex> DeepEvalEx.Result.successful?(0.7, nil)
+      nil
+  """
+  @spec successful?(number() | nil, number() | nil) :: boolean() | nil
+  def successful?(_score, nil), do: nil
+  def successful?(score, threshold) when is_number(score), do: score >= threshold
+  def successful?(_score, _threshold), do: false
+
+  @doc """
   Checks if the result is successful (score >= threshold).
 
-  Errored results are never successful.
+  Errored results are never successful; score-only and skipped results
+  return `nil`.
   """
-  @spec success?(t()) :: boolean()
+  @spec success?(t()) :: boolean() | nil
   def success?(%__MODULE__{success: success}), do: success
 
   @doc """
@@ -193,15 +287,18 @@ defmodule DeepEvalEx.Result do
   @doc """
   Returns a human-readable summary of the result.
 
-  Errored results are summarised as `"Metric: ERROR - message"`.
+  Errored results are summarised as `"Metric: ERROR - message"`, skipped
+  ones as `"Metric: SKIPPED"` and score-only ones with the status `SCORED`.
   """
   @spec summary(t()) :: String.t()
   def summary(%__MODULE__{error: error} = result) when is_binary(error) do
     "#{result.metric}: ERROR - #{error}"
   end
 
+  def summary(%__MODULE__{skipped: true} = result), do: "#{result.metric}: SKIPPED"
+
   def summary(%__MODULE__{} = result) do
-    status = if result.success, do: "PASS", else: "FAIL"
+    status = status(result)
     score_pct = Float.round(result.score * 100 / 1, 1)
 
     base = "#{result.metric}: #{status} (#{score_pct}%)"
@@ -212,6 +309,15 @@ defmodule DeepEvalEx.Result do
       base
     end
   end
+
+  @doc false
+  # "PASS", "FAIL", "SCORED" (no threshold), "SKIPPED" or "ERROR".
+  @spec status(t()) :: String.t()
+  def status(%__MODULE__{error: error}) when is_binary(error), do: "ERROR"
+  def status(%__MODULE__{skipped: true}), do: "SKIPPED"
+  def status(%__MODULE__{success: true}), do: "PASS"
+  def status(%__MODULE__{success: false}), do: "FAIL"
+  def status(%__MODULE__{success: nil}), do: "SCORED"
 
   defp format_error({:missing_params, params}) do
     "Missing required parameters: #{Enum.join(params, ", ")}"
@@ -232,12 +338,7 @@ defimpl Inspect, for: DeepEvalEx.Result do
   import Inspect.Algebra
 
   def inspect(result, opts) do
-    status =
-      cond do
-        DeepEvalEx.Result.errored?(result) -> "ERROR"
-        result.success -> "PASS"
-        true -> "FAIL"
-      end
+    status = DeepEvalEx.Result.status(result)
 
     fields =
       [

@@ -2,7 +2,31 @@ defmodule DeepEvalEx.Metrics.BaseMetricTest do
   use ExUnit.Case, async: true
 
   alias DeepEvalEx.LLM.Usage
+  alias DeepEvalEx.Metrics.BaseMetric
   alias DeepEvalEx.{Result, TestCase}
+
+  doctest BaseMetric, only: [threshold: 2, strict_score: 2]
+
+  defmodule FixedScore do
+    @moduledoc false
+
+    use DeepEvalEx.Metrics.BaseMetric
+
+    @impl true
+    def metric_name, do: "FixedScore"
+
+    @impl true
+    def required_params, do: []
+
+    def do_measure(_test_case, opts) do
+      {:ok,
+       Result.new(
+         metric: metric_name(),
+         score: Keyword.fetch!(opts, :score),
+         threshold: Keyword.get(opts, :threshold, default_threshold())
+       )}
+    end
+  end
 
   defmodule NoCallJudge do
     @moduledoc false
@@ -91,6 +115,67 @@ defmodule DeepEvalEx.Metrics.BaseMetricTest do
     test "usage of an errored measurement is passed on to the enclosing scope" do
       assert {{:error, :bad_json}, [%Usage{model: "gpt-4o-mini", input_tokens: 1_000}]} =
                Usage.track(fn -> JudgeThenFail.measure(test_case(), []) end)
+    end
+  end
+
+  describe "measure/2 strict mode, score-only and flaky" do
+    test "strict_mode forces the threshold to the integer 1, as deepeval's constructors do" do
+      assert {:ok, %Result{score: 1.0, threshold: 1, success: true, strict_mode: true} = result} =
+               FixedScore.measure(test_case(), score: 1.0, threshold: 0.3, strict_mode: true)
+
+      assert result.threshold === 1
+    end
+
+    test "strict_mode clamps a score below the threshold to the integer 0" do
+      assert {:ok, %Result{threshold: 1, success: false} = result} =
+               FixedScore.measure(test_case(), score: 0.9, strict_mode: true)
+
+      assert result.score === 0
+    end
+
+    test "without strict_mode the threshold and score are kept" do
+      assert {:ok, %Result{score: 0.9, threshold: 0.5, success: true, strict_mode: false}} =
+               FixedScore.measure(test_case(), score: 0.9)
+    end
+
+    test "threshold: nil measures score-only: no success, as deepeval's is_successful" do
+      assert {:ok, %Result{score: 0.25, threshold: nil, success: nil}} =
+               FixedScore.measure(test_case(), score: 0.25, threshold: nil)
+    end
+
+    test "results carry the :flaky option" do
+      assert {:ok, %Result{flaky: true}} =
+               FixedScore.measure(test_case(), score: 1.0, flaky: true)
+
+      assert {:ok, %Result{flaky: false}} = FixedScore.measure(test_case(), score: 1.0)
+    end
+  end
+
+  describe "threshold/2" do
+    test "is the integer 1 in strict mode, whatever :threshold says" do
+      assert BaseMetric.threshold([strict_mode: true, threshold: 0.3], 0.5) === 1
+      assert BaseMetric.threshold([strict_mode: true, threshold: nil], 0.5) === 1
+    end
+
+    test "is :threshold when given, nil included, else the default" do
+      assert BaseMetric.threshold([threshold: 0.3], 0.5) == 0.3
+      assert BaseMetric.threshold([threshold: nil], 0.5) == nil
+      assert BaseMetric.threshold([], 0.5) == 0.5
+      assert BaseMetric.threshold([strict_mode: false], 1) === 1
+    end
+  end
+
+  describe "strict_score/2" do
+    test "clamps a score below the threshold to the integer 0 in strict mode only" do
+      assert BaseMetric.strict_score(0.5, strict_mode: true, threshold: 1) === 0
+      assert BaseMetric.strict_score(1.0, strict_mode: true, threshold: 1) === 1.0
+      assert BaseMetric.strict_score(0.5, strict_mode: false, threshold: 1) === 0.5
+      assert BaseMetric.strict_score(0.5, threshold: 1) === 0.5
+    end
+
+    test "leaves a score-only or missing score alone" do
+      assert BaseMetric.strict_score(0.5, strict_mode: true, threshold: nil) === 0.5
+      assert BaseMetric.strict_score(nil, strict_mode: true, threshold: 1) == nil
     end
   end
 

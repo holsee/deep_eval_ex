@@ -389,8 +389,9 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
       assert {:ok, result} = ToolCorrectness.measure(tc, strict_mode: true)
       # Without strict: score = 0.5, threshold = 0.5 → pass
       # With strict: threshold forced to 1.0, 0.5 < 1.0 → score zeroed
-      assert result.score == 0.0
-      assert result.threshold == 1.0
+      # Integers, as deepeval's `1 if strict_mode` and `0 if ... < threshold`
+      assert result.score === 0
+      assert result.threshold === 1
       assert result.success == false
     end
 

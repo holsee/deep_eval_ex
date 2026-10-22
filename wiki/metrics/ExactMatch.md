@@ -39,7 +39,7 @@ result.reason   # => "The actual and expected outputs are exact matches."
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `:threshold` | float | 1.0 | Score threshold for pass/fail |
+| `:threshold` | number | 1 | Score threshold for pass/fail (the integer `1`, as in deepeval) |
 | `:case_sensitive` | boolean | true | Whether comparison is case-sensitive |
 | `:normalize_whitespace` | boolean | false | Collapse multiple whitespace to single space |
 

@@ -1,13 +1,12 @@
 defmodule DeepEvalEx.TestRunTest do
   use ExUnit.Case, async: true
 
-  alias DeepEvalEx.Metrics.{ExactMatch, GEval}
   alias DeepEvalEx.{Result, TestCase, TestRun}
   alias DeepEvalEx.Schemas.ToolCall
   alias DeepEvalEx.TestRun.JSON
 
   defp ok(metric, score, opts \\ []) do
-    Result.new([metric: metric, score: score, threshold: 0.5] ++ opts)
+    Result.new(Keyword.merge([metric: metric, score: score, threshold: 0.5], opts))
   end
 
   defp encode(test_run), do: test_run |> TestRun.to_map() |> JSON.encode!()
@@ -86,7 +85,7 @@ defmodule DeepEvalEx.TestRunTest do
       results = [
         [ok("M", 1.0), ok("N", 0.9)],
         [ok("M", 1.0), ok("N", 0.1)],
-        [Result.error("M", "boom"), ok("N", 0.9)]
+        [Result.error("M", "boom", threshold: 0.5), ok("N", 0.9)]
       ]
 
       test_run = TestRun.from_results(test_cases, results)
@@ -155,22 +154,121 @@ defmodule DeepEvalEx.TestRunTest do
       assert encode(test_run) =~ ~s("runDuration": 1.25, "order": 1})
     end
 
-    test "takes strict mode from the metrics" do
-      metric =
-        GEval.new(
-          name: "C",
-          criteria: "c",
-          evaluation_params: [:actual_output],
-          strict_mode: true
+    test "takes strict mode and flakiness from each result" do
+      results = [
+        ok("C [GEval]", 1, threshold: 1, strict_mode: true),
+        ok("Exact", 1.0, flaky: true)
+      ]
+
+      test_run = TestRun.from_results([%TestCase{input: "a"}], [results])
+
+      assert [
+               %{
+                 metrics_data: [
+                   %{strict_mode: true, flaky: false, threshold: 1},
+                   %{strict_mode: false, flaky: true}
+                 ]
+               }
+             ] = test_run.test_cases
+
+      assert encode(test_run) =~ ~s("threshold": 1.0, "success": true, "score": 1.0)
+      assert encode(test_run) =~ ~s("strictMode": true, "flaky": false)
+    end
+
+    test "flaky metrics never decide a test case's success, as deepeval's update_status" do
+      test_cases = [%TestCase{input: "a"}, %TestCase{input: "b"}]
+
+      results = [
+        [ok("M", 0.1, flaky: true), ok("N", 0.9)],
+        [Result.error("M", "boom", threshold: 0.5, flaky: true), ok("N", 0.9)]
+      ]
+
+      test_run = TestRun.from_results(test_cases, results)
+
+      assert Enum.map(test_run.test_cases, & &1.success) == [true, true]
+      assert test_run.test_passed == 2
+
+      assert [%{metric: "M", passes: 0, fails: 1, errors: 1}, %{metric: "N", passes: 2}] =
+               test_run.metrics_scores
+    end
+
+    test "score-only results neither pass nor fail, and are counted as errors like deepeval" do
+      test_cases = [%TestCase{input: "a"}, %TestCase{input: "b"}]
+
+      results = [
+        [ok("S", 0.25, threshold: nil), ok("N", 0.9)],
+        [ok("S", 0.25, threshold: nil), ok("N", 0.1)]
+      ]
+
+      test_run = TestRun.from_results(test_cases, results)
+
+      assert Enum.map(test_run.test_cases, & &1.success) == [true, false]
+      assert [%{metric: "S", scores: [], errors: 2} | _] = test_run.metrics_scores
+      refute encode(test_run) =~ ~s("name": "S", "threshold")
+      assert encode(test_run) =~ ~s({"name": "S", "score": 0.25, "strictMode": false)
+    end
+
+    test "leaves skipped results out, and test cases whose results were all skipped" do
+      test_cases = [%TestCase{input: "a"}, %TestCase{input: "b"}]
+
+      results = [
+        [Result.skipped("Exact Match", threshold: 1), ok("N", 0.9)],
+        [Result.skipped("Exact Match", threshold: 1)]
+      ]
+
+      test_run = TestRun.from_results(test_cases, results)
+
+      assert [%TestRun.TestCase{order: 0, metrics_data: [%{name: "N"}]}] = test_run.test_cases
+      assert [%{metric: "N"}] = test_run.metrics_scores
+    end
+  end
+
+  describe "from_results/3 matches deepeval's score-only, flaky and skipped export" do
+    # Produced by deepeval 4.3.1's `evaluate()` with
+    # `ErrorConfig(skip_on_missing_params=True)` and three metrics: a flaky
+    # `ExactMatchMetric` (skipped on the second test case, which has no
+    # expected output) and two fixed-score custom metrics, one with a
+    # threshold of 0.1 and one with `threshold=None`. The test cases'
+    # `runDuration` is shown as the integer 0 deepeval's async executor
+    # records for sub-second test cases.
+    @score_only_export ~S({"testCases": [{"name": "test_case_0", "input": "a", "actualOutput": "x", "expectedOutput": "y", "flaky": false, "success": true, "metricsData": [{"name": "Exact Match", "threshold": 1.0, "success": false, "score": 0.0, "reason": "The actual and expected outputs are different.", "strictMode": false, "flaky": true}, {"name": "ScoreOnly", "threshold": 0.1, "success": true, "score": 0.25, "reason": "r", "strictMode": false, "flaky": false}, {"name": "ScoreOnly", "score": 0.25, "reason": "r", "strictMode": false, "flaky": false}], "runDuration": 0, "order": 0}, {"name": "test_case_1", "input": "b", "actualOutput": "x", "flaky": false, "success": true, "metricsData": [{"name": "ScoreOnly", "threshold": 0.1, "success": true, "score": 0.25, "reason": "r", "strictMode": false, "flaky": false}, {"name": "ScoreOnly", "score": 0.25, "reason": "r", "strictMode": false, "flaky": false}], "runDuration": 0, "order": 1}], "conversationalTestCases": [], "metricsScores": [{"metric": "Exact Match", "scores": [0.0], "passes": 0, "fails": 1, "errors": 0}, {"metric": "ScoreOnly", "scores": [0.25, 0.25], "passes": 2, "fails": 0, "errors": 2}], "prompts": [], "testPassed": 2, "testFailed": 0, "runDuration": 0.01653450000048906, "official": false})
+
+    test "encodes the same run byte for byte" do
+      test_cases = [
+        %TestCase{input: "a", actual_output: "x", expected_output: "y"},
+        %TestCase{input: "b", actual_output: "x"}
+      ]
+
+      score_only = [
+        ok("ScoreOnly", 0.25, threshold: 0.1, reason: "r"),
+        ok("ScoreOnly", 0.25, threshold: nil, reason: "r")
+      ]
+
+      exact_match =
+        ok("Exact Match", 0.0,
+          threshold: 1,
+          reason: "The actual and expected outputs are different.",
+          flaky: true
         )
 
-      test_run =
-        TestRun.from_results([%TestCase{input: "a"}], [[ok("C [GEval]", 1.0), ok("Exact", 1.0)]],
-          metrics: [metric, ExactMatch]
-        )
+      results = [
+        [exact_match | score_only],
+        [Result.skipped("Exact Match", threshold: 1, flaky: true) | score_only]
+      ]
 
-      assert [%{metrics_data: [%{strict_mode: true}, %{strict_mode: false}]}] =
+      test_run = TestRun.from_results(test_cases, results, run_duration: 0.01653450000048906)
+
+      assert encode(test_run) == @score_only_export
+    end
+
+    test "loads and re-encodes the run byte for byte" do
+      {:ok, test_run} =
+        TestRun.from_map(Jason.decode!(@score_only_export, objects: :ordered_objects))
+
+      assert [%{success: true, metrics_data: [_, _, %{threshold: nil, success: nil}]} | _] =
                test_run.test_cases
+
+      assert encode(test_run) == @score_only_export
     end
   end
 

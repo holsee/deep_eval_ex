@@ -25,14 +25,20 @@ defmodule DeepEvalEx.Evaluator do
   - `:metric_timeout` - Timeout per metric in milliseconds (default: the
     `:timeout` value). A metric that exceeds it is killed and reported as an
     errored result (`"Metric timed out"`) while its siblings keep running
-  - `:threshold` - Default threshold for all metrics
+  - `:threshold` - Default threshold for all metrics; `nil` makes them
+    score-only
+  - `:strict_mode` - Default strict mode for all metrics (threshold forced
+    to `1`, see `DeepEvalEx.Metrics.BaseMetric`)
+  - `:flaky` - Default flakiness for all metrics
   - `:model` - Default LLM model for LLM-based metrics
   - `:adapter` - Default LLM adapter
 
   Run-level options are defaults only: when a metric is passed as a struct,
   any non-nil field on that struct overrides the run-level option of the
   same name, so `GEval.new(threshold: 0.9)` keeps its 0.9 threshold even
-  when the run sets `threshold: 0.5`.
+  when the run sets `threshold: 0.5`. A struct's `:threshold` is its
+  configuration even when `nil`: like deepeval's `threshold=None`, it makes
+  that metric score-only whatever the run sets.
 
   ## Timeouts
 
@@ -181,6 +187,10 @@ defmodule DeepEvalEx.Evaluator do
   also carries the judge model and the tokens and cost of any LLM calls made
   before the error.
 
+  The metric gets deepeval's strict mode, score-only and flaky semantics
+  even when it implements `DeepEvalEx.Metrics.BaseMetric` without `use`
+  (see that module).
+
   An exception raised by the metric is reported the same way, with the
   exception's message (`Exception.message/1`) as the error, as deepeval's
   evaluation records `str(exception)`. It does not affect the other metrics.
@@ -188,17 +198,55 @@ defmodule DeepEvalEx.Evaluator do
   @spec evaluate_metric(TestCase.t(), module() | struct(), keyword()) :: Result.t()
   def evaluate_metric(test_case, metric, opts) do
     # Run-level options are defaults; a metric's own configuration wins.
-    merged_opts = metric_opts(metric, opts)
     module = metric_module(metric)
+    merged_opts = BaseMetric.strict_opts(metric_opts(metric, opts), default_threshold(module))
 
     {outcome, usages} =
       BaseMetric.track_usage(fn -> module.measure(test_case, merged_opts) end)
 
     case outcome do
-      {:ok, result} -> result
+      # Also covers metrics that implement the behaviour without `use`.
+      {:ok, result} -> BaseMetric.apply_metric_semantics(result, merged_opts)
       {:error, reason} -> error_result(reason, metric, opts, usages)
       {:raised, exception, _stacktrace} -> error_result(exception, metric, opts, usages)
     end
+  end
+
+  @doc """
+  Raises unless at least one metric has a threshold and is not flaky, as
+  deepeval's `check_at_least_one_metric_has_threshold` does before
+  `evaluate()` and `assert_test()` run: otherwise no test case could ever
+  pass or fail.
+
+  A metric's threshold and flakiness are resolved from `opts` and its own
+  configuration as for evaluation (strict mode counts as a threshold of
+  `1`). A metric module that defines no `default_threshold/0` is assumed to
+  have a threshold unless `:threshold` is `nil`.
+
+  Raises `ArgumentError` with deepeval's `ValueError` message.
+  """
+  @spec check_at_least_one_metric_has_threshold!([module() | struct()], keyword()) :: :ok
+  def check_at_least_one_metric_has_threshold!(metrics, opts) do
+    if Enum.any?(metrics, &decides_success?(&1, opts)) do
+      :ok
+    else
+      raise ArgumentError,
+            "You must provide at least one non-flaky metric with a 'threshold', " <>
+              "otherwise test cases can never pass or fail."
+    end
+  end
+
+  defp decides_success?(metric, opts) do
+    merged_opts = metric_opts(metric, opts)
+    module = metric_module(metric)
+
+    has_threshold? =
+      case threshold_opts(module, merged_opts) do
+        [threshold: threshold] -> not is_nil(threshold)
+        [] -> true
+      end
+
+    has_threshold? and not Keyword.get(merged_opts, :flaky, false)
   end
 
   defp seconds_since(started) do
@@ -243,11 +291,12 @@ defmodule DeepEvalEx.Evaluator do
 
   # Convert a metric struct to an options keyword list, dropping unset
   # (nil) fields so they neither mask run-level options nor shadow the
-  # metric's own defaults in `Keyword.get/3`.
+  # metric's own defaults in `Keyword.get/3`. A nil `:threshold` is kept: it
+  # is the metric's score-only configuration, as deepeval's `threshold=None`.
   defp struct_to_opts(struct) do
     struct
     |> Map.from_struct()
-    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Enum.reject(fn {key, value} -> is_nil(value) and key != :threshold end)
   end
 
   defp error_results(reason, metrics, opts) do
@@ -264,7 +313,11 @@ defmodule DeepEvalEx.Evaluator do
     Result.error(
       metric_name(metric),
       reason,
-      [threshold: resolve_threshold(module, merged_opts)] ++ Map.to_list(usage_fields)
+      threshold_opts(module, merged_opts) ++
+        [
+          strict_mode: Keyword.get(merged_opts, :strict_mode, false),
+          flaky: Keyword.get(merged_opts, :flaky, false)
+        ] ++ Map.to_list(usage_fields)
     )
   end
 
@@ -280,13 +333,22 @@ defmodule DeepEvalEx.Evaluator do
 
   defp metric_name(module) when is_atom(module), do: module.metric_name()
 
-  # The threshold the metric would have used: its own configuration, then
-  # the run-level option, then the metric's default (when it exposes one).
-  defp resolve_threshold(module, opts) do
-    Keyword.get_lazy(opts, :threshold, fn ->
-      if Code.ensure_loaded?(module) and function_exported?(module, :default_threshold, 0) do
-        module.default_threshold()
-      end
-    end)
+  # `[threshold: threshold]` with the threshold the metric would have used:
+  # 1 in strict mode, else its own configuration, then the run-level option,
+  # then the metric's default. `[]` when it is unknown: no option is given
+  # and the metric exposes no default.
+  defp threshold_opts(module, opts) do
+    if Keyword.has_key?(opts, :threshold) or Keyword.get(opts, :strict_mode, false) or
+         exports_default_threshold?(module),
+       do: [threshold: BaseMetric.threshold(opts, default_threshold(module))],
+       else: []
+  end
+
+  defp default_threshold(module) do
+    if exports_default_threshold?(module), do: module.default_threshold()
+  end
+
+  defp exports_default_threshold?(module) do
+    Code.ensure_loaded?(module) and function_exported?(module, :default_threshold, 0)
   end
 end

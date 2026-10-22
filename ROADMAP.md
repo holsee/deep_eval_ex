@@ -71,9 +71,9 @@ These are fixed in [P1](#p1-correct-the-existing-metric-surface):
 - **Prompt templates are not verbatim.** The prompt modules follow earlier
   deepeval templates; 4.3.1 renders `.txt` Jinja templates with shared
   fragments, so rendered prompts differ.
-- **`strict_mode` gaps.** Only GEval and ToolCorrectness accept `:strict_mode`;
-  in 4.3.1 every metric does (threshold forced to 1, scores below it clamped
-  to 0).
+- **GEval strict scoring.** In strict mode GEval normalises the judge's 0/1
+  over its score range before the shared clamp; 4.3.1 takes the 0/1 as the
+  score.
 - **No GEval logprob weighting.** 4.3.1 weights the GEval score by the judge's
   top logprobs when the provider returns them; DeepEvalEx uses the raw score.
 

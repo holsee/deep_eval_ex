@@ -67,6 +67,31 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   set with deepeval's `:empty_score` and `strict_mode` clamp. The five
   verdict metrics parse their verdicts through it, and Faithfulness,
   AnswerRelevancy, Hallucination and ContextualRecall score through it.
+- **`strict_mode`, score-only and `flaky` on every metric**, with deepeval
+  4.3.1's `BaseMetric` semantics. Every metric, built-in or `use
+  DeepEvalEx.Metrics.BaseMetric`, takes `:strict_mode` (the threshold is forced
+  to the integer `1`, as deepeval's constructors force it, and a score below
+  it becomes the integer `0`; the QAG metrics, ContextualPrecision and
+  ToolCorrectness clamp before writing their reason, as deepeval does),
+  `threshold: nil` (score-only: `success` is `nil`, as `is_successful()`
+  returns `None`) and `:flaky` (reported, but never deciding its test case's
+  success, as `update_status` ignores flaky metrics). `DeepEvalEx.Result`
+  gains `:strict_mode`, `:flaky`, `:score_breakdown` and `:skipped`, with
+  `Result.skipped/2` and `Result.successful?/2`; `BaseMetric.threshold/2` and
+  `BaseMetric.strict_score/2` share the strict rules, and GEval takes
+  `:flaky`. The export writes each metric's own `strictMode` and `flaky`,
+  leaves out a score-only metric's `threshold` and `success`, counts it under
+  `errors` in `metricsScores`, and leaves skipped results out of
+  `metricsData`, all as deepeval does.
+- **`evaluate` refuses runs that cannot pass or fail.** As deepeval's
+  `check_at_least_one_metric_has_threshold`, `DeepEvalEx.evaluate/3`,
+  `evaluate_batch/3`, `evaluate_run/3` and ExUnit's `assert_evaluation` raise
+  `ArgumentError` ("You must provide at least one non-flaky metric with a
+  'threshold', ...") before evaluating when no non-flaky metric has a
+  threshold (`DeepEvalEx.Evaluator.check_at_least_one_metric_has_threshold!/2`).
+  `assert_evaluation` does not count a score-only result as a failure, and
+  `assert_passes`/`assert_fails` report that a score-only metric has no
+  threshold.
 - **Scripted mode for the Mock adapter.** `Mock.script/2` replays judge
   responses keyed by step (named by the requested schema's fields, see
   `Mock.step_key/1`) and call index, reports the script's judge model and
@@ -157,6 +182,25 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   deepeval's `measure()` does (the test run export still writes `1.0`, as
   deepeval's does). `DeepEvalEx.Result`'s `:score` is typed `number()`, and
   `Result.summary/1` accepts an integer score.
+- **BREAKING: thresholds, success and strict mode follow deepeval's
+  `BaseMetric`.** `strict_mode: true` now forces the threshold to the integer
+  `1` and clamps lower scores to `0` in every metric (Faithfulness,
+  AnswerRelevancy, Hallucination, ContextualPrecision and ContextualRecall
+  ignored it; ToolCorrectness used the floats `1.0` and `0.0`). ExactMatch's
+  default threshold is the integer `1` instead of `1.0`. ToolCorrectness
+  reports its configured judge as `evaluation_model` even without
+  `:available_tools`, as deepeval does.
+- **BREAKING: a `nil` threshold means score-only.** A metric struct's
+  `threshold: nil` is now its configuration, as deepeval's `threshold=None`,
+  rather than unset: run-level `:threshold` no longer fills it in. Such
+  results, and errored results given `threshold: nil`, have `success: nil`
+  (typed `boolean() | nil`), so a test case no longer fails because of them.
+- **BREAKING: per-metric `strictMode` in the export.**
+  `DeepEvalEx.TestRun.from_results/3` no longer takes the `:strict_mode` and
+  `:metrics` options, and `MetricData.from_result/2` is now `from_result/1`:
+  each metric's `strictMode` and `flaky` come from its result.
+  `MetricData.to_result/1` keeps them. Loading a deepeval file reads a metric
+  without `success` as `nil` (deepeval's default) instead of `false`.
 - **Metric names now match deepeval**, because they key the exported
   `metricsData` and `metricsScores`: `ExactMatch` is reported as
   `"Exact Match"`, and GEval as `"<name> [GEval]"`.

@@ -49,13 +49,15 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
   ## Options
 
   - `:threshold` - Pass/fail threshold (default: 0.5)
+  - `:strict_mode` - Force the threshold to `1` and score below it `0`
+    (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, Metrics.QAG, Result}
+  alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Metrics.QAG, Result}
   alias DeepEvalEx.Prompts.ContextualRecall, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.ContextualRecall, as: Schema
 
@@ -82,14 +84,14 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
   - `:model` - Model name
   """
   def do_measure(test_case, opts) do
-    threshold = Keyword.get(opts, :threshold, default_threshold())
+    threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
     expected_output = test_case.expected_output
     retrieval_context = get_retrieval_context(test_case)
 
     with {:ok, verdicts} <- generate_verdicts(expected_output, retrieval_context, opts),
-         score = calculate_score(verdicts),
+         score = calculate_score(verdicts, threshold, opts),
          {:ok, reason} <-
            maybe_generate_reason(score, expected_output, verdicts, include_reason, opts) do
       {:ok,
@@ -129,8 +131,13 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
   end
 
   # As in deepeval 4.3.1, no verdicts scores the integer 0
-  defp calculate_score(verdicts) do
-    QAG.score_qag_verdicts(verdicts, passing: [:yes], empty_score: 0)
+  defp calculate_score(verdicts, threshold, opts) do
+    QAG.score_qag_verdicts(verdicts,
+      passing: [:yes],
+      empty_score: 0,
+      strict_mode: Keyword.get(opts, :strict_mode, false),
+      threshold: threshold
+    )
   end
 
   defp maybe_generate_reason(_score, _expected_output, _verdicts, false, _opts), do: {:ok, nil}

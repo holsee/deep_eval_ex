@@ -20,7 +20,7 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
         def measure(test_case, opts) do
           # Your evaluation logic
           score = calculate_score(test_case)
-          threshold = Keyword.get(opts, :threshold, 0.5)
+          threshold = Keyword.get(opts, :threshold, default_threshold())
 
           {:ok, DeepEvalEx.Result.new(
             metric: metric_name(),
@@ -36,6 +36,10 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   The `use DeepEvalEx.Metrics.BaseMetric` macro provides:
 
   - Default implementation of `validate_test_case/2`
+  - `default_threshold/0`, set with `use DeepEvalEx.Metrics.BaseMetric,
+    default_threshold: 0.7` (default: `0.5`; `nil` makes the metric
+    score-only by default)
+  - deepeval's `strict_mode`, score-only and `flaky` semantics (see below)
   - Telemetry instrumentation around `measure/2`
   - Consistent error handling
   - The result's `:evaluation_model`, `:input_tokens`, `:output_tokens` and
@@ -54,6 +58,27 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
 
       @impl true
       defdelegate evaluation_model(opts), to: DeepEvalEx.LLM.Adapter, as: :model_name
+
+  ## Strict mode, score-only and flaky
+
+  Every metric accepts these options, with the semantics of deepeval's
+  `BaseMetric`:
+
+  - `:strict_mode` - Forces the threshold to the integer `1`, as deepeval's
+    metric constructors do (`self.threshold = 1 if strict_mode else
+    threshold`), whatever `:threshold` says. A score below it becomes the
+    integer `0`. `measure/2` puts the forced threshold in the options
+    `do_measure/2` gets, and clamps the score it returns; metrics whose
+    reason depends on the score clamp it themselves first, with
+    `strict_score/2`
+  - `:threshold` - `nil` makes the metric score-only: its result has no
+    `:success` (`nil`), as deepeval's `is_successful()` returns `None`, and
+    it neither passes nor fails its test case
+  - `:flaky` - The result is reported but never decides its test case's
+    success (deepeval's `update_status`)
+
+  The result's `:strict_mode` and `:flaky` are set from these options, and
+  exported per metric as deepeval's `strictMode` and `flaky`.
 
   You can override any of these defaults.
   """
@@ -146,7 +171,7 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
       @doc """
       Returns the default threshold for this metric.
       """
-      @spec default_threshold() :: float()
+      @spec default_threshold() :: number() | nil
       def default_threshold, do: @default_threshold
 
       @doc """
@@ -163,6 +188,9 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
 
       This wraps the underlying `do_measure/2` implementation with:
       - Parameter validation
+      - Strict mode: `do_measure/2` gets `threshold: 1` when
+        `:strict_mode` is set, and a returned score below the threshold
+        becomes `0`. The result carries `:strict_mode` and `:flaky`
       - Telemetry events
       - Error handling: an exception raised by `do_measure/2` is re-raised
         after the `:exception` telemetry event and after its LLM usage has
@@ -176,6 +204,7 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
               {:ok, Result.t()} | {:error, term()}
       def measure(test_case, opts \\ []) do
         start_time = System.monotonic_time(:millisecond)
+        opts = unquote(__MODULE__).strict_opts(opts, default_threshold())
 
         metadata = %{
           metric: metric_name(),
@@ -198,8 +227,10 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
             latency = System.monotonic_time(:millisecond) - start_time
 
             result =
-              unquote(__MODULE__).put_usage(
-                %{result | latency_ms: latency},
+              result
+              |> unquote(__MODULE__).apply_metric_semantics(opts)
+              |> Map.put(:latency_ms, latency)
+              |> unquote(__MODULE__).put_usage(
                 unquote(__MODULE__).usage_fields(__MODULE__, opts, usages)
               )
 
@@ -234,6 +265,88 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
 
       defoverridable measure: 2, do_measure: 2, validate_test_case: 1
     end
+  end
+
+  @doc """
+  The threshold a metric configured with `opts` uses, given its `default`.
+
+  The integer `1` when `:strict_mode` is set, as deepeval's constructors
+  force it; otherwise `:threshold` when given, `nil` (score-only) included,
+  else `default`.
+
+  ## Examples
+
+      iex> DeepEvalEx.Metrics.BaseMetric.threshold([strict_mode: true, threshold: 0.3], 0.5)
+      1
+
+      iex> DeepEvalEx.Metrics.BaseMetric.threshold([threshold: nil], 0.5)
+      nil
+  """
+  @spec threshold(keyword(), number() | nil) :: number() | nil
+  def threshold(opts, default) do
+    if Keyword.get(opts, :strict_mode, false),
+      do: 1,
+      else: Keyword.get(opts, :threshold, default)
+  end
+
+  @doc """
+  Clamps `score` to the integer `0` when `opts` has `:strict_mode` set and
+  the score is below `opts[:threshold]`, as deepeval's metrics do
+  (`0 if self.strict_mode and score < self.threshold else score`).
+
+  Any other score, including a `nil` one or one without a threshold, is
+  returned unchanged.
+
+  ## Examples
+
+      iex> DeepEvalEx.Metrics.BaseMetric.strict_score(0.5, strict_mode: true, threshold: 1)
+      0
+
+      iex> DeepEvalEx.Metrics.BaseMetric.strict_score(0.5, threshold: 1)
+      0.5
+  """
+  @spec strict_score(number() | nil, keyword()) :: number() | nil
+  def strict_score(score, opts) do
+    threshold = Keyword.get(opts, :threshold)
+
+    if Keyword.get(opts, :strict_mode, false) and is_number(score) and is_number(threshold) and
+         score < threshold,
+       do: 0,
+       else: score
+  end
+
+  @doc false
+  # The options `do_measure/2` gets: in strict mode `:threshold` is forced
+  # to 1 (see `threshold/2`).
+  @spec strict_opts(keyword(), number() | nil) :: keyword()
+  def strict_opts(opts, default) do
+    if Keyword.get(opts, :strict_mode, false),
+      do: Keyword.put(opts, :threshold, threshold(opts, default)),
+      else: opts
+  end
+
+  @doc false
+  # Applies strict mode to a measured result and records the metric's strict
+  # mode and flakiness on it. A clamped score cannot meet the threshold, so
+  # success is recomputed only then.
+  @spec apply_metric_semantics(Result.t(), keyword()) :: Result.t()
+  def apply_metric_semantics(%Result{} = result, opts) do
+    strict_opts = [
+      strict_mode: Keyword.get(opts, :strict_mode, false),
+      threshold: result.threshold
+    ]
+
+    result =
+      case strict_score(result.score, strict_opts) do
+        score when score === result.score -> result
+        score -> %{result | score: score, success: Result.successful?(score, result.threshold)}
+      end
+
+    %{
+      result
+      | strict_mode: Keyword.get(opts, :strict_mode, false),
+        flaky: Keyword.get(opts, :flaky, false)
+    }
   end
 
   @doc false

@@ -37,7 +37,8 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     `[:input_parameters]`, `[:output]`, or `[:input_parameters, :output]` (default: `[]`)
   - `:available_tools` - List of available ToolCall structs. When provided, an LLM
     evaluates whether the right tools were selected. Final score = min(calling, selection).
-  - `:strict_mode` - When true, threshold is forced to 1.0 and any score below is zeroed (default: false)
+  - `:strict_mode` - When true, threshold is forced to the integer `1` and any score below
+    it becomes the integer `0`, as in deepeval (default: false)
   - `:include_reason` - Whether to include reason in results (default: true)
   - `:adapter` - LLM adapter for tool selection scoring
   - `:model` - Model name for tool selection scoring
@@ -57,6 +58,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
   alias DeepEvalEx.LLM.Adapter
+  alias DeepEvalEx.Metrics.BaseMetric
   alias DeepEvalEx.Prompts.ToolCorrectness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.ToolCorrectness, as: Schema
 
@@ -67,16 +69,14 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   def required_params, do: [:tools_called, :expected_tools]
 
   @doc """
-  Returns the judge model this metric calls with `opts`: only when
-  `:available_tools` are given, as tool selection is the only LLM-scored part.
+  Returns the judge model this metric is configured with.
+
+  As in deepeval, whose constructor sets `evaluation_model` from its model,
+  it is reported even without `:available_tools`, when tool selection, the
+  only LLM-scored part, makes no call.
   """
   @impl true
-  def evaluation_model(opts) do
-    case Keyword.get(opts, :available_tools) do
-      tools when is_list(tools) and tools != [] -> Adapter.model_name(opts)
-      _ -> nil
-    end
-  end
+  defdelegate evaluation_model(opts), to: Adapter, as: :model_name
 
   @doc """
   Override validate_test_case to allow empty lists.
@@ -134,7 +134,6 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
        score: score,
        threshold: config.threshold,
        reason: reason,
-       success: score >= config.threshold,
        metadata: %{
          tool_calling_score: tool_calling_score,
          tool_selection_score: tool_selection_score,
@@ -148,12 +147,9 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   end
 
   defp parse_config(opts) do
-    strict_mode? = Keyword.get(opts, :strict_mode, false)
-
     %{
-      strict_mode?: strict_mode?,
-      threshold:
-        if(strict_mode?, do: 1.0, else: Keyword.get(opts, :threshold, default_threshold())),
+      strict_mode?: Keyword.get(opts, :strict_mode, false),
+      threshold: BaseMetric.threshold(opts, default_threshold()),
       exact_match?: Keyword.get(opts, :should_exact_match, false),
       consider_ordering?: Keyword.get(opts, :should_consider_ordering, false),
       eval_params: Keyword.get(opts, :evaluation_params, []),
@@ -162,10 +158,12 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     }
   end
 
-  defp apply_strict_mode(score, %{strict_mode?: true, threshold: threshold})
-       when score < threshold, do: 0.0
-
-  defp apply_strict_mode(score, _config), do: score
+  defp apply_strict_mode(score, config) do
+    BaseMetric.strict_score(score,
+      strict_mode: config.strict_mode?,
+      threshold: config.threshold
+    )
+  end
 
   defp evaluate_tool_selection(_input, _called, nil, _opts) do
     {1.0, "No available tools were provided to assess tool selection criteria"}

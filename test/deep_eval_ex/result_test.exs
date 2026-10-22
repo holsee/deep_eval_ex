@@ -3,6 +3,8 @@ defmodule DeepEvalEx.ResultTest do
 
   alias DeepEvalEx.Result
 
+  doctest Result, only: [successful?: 2]
+
   describe "new/1" do
     test "builds a scored result that is not errored" do
       result = Result.new(metric: "GEval", score: 0.8, threshold: 0.5, reason: "Good.")
@@ -28,6 +30,48 @@ defmodule DeepEvalEx.ResultTest do
                output_tokens: 5,
                evaluation_cost: 0.0001
              } = result
+    end
+
+    test "has no success without a threshold, as deepeval's is_successful returns None" do
+      result = Result.new(metric: "Custom", score: 0.25, threshold: nil)
+
+      assert %Result{score: 0.25, success: nil, threshold: nil} = result
+      assert Result.success?(result) == nil
+    end
+
+    test "defaults strict_mode, flaky and skipped to false and score_breakdown to nil" do
+      assert %Result{strict_mode: false, flaky: false, skipped: false, score_breakdown: nil} =
+               Result.new(metric: "M", score: 1.0)
+    end
+
+    test "keeps strict_mode, flaky and score_breakdown when given" do
+      assert %Result{strict_mode: true, flaky: true, score_breakdown: %{"a" => 0.5}} =
+               Result.new(
+                 metric: "M",
+                 score: 0.5,
+                 strict_mode: true,
+                 flaky: true,
+                 score_breakdown: %{"a" => 0.5}
+               )
+    end
+  end
+
+  describe "skipped/2" do
+    test "builds a result with no score, success or error, marked skipped" do
+      result = Result.skipped("Exact Match", threshold: 1, flaky: true)
+
+      assert %Result{
+               metric: "Exact Match",
+               score: nil,
+               success: nil,
+               error: nil,
+               threshold: 1,
+               flaky: true,
+               skipped: true
+             } = result
+
+      refute Result.errored?(result)
+      assert Result.summary(result) == "Exact Match: SKIPPED"
     end
   end
 
@@ -55,8 +99,18 @@ defmodule DeepEvalEx.ResultTest do
       refute Result.success?(result)
     end
 
-    test "leaves the threshold nil when it is not known" do
-      assert %Result{threshold: nil} = Result.error("Custom", "boom")
+    test "leaves the threshold nil and fails when it is not known" do
+      assert %Result{threshold: nil, success: false} = Result.error("Custom", "boom")
+    end
+
+    test "has no success for a score-only metric, as deepeval's is_successful returns None" do
+      assert %Result{threshold: nil, success: nil} =
+               Result.error("Custom", "boom", threshold: nil)
+    end
+
+    test "keeps strict_mode and flaky when given" do
+      assert %Result{strict_mode: true, flaky: true} =
+               Result.error("Custom", "boom", threshold: 1, strict_mode: true, flaky: true)
     end
 
     test "formats missing parameter errors" do
@@ -93,6 +147,13 @@ defmodule DeepEvalEx.ResultTest do
       result = Result.new(metric: "Faithfulness", score: 1, threshold: 0.5)
 
       assert Result.summary(result) == "Faithfulness: PASS (100.0%)"
+    end
+
+    test "reports SCORED with the score for a result without a threshold" do
+      result = Result.new(metric: "Custom", score: 0.25, threshold: nil)
+
+      assert Result.summary(result) == "Custom: SCORED (25.0%)"
+      assert inspect(result) =~ ~s(status: "SCORED")
     end
 
     test "reports ERROR with the message for errored results" do

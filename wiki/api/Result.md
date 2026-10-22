@@ -11,11 +11,15 @@ Every metric evaluation returns a `Result` struct containing the score, success 
 | Field | Type | Description |
 |-------|------|-------------|
 | `metric` | `String.t()` | Name of the metric that produced this result |
-| `score` | `float() \| nil` | Numeric score from 0.0 to 1.0; `nil` when the metric errored |
-| `success` | `boolean()` | Whether the score meets the threshold; always `false` when errored |
+| `score` | `number() \| nil` | Numeric score from 0.0 to 1.0; `nil` when the metric errored or was skipped |
+| `success` | `boolean() \| nil` | Whether the score meets the threshold; `nil` for a score-only metric (no threshold), `false` when errored |
 | `reason` | `String.t()` | Explanation for the score (LLM-based metrics) |
-| `threshold` | `float() \| nil` | The threshold used for pass/fail; `nil` only if it is unknown |
+| `threshold` | `number() \| nil` | The threshold used for pass/fail; the integer `1` in strict mode; `nil` for a score-only metric or when unknown |
 | `error` | `String.t() \| nil` | Error message when the metric could not produce a score |
+| `strict_mode` | `boolean()` | Whether the metric ran in strict mode |
+| `flaky` | `boolean()` | Whether the metric is flaky: reported, but never deciding its test case's success |
+| `score_breakdown` | `map() \| nil` | Per-component scores of a composite metric (not exported) |
+| `skipped` | `boolean()` | Whether the metric was skipped instead of measured |
 | `metadata` | `map()` | Additional metric-specific data |
 | `evaluation_model` | `String.t() \| nil` | Judge model used by LLM-based metrics |
 | `evaluation_cost` | `float() \| nil` | USD cost of the LLM calls; `nil` when no LLM was called or a model is not priced |
@@ -41,6 +45,31 @@ result.score     # => 0.85
 result.success   # => true (score >= threshold)
 ```
 
+## Strict Mode, Score-Only and Flaky Metrics
+
+Every metric accepts deepeval's `BaseMetric` options:
+
+- `strict_mode: true` forces the threshold to the integer `1`, as deepeval's
+  metric constructors do, and a score below it becomes the integer `0`.
+- `threshold: nil` makes the metric **score-only**: `success` is `nil`
+  (deepeval's `is_successful()` returns `None`), the metric neither passes nor
+  fails its test case, and the export leaves out its `threshold` and
+  `success`.
+- `flaky: true` reports the result without letting it decide its test case's
+  success, as deepeval's `update_status` ignores flaky metrics.
+
+```elixir
+{:ok, result} = Faithfulness.measure(test_case, strict_mode: true)
+result.threshold # => 1
+result.score     # => 0 (anything below 1 is clamped)
+
+{:ok, result} = Faithfulness.measure(test_case, threshold: nil)
+result.success   # => nil
+```
+
+`DeepEvalEx.evaluate/3` raises `ArgumentError`, like deepeval's `evaluate()`,
+when no non-flaky metric has a threshold.
+
 ## Errored vs Failed Results
 
 A **failed** result has a score that misses the threshold. An **errored**
@@ -51,7 +80,7 @@ mirrors deepeval's `MetricData`, where `error` is set and `score` is `None`.
 Errored results have:
 
 - `score: nil` and `reason: nil`
-- `success: false`
+- `success: false` (`nil` for a score-only metric, as in deepeval)
 - `error` set to a message string
 - `threshold` set to the metric's real threshold (its own configuration, the
   run-level `:threshold` option, or the metric's default)
@@ -199,7 +228,7 @@ result.evaluation_cost   # => 0.00055185
 - Metrics that make no LLM call (e.g. `ExactMatch`) leave all four `nil`.
 - LLM-based metrics report their configured judge as `evaluation_model` even
   when they made no call, as deepeval sets it when the metric is created.
-  `ToolCorrectness` only has a judge when given `:available_tools`.
+  `ToolCorrectness` reports its judge too, even without `:available_tools`.
 - Errored results keep the judge model and the tokens and cost of the calls
   made before the error, like deepeval's errored `MetricData`.
 - Token counts are `nil` when the adapter does not report usage.
@@ -246,11 +275,15 @@ end
 ```elixir
 @type t :: %DeepEvalEx.Result{
   metric: String.t(),
-  score: float() | nil,
-  success: boolean(),
+  score: number() | nil,
+  success: boolean() | nil,
   reason: String.t() | nil,
-  threshold: float() | nil,
+  threshold: number() | nil,
   error: String.t() | nil,
+  strict_mode: boolean(),
+  flaky: boolean(),
+  score_breakdown: map() | nil,
+  skipped: boolean(),
   metadata: map() | nil,
   evaluation_model: String.t() | nil,
   evaluation_cost: float() | nil,

@@ -75,6 +75,34 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
       assert metric.strict_mode == true
     end
 
+    test "strict_mode forces the threshold to the integer 1, as deepeval's constructor" do
+      metric =
+        GEval.new(
+          name: "Strict",
+          criteria: "Binary check",
+          evaluation_params: [:input],
+          strict_mode: true,
+          threshold: 0.3
+        )
+
+      assert metric.threshold === 1
+    end
+
+    test "accepts a nil threshold for score-only evaluation and a flaky flag" do
+      metric =
+        GEval.new(
+          name: "Scored",
+          criteria: "Quality",
+          evaluation_params: [:input],
+          threshold: nil,
+          flaky: true
+        )
+
+      assert metric.threshold == nil
+      assert metric.flaky == true
+      refute GEval.new(name: "D", criteria: "c", evaluation_params: [:input]).flaky
+    end
+
     test "supports custom score_range" do
       metric =
         GEval.new(
@@ -200,6 +228,30 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
       assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
       # 5/10 = 0.5
       assert result.score == 0.5
+    end
+
+    test "a nil threshold measures score-only, through the evaluator too" do
+      Mock.set_schema_response(~r/evaluator/i, %{"score" => 5, "reason" => "Average."})
+
+      metric =
+        GEval.new(
+          name: "Test",
+          evaluation_params: [:input, :actual_output],
+          evaluation_steps: ["Check quality"],
+          threshold: nil,
+          flaky: true
+        )
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A")
+
+      assert {:ok, %{score: 0.5, threshold: nil, success: nil}} =
+               GEval.evaluate(metric, test_case, adapter: :mock)
+
+      assert %{score: 0.5, threshold: nil, success: nil, flaky: true} =
+               DeepEvalEx.Evaluator.evaluate_metric(test_case, metric,
+                 adapter: :mock,
+                 threshold: 0.7
+               )
     end
 
     test "handles custom score range" do

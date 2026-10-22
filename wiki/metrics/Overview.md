@@ -58,6 +58,14 @@ Score threshold for pass/fail determination (0.0 - 1.0):
 result.success  # true if score >= 0.7
 ```
 
+Every metric also takes deepeval's `BaseMetric` options:
+
+- `strict_mode: true` - the threshold is forced to `1` and a score below it
+  becomes `0`
+- `threshold: nil` - score-only: `success` is `nil` and the metric never
+  decides its test case's success
+- `flaky: true` - reported, but never deciding its test case's success
+
 ### Result
 ```elixir
 %DeepEvalEx.Result{

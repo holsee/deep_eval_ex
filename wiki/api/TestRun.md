@@ -66,7 +66,9 @@ metric_data.strict_mode      # => false
 Test cases are `DeepEvalEx.TestRun.TestCase` structs and their metric
 results are `DeepEvalEx.TestRun.MetricData` structs, keeping everything in
 the file: scores, reasons, errors, evaluation model, token counts, cost,
-strict mode and flakiness. `to_results/1` converts them to the structs the
+strict mode and flakiness (each metric's own, from its result). A score-only
+metric's data has `threshold: nil` and `success: nil`, as deepeval writes it
+without either key. `to_results/1` converts them to the structs the
 rest of DeepEvalEx uses, in the shape `DeepEvalEx.evaluate_batch/3`
 returns:
 

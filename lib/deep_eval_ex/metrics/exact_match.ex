@@ -20,7 +20,8 @@ defmodule DeepEvalEx.Metrics.ExactMatch do
 
   ## Options
 
-  - `:threshold` - Score threshold for pass/fail (default: 1.0)
+  - `:threshold` - Score threshold for pass/fail (default: the integer `1`,
+    as deepeval's)
   - `:case_sensitive` - Whether comparison is case-sensitive (default: true)
   - `:normalize_whitespace` - Collapse multiple whitespace to single space (default: false)
 
@@ -30,7 +31,9 @@ defmodule DeepEvalEx.Metrics.ExactMatch do
   - `0.0` - No match
   """
 
-  use DeepEvalEx.Metrics.BaseMetric, default_threshold: 1.0
+  use DeepEvalEx.Metrics.BaseMetric, default_threshold: 1
+
+  alias DeepEvalEx.Metrics.BaseMetric
 
   @impl true
   def metric_name, do: "Exact Match"
@@ -39,7 +42,7 @@ defmodule DeepEvalEx.Metrics.ExactMatch do
   def required_params, do: [:input, :actual_output, :expected_output]
 
   def do_measure(test_case, opts) do
-    threshold = Keyword.get(opts, :threshold, default_threshold())
+    threshold = BaseMetric.threshold(opts, default_threshold())
     case_sensitive = Keyword.get(opts, :case_sensitive, true)
     normalize_ws = Keyword.get(opts, :normalize_whitespace, false)
 
