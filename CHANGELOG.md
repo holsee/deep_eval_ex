@@ -622,7 +622,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 ### Removed
 
 - The `ecto` dependency.
-- **BREAKING:** `DeepEvalEx.TestCase.get_retrieval_context/1`, which fell
+- **BREAKING:** `get_retrieval_context/1` (on `DeepEvalEx.TestCase`), which fell
   back to `:context`. Read `test_case.retrieval_context` instead.
 
 ### Fixed
