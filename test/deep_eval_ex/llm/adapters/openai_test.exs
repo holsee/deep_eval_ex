@@ -196,6 +196,21 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
         refute Map.has_key?(body, "temperature"), "expected no temperature for #{model}"
       end
     end
+
+    test "recognises reasoning models behind gateway prefixes and region suffixes" do
+      stub_completion("hi")
+
+      for model <-
+            ~w(openai/gpt-6-luna openai/gpt-5.4-mini aws-bedrock-runtime/openai/gpt-6.1-sol@global) do
+        assert {:ok, "hi"} = OpenAI.generate("hello", [model: model] ++ @base_opts)
+        assert_received {:request, _conn, body}
+        refute Map.has_key?(body, "temperature"), "expected no temperature for #{model}"
+      end
+
+      assert {:ok, "hi"} = OpenAI.generate("hello", [model: "openai/gpt-4.1-mini"] ++ @base_opts)
+      assert_received {:request, _conn, body}
+      assert body["temperature"] == 0.0
+    end
   end
 
   describe "generate_with_schema/3" do

@@ -152,13 +152,24 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   # Defaults to 0.0 like deepeval's GPTModel; reasoning models reject it
   # outright, so it is dropped for them whatever was configured.
   defp temperature(model, opts) do
-    if Regex.match?(@reasoning_model_pattern, model) do
+    if Regex.match?(@reasoning_model_pattern, base_model(model)) do
       nil
     else
       Keyword.get_lazy(opts, :temperature, fn ->
         Application.get_env(:deep_eval_ex, :openai_temperature, @default_temperature)
       end)
     end
+  end
+
+  # Gateways name models with a provider path and a region suffix, e.g.
+  # "aws-bedrock-runtime/openai/gpt-6.1-sol@global"; capabilities follow
+  # the underlying model, "gpt-6.1-sol".
+  defp base_model(model) do
+    model
+    |> String.split("/")
+    |> List.last()
+    |> String.split("@")
+    |> hd()
   end
 
   defp base_url(opts) do
