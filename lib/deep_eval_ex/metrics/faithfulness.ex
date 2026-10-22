@@ -56,6 +56,9 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
     unfaithful, and list them as `(Ambiguous)` contradictions in the reason
     (default: false)
   - `:model` - LLM model for evaluation
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
   - `:eval_mode` and `:system_one_model` - who decides, see "System One"
@@ -83,6 +86,7 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
 
   alias DeepEvalEx.{LLM.Adapter, LLM.Usage, Metrics.BaseMetric, Metrics.QAG, Result}
   alias DeepEvalEx.Metrics.Utils.Verbose
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Prompts.Faithfulness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.Faithfulness, as: Schema
   alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
@@ -105,10 +109,10 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
   case's `actual_output` and `retrieval_context`.
   """
   @impl true
-  def system_one_eval_spec(_test_case, _opts) do
+  def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: [:actual_output, :retrieval_context],
-      questions: Scored.parse!(Template.system_one_questions())
+      questions: Scored.parse!(EvaluationTemplate.render(opts, Template, :system_one_questions))
     }
   end
 
@@ -190,7 +194,7 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
     context_text = Enum.join(retrieval_context, "\n\n")
 
     prompt =
-      Template.generate_truths(
+      EvaluationTemplate.render(opts, Template, :generate_truths,
         retrieval_context: context_text,
         extraction_limit: limit
       )
@@ -202,7 +206,8 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
   end
 
   defp generate_claims(actual_output, opts) do
-    prompt = Template.generate_claims(actual_output: actual_output)
+    prompt =
+      EvaluationTemplate.render(opts, Template, :generate_claims, actual_output: actual_output)
 
     case Adapter.generate_with_schema(prompt, Schema.claims_schema(), opts) do
       {:ok, response} -> Schema.parse_claims(response)
@@ -219,7 +224,7 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
   # it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_verdicts(claims, truths, opts) do
     spec = %Spec.Verdicts{
-      instructions: Template.system_one_verdict(),
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
       items: claims,
       item_key: "claim",
       state: [retrieval_context: truths]
@@ -237,7 +242,7 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
     truths_text = Enum.join(truths, "\n\n")
 
     prompt =
-      Template.generate_verdicts(
+      EvaluationTemplate.render(opts, Template, :generate_verdicts,
         claims: claims,
         retrieval_context: truths_text
       )
@@ -281,7 +286,7 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
       end)
 
     prompt =
-      Template.generate_reason(
+      EvaluationTemplate.render(opts, Template, :generate_reason,
         score: score,
         contradictions: contradictions
       )

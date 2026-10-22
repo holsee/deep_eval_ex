@@ -46,6 +46,9 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
   - `:eval_mode` and `:system_one_model` - who decides, see "System One"
@@ -74,6 +77,7 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Metrics.QAG, Result}
   alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.AnswerRelevancy, as: Template
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Schemas.MetricOutputs.AnswerRelevancy, as: Schema
   alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
 
@@ -95,10 +99,10 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   case's `input` and `actual_output` (the metric's required params).
   """
   @impl true
-  def system_one_eval_spec(_test_case, _opts) do
+  def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: required_params(),
-      questions: Scored.parse!(Template.system_one_questions())
+      questions: Scored.parse!(EvaluationTemplate.render(opts, Template, :system_one_questions))
     }
   end
 
@@ -158,7 +162,10 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   end
 
   defp generate_statements(actual_output, opts) do
-    prompt = Template.generate_statements(actual_output: actual_output)
+    prompt =
+      EvaluationTemplate.render(opts, Template, :generate_statements,
+        actual_output: actual_output
+      )
 
     case Adapter.generate_with_schema(prompt, Schema.statements_schema(), opts) do
       {:ok, response} -> Schema.parse_statements(response)
@@ -175,7 +182,7 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   # when it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_verdicts(input, statements, opts) do
     spec = %Spec.Verdicts{
-      instructions: Template.system_one_verdict(),
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
       items: statements,
       item_key: "statement",
       state: [input: input]
@@ -191,7 +198,7 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
 
   defp llm_verdicts(input, statements, opts) do
     prompt =
-      Template.generate_verdicts(
+      EvaluationTemplate.render(opts, Template, :generate_verdicts,
         input: input,
         statements: statements
       )
@@ -222,7 +229,7 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
       |> Enum.reject(&is_nil/1)
 
     prompt =
-      Template.generate_reason(
+      EvaluationTemplate.render(opts, Template, :generate_reason,
         score: score,
         input: input,
         irrelevant_statements: irrelevant_statements

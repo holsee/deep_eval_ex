@@ -1222,6 +1222,31 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `batch_system_one_summarization` (batched with AnswerRelevancy).
   DeepEvalEx matches each byte for byte. The metric has a wiki page, and
   the metrics overview a Summarization Metrics section.
+- **Per-metric prompt overrides, deepeval's `evaluation_template`**, a port
+  of 4.3.1's `PromptMixin._get_prompt` and generated template classes.
+  Every LLM-judged metric (AnswerRelevancy, ArgumentCorrectness, Bias,
+  ContextualPrecision, ContextualRecall, ContextualRelevancy, Faithfulness,
+  GEval, Hallucination, JsonCorrectness, PIILeakage, PromptAlignment,
+  Summarization, ToolCorrectness and Toxicity) takes an
+  `:evaluation_template` module, also a field of the structs `GEval.new/1`,
+  `JsonCorrectness.new/1`, `PromptAlignment.new/1` and
+  `Summarization.new/1` build.
+  - Each `DeepEvalEx.Prompts.<Metric>` module is now a behaviour whose
+    optional callbacks are its templates, including the System One ones
+    (deepeval's `_experimental_system_one_*`, here `system_one_verdict/0`,
+    `system_one_questions` and `system_one_tool_selection_score/0`). An
+    override defines only the templates it changes; every other template
+    falls back to the default one at a time, as deepeval falls back when
+    the class has no such method. Formatting helpers such as
+    `GEval.format_params/1` are not templates.
+  - `DeepEvalEx.Prompts.EvaluationTemplate.render/3,4` picks the override's
+    template or the default, and raises `ArgumentError` when the option is
+    not a loadable module.
+  - Templates a metric borrows from another are never overridden, as
+    deepeval's explicit `template_class` bypasses the override:
+    Summarization always extracts claims and truths with the Faithfulness
+    prompts.
+  - The metrics overview has a Custom Prompts section.
 
 ### Changed
 

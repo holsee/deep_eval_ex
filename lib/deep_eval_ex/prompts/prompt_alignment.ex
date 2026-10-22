@@ -28,6 +28,14 @@ defmodule DeepEvalEx.Prompts.PromptAlignment do
   prompt instruction.
   """
 
+  use DeepEvalEx.Prompts.EvaluationTemplate,
+    templates: [
+      generate_verdicts: 1,
+      generate_reason: 1,
+      system_one_verdict: 0,
+      system_one_questions: 1
+    ]
+
   alias DeepEvalEx.Prompts.Python
 
   @doc """

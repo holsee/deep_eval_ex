@@ -56,6 +56,9 @@ defmodule DeepEvalEx.Metrics.Hallucination do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
   - `:eval_mode` and `:system_one_model` - who decides, see "System One"
@@ -92,6 +95,7 @@ defmodule DeepEvalEx.Metrics.Hallucination do
     Result
   }
 
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Prompts.Hallucination, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.Hallucination, as: Schema
   alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
@@ -114,10 +118,10 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   case's `actual_output` and `context`.
   """
   @impl true
-  def system_one_eval_spec(_test_case, _opts) do
+  def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: [:actual_output, :context],
-      questions: Scored.parse!(Template.system_one_questions())
+      questions: Scored.parse!(EvaluationTemplate.render(opts, Template, :system_one_questions))
     }
   end
 
@@ -184,7 +188,7 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   # when it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_verdicts(actual_output, contexts, opts) do
     spec = %Spec.Verdicts{
-      instructions: Template.system_one_verdict(),
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
       items: contexts,
       item_key: "context",
       state: [actual_output: actual_output]
@@ -200,7 +204,7 @@ defmodule DeepEvalEx.Metrics.Hallucination do
 
   defp llm_verdicts(actual_output, contexts, opts) do
     prompt =
-      Template.generate_verdicts(
+      EvaluationTemplate.render(opts, Template, :generate_verdicts,
         actual_output: actual_output,
         contexts: contexts
       )
@@ -238,7 +242,7 @@ defmodule DeepEvalEx.Metrics.Hallucination do
       |> Enum.reject(&is_nil/1)
 
     prompt =
-      Template.generate_reason(
+      EvaluationTemplate.render(opts, Template, :generate_reason,
         score: score,
         factual_alignments: alignment_reasons,
         contradictions: contradiction_reasons

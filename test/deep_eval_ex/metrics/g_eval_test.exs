@@ -6,6 +6,7 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.GEval
   alias DeepEvalEx.Metrics.GEval.Rubric
+  alias DeepEvalEx.Prompts.GEval, as: GEvalPrompts
   alias DeepEvalEx.TestCase
 
   doctest GEval, only: [calculate_weighted_summed_score: 2]
@@ -249,7 +250,42 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
     end
   end
 
+  defmodule StepsOverride do
+    @behaviour GEvalPrompts
+
+    @impl true
+    def generate_evaluation_steps(opts),
+      do: "CUSTOM STEPS\n" <> GEvalPrompts.generate_evaluation_steps(opts)
+  end
+
   describe "evaluate/2 with mock adapter" do
+    test "renders the :evaluation_template override and the defaults for the rest" do
+      Mock.set_schema_response(~r/generate.*evaluation steps/i, %{"steps" => ["Check accuracy."]})
+      Mock.set_schema_response(~r/evaluator/i, %{"score" => 7, "reason" => "Good."})
+
+      metric =
+        GEval.new(
+          name: "Accuracy",
+          criteria: "Is the arithmetic right?",
+          evaluation_params: [:input, :actual_output],
+          evaluation_template: StepsOverride
+        )
+
+      assert metric.evaluation_template == StepsOverride
+
+      test_case = TestCase.new!(input: "2 + 2?", actual_output: "4")
+
+      assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
+      assert result.score == 0.7
+
+      # The Mock records every async test's prompts: keep this test's.
+      prompts = Mock.get_recorded_prompts()
+      assert [steps] = Enum.filter(prompts, &(&1 =~ "Is the arithmetic right?"))
+      assert steps =~ ~r/^CUSTOM STEPS\n/
+      assert [results] = Enum.filter(prompts, &(&1 =~ "2 + 2?"))
+      refute results =~ "CUSTOM"
+    end
+
     test "evaluates test case with pre-defined steps" do
       # Mock the evaluation response
       Mock.set_schema_response(

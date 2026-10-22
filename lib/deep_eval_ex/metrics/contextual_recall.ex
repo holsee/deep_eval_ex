@@ -53,6 +53,9 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
   - `:eval_mode` and `:system_one_model` - who decides, see "System One"
@@ -82,6 +85,7 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
   alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Metrics.QAG, Result}
   alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.ContextualRecall, as: Template
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Schemas.MetricOutputs.ContextualRecall, as: Schema
   alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
 
@@ -103,10 +107,10 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
   case's `expected_output` and `retrieval_context`.
   """
   @impl true
-  def system_one_eval_spec(_test_case, _opts) do
+  def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: [:expected_output, :retrieval_context],
-      questions: Scored.parse!(Template.system_one_questions())
+      questions: Scored.parse!(EvaluationTemplate.render(opts, Template, :system_one_questions))
     }
   end
 
@@ -177,7 +181,7 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
   # generate_qag_verdicts).
   defp generate_verdicts(expected_output, retrieval_context, opts) do
     spec = %Spec.Verdicts{
-      instructions: Template.system_one_verdict(),
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
       items: Decision.split_sentences(expected_output),
       item_key: "sentence",
       state: [retrieval_context: retrieval_context]
@@ -193,7 +197,7 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
 
   defp llm_verdicts(expected_output, retrieval_context, opts) do
     prompt =
-      Template.generate_verdicts(
+      EvaluationTemplate.render(opts, Template, :generate_verdicts,
         expected_output: expected_output,
         retrieval_context: retrieval_context
       )
@@ -231,7 +235,7 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
       |> Enum.reject(&is_nil/1)
 
     prompt =
-      Template.generate_reason(
+      EvaluationTemplate.render(opts, Template, :generate_reason,
         score: score,
         expected_output: expected_output,
         supportive_reasons: supportive_reasons,

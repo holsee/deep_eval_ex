@@ -122,6 +122,9 @@ defmodule DeepEvalEx.Metrics.GEval do
     evaluation steps, rubric and score) after measuring (default: false)
   - `:include_g_eval_suffix` - Name results `"<name> [GEval]"` rather than
     just `"<name>"` (default: true, as in deepeval)
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
 
   ## Eval Modes
 
@@ -136,6 +139,7 @@ defmodule DeepEvalEx.Metrics.GEval do
   alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Result, TestCase}
   alias DeepEvalEx.Metrics.GEval.Rubric
   alias DeepEvalEx.Metrics.Utils.{Generation, Verbose}
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Prompts.GEval, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.GEval, as: Schema
 
@@ -151,6 +155,7 @@ defmodule DeepEvalEx.Metrics.GEval do
     :strict_mode,
     :model,
     :verbose_mode,
+    :evaluation_template,
     top_logprobs: 20,
     flaky: false,
     include_g_eval_suffix: true
@@ -169,7 +174,8 @@ defmodule DeepEvalEx.Metrics.GEval do
           flaky: boolean(),
           model: tuple() | nil,
           top_logprobs: pos_integer(),
-          include_g_eval_suffix: boolean()
+          include_g_eval_suffix: boolean(),
+          evaluation_template: module() | nil
         }
 
   @doc """
@@ -193,6 +199,7 @@ defmodule DeepEvalEx.Metrics.GEval do
     (default: 20)
   - `:verbose_mode` - Print the verbose logs (default: false)
   - `:include_g_eval_suffix` - Append `" [GEval]"` to the name (default: true)
+  - `:evaluation_template` - A `DeepEvalEx.Prompts.GEval` override (default: `nil`)
 
   Raises `ArgumentError`, as deepeval's constructor raises `ValueError`,
   for an empty `:evaluation_params` list, a blank `:criteria`, an empty
@@ -223,7 +230,8 @@ defmodule DeepEvalEx.Metrics.GEval do
       model: Keyword.get(opts, :model),
       verbose_mode: Keyword.get(opts, :verbose_mode),
       top_logprobs: Keyword.get(opts, :top_logprobs, 20),
-      include_g_eval_suffix: Keyword.get(opts, :include_g_eval_suffix, true)
+      include_g_eval_suffix: Keyword.get(opts, :include_g_eval_suffix, true),
+      evaluation_template: Keyword.get(opts, :evaluation_template)
     }
   end
 
@@ -443,6 +451,8 @@ defmodule DeepEvalEx.Metrics.GEval do
   defp g_eval_score(score, %{score_range: {min_score, max_score}}),
     do: (score - min_score) / (max_score - min_score)
 
+  defp template_opts(metric), do: [evaluation_template: metric.evaluation_template]
+
   defp build_adapter_opts(metric, opts), do: adapter_opts(metric.model, opts)
 
   defp adapter_opts(model, opts) do
@@ -463,7 +473,7 @@ defmodule DeepEvalEx.Metrics.GEval do
     params_string = Template.format_params(metric.evaluation_params)
 
     prompt =
-      Template.generate_evaluation_steps(
+      EvaluationTemplate.render(template_opts(metric), Template, :generate_evaluation_steps,
         criteria: metric.criteria,
         parameters: params_string
       )
@@ -480,13 +490,16 @@ defmodule DeepEvalEx.Metrics.GEval do
 
     prompt =
       if metric.strict_mode do
-        Template.generate_strict_evaluation_results(
+        EvaluationTemplate.render(
+          template_opts(metric),
+          Template,
+          :generate_strict_evaluation_results,
           evaluation_steps: steps,
           test_case_content: test_case_content,
           parameters: params_string
         )
       else
-        Template.generate_evaluation_results(
+        EvaluationTemplate.render(template_opts(metric), Template, :generate_evaluation_results,
           evaluation_steps: steps,
           test_case_content: test_case_content,
           parameters: params_string,

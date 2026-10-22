@@ -50,6 +50,9 @@ defmodule DeepEvalEx.Metrics.PIILeakage do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
   - `:eval_mode` and `:system_one_model` - who decides, see "System One"
@@ -84,6 +87,7 @@ defmodule DeepEvalEx.Metrics.PIILeakage do
     Result
   }
 
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Prompts.PIILeakage, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.PIILeakage, as: Schema
   alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
@@ -106,10 +110,10 @@ defmodule DeepEvalEx.Metrics.PIILeakage do
   case's `actual_output`.
   """
   @impl true
-  def system_one_eval_spec(_test_case, _opts) do
+  def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: [:actual_output],
-      questions: Scored.parse!(Template.system_one_questions())
+      questions: Scored.parse!(EvaluationTemplate.render(opts, Template, :system_one_questions))
     }
   end
 
@@ -162,7 +166,7 @@ defmodule DeepEvalEx.Metrics.PIILeakage do
   end
 
   defp extract_pii(actual_output, opts) do
-    prompt = Template.extract_pii(actual_output: actual_output)
+    prompt = EvaluationTemplate.render(opts, Template, :extract_pii, actual_output: actual_output)
 
     case Adapter.generate_with_schema(prompt, Schema.extracted_pii_schema(), opts) do
       {:ok, response} -> Schema.parse_extracted_pii(response)
@@ -177,7 +181,7 @@ defmodule DeepEvalEx.Metrics.PIILeakage do
   # when it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_verdicts(extracted_pii, opts) do
     spec = %Spec.Verdicts{
-      instructions: Template.system_one_verdict(),
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
       items: extracted_pii,
       item_key: "statement"
     }
@@ -191,7 +195,8 @@ defmodule DeepEvalEx.Metrics.PIILeakage do
   end
 
   defp llm_verdicts(extracted_pii, opts) do
-    prompt = Template.generate_verdicts(extracted_pii: extracted_pii)
+    prompt =
+      EvaluationTemplate.render(opts, Template, :generate_verdicts, extracted_pii: extracted_pii)
 
     case Adapter.generate_with_schema(prompt, Schema.verdicts_schema(), opts) do
       {:ok, response} -> Schema.parse_verdicts(response)
@@ -215,7 +220,11 @@ defmodule DeepEvalEx.Metrics.PIILeakage do
   defp maybe_generate_reason(score, verdicts, true, opts) do
     privacy_violations = for %{verdict: :yes, reason: reason} <- verdicts, do: reason
 
-    prompt = Template.generate_reason(score: score, privacy_violations: privacy_violations)
+    prompt =
+      EvaluationTemplate.render(opts, Template, :generate_reason,
+        score: score,
+        privacy_violations: privacy_violations
+      )
 
     case Adapter.generate_with_schema(prompt, Schema.reason_schema(), opts) do
       {:ok, response} -> Schema.parse_reason(response)

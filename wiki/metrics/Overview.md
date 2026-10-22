@@ -95,6 +95,25 @@ Every metric also takes deepeval's `BaseMetric` options:
   decides its test case's success
 - `flaky: true` - reported, but never deciding its test case's success
 
+### Custom Prompts
+Every LLM-judged metric takes deepeval's `evaluation_template` as the
+`:evaluation_template` option: a module implementing the metric's prompt
+behaviour (`DeepEvalEx.Prompts.Faithfulness`, ...) that defines only the
+templates it changes. The others, System One templates included, fall back
+to deepeval's defaults one by one (see `DeepEvalEx.Prompts.EvaluationTemplate`):
+
+```elixir
+defmodule MyFaithfulnessTemplate do
+  @behaviour DeepEvalEx.Prompts.Faithfulness
+
+  @impl true
+  def generate_claims(opts),
+    do: "Only extract pricing claims.\n\n" <> DeepEvalEx.Prompts.Faithfulness.generate_claims(opts)
+end
+
+Faithfulness.measure(test_case, evaluation_template: MyFaithfulnessTemplate)
+```
+
 ### Result
 ```elixir
 %DeepEvalEx.Result{

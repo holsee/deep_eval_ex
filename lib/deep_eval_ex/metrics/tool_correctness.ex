@@ -44,6 +44,9 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     (default: false)
   - `:adapter` - LLM adapter for tool selection scoring
   - `:model` - Model name for tool selection scoring
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
   - `:eval_mode` and `:system_one_model` - who scores tool selection, see
     "System One"
 
@@ -84,6 +87,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   alias DeepEvalEx.LLM.Adapter
   alias DeepEvalEx.Metrics.BaseMetric
   alias DeepEvalEx.Metrics.Utils.Verbose
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.Prompts.ToolCorrectness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.ToolCorrectness, as: Schema
@@ -440,7 +444,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   # selection; the LLM does when it is not asked or fails.
   defp get_tool_selection_score(user_input, tools_called, available_tools, opts) do
     spec = %Spec.Score{
-      instructions: Template.system_one_tool_selection_score(),
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_tool_selection_score),
       levels: @tool_selection_levels,
       state: [
         input: user_input,
@@ -465,7 +469,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     available_tools_formatted = Template.format_tools(available_tools)
 
     prompt =
-      Template.get_tool_selection_score(
+      EvaluationTemplate.render(opts, Template, :get_tool_selection_score,
         user_input: user_input,
         tools_called: tools_called_formatted,
         available_tools: available_tools_formatted

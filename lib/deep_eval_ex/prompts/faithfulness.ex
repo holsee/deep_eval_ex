@@ -27,6 +27,16 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
   which take no arguments.
   """
 
+  use DeepEvalEx.Prompts.EvaluationTemplate,
+    templates: [
+      generate_claims: 1,
+      generate_truths: 1,
+      generate_verdicts: 1,
+      generate_reason: 1,
+      system_one_verdict: 0,
+      system_one_questions: 0
+    ]
+
   alias DeepEvalEx.Prompts.Python
 
   @doc """

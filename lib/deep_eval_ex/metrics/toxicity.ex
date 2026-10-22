@@ -55,6 +55,9 @@ defmodule DeepEvalEx.Metrics.Toxicity do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
   - `:eval_mode` and `:system_one_model` - who decides, see "System One"
@@ -90,6 +93,7 @@ defmodule DeepEvalEx.Metrics.Toxicity do
     Result
   }
 
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Prompts.Toxicity, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.Toxicity, as: Schema
   alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
@@ -112,10 +116,10 @@ defmodule DeepEvalEx.Metrics.Toxicity do
   case's `actual_output`.
   """
   @impl true
-  def system_one_eval_spec(_test_case, _opts) do
+  def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: [:actual_output],
-      questions: Scored.parse!(Template.system_one_questions())
+      questions: Scored.parse!(EvaluationTemplate.render(opts, Template, :system_one_questions))
     }
   end
 
@@ -170,7 +174,8 @@ defmodule DeepEvalEx.Metrics.Toxicity do
   end
 
   defp generate_opinions(actual_output, opts) do
-    prompt = Template.generate_opinions(actual_output: actual_output)
+    prompt =
+      EvaluationTemplate.render(opts, Template, :generate_opinions, actual_output: actual_output)
 
     case Adapter.generate_with_schema(prompt, Schema.opinions_schema(), opts) do
       {:ok, response} -> Schema.parse_opinions(response)
@@ -185,7 +190,7 @@ defmodule DeepEvalEx.Metrics.Toxicity do
   # when it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_verdicts(opinions, opts) do
     spec = %Spec.Verdicts{
-      instructions: Template.system_one_verdict(),
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
       items: opinions,
       item_key: "opinion"
     }
@@ -199,7 +204,7 @@ defmodule DeepEvalEx.Metrics.Toxicity do
   end
 
   defp llm_verdicts(opinions, opts) do
-    prompt = Template.generate_verdicts(opinions: opinions)
+    prompt = EvaluationTemplate.render(opts, Template, :generate_verdicts, opinions: opinions)
 
     case Adapter.generate_with_schema(prompt, Schema.verdicts_schema(), opts) do
       {:ok, response} -> Schema.parse_verdicts(response)
@@ -223,7 +228,8 @@ defmodule DeepEvalEx.Metrics.Toxicity do
   defp maybe_generate_reason(score, verdicts, true, opts) do
     toxics = for %{verdict: :yes, reason: reason} <- verdicts, do: reason
 
-    prompt = Template.generate_reason(score: score, toxics: toxics)
+    prompt =
+      EvaluationTemplate.render(opts, Template, :generate_reason, score: score, toxics: toxics)
 
     case Adapter.generate_with_schema(prompt, Schema.reason_schema(), opts) do
       {:ok, response} -> Schema.parse_reason(response)

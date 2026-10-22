@@ -62,6 +62,9 @@ defmodule DeepEvalEx.Metrics.Summarization do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
   - `:eval_mode` and `:system_one_model` - who decides, see "System One"
@@ -106,6 +109,7 @@ defmodule DeepEvalEx.Metrics.Summarization do
     Result
   }
 
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Prompts.Faithfulness, as: FaithfulnessTemplate
   alias DeepEvalEx.Prompts.Summarization, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.Faithfulness, as: FaithfulnessSchema
@@ -126,7 +130,8 @@ defmodule DeepEvalEx.Metrics.Summarization do
     :verbose_mode,
     :flaky,
     :eval_mode,
-    :system_one_model
+    :system_one_model,
+    :evaluation_template
   ]
 
   @type t :: %__MODULE__{
@@ -140,7 +145,8 @@ defmodule DeepEvalEx.Metrics.Summarization do
           verbose_mode: boolean() | nil,
           flaky: boolean() | nil,
           eval_mode: atom() | String.t() | nil,
-          system_one_model: term()
+          system_one_model: term(),
+          evaluation_template: module() | nil
         }
 
   @typedoc """
@@ -172,7 +178,8 @@ defmodule DeepEvalEx.Metrics.Summarization do
       verbose_mode: Keyword.get(opts, :verbose_mode),
       flaky: Keyword.get(opts, :flaky),
       eval_mode: Keyword.get(opts, :eval_mode),
-      system_one_model: Keyword.get(opts, :system_one_model)
+      system_one_model: Keyword.get(opts, :system_one_model),
+      evaluation_template: Keyword.get(opts, :evaluation_template)
     }
   end
 
@@ -200,7 +207,12 @@ defmodule DeepEvalEx.Metrics.Summarization do
 
     %EvalSpec{
       evaluation_params: required_params(),
-      questions: Scored.parse!(Template.system_one_questions(assessment_questions: questions))
+      questions:
+        Scored.parse!(
+          EvaluationTemplate.render(opts, Template, :system_one_questions,
+            assessment_questions: questions
+          )
+        )
     }
   end
 
@@ -332,7 +344,11 @@ defmodule DeepEvalEx.Metrics.Summarization do
   end
 
   defp generate_questions(text, opts) do
-    prompt = Template.generate_questions(text: text, n: Keyword.get(opts, :n, @default_n))
+    prompt =
+      EvaluationTemplate.render(opts, Template, :generate_questions,
+        text: text,
+        n: Keyword.get(opts, :n, @default_n)
+      )
 
     case Adapter.generate_with_schema(prompt, Schema.questions_schema(), opts) do
       {:ok, response} -> Schema.parse_questions(response)
@@ -341,7 +357,11 @@ defmodule DeepEvalEx.Metrics.Summarization do
   end
 
   defp generate_answers(questions, text, opts) do
-    prompt = Template.generate_answers(questions: questions, text: text)
+    prompt =
+      EvaluationTemplate.render(opts, Template, :generate_answers,
+        questions: questions,
+        text: text
+      )
 
     case Adapter.generate_with_schema(prompt, Schema.answers_schema(), opts) do
       {:ok, response} -> Schema.parse_answers(response)
@@ -380,7 +400,7 @@ defmodule DeepEvalEx.Metrics.Summarization do
   # it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_alignment_verdicts(claims, truths, opts) do
     spec = %Spec.Verdicts{
-      instructions: Template.system_one_verdict(),
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
       items: claims,
       item_key: "summary_claim",
       state: [original_text: truths]
@@ -396,7 +416,7 @@ defmodule DeepEvalEx.Metrics.Summarization do
 
   defp llm_alignment_verdicts(claims, truths, opts) do
     prompt =
-      Template.generate_alignment_verdicts(
+      EvaluationTemplate.render(opts, Template, :generate_alignment_verdicts,
         summary_claims: claims,
         original_text: Enum.join(truths, "\n\n")
       )
@@ -456,7 +476,7 @@ defmodule DeepEvalEx.Metrics.Summarization do
   # cannot answer though the original can.
   defp maybe_generate_reason(score, alignment_verdicts, coverage_verdicts, true, opts) do
     prompt =
-      Template.generate_reason(
+      EvaluationTemplate.render(opts, Template, :generate_reason,
         score: score,
         contradictions: for(%{verdict: :no, reason: reason} <- alignment_verdicts, do: reason),
         redundancies:

@@ -60,6 +60,9 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
   - `:eval_mode` and `:system_one_model` - who decides, see "System One"
@@ -88,6 +91,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Metrics.QAG, Result}
   alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.ContextualPrecision, as: Template
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Schemas.MetricOutputs.ContextualPrecision, as: Schema
   alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
 
@@ -110,10 +114,10 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   (the metric's required params).
   """
   @impl true
-  def system_one_eval_spec(_test_case, _opts) do
+  def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: required_params(),
-      questions: Scored.parse!(Template.system_one_questions())
+      questions: Scored.parse!(EvaluationTemplate.render(opts, Template, :system_one_questions))
     }
   end
 
@@ -182,7 +186,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   # it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_verdicts(input, expected_output, retrieval_context, opts) do
     spec = %Spec.Verdicts{
-      instructions: Template.system_one_verdict(),
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
       items: retrieval_context,
       item_key: "node",
       state: [input: input, expected_output: expected_output]
@@ -198,7 +202,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
 
   defp llm_verdicts(input, expected_output, retrieval_context, opts) do
     prompt =
-      Template.generate_verdicts(
+      EvaluationTemplate.render(opts, Template, :generate_verdicts,
         input: input,
         expected_output: expected_output,
         retrieval_context: retrieval_context
@@ -262,7 +266,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
 
   defp maybe_generate_reason(score, input, verdicts, true, opts) do
     prompt =
-      Template.generate_reason(
+      EvaluationTemplate.render(opts, Template, :generate_reason,
         score: score,
         input: input,
         verdicts: verdicts

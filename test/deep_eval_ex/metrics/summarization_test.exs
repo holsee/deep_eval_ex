@@ -7,6 +7,8 @@ defmodule DeepEvalEx.Metrics.SummarizationTest do
   alias DeepEvalEx.Evaluator
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.Summarization
+  alias DeepEvalEx.Prompts.Faithfulness, as: FaithfulnessPrompts
+  alias DeepEvalEx.Prompts.Summarization, as: SummarizationPrompts
   alias DeepEvalEx.SystemOne.Adapters.Mock, as: SystemOneMock
   alias DeepEvalEx.SystemOne.{EvalSpec, Scored}
   alias DeepEvalEx.TestCase
@@ -303,6 +305,47 @@ defmodule DeepEvalEx.Metrics.SummarizationTest do
 
       assert result.metadata.assessment_questions == @questions
       refute Enum.any?(Mock.get_recorded_prompts(), &(&1 =~ @questions_prompt))
+    end
+  end
+
+  defmodule TemplateOverride do
+    @behaviour SummarizationPrompts
+
+    @impl true
+    def generate_questions(opts),
+      do: "CUSTOM QUESTIONS\n" <> SummarizationPrompts.generate_questions(opts)
+
+    # Not a Summarization template: the claims prompt is borrowed from
+    # Faithfulness, which an override must not hijack.
+    def generate_claims(_opts), do: "HIJACKED CLAIMS"
+  end
+
+  describe ":evaluation_template" do
+    test "overrides Summarization templates but not those borrowed from Faithfulness" do
+      script_judge()
+
+      assert {:ok, _result} =
+               Summarization.measure(test_case(),
+                 adapter: :mock,
+                 evaluation_template: TemplateOverride
+               )
+
+      assert prompt(@questions_prompt) =~ ~r/^CUSTOM QUESTIONS\n/
+
+      assert prompt(@claims_prompt) ==
+               FaithfulnessPrompts.generate_claims(actual_output: @summary)
+
+      refute Enum.any?(Mock.get_recorded_prompts(), &(&1 =~ "HIJACKED"))
+    end
+
+    test "configures a metric built with new/1" do
+      script_judge()
+      metric = Summarization.new(evaluation_template: TemplateOverride)
+
+      assert %Summarization{evaluation_template: TemplateOverride} = metric
+      Evaluator.evaluate_metric(test_case(), metric, adapter: :mock)
+
+      assert prompt(@questions_prompt) =~ ~r/^CUSTOM QUESTIONS\n/
     end
   end
 

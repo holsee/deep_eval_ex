@@ -25,6 +25,9 @@ defmodule DeepEvalEx.Prompts.JsonCorrectness do
   validity as a Python bool. JsonCorrectness has no System One templates.
   """
 
+  use DeepEvalEx.Prompts.EvaluationTemplate,
+    templates: [generate_reason: 1]
+
   alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.TestRun.JSON
 

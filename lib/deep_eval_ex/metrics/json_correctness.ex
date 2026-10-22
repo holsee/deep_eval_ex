@@ -79,6 +79,9 @@ defmodule DeepEvalEx.Metrics.JsonCorrectness do
   - `:threshold` - Minimum passing score when not strict (default: 0.5)
   - `:include_reason` - Explain the score (default: true)
   - `:model` - LLM model for the reason
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
   - `:eval_mode` - see "Eval Modes"
@@ -127,6 +130,7 @@ defmodule DeepEvalEx.Metrics.JsonCorrectness do
     Metrics.Utils.Verbose
   }
 
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Prompts.JsonCorrectness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.JsonCorrectness, as: Schema
   alias DeepEvalEx.SystemOne.Context
@@ -142,7 +146,8 @@ defmodule DeepEvalEx.Metrics.JsonCorrectness do
     :model,
     :verbose_mode,
     :flaky,
-    :eval_mode
+    :eval_mode,
+    :evaluation_template
   ]
 
   @type t :: %__MODULE__{
@@ -153,7 +158,8 @@ defmodule DeepEvalEx.Metrics.JsonCorrectness do
           model: term(),
           verbose_mode: boolean() | nil,
           flaky: boolean() | nil,
-          eval_mode: atom() | String.t() | nil
+          eval_mode: atom() | String.t() | nil,
+          evaluation_template: module() | nil
         }
 
   @doc """
@@ -177,7 +183,8 @@ defmodule DeepEvalEx.Metrics.JsonCorrectness do
       model: Keyword.get(opts, :model),
       verbose_mode: Keyword.get(opts, :verbose_mode),
       flaky: Keyword.get(opts, :flaky),
-      eval_mode: Keyword.get(opts, :eval_mode)
+      eval_mode: Keyword.get(opts, :eval_mode),
+      evaluation_template: Keyword.get(opts, :evaluation_template)
     }
   end
 
@@ -269,7 +276,7 @@ defmodule DeepEvalEx.Metrics.JsonCorrectness do
 
   defp generate_reason(actual_output, schema, opts) do
     prompt =
-      Template.generate_reason(
+      EvaluationTemplate.render(opts, Template, :generate_reason,
         actual_output: actual_output,
         expected_schema: schema,
         is_valid_json: false

@@ -28,6 +28,15 @@ defmodule DeepEvalEx.Prompts.Bias do
   `_experimental_system_one_questions`, which take no arguments.
   """
 
+  use DeepEvalEx.Prompts.EvaluationTemplate,
+    templates: [
+      generate_opinions: 1,
+      generate_verdicts: 1,
+      generate_reason: 1,
+      system_one_verdict: 0,
+      system_one_questions: 0
+    ]
+
   alias DeepEvalEx.Prompts.Python
 
   @doc """

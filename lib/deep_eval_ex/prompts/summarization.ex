@@ -36,6 +36,16 @@ defmodule DeepEvalEx.Prompts.Summarization do
   assessment question.
   """
 
+  use DeepEvalEx.Prompts.EvaluationTemplate,
+    templates: [
+      generate_questions: 1,
+      generate_answers: 1,
+      generate_alignment_verdicts: 1,
+      generate_reason: 1,
+      system_one_verdict: 0,
+      system_one_questions: 1
+    ]
+
   alias DeepEvalEx.Prompts.Python
 
   @doc """

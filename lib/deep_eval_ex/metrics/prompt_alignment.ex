@@ -50,6 +50,9 @@ defmodule DeepEvalEx.Metrics.PromptAlignment do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
   - `:eval_mode` and `:system_one_model` - who decides, see "System One"
@@ -99,6 +102,7 @@ defmodule DeepEvalEx.Metrics.PromptAlignment do
     Result
   }
 
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Prompts.PromptAlignment, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.PromptAlignment, as: Schema
   alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
@@ -113,7 +117,8 @@ defmodule DeepEvalEx.Metrics.PromptAlignment do
     :verbose_mode,
     :flaky,
     :eval_mode,
-    :system_one_model
+    :system_one_model,
+    :evaluation_template
   ]
 
   @type t :: %__MODULE__{
@@ -125,7 +130,8 @@ defmodule DeepEvalEx.Metrics.PromptAlignment do
           verbose_mode: boolean() | nil,
           flaky: boolean() | nil,
           eval_mode: atom() | String.t() | nil,
-          system_one_model: term()
+          system_one_model: term(),
+          evaluation_template: module() | nil
         }
 
   @doc """
@@ -147,7 +153,8 @@ defmodule DeepEvalEx.Metrics.PromptAlignment do
       verbose_mode: Keyword.get(opts, :verbose_mode),
       flaky: Keyword.get(opts, :flaky),
       eval_mode: Keyword.get(opts, :eval_mode),
-      system_one_model: Keyword.get(opts, :system_one_model)
+      system_one_model: Keyword.get(opts, :system_one_model),
+      evaluation_template: Keyword.get(opts, :evaluation_template)
     }
   end
 
@@ -174,7 +181,11 @@ defmodule DeepEvalEx.Metrics.PromptAlignment do
     %EvalSpec{
       evaluation_params: required_params(),
       questions:
-        Scored.parse!(Template.system_one_questions(prompt_instructions: instructions!(opts)))
+        Scored.parse!(
+          EvaluationTemplate.render(opts, Template, :system_one_questions,
+            prompt_instructions: instructions!(opts)
+          )
+        )
     }
   end
 
@@ -241,7 +252,7 @@ defmodule DeepEvalEx.Metrics.PromptAlignment do
   # when it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_verdicts(instructions, test_case, opts) do
     spec = %Spec.Verdicts{
-      instructions: Template.system_one_verdict(),
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
       items: instructions,
       item_key: "instruction",
       state: [input: test_case.input, actual_output: test_case.actual_output]
@@ -257,7 +268,7 @@ defmodule DeepEvalEx.Metrics.PromptAlignment do
 
   defp llm_verdicts(instructions, test_case, opts) do
     prompt =
-      Template.generate_verdicts(
+      EvaluationTemplate.render(opts, Template, :generate_verdicts,
         prompt_instructions: instructions,
         input: test_case.input,
         actual_output: test_case.actual_output
@@ -286,7 +297,7 @@ defmodule DeepEvalEx.Metrics.PromptAlignment do
     unalignment_reasons = for %{verdict: :no, reason: reason} <- verdicts, do: reason
 
     prompt =
-      Template.generate_reason(
+      EvaluationTemplate.render(opts, Template, :generate_reason,
         unalignment_reasons: unalignment_reasons,
         input: test_case.input,
         actual_output: test_case.actual_output,

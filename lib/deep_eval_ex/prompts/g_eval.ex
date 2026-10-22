@@ -24,6 +24,13 @@ defmodule DeepEvalEx.Prompts.GEval do
   `construct_test_case_string` and `format_rubrics` do.
   """
 
+  use DeepEvalEx.Prompts.EvaluationTemplate,
+    templates: [
+      generate_evaluation_steps: 1,
+      generate_evaluation_results: 1,
+      generate_strict_evaluation_results: 1
+    ]
+
   alias DeepEvalEx.Metrics.GEval.Rubric
   alias DeepEvalEx.Params.SingleTurn
   alias DeepEvalEx.Prompts.Python

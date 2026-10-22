@@ -31,6 +31,14 @@ defmodule DeepEvalEx.Prompts.Hallucination do
   no multimodal fragment.
   """
 
+  use DeepEvalEx.Prompts.EvaluationTemplate,
+    templates: [
+      generate_verdicts: 1,
+      generate_reason: 1,
+      system_one_verdict: 0,
+      system_one_questions: 0
+    ]
+
   alias DeepEvalEx.Prompts.Python
 
   @doc """

@@ -25,6 +25,9 @@ defmodule DeepEvalEx.Prompts.ToolCorrectness do
   which takes no arguments.
   """
 
+  use DeepEvalEx.Prompts.EvaluationTemplate,
+    templates: [get_tool_selection_score: 1, system_one_tool_selection_score: 0]
+
   alias DeepEvalEx.TestRun.JSON
 
   @doc """

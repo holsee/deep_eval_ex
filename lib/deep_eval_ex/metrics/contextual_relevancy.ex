@@ -55,6 +55,9 @@ defmodule DeepEvalEx.Metrics.ContextualRelevancy do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
   - `:eval_mode` and `:system_one_model` - who decides, see "System One"
@@ -85,6 +88,7 @@ defmodule DeepEvalEx.Metrics.ContextualRelevancy do
   alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Metrics.QAG, Result}
   alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.ContextualRelevancy, as: Template
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.Schemas.MetricOutputs.ContextualRelevancy, as: Schema
   alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
@@ -108,10 +112,10 @@ defmodule DeepEvalEx.Metrics.ContextualRelevancy do
   case's `input` and `retrieval_context` (the metric's required params).
   """
   @impl true
-  def system_one_eval_spec(_test_case, _opts) do
+  def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: required_params(),
-      questions: Scored.parse!(Template.system_one_questions())
+      questions: Scored.parse!(EvaluationTemplate.render(opts, Template, :system_one_questions))
     }
   end
 
@@ -189,7 +193,7 @@ defmodule DeepEvalEx.Metrics.ContextualRelevancy do
   # LLM does when it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_verdicts(input, context, opts) do
     spec = %Spec.Verdicts{
-      instructions: Template.system_one_verdict(),
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
       items: Decision.split_sentences(context),
       item_key: "statement",
       state: [input: input],
@@ -218,7 +222,11 @@ defmodule DeepEvalEx.Metrics.ContextualRelevancy do
   end
 
   defp llm_verdicts(input, context, opts) do
-    prompt = Template.generate_verdicts(input: input, context: context)
+    prompt =
+      EvaluationTemplate.render(opts, Template, :generate_verdicts,
+        input: input,
+        context: context
+      )
 
     case Adapter.generate_with_schema(prompt, Schema.verdicts_schema(), opts) do
       {:ok, response} -> Schema.parse_verdicts(response)
@@ -246,7 +254,7 @@ defmodule DeepEvalEx.Metrics.ContextualRelevancy do
       verdicts_list |> List.flatten() |> Enum.split_with(&(&1.verdict == :no))
 
     prompt =
-      Template.generate_reason(
+      EvaluationTemplate.render(opts, Template, :generate_reason,
         score: score,
         input: input,
         irrelevant_statements: Enum.map(irrelevant, & &1.reason),
