@@ -1275,6 +1275,31 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     (`contextual_precision_`, `contextual_recall_` and
     `g_eval_retrieved_context_data`) check the prompts, results and exports
     byte for byte
+- **`DeepEvalEx.Dataset.Golden`, single-turn goldens**, a port of deepeval
+  4.3.1's `Golden` (`dataset/golden.py`): the input of a test case and what
+  it should produce, with `:source_file`, `:custom_column_key_values`,
+  `:expectations` and `:expected_labels`. The modules are grouped under
+  Datasets in the docs.
+  - `Golden.new/1` and `new!/1` accept the keys deepeval's `Golden`
+    validates: the field names and the camelCase aliases `tokenCost`,
+    `inputTokenCount`, `outputTokenCount` and `expectedLabels`, which win
+    over the field name. Like deepeval, they drop `actualOutput` and the
+    other serialisation-only camelCase names, and any unknown key.
+  - `Golden.to_test_case/1` and `from_test_case/1`, with the list forms
+    `convert_goldens_to_test_cases/1` and `convert_test_cases_to_goldens/1`,
+    carry the fields deepeval's conversions carry: `:additional_metadata`
+    becomes `:metadata` and back; a test case does not get the golden's
+    `:source_file` or `:custom_column_key_values`, and a golden does not
+    get the test case's `:name`, `:comments`, `:tags`, `:completion_time`,
+    `:flaky`, `:expected_labels` or `:custom_column_key_values`.
+  - `DeepEvalEx.Dataset.Expectations.cast/1` validates expectations as
+    deepeval's `Expectations` model and returns them as a plain map of
+    `:model`, `:eval_mode` (`:llm` or `:system_one`), `:must` and
+    `:must_not`, conditions stripped (`mustNot` is accepted; blank
+    conditions and unknown keys are errors). No metric judges them yet.
+  - `DeepEvalEx.TestCase` gains `:expectations`, as deepeval's
+    `LLMTestCase`, so they survive the conversions. Like deepeval, the test
+    run export leaves them out.
 
 ### Changed
 

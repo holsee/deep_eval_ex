@@ -446,6 +446,14 @@ defmodule DeepEvalEx.TestCaseTest do
       assert {:error, _} = TestCase.new(input: "Q", custom_column_key_values: %{"a" => 1})
       assert {:error, _} = TestCase.new(input: "Q", expected_labels: %{"tone" => :neutral})
     end
+
+    test "keeps expectations as deepeval's Expectations data" do
+      assert TestCase.new!(%{"input" => "Q", "expectations" => %{"mustNot" => [" Guess "]}}).expectations ==
+               %{model: nil, eval_mode: nil, must: [], must_not: ["Guess"]}
+
+      assert TestCase.new!(input: "Q").expectations == nil
+      assert {:error, _} = TestCase.new(input: "Q", expectations: %{"must" => [""]})
+    end
   end
 
   describe "json_schema/0" do
@@ -465,6 +473,12 @@ defmodule DeepEvalEx.TestCaseTest do
              }
 
       assert props["expected_labels"] == props["custom_column_key_values"]
+
+      assert props["expectations"]["properties"]["must_not"] == %{
+               "type" => "array",
+               "items" => %{"type" => "string"}
+             }
+
       assert props["tools_called"]["items"]["properties"]["type"]["enum"] == ["function", "mcp"]
     end
   end

@@ -35,12 +35,15 @@ defmodule DeepEvalEx.TestCase do
     string keys to string values
   - `:expected_labels` - The label each classifier should give the test
     case, a map of classifier name to label (both strings)
+  - `:expectations` - Required and prohibited behaviour, plain data as
+    `DeepEvalEx.Dataset.Expectations` describes
 
   `:comments` through `:flaky` mirror deepeval's `LLMTestCase` and are
   carried through to results and exports unchanged; no metric reads them.
-  `:custom_column_key_values` and `:expected_labels` are deepeval's too and
-  are kept on the struct; deepeval does not export them in a test run, and
-  neither does DeepEvalEx.
+  `:custom_column_key_values`, `:expected_labels` and `:expectations` are
+  deepeval's too and are kept on the struct (a `DeepEvalEx.Dataset.Golden`
+  carries them to and from test cases); deepeval does not export them in a
+  test run, and neither does DeepEvalEx.
 
   ## deepeval keys
 
@@ -88,6 +91,7 @@ defmodule DeepEvalEx.TestCase do
 
   import Peri
 
+  alias DeepEvalEx.Dataset.Expectations
   alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
 
   @type t :: %__MODULE__{
@@ -108,7 +112,8 @@ defmodule DeepEvalEx.TestCase do
           completion_time: float() | nil,
           flaky: boolean(),
           custom_column_key_values: %{optional(String.t()) => String.t()} | nil,
-          expected_labels: %{optional(String.t()) => String.t()} | nil
+          expected_labels: %{optional(String.t()) => String.t()} | nil,
+          expectations: Expectations.t() | nil
         }
 
   defstruct [
@@ -127,6 +132,7 @@ defmodule DeepEvalEx.TestCase do
     :completion_time,
     :custom_column_key_values,
     :expected_labels,
+    :expectations,
     :tools_called,
     :expected_tools,
     flaky: false
@@ -158,7 +164,8 @@ defmodule DeepEvalEx.TestCase do
     name: ["name"],
     tags: ["tags"],
     custom_column_key_values: ["customColumnKeyValues", "custom_column_key_values"],
-    expected_labels: ["expectedLabels", "expected_labels"]
+    expected_labels: ["expectedLabels", "expected_labels"],
+    expectations: ["expectations"]
   ]
 
   defschema(:test_case_schema, %{
@@ -179,7 +186,8 @@ defmodule DeepEvalEx.TestCase do
     completion_time: :float,
     flaky: {:boolean, {:default, false}},
     custom_column_key_values: {:map, :string, :string},
-    expected_labels: {:map, :string, :string}
+    expected_labels: {:map, :string, :string},
+    expectations: {:custom, {Expectations, :cast}}
   })
 
   @doc """
@@ -207,6 +215,8 @@ defmodule DeepEvalEx.TestCase do
   - `:flaky` - Whether the test case is flaky (default: `false`)
   - `:custom_column_key_values` - Map of string column names to string values
   - `:expected_labels` - Map of string classifier names to string labels
+  - `:expectations` - Map of deepeval's `Expectations` fields, validated by
+    `DeepEvalEx.Dataset.Expectations.cast/1`
 
   Keys may be atoms or strings, and may be deepeval's camelCase aliases;
   unknown keys are dropped (see "deepeval keys" above). Tool calls may be `DeepEvalEx.Schemas.ToolCall`
@@ -246,6 +256,7 @@ defmodule DeepEvalEx.TestCase do
   def json_schema do
     tool_call_schema = ToolCall.json_schema()
     string_map_schema = %{"type" => "object", "additionalProperties" => %{"type" => "string"}}
+    string_list_schema = %{"type" => "array", "items" => %{"type" => "string"}}
 
     %{
       "type" => "object",
@@ -267,7 +278,17 @@ defmodule DeepEvalEx.TestCase do
         "completion_time" => %{"type" => "number"},
         "flaky" => %{"type" => "boolean"},
         "custom_column_key_values" => string_map_schema,
-        "expected_labels" => string_map_schema
+        "expected_labels" => string_map_schema,
+        "expectations" => %{
+          "type" => "object",
+          "properties" => %{
+            "model" => %{"type" => "string"},
+            "eval_mode" => %{"type" => "string", "enum" => ["llm", "system_one"]},
+            "must" => string_list_schema,
+            "must_not" => string_list_schema
+          },
+          "additionalProperties" => false
+        }
       },
       "required" => ["input"],
       "additionalProperties" => false
