@@ -80,6 +80,48 @@ defmodule DeepEvalEx.ScriptedParityTest do
                 faithfulness g_eval hallucination tool_correctness)
   end
 
+  describe "assert_matches_fixture/2 on prompts" do
+    setup %{tmp_dir: tmp_dir} do
+      path = Path.join(tmp_dir, "prompts.json")
+
+      File.write!(
+        path,
+        Jason.encode!([
+          %{step: "truths", prompt: "T"},
+          %{step: "claims", prompt: "C"},
+          %{step: "verdicts", prompt: "V"},
+          %{step: "reason", prompt: "R"}
+        ])
+      )
+
+      %{path: path}
+    end
+
+    test "rejects a step sent before a step it depends on", %{path: path} do
+      reordered = [
+        %{step: "truths", prompt: "T"},
+        %{step: "claims", prompt: "C"},
+        %{step: "reason", prompt: "R"},
+        %{step: "verdicts", prompt: "V"}
+      ]
+
+      assert_raise ExUnit.AssertionError, ~r/"reason".*"verdicts"/s, fn ->
+        assert_matches_fixture(reordered, path)
+      end
+    end
+
+    test "accepts independent steps in either order", %{path: path} do
+      swapped = [
+        %{step: "claims", prompt: "C"},
+        %{step: "truths", prompt: "T"},
+        %{step: "verdicts", prompt: "V"},
+        %{step: "reason", prompt: "R"}
+      ]
+
+      assert assert_matches_fixture(swapped, path)
+    end
+  end
+
   for scenario <- @scenarios do
     describe "#{scenario} scenario" do
       @describetag scenario: scenario

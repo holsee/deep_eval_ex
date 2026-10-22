@@ -47,6 +47,10 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "tool_correctness" => ToolCorrectness
   }
 
+  # Pairs of steps that need not keep deepeval's relative order, as neither
+  # uses the other's answers.
+  @independent_steps [MapSet.new(["claims", "truths"])]
+
   @doc "The directory holding the scripted scenarios."
   @spec fixtures_dir() :: Path.t()
   def fixtures_dir, do: @fixtures
@@ -133,9 +137,11 @@ defmodule DeepEvalEx.Test.ScriptedParity do
   is named after what it holds:
 
   - `prompts.json` - `actual` is a list of `%{step:, prompt:}`. Each step's
-    prompts must equal deepeval's byte for byte, in call order. Steps are
-    compared separately, as DeepEvalEx may run independent steps (such as
-    Faithfulness's truths and claims) concurrently.
+    prompts must equal deepeval's byte for byte, in call order. Across
+    steps, where deepeval sent every prompt of one step before any of
+    another, DeepEvalEx must too, except for steps that are independent of
+    each other (Faithfulness's truths and claims), which DeepEvalEx may run
+    concurrently.
   - `measure.json` - `actual` is a map of some of its fields (see
     `measured/1`); each must equal deepeval's, integer vs float included.
   - `test_run.json` - `actual` is the test run file DeepEvalEx wrote. It must
@@ -168,6 +174,28 @@ defmodule DeepEvalEx.Test.ScriptedParity do
       # Step and index in both sides, so the failure diff names the prompt.
       assert {step, index, Enum.at(ours[step], index)} == {step, index, their_prompt}
     end
+
+    assert_step_order(Enum.map(actual, & &1.step), Enum.map(expected, & &1["step"]))
+  end
+
+  # Every pair of steps deepeval sent one after the other must keep that
+  # order, unless independent.
+  defp assert_step_order(ours, theirs) do
+    for first <- Enum.uniq(theirs),
+        second <- Enum.uniq(theirs),
+        first != second,
+        MapSet.new([first, second]) not in @independent_steps,
+        before?(theirs, first, second) do
+      assert before?(ours, first, second),
+             "every #{inspect(first)} prompt must come before any #{inspect(second)} " <>
+               "prompt, as in deepeval; sent: #{inspect(ours)}"
+    end
+  end
+
+  # Whether every call of step `first` comes before any call of `second`.
+  defp before?(steps, first, second) do
+    last_first = length(steps) - 1 - Enum.find_index(Enum.reverse(steps), &(&1 == first))
+    last_first < Enum.find_index(steps, &(&1 == second))
   end
 
   defp assert_measured(actual, expected) do
