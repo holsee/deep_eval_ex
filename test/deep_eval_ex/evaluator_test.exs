@@ -922,4 +922,112 @@ defmodule DeepEvalEx.EvaluatorTest do
       assert {2, _starts} = probe_report()
     end
   end
+
+  describe "System One batching (deepeval's system_one_batch)" do
+    @rag %TestCase{
+      input: "What is the vacation policy?",
+      actual_output: "Employees get 20 days of PTO per year.",
+      retrieval_context: ["Full-time employees receive 20 days of paid time off per year."]
+    }
+
+    @down %DeepEvalEx.SystemOne.Error{
+      reason: :connection,
+      type: "ConnectionError",
+      message: "Jev is down"
+    }
+
+    alias DeepEvalEx.Metrics.AnswerRelevancy
+    alias DeepEvalEx.SystemOne.Adapters.Mock
+
+    defp batched(mock, extra \\ []),
+      do: [eval_mode: :system_one, system_one_model: mock, adapter: :mock] ++ extra
+
+    test "asks one request for a test case's :system_one metrics and splits its cost" do
+      mock = Mock.new(answer_fn: Mock.answer_everything(0.9, 0.8), cost: {0.000126, 3001, 0})
+
+      [[faithfulness, relevancy]] =
+        Evaluator.evaluate([@rag], [Faithfulness, AnswerRelevancy], batched(mock))
+
+      assert [%Mock.Call{questions: questions}] = Mock.calls(mock)
+
+      assert questions
+             |> Enum.map(&elem(&1, 0))
+             |> Enum.map(&hd(String.split(&1, ".")))
+             |> Enum.uniq() ==
+               ["m0", "m1"]
+
+      assert %Result{evaluation_cost: 6.3e-05, input_tokens: 1500, evaluation_model: "fake-jev"} =
+               faithfulness
+
+      assert %Result{evaluation_cost: 6.3e-05, input_tokens: 1501, error: nil} = relevancy
+      assert is_float(faithfulness.score) and is_float(relevancy.score)
+    end
+
+    test "records a failed request as deepeval's format_error_text with ignore_errors: true" do
+      mock = Mock.new(raises: @down)
+
+      assert [
+               [
+                 %Result{error: "ConnectionError: Jev is down", success: false} = faithfulness,
+                 relevancy
+               ]
+             ] =
+               Evaluator.evaluate(
+                 [@rag],
+                 [Faithfulness, AnswerRelevancy],
+                 batched(mock, ignore_errors: true)
+               )
+
+      assert %Result{
+               error: "ConnectionError: Jev is down",
+               evaluation_cost: +0.0,
+               input_tokens: 0
+             } =
+               relevancy
+
+      assert faithfulness.evaluation_model == "exploding-jev"
+      assert length(Mock.calls(mock)) == 1
+    end
+
+    test "re-raises a failed request's original error by default" do
+      mock = Mock.new(raises: @down)
+
+      assert_raise DeepEvalEx.SystemOne.Error, "Jev is down", fn ->
+        Evaluator.evaluate([@rag], [Faithfulness, AnswerRelevancy], batched(mock))
+      end
+    end
+
+    test "fails a metric whose test case lacks its params as deepeval's batch does" do
+      mock = Mock.new(answer_fn: Mock.answer_everything())
+      no_context = %{@rag | retrieval_context: nil}
+      metrics = [Faithfulness, AnswerRelevancy]
+
+      assert [[%Result{error: error, evaluation_cost: nil}, %Result{error: nil}]] =
+               Evaluator.evaluate([no_context], metrics, batched(mock, ignore_errors: true))
+
+      assert error ==
+               "MissingTestCaseParamsError: 'retrieval_context' cannot be None for the " <>
+                 "'Faithfulness' metric"
+
+      assert [[%Result{skipped: true}, %Result{skipped: false}]] =
+               Evaluator.evaluate(
+                 [no_context],
+                 metrics,
+                 batched(mock, skip_on_missing_params: true)
+               )
+
+      assert_raise MissingTestCaseParamsError, ~r/'retrieval_context' cannot be None/, fn ->
+        Evaluator.evaluate([no_context], metrics, batched(mock))
+      end
+    end
+
+    test "batches nothing for a single :system_one metric" do
+      mock = Mock.new(answer_fn: Mock.answer_everything())
+
+      [[_faithfulness, _exact]] =
+        Evaluator.evaluate([@rag], [Faithfulness, ExactMatch], batched(mock, ignore_errors: true))
+
+      assert [%Mock.Call{questions: [{"q_0", _} | _]}] = Mock.calls(mock)
+    end
+  end
 end

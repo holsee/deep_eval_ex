@@ -14,7 +14,9 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
   - `test_run` - the exported test run, byte for byte
   - `evaluate decide` - the System One requests of the `evaluate()` run
 
-  Batched scenarios (`batch_*`) are `DeepEvalEx.SystemOne.Batch`'s.
+  Batched scenarios (`batch_*`) measure several metrics: each is measured
+  alone (`decide`, `measure`), and `evaluate()` batches them into one
+  request (`DeepEvalEx.SystemOne.Batch`, `test_run` and `evaluate decide`).
   """
 
   use ExUnit.Case, async: true
@@ -38,7 +40,9 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
     jev_eval jev_eval_strict_not_applicable
   )
 
-  for scenario <- @scenarios,
+  @batched_scenarios ~w(batch_system_one batch_system_one_down)
+
+  for scenario <- @scenarios ++ @batched_scenarios,
       file <- ~w(input.json decide.json measure.json prompts.json test_run.json),
       File.regular?(fixture(scenario, file)) do
     @external_resource fixture(scenario, file)
@@ -65,6 +69,28 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
         {test_run, calls} = test_run(unquote(scenario), tmp_dir)
         assert_test_run(test_run, unquote(scenario))
         assert_calls(calls, unquote(scenario), :evaluate)
+      end
+    end
+  end
+
+  for scenario <- @batched_scenarios do
+    describe scenario do
+      for index <- 0..(metric_count(scenario) - 1) do
+        test "asks System One what deepeval asked metric #{index} alone" do
+          {_measured, calls, _prompts} = measure(unquote(scenario), unquote(index))
+          assert_calls(calls, unquote(scenario), :measure, unquote(index))
+        end
+
+        test "measures metric #{index} alone as deepeval did" do
+          {measured, _calls, _prompts} = measure(unquote(scenario), unquote(index))
+          assert_measured(measured, unquote(scenario), unquote(index))
+        end
+      end
+
+      test "exports deepeval's test run from one batched request", %{tmp_dir: tmp_dir} do
+        {test_run, calls} = test_run(unquote(scenario), tmp_dir)
+        assert_calls(calls, unquote(scenario), :evaluate)
+        assert_test_run(test_run, unquote(scenario))
       end
     end
   end

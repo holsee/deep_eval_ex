@@ -66,6 +66,20 @@ defmodule DeepEvalEx.Evaluator do
   `DeepEvalEx.DeepEvalError`, whatever `:ignore_errors` says. Each metric
   then gets its context as `opts[:system_one]`.
 
+  When two or more of a test case's metrics run under `:system_one`, their
+  System One requests are merged, as deepeval's `evaluate()` batches them
+  (`DeepEvalEx.SystemOne.Batch`): before the test case's metrics start, as
+  few requests as the context budget allows ask every question, bounded by
+  the test case's timeout, and each request's cost and tokens are split
+  among its metrics by their share of its questions. Each metric then
+  measures as usual with its own answers. A failed request fails each of
+  its metrics without falling back to the LLM: with `ignore_errors: true`
+  the error recorded is deepeval's `"<type>: <message>"` text
+  (`"ConnectionError: Jev is down"`), otherwise the request's error is
+  raised. A metric whose test case lacks its params errors the same way
+  (`"MissingTestCaseParamsError: ..."`), or is skipped with
+  `skip_on_missing_params: true`.
+
   ## Concurrency
 
   `:max_concurrent`, `:throttle_value` and `:run_async` are deepeval's
@@ -173,7 +187,7 @@ defmodule DeepEvalEx.Evaluator do
   alias DeepEvalEx.{Config, MetricError, MissingTestCaseParamsError, Result, TestCase}
   alias DeepEvalEx.Metrics.BaseMetric
   alias DeepEvalEx.Prompts.Python
-  alias DeepEvalEx.SystemOne.Context
+  alias DeepEvalEx.SystemOne.{Batch, Context}
 
   # Where the run keeps each metric's resolved System One context.
   @contexts_key :__system_one_contexts__
@@ -307,11 +321,14 @@ defmodule DeepEvalEx.Evaluator do
   # the deadline, whichever comes first.
   defp run_single(test_case, metrics, opts) do
     deadline = deadline(case_timeout(metrics, opts))
+    prefetched = prefetch(test_case, metrics, deadline, opts)
 
     outcomes =
       Task.async_stream(
-        metrics,
-        &measure_until(test_case, &1, deadline, opts),
+        Enum.zip(metrics, prefetched),
+        fn {metric, prefetched} ->
+          measure_until(test_case, metric, prefetched, deadline, opts)
+        end,
         ordered: true,
         max_concurrency: metric_concurrency(metrics, opts),
         timeout: :infinity
@@ -329,19 +346,35 @@ defmodule DeepEvalEx.Evaluator do
     |> collected()
   end
 
+  # The test case's :system_one metrics' System One answers, asked in as
+  # few requests as possible before any metric starts (see "System One"),
+  # one Batch outcome per metric. The requests run until the deadline.
+  defp prefetch(test_case, metrics, deadline, opts) do
+    entries = Enum.map(metrics, &{metric_module(&1), measure_opts(&1, opts)})
+
+    Batch.prefetch(test_case, entries,
+      timeout: remaining(deadline),
+      max_concurrency: if(Keyword.get(opts, :run_async, true), do: length(metrics), else: 1)
+    )
+  end
+
   # Measures `metric` in its own process, killed when it outlives its
   # :metric_timeout or the test case's deadline. A metric whose turn comes
-  # after the deadline is not started.
-  defp measure_until(test_case, metric, deadline, opts) do
+  # after the deadline is not started, nor one whose part in the System
+  # One batch could not be prepared.
+  defp measure_until(_test_case, metric, {:setup_failed, error}, _deadline, opts),
+    do: error_outcome(error, metric, opts)
+
+  defp measure_until(test_case, metric, prefetched, deadline, opts) do
     case remaining(deadline) do
       0 -> error_outcome(unstarted_message(opts), metric, opts)
-      remaining -> measure_within(test_case, metric, remaining, opts)
+      remaining -> measure_within(test_case, metric, prefetched, remaining, opts)
     end
   end
 
-  defp measure_within(test_case, metric, remaining, opts) do
+  defp measure_within(test_case, metric, prefetched, remaining, opts) do
     metric_timeout = metric_timeout(opts)
-    task = Task.async(fn -> measure_metric(test_case, metric, opts) end)
+    task = Task.async(fn -> measure_metric(test_case, metric, prefetched, opts) end)
 
     case Task.yield(task, min_timeout(metric_timeout, remaining)) ||
            Task.shutdown(task, :brutal_kill) do
@@ -422,7 +455,7 @@ defmodule DeepEvalEx.Evaluator do
   """
   @spec evaluate_metric(TestCase.t(), module() | struct(), keyword()) :: Result.t()
   def evaluate_metric(test_case, metric, opts) do
-    test_case |> measure_metric(metric, preflight([metric], opts)) |> unwrap!()
+    test_case |> measure_metric(metric, nil, preflight([metric], opts)) |> unwrap!()
   end
 
   # Resolves every metric's System One context up front (see "System One"),
@@ -445,15 +478,24 @@ defmodule DeepEvalEx.Evaluator do
     end
   end
 
-  defp measure_metric(test_case, metric, opts) do
-    # Run-level options are defaults; a metric's own configuration wins.
+  # The options `metric` measures with. Run-level options are defaults; a
+  # metric's own configuration wins.
+  defp measure_opts(metric, opts) do
+    metric
+    |> metric_opts(opts)
+    |> BaseMetric.strict_opts(default_threshold(metric_module(metric)))
+    |> put_context(metric, opts)
+  end
+
+  # `prefetched` is the metric's System One batch outcome, if any.
+  defp measure_metric(test_case, metric, prefetched, opts) do
     module = metric_module(metric)
 
     merged_opts =
-      metric
-      |> metric_opts(opts)
-      |> BaseMetric.strict_opts(default_threshold(module))
-      |> put_context(metric, opts)
+      case prefetched do
+        nil -> measure_opts(metric, opts)
+        prefetched -> Keyword.put(measure_opts(metric, opts), :system_one_prefetched, prefetched)
+      end
 
     {outcome, usages} =
       BaseMetric.track_usage(fn -> module.measure(test_case, merged_opts) end)
@@ -475,7 +517,21 @@ defmodule DeepEvalEx.Evaluator do
   # is skipped with skip_on_missing_params; otherwise its error is stored
   # with ignore_errors, else raised. `{:raise, exception, stacktrace}`
   # re-raises an exception the metric raised; a nil stacktrace raises anew.
-  defp error_outcome(reason, metric, opts, usages \\ [], stacktrace \\ nil) do
+  #
+  # A Batch.Error is the error of the metric's System One batch: ignored, it
+  # records deepeval's format_error_text; otherwise its original is raised,
+  # or skipped when it is missing params.
+  defp error_outcome(reason, metric, opts, usages \\ [], stacktrace \\ nil)
+
+  defp error_outcome(%Batch.Error{original: original} = error, metric, opts, usages, stacktrace) do
+    if Keyword.get(opts, :ignore_errors, false) and
+         not (missing_params?(original) and Keyword.get(opts, :skip_on_missing_params, false)),
+       do: {:ok, error_result(error, metric, opts, usages)},
+       else:
+         error_outcome(original, metric, opts, usages, original_stacktrace(original, stacktrace))
+  end
+
+  defp error_outcome(reason, metric, opts, usages, stacktrace) do
     cond do
       missing_params?(reason) and Keyword.get(opts, :skip_on_missing_params, false) ->
         {:ok, skipped_result(metric, opts)}
@@ -490,6 +546,12 @@ defmodule DeepEvalEx.Evaluator do
         {:raise, metric_error(reason, metric, opts, usages), nil}
     end
   end
+
+  # An exception is re-raised as it is; a missing-params error raises anew.
+  defp original_stacktrace(original, stacktrace) when is_exception(original),
+    do: stacktrace || []
+
+  defp original_stacktrace(_original, _stacktrace), do: nil
 
   # Every metric of a killed test case errors with `reason`.
   defp error_outcomes(reason, metrics, opts) do

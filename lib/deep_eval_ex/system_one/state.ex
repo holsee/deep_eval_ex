@@ -49,6 +49,67 @@ defmodule DeepEvalEx.SystemOne.State do
   end
 
   @doc """
+  `a` and `b` as one state, or `nil` when they give the same top-level key
+  different values, deepeval's `_merge_states`
+  (`deepeval/metrics/utils/system_one_batch.py`), which merges the states
+  of a batched request.
+
+  `"test_case"` fields always merge, `b`'s after `a`'s, and so do each
+  turn's fields under `"turns"`: both states were built from the same test
+  case. Keys keep their order, `b`'s new keys after `a`'s.
+
+  ## Examples
+
+      iex> alias Jason.OrderedObject
+      iex> a = OrderedObject.new([{"test_case", OrderedObject.new([{"input", "Q"}])}])
+      iex> b = OrderedObject.new([{"test_case", OrderedObject.new([{"actual_output", "A"}])}, {"topics", ["x"]}])
+      iex> DeepEvalEx.TestRun.JSON.encode!(DeepEvalEx.SystemOne.State.merge(a, b))
+      ~s({"test_case": {"input": "Q", "actual_output": "A"}, "topics": ["x"]})
+
+      iex> alias Jason.OrderedObject
+      iex> DeepEvalEx.SystemOne.State.merge(OrderedObject.new([{"topics", ["x"]}]), OrderedObject.new([{"topics", ["y"]}]))
+      nil
+  """
+  @spec merge(OrderedObject.t(), OrderedObject.t()) :: OrderedObject.t() | nil
+  def merge(%OrderedObject{values: a}, %OrderedObject{values: b}) do
+    case Enum.reduce_while(b, a, &merge_key/2) do
+      nil -> nil
+      values -> OrderedObject.new(values)
+    end
+  end
+
+  defp merge_key({key, value}, merged) do
+    case List.keyfind(merged, key, 0) do
+      nil -> {:cont, merged ++ [{key, value}]}
+      {"test_case", mine} -> {:cont, put(merged, key, merge_fields(mine, value))}
+      {"turns", mine} -> {:cont, put(merged, key, merge_turns(mine, value))}
+      {_key, mine} -> if same?(mine, value), do: {:cont, merged}, else: {:halt, nil}
+    end
+  end
+
+  # Python's {**mine, **theirs}.
+  defp merge_fields(%OrderedObject{values: mine}, %OrderedObject{values: theirs}),
+    do:
+      OrderedObject.new(
+        Enum.reduce(theirs, mine, fn {key, value}, acc -> put(acc, key, value) end)
+      )
+
+  # Python's [{**mine, **theirs} for mine, theirs in zip(...)].
+  defp merge_turns(mine, theirs) when is_list(mine) and is_list(theirs),
+    do: Enum.zip_with(mine, theirs, &merge_fields/2)
+
+  # Python's dict equality ignores key order.
+  defp same?(a, b), do: plain(a) == plain(b)
+
+  defp plain(%OrderedObject{values: values}), do: Map.new(values, fn {k, v} -> {k, plain(v)} end)
+  defp plain(list) when is_list(list), do: Enum.map(list, &plain/1)
+
+  defp plain(map) when is_map(map) and not is_struct(map),
+    do: Map.new(map, fn {k, v} -> {k, plain(v)} end)
+
+  defp plain(value), do: value
+
+  @doc """
   A single-turn test case's state, deepeval's `construct_single_turn_state`:
   `{"test_case": {param: value}}` for each of `params` whose field is
   populated (not `nil`, `""`, `[]` or an empty map), in order, each value

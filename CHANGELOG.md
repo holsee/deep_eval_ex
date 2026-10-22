@@ -505,6 +505,45 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `jev_eval_strict_not_applicable` fixtures, which match deepeval byte for
   byte: the request, the measured state, the verbose logs and the exported
   test run.
+- **Batched System One requests in `evaluate()`** (ADR-0009), a port of
+  deepeval 4.3.1's `system_one_batch.py`. When two or more of a test case's
+  metrics run under the `:system_one` eval mode, `DeepEvalEx.Evaluator` now
+  asks System One about the test case in as few requests as the context
+  budget allows, instead of one request per metric, before the metrics run
+  (`DeepEvalEx.SystemOne.Batch.prefetch/3`).
+  - Candidates are counted as deepeval counts them: a metric whose spec
+    declines the test case (ToolCorrectness) counts towards the two, then
+    makes its own request. A single `:system_one` metric is not batched.
+  - Requests are packed greedily in metric order: a metric joins the first
+    request for a model of the same name whose state merges with its own
+    (the new `DeepEvalEx.SystemOne.State.merge/2`) and that still fits the
+    model's context budget. Question keys are prefixed `m<j>.`. Requests run
+    concurrently within the test case's timeout.
+  - A request's cost is split among its metrics by their share of its
+    questions, and its token counts are apportioned with Python's
+    round-half-even so that they add up (`Batch.split_usage/2`,
+    `Batch.apportion/2`): 3,001 input tokens over three metrics are
+    1000/1001/1000.
+  - Each metric still runs its own `measure/2` with its answers, so scores,
+    reasons, strict mode, usage, telemetry and timeouts are unchanged. The
+    request's telemetry span carries every batched metric's name and
+    `batched?: true`.
+  - Nothing falls back to the LLM. A failed request fails each of its
+    metrics: with `ignore_errors: true` the recorded error is deepeval's
+    `format_error_text` (`"ConnectionError: Jev is down"`, not the bare
+    message), otherwise the request's error is raised as it is. A context
+    overflow of a request for one metric is that metric's
+    `DeepEvalEx.ContextWindowExceededError`. A metric whose test case lacks
+    its params errors with `"MissingTestCaseParamsError: ..."`, is skipped
+    with `skip_on_missing_params: true`, or raises
+    `DeepEvalEx.MissingTestCaseParamsError`.
+  - `DeepEvalEx.SystemOne.Runner.request_for/3` exposes the whole-chain
+    request a metric would send.
+
+  The System One parity test now also runs the `batch_system_one` and
+  `batch_system_one_down` fixtures: each metric measured alone, and the
+  `evaluate()` run's single batched request and exported test run (cost
+  4.2e-05 and 1000/1001/1000 tokens per metric), byte for byte.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in

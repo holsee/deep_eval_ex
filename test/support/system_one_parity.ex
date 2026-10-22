@@ -4,9 +4,11 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   through the real DeepEvalEx metrics and compares the outcome with what
   deepeval 4.3.1 did for the same scenario (see the fixtures' README).
 
-  A scenario's `input.json` holds one metric (`kind`, `eval_mode` and
+  A scenario's `input.json` holds its metrics (`kind`, `eval_mode` and
   constructor `params`; a `jev_eval` has no `eval_mode` and is built as a
-  `DeepEvalEx.Metrics.JevEval` struct), one `test_case`, the fake System One model
+  `DeepEvalEx.Metrics.JevEval` struct): one, or several for a `batched`
+  scenario, whose `evaluate()` asked one batched request (see
+  `DeepEvalEx.SystemOne.Batch`). It also holds one `test_case`, the fake System One model
   (`system_one`: canned answers or the error it raises) and, when an LLM is
   involved, the scripted judge's `responses`. Here
   `DeepEvalEx.SystemOne.Adapters.Mock.from_fixture/2` stands in for the
@@ -53,17 +55,27 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   def fixture(scenario, file), do: Path.join([@fixtures, scenario, file])
 
   @doc """
-  Measures the scenario's test case with its metric, as deepeval's
-  `measure()` did, with `ignore_errors: false`.
+  The number of metrics the scenario measures.
+  """
+  @spec metric_count(String.t()) :: pos_integer()
+  def metric_count(scenario), do: length(load(scenario, "input.json")["metrics"])
+
+  @doc """
+  Measures the scenario's test case with its metric number `index`, alone,
+  as deepeval's `measure()` did, with `ignore_errors: false`. A batched
+  scenario's fake answers metric `index` from the batch's answers for its
+  `m<index>.` keys.
 
   Returns `{measured, calls, prompts}`: the result as `measure.json`'s
   fields (`raised` holding the error `measure()` raised, if any), the
   System One calls as `decide.json` records them and the judge's prompts.
   """
-  @spec measure(String.t()) :: {map(), [map()], [map()]}
-  def measure(scenario) do
+  @spec measure(String.t(), non_neg_integer()) :: {map(), [map()], [map()]}
+  def measure(scenario, index \\ 0) do
     input = load(scenario, "input.json")
-    {metric, opts, mock} = metric(input)
+    prefix = if input["batched"], do: "m#{index}.", else: ""
+    mock = Mock.from_fixture(input["system_one"], prefix: prefix)
+    {metric, opts} = input |> metrics(mock) |> Enum.at(index)
 
     measured =
       try do
@@ -73,10 +85,30 @@ defmodule DeepEvalEx.Test.SystemOneParity do
         |> measured(nil)
       rescue
         error in [MetricError] -> measured(error.result, nil)
-        error -> measured(nil, error)
+        error -> measured(raised_state(input, index), error)
       end
 
     {measured, Mock.dump_calls(mock), LLMMock.scripted_prompts()}
+  end
+
+  # The metric as deepeval's measure() left it when it raised: its
+  # threshold, models and seeded cost, but neither success nor error (only
+  # ignore_errors sets those). DeepEvalEx raises without a result, so the
+  # metric is measured again, against a fresh fake, with ignore_errors: true.
+  # deepeval seeds the cost with the int 0, DeepEvalEx with 0.0; both export
+  # as 0.0.
+  defp raised_state(input, index) do
+    prefix = if input["batched"], do: "m#{index}.", else: ""
+    mock = Mock.from_fixture(input["system_one"], prefix: prefix)
+    {metric, opts} = input |> metrics(mock) |> Enum.at(index)
+
+    result =
+      input
+      |> test_case()
+      |> Evaluator.evaluate_metric(metric, [ignore_errors: true] ++ opts)
+
+    cost = if result.evaluation_cost === 0.0, do: 0, else: result.evaluation_cost
+    %{result | success: nil, error: nil, evaluation_cost: cost}
   end
 
   @doc """
@@ -88,12 +120,15 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   @spec test_run(String.t(), Path.t()) :: {binary(), [map()]}
   def test_run(scenario, results_folder) do
     input = load(scenario, "input.json")
-    {metric, opts, mock} = metric(input)
+    mock = Mock.from_fixture(input["system_one"])
+    {metrics, opts} = input |> metrics(mock) |> Enum.unzip()
+    # The run's options: a batched scenario's metrics share theirs.
+    [opts] = Enum.uniq(opts)
 
     {_results, _test_run, path} =
       DeepEvalEx.evaluate_run(
         [test_case(input)],
-        [metric],
+        metrics,
         [results_folder: results_folder, ignore_errors: true] ++ opts
       )
 
@@ -102,28 +137,29 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   end
 
   @doc """
-  Asserts that `measured` (see `measure/1`) is the scenario's
-  `measure.json`, every field, integer vs float included.
+  Asserts that `measured` (see `measure/2`) is the scenario's
+  `measure.json` entry for metric `index`, every field, integer vs float
+  included.
   """
-  @spec assert_measured(map(), String.t()) :: :ok
-  def assert_measured(measured, scenario) do
-    [expected] = scenario |> fixture("measure.json") |> File.read!() |> Jason.decode!()
-    assert JSONDiff.diff(roundtrip(measured), expected) == []
+  @spec assert_measured(map(), String.t(), non_neg_integer()) :: :ok
+  def assert_measured(measured, scenario, index \\ 0) do
+    expected = scenario |> fixture("measure.json") |> File.read!() |> Jason.decode!()
+    assert JSONDiff.diff(roundtrip(measured), Enum.at(expected, index)) == []
     :ok
   end
 
   @doc """
   Asserts that `calls` are the scenario's recorded `decide()` calls:
-  `decide.json`'s `"measure"` calls, or its `"evaluate"` calls with
-  `:evaluate`, byte for byte.
+  `decide.json`'s `"measure"` calls of metric `index`, or its `"evaluate"`
+  calls with `:evaluate`, byte for byte.
   """
-  @spec assert_calls([map()], String.t(), :measure | :evaluate) :: :ok
-  def assert_calls(calls, scenario, run \\ :measure) do
+  @spec assert_calls([map()], String.t(), :measure | :evaluate, non_neg_integer()) :: :ok
+  def assert_calls(calls, scenario, run \\ :measure, index \\ 0) do
     decide = load(scenario, "decide.json")
 
     expected =
       case run do
-        :measure -> hd(decide["measure"])
+        :measure -> Enum.at(decide["measure"], index)
         :evaluate -> decide["evaluate"]
       end
 
@@ -163,23 +199,25 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     :ok
   end
 
-  # The metric (a module, or a JevEval struct), its options (deepeval's
+  # Each metric (a module, or a JevEval struct) with its options (deepeval's
   # constructor params, the eval mode, the fake System One model and the
-  # scripted judge) and the fake.
-  defp metric(input) do
-    [%{"kind" => kind, "params" => params} = spec] =
-      Enum.map(input["metrics"], &Map.new(&1.values))
-
-    mock = Mock.from_fixture(input["system_one"])
+  # scripted judge).
+  defp metrics(input, mock) do
+    specs = Enum.map(input["metrics"], &Map.new(&1.values))
 
     # A scenario without responses had deepeval's exploding LLM: no call.
-    responses = (input["responses"] || %{}) |> plain() |> Map.get(kind, %{})
-    LLMMock.script(responses, model: input["judge_model"] || "exploding-llm")
+    # Only single-metric scenarios script a judge.
+    responses = (input["responses"] || %{}) |> plain()
+    [%{"kind" => first} | _] = specs
+    LLMMock.script(Map.get(responses, first, %{}), model: input["judge_model"] || "exploding-llm")
 
-    case kind do
-      "jev_eval" -> {jev_eval(params, mock), [adapter: :mock], mock}
-      _kind -> metric(kind, spec["eval_mode"], params, mock)
-    end
+    Enum.map(specs, fn
+      %{"kind" => "jev_eval", "params" => params} ->
+        {jev_eval(params, mock), [adapter: :mock]}
+
+      %{"kind" => kind, "params" => params} = spec ->
+        metric(kind, spec["eval_mode"], params, mock)
+    end)
   end
 
   defp metric(kind, eval_mode, params, mock) do
@@ -193,12 +231,15 @@ defmodule DeepEvalEx.Test.SystemOneParity do
         system_one_model: mock
       ] ++ Enum.map(params.values, fn {key, value} -> option(key, plain(value)) end)
 
-    {module, opts, mock}
+    {module, opts}
   end
 
   # deepeval's JevEval(**params): the questions as Scored structs, the
   # evaluation params as atoms.
   defp jev_eval(params, mock) do
+    # Its evaluation params are the test case's field names.
+    Code.ensure_loaded!(TestCase)
+
     params.values
     |> Enum.map(fn
       {"questions", questions} ->

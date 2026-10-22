@@ -87,6 +87,7 @@ defmodule DeepEvalEx.SystemOne.Runner do
     Ledger,
     Limits,
     Model,
+    Question,
     Scored,
     Scoring,
     State
@@ -102,6 +103,28 @@ defmodule DeepEvalEx.SystemOne.Runner do
     case Context.resolve!(metric, opts) do
       %Context{mode: :system_one} = context -> prepare(metric, test_case, context, opts)
       %Context{} -> :continue
+    end
+  end
+
+  @doc """
+  The whole-chain request `metric` would send for `test_case`, deepeval's
+  `_request_for`: `{spec, state, questions}`, the questions keyed
+  `"q_<i>"`, or `nil` when the metric's spec declines the test case (or it
+  has none). `DeepEvalEx.SystemOne.Batch` merges these requests.
+
+  Raises `DeepEvalEx.DeepEvalError` when the metric has no System One
+  model.
+  """
+  @spec request_for(module(), TestCase.t(), keyword()) ::
+          {EvalSpec.t(), Jason.OrderedObject.t(), Question.questions()} | nil
+  def request_for(metric, %TestCase{} = test_case, opts) when is_atom(metric) and is_list(opts) do
+    case eval_spec(metric, test_case, opts) do
+      %EvalSpec{} = spec ->
+        %Context{model: model} = Context.resolve!(metric, opts)
+        {spec, build_state(metric, spec, model, test_case), Scoring.questions(spec.questions)}
+
+      nil ->
+        nil
     end
   end
 
@@ -125,9 +148,7 @@ defmodule DeepEvalEx.SystemOne.Runner do
 
   # deepeval's _request_for, _decide and _populate.
   defp decide(metric, test_case, spec, %Context{model: model}, opts) do
-    if model == nil, do: raise(DeepEvalError, message: not_configured(metric))
-
-    state = State.build(spec, test_case)
+    state = build_state(metric, spec, model, test_case)
     questions = Scoring.questions(spec.questions)
 
     {answers, usage} =
@@ -138,6 +159,11 @@ defmodule DeepEvalEx.SystemOne.Runner do
 
     {:ok, populate(metric, spec, model, answers, usage, opts)}
   end
+
+  defp build_state(metric, _spec, nil, _test_case),
+    do: raise(DeepEvalError, message: not_configured(metric))
+
+  defp build_state(_metric, spec, %Model{}, test_case), do: State.build(spec, test_case)
 
   # A batch prefetch (DeepEvalEx.SystemOne.Batch) already sent this
   # metric's questions: its answers and usage share, or the request's error.

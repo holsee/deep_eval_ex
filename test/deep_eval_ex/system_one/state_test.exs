@@ -87,4 +87,32 @@ defmodule DeepEvalEx.SystemOne.StateTest do
       assert Dumpable.dump(~D[2026-10-22]) == "2026-10-22"
     end
   end
+
+  describe "merge/2" do
+    defp object(pairs), do: Jason.OrderedObject.new(pairs)
+
+    test "merges test case fields in place and appends new keys, as deepeval's _merge_states" do
+      a = object([{"test_case", object([{"input", "Q"}])}, {"topics", ["x"]}])
+      b = object([{"facts", ["f"]}, {"test_case", object([{"input", "Q"}, {"context", ["c"]}])}])
+
+      assert encode(State.merge(a, b)) ==
+               ~s({"test_case": {"input": "Q", "context": ["c"]}, "topics": ["x"], "facts": ["f"]})
+    end
+
+    test "keeps an equal key whatever its order, and refuses a different value" do
+      a = object([{"tools", object([{"a", 1}, {"b", 2}])}])
+
+      assert State.merge(a, object([{"tools", object([{"b", 2}, {"a", 1}])}])) == a
+      assert State.merge(a, object([{"tools", object([{"a", 1}])}])) == nil
+    end
+
+    test "merges each turn's fields" do
+      a = object([{"turns", [object([{"role", "user"}]), object([{"role", "assistant"}])]}])
+      b = object([{"turns", [object([{"content", "hi"}]), object([{"content", "hello"}])]}])
+
+      assert encode(State.merge(a, b)) ==
+               ~s({"turns": [{"role": "user", "content": "hi"}, ) <>
+                 ~s({"role": "assistant", "content": "hello"}]})
+    end
+  end
 end
