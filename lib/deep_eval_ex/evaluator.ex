@@ -79,8 +79,8 @@ defmodule DeepEvalEx.Evaluator do
       )
       |> Enum.map(fn
         {:ok, results} -> results
-        {:exit, :timeout} -> [error_result("Evaluation timed out", metrics)]
-        {:exit, reason} -> [error_result("Evaluation failed: #{inspect(reason)}", metrics)]
+        {:exit, :timeout} -> error_result("Evaluation timed out", metrics)
+        {:exit, reason} -> error_result("Evaluation failed: #{inspect(reason)}", metrics)
       end)
 
     duration = System.monotonic_time(:millisecond) - start_time
