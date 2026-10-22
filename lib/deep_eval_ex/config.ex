@@ -41,7 +41,7 @@ defmodule DeepEvalEx.Config do
   | `:cache_folder` | `DEEPEVAL_CACHE_FOLDER` | string | `".deepeval"` |
   | `:typesafe_api_key` | `TYPESAFE_API_KEY` | string | `nil` |
   | `:typesafe_model_name` | `TYPESAFE_MODEL_NAME` | string | `nil` |
-  | `:typesafe_cost_per_input_token` | `TYPESAFE_COST_PER_INPUT_TOKEN` | float > 0 | `nil` |
+  | `:typesafe_cost_per_input_token` | `TYPESAFE_COST_PER_INPUT_TOKEN` | float >= 0 | `nil` |
 
   ## Parsing
 
@@ -94,7 +94,9 @@ defmodule DeepEvalEx.Config do
     cache_folder: {"DEEPEVAL_CACHE_FOLDER", :string, ".deepeval"},
     typesafe_api_key: {"TYPESAFE_API_KEY", :string, nil},
     typesafe_model_name: {"TYPESAFE_MODEL_NAME", :string, nil},
-    typesafe_cost_per_input_token: {"TYPESAFE_COST_PER_INPUT_TOKEN", {:float, :>, 0}, nil}
+    # deepeval's setting is a PositiveFloat, but its TypeSafeModel accepts a
+    # price of 0 (a free Jev); only a negative price is an error there.
+    typesafe_cost_per_input_token: {"TYPESAFE_COST_PER_INPUT_TOKEN", {:float, :>=, 0}, nil}
   ]
 
   # deepeval's Settings._normalize_fs aliases.
@@ -266,13 +268,11 @@ defmodule DeepEvalEx.Config do
   defp to_number(_value, _kind), do: nil
 
   defp compare(number, :>=, bound), do: number >= bound
-  defp compare(number, :>, bound), do: number > bound
 
   defp describe({:integer, op, bound}), do: "an integer #{describe_op(op)} #{bound}"
   defp describe({:float, op, bound}), do: "a number #{describe_op(op)} #{bound}"
 
   defp describe_op(:>=), do: "greater than or equal to"
-  defp describe_op(:>), do: "greater than"
 
   @doc """
   Reads a value as a boolean, as deepeval's `parse_bool`.

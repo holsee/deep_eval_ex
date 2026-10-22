@@ -133,8 +133,42 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `init/1` rejects options with a well-formed `DeepEvalEx.SystemOne.Error`.
   The model may also come from the test context's `:system_one_model`. The
   checks are public (`assert_answers/2`, `assert_reply/2`, `assert_error/1`,
-  `assert_budget/1`). It runs against the Mock and a toy third-party
-  provider.
+  `assert_budget/1`). It runs against the Mock, the TypeSafe adapter (on a
+  stubbed API) and a toy third-party provider.
+- **`DeepEvalEx.SystemOne.Adapters.TypeSafe`, TypeSafe AI's Jev** (ADR-0009),
+  a port of deepeval 4.3.1's `TypeSafeModel` on `Req` and the default System
+  One model (`:typesafe`, `:jev`, a Jev model name such as `"jev-preview"`,
+  or an unset `:system_one_model`).
+  - `decide/3` posts the state, the questions in the SDK's shape and the
+    model to `POST https://api.typesafe.ai/v1/systemone` with a Bearer key,
+    after deepeval's "requires at least one question" check and Jev's
+    context-budget pre-check. The reply's Noul, Choice and Score answers
+    keep their order, and Score level keys are cast to integers.
+  - The API key, model and price come from `:api_key`, `:model` and
+    `:cost_per_input_token`, else `TYPESAFE_API_KEY`, `TYPESAFE_MODEL_NAME`
+    (default `"jev-latest"`) and `TYPESAFE_COST_PER_INPUT_TOKEN`.
+    `model_name/1` is `"<model> (TypeSafe AI)"`. `init/1` fails permanently
+    without a key, with deepeval's text, so a metric in `:hybrid` or
+    `:system_one` fails before any measure; a negative price raises
+    deepeval's `DeepEvalError`.
+  - Usage is priced on input tokens only, at 0.042 USD per 1M for
+    `jev-1.13.0`, `jev-latest` and `jev-preview` (computed as deepeval does,
+    so 1,000 tokens cost `4.2000000000000004e-05`); missing token counts are
+    `0`, and another model without a configured price is unpriced (`nil`).
+  - Errors: only a reply whose `detail.error_type` is
+    `"max_tokens_exceeded"` is a context limit Jev rejected
+    (`limit_tokens: nil`); a bare `422` is an HTTP error. `401` and `403`
+    are permanent authentication errors, `429` a rate limit, timeouts a
+    `TimeoutError` and other transport errors a `ConnectionError`.
+  - The request envelope, endpoint, auth header, error body and response
+    field names follow the SDK's call shape and are unverified until the
+    live check runs against Jev.
+- **`DeepEvalEx.LLM.Retry` policy `:typesafe`**, deepeval's TypeSafe retry
+  policy: transport errors, `429` and `5xx` are retried; `401`, `403`, other
+  client errors (`422` included) and a `max_tokens_exceeded` reply are not.
+- **Jev prices in `DeepEvalEx.LLM.Pricing`**: `jev-1.13.0`, `jev-latest`
+  and `jev-preview` at 0.042 USD per 1M input tokens, output free, for
+  display.
 - **`DeepEvalEx.Prompts.Python.format_g/1` and `round/2`**, Python's
   `format(x, "g")` and `round(x, ndigits)` (ADR-0009), which deepeval 4.3.1's
   System One reasons and verbose logs use (`f"weight={weight:g}"`,
@@ -659,6 +693,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Changed
 
+- `TYPESAFE_COST_PER_INPUT_TOKEN` (and `config :deep_eval_ex,
+  typesafe_cost_per_input_token:`) accepts `0`, a free Jev, as deepeval's
+  `TypeSafeModel` does; only a negative price is rejected.
 - **BREAKING:** a custom LLM judge's cost is no longer reported, as in
   deepeval, which seeds a metric's cost with `None` unless its model is native,
   so a custom judge's metric has no `evaluationCost` whatever its calls

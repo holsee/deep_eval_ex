@@ -182,6 +182,10 @@ defmodule DeepEvalEx.ConfigTest do
       System.put_env("DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE", "0")
       assert Config.get(:per_task_timeout_seconds_override) === 0.0
 
+      # A free Jev, as TypeSafeModel(cost_per_input_token=0) accepts.
+      System.put_env("TYPESAFE_COST_PER_INPUT_TOKEN", "0")
+      assert Config.get(:typesafe_cost_per_input_token) === 0.0
+
       Application.put_env(:deep_eval_ex, :retry_cap_seconds, 10)
       assert Config.get(:retry_cap_seconds) === 10.0
     end
@@ -195,7 +199,7 @@ defmodule DeepEvalEx.ConfigTest do
             {"DEEPEVAL_RETRY_EXP_BASE", "0.5", "a number greater than or equal to 1"},
             {"DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE", "none",
              "a number greater than or equal to 0"},
-            {"TYPESAFE_COST_PER_INPUT_TOKEN", "0", "a number greater than 0"}
+            {"TYPESAFE_COST_PER_INPUT_TOKEN", "-1e-06", "a number greater than or equal to 0"}
           ] do
         System.put_env(var, value)
         key = Enum.find_value(@env_vars, fn {key, v} -> if v == var, do: key end)

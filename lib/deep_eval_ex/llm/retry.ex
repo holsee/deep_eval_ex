@@ -43,6 +43,13 @@ defmodule DeepEvalEx.LLM.Retry do
     errors are not retried.
   - **`:ollama`** - transport errors only; deepeval's Ollama policy retries
     no HTTP status.
+  - **`:typesafe`** - transport errors (timeouts included), rate limits
+    (`429`) and `5xx`, for `DeepEvalEx.SystemOne.Adapters.TypeSafe`.
+    Authentication (`401`), permission (`403`) and other client errors,
+    `422` included, are not retried, and neither is a response whose
+    `"detail"."error_type"` is `"max_tokens_exceeded"`: deepeval turns it
+    into a `SystemOneContextLimitError` inside the retried call, which its
+    TypeSafe policy does not retry.
 
   A request's `:req_options` are merged over these, so `retry: false` still
   turns retries off for one call.
@@ -53,7 +60,7 @@ defmodule DeepEvalEx.LLM.Retry do
 
   alias DeepEvalEx.Config
 
-  @type provider :: :openai | :anthropic | :ollama
+  @type provider :: :openai | :anthropic | :ollama | :typesafe
 
   # deepeval's OPENAI_MESSAGE_MARKERS: text that identifies a non-retryable
   # code when the response carries no structured one.
@@ -70,7 +77,10 @@ defmodule DeepEvalEx.LLM.Retry do
   # exception class: the OpenAI and Anthropic SDKs raise AuthenticationError
   # for 401, RateLimitError for 429 and an APIStatusError carrying the status
   # otherwise. Ollama's policy lists no auth, rate limit or HTTP status
-  # exceptions, so only transport errors are retried.
+  # exceptions, so only transport errors are retried. TypeSafe's lists the
+  # SDK's authentication and permission errors (401, 403), its rate limit
+  # error (429) and its connection, timeout and internal server errors
+  # (5xx); its context overflow is never transient.
   @policies %{
     openai: %{
       auth_statuses: [401],
@@ -92,6 +102,14 @@ defmodule DeepEvalEx.LLM.Retry do
       retry_5xx: false,
       non_retryable_codes: [],
       message_markers: %{}
+    },
+    typesafe: %{
+      auth_statuses: [401, 403],
+      rate_limit_statuses: [429],
+      retry_5xx: true,
+      non_retryable_codes: [],
+      message_markers: %{},
+      non_retryable_error_types: ["max_tokens_exceeded"]
     }
   }
 
@@ -124,6 +142,8 @@ defmodule DeepEvalEx.LLM.Retry do
 
   - a `Req.TransportError` or `Req.HTTPError` (connection failures and
     timeouts) is retried;
+  - a response whose `"detail"."error_type"` the policy never retries
+    (TypeSafe's `"max_tokens_exceeded"`) is not;
   - an authentication status is not;
   - a rate limit status is, unless the error code in the body (its
     `"error"."code"`, or else a known message) is non-retryable;
@@ -192,6 +212,9 @@ defmodule DeepEvalEx.LLM.Retry do
 
   defp transient?(policy, %Req.Response{status: status, body: body}) do
     cond do
+      non_retryable_error_type?(body, policy) ->
+        false
+
       status in policy.auth_statuses ->
         false
 
@@ -222,6 +245,24 @@ defmodule DeepEvalEx.LLM.Retry do
       if Enum.any?(needles, &String.contains?(text, &1)), do: code
     end)
   end
+
+  defp non_retryable_error_type?(body, policy) do
+    case Map.get(policy, :non_retryable_error_types, []) do
+      [] -> false
+      types -> detail_error_type(body) in types
+    end
+  end
+
+  # The body's detail.error_type, TypeSafe's error shape. Retries are
+  # classified before Req decodes the body, so a JSON text is decoded here.
+  defp detail_error_type(body) when is_binary(body) do
+    case Jason.decode(body) do
+      {:ok, decoded} -> detail_error_type(decoded)
+      {:error, _} -> nil
+    end
+  end
+
+  defp detail_error_type(body), do: get_in_map(body, ["detail", "error_type"])
 
   defp get_in_map(value, []), do: value
   defp get_in_map(%{} = map, [key | rest]), do: get_in_map(Map.get(map, key), rest)

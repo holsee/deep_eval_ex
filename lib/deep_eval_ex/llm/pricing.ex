@@ -4,7 +4,10 @@ defmodule DeepEvalEx.LLM.Pricing do
 
   Prices are USD per 1M tokens. The built-in table mirrors the OpenAI and
   Anthropic prices in deepeval's model registry
-  (`deepeval/models/llms/constants.py`). A model that is not priced has a
+  (`deepeval/models/llms/constants.py`) and TypeSafe AI's Jev prices
+  (`deepeval/models/system_one/constants.py`: input only, output is free).
+  The Jev entries are for display: `DeepEvalEx.SystemOne.Adapters.TypeSafe`
+  prices its own requests, as deepeval's `TypeSafeModel` does. A model that is not priced has a
   `nil` cost: DeepEvalEx never guesses a price, just as deepeval leaves
   `evaluation_cost` as `None` for models it cannot price.
 
@@ -123,7 +126,15 @@ defmodule DeepEvalEx.LLM.Pricing do
     "claude-3-opus-latest" => {15.00, 75.00}
   }
 
-  @prices Map.merge(@openai_prices, @anthropic_prices)
+  # USD per 1M tokens, deepeval 4.3.1's TYPESAFE_MODELS_DATA (_JEV_INPUT_PRICE):
+  # Jev is priced on input tokens only.
+  @typesafe_prices %{
+    "jev-1.13.0" => {0.042, 0.0},
+    "jev-latest" => {0.042, 0.0},
+    "jev-preview" => {0.042, 0.0}
+  }
+
+  @prices @openai_prices |> Map.merge(@anthropic_prices) |> Map.merge(@typesafe_prices)
 
   @doc """
   Returns the per-1M-token price of `model`, or `nil` when it is not priced.

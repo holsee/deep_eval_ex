@@ -35,6 +35,12 @@ defmodule DeepEvalEx.LLM.PricingTest do
       assert Pricing.price("claude-fable-5-1") == %{input: 10.00, output: 50.00}
     end
 
+    test "returns deepeval's per-1M-token prices for TypeSafe's Jev models, input only" do
+      for model <- ~w(jev-1.13.0 jev-latest jev-preview) do
+        assert Pricing.price(model) == %{input: 0.042, output: 0.0}
+      end
+    end
+
     test "returns nil for unknown models and models deepeval leaves unpriced" do
       assert Pricing.price("my-local-llama") == nil
       assert Pricing.price("o1-mini") == nil

@@ -154,6 +154,30 @@ defmodule DeepEvalEx.LLM.RetryTest do
     end
   end
 
+  describe "retryable?/2 for :typesafe" do
+    test "retries rate limits, 5xx and transport errors, timeouts included" do
+      for status <- [429, 500, 503, 529] do
+        assert Retry.retryable?(:typesafe, response(status)), "did not retry #{status}"
+      end
+
+      assert Retry.retryable?(:typesafe, %Req.TransportError{reason: :econnrefused})
+      assert Retry.retryable?(:typesafe, %Req.TransportError{reason: :timeout})
+    end
+
+    test "never retries authentication, permission or other client errors" do
+      for status <- [400, 401, 403, 404, 422] do
+        refute Retry.retryable?(:typesafe, response(status)), "retried #{status}"
+      end
+    end
+
+    test "never retries a context limit, whatever its status or body encoding" do
+      exceeded = %{"detail" => %{"error_type" => "max_tokens_exceeded"}}
+      refute Retry.retryable?(:typesafe, response(503, exceeded))
+      refute Retry.retryable?(:typesafe, response(503, Jason.encode!(exceeded)))
+      assert Retry.retryable?(:typesafe, response(503, "Service Unavailable"))
+    end
+  end
+
   describe "req_options/1" do
     test "makes DEEPEVAL_RETRY_MAX_ATTEMPTS attempts, the first call included" do
       assert Keyword.fetch!(Retry.req_options(:openai), :max_retries) == 1
