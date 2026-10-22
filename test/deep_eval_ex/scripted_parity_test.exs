@@ -23,6 +23,8 @@ defmodule DeepEvalEx.ScriptedParityTest do
 
   @moduletag :parity
   @moduletag :tmp_dir
+  # Hallucination logs its one-time score direction warning on first measure.
+  @moduletag :capture_log
 
   @scenarios scenarios()
 
@@ -40,7 +42,8 @@ defmodule DeepEvalEx.ScriptedParityTest do
   @known_divergences %{
     prompts: [{"P1.6", @llm_scenarios}],
     measure: [
-      {"P1.2", ~w(answer_relevancy_no_statements faithfulness_no_claims)},
+      {"P1.2",
+       ~w(answer_relevancy_no_statements faithfulness_no_claims hallucination_no_verdicts)},
       {"P1.3", ~w(answer_relevancy_strict contextual_precision_strict contextual_recall_strict
           exact_match_fail exact_match_pass faithfulness_strict hallucination_strict)},
       {"P1.6", ~w(tool_correctness_available_tools tool_correctness_fail tool_correctness_pass

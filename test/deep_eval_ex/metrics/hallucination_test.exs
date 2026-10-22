@@ -6,6 +6,9 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
 
   import ExUnit.CaptureLog
 
+  # The first measure on the node logs the score direction warning.
+  @moduletag :capture_log
+
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.Hallucination
   alias DeepEvalEx.TestCase

@@ -31,7 +31,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   also runs deepeval 4.3.1's real ExactMatch, GEval, Faithfulness,
   Hallucination, AnswerRelevancy, ContextualPrecision, ContextualRecall and
   ToolCorrectness (including `available_tools`) against a judge that replays
-  committed scripts, over 27 scenarios (pass, fail, empty lists, strict mode).
+  committed scripts, over 28 scenarios (pass, fail, empty lists, strict mode).
   It records the prompts deepeval sent, the metric's state after `measure()`
   and the exported test run. A new parity suite replays the same scripts
   through DeepEvalEx and compares prompts and exports byte for byte. Known
