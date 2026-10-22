@@ -86,7 +86,7 @@ defmodule DeepEvalEx.MixProject do
       maintainers: ["holsee"],
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url},
-      files: ~w(lib .formatter.exs mix.exs README.md LICENSE NOTICE)
+      files: ~w(lib .formatter.exs mix.exs README.md CHANGELOG.md LICENSE NOTICE)
     ]
   end
 
@@ -97,6 +97,7 @@ defmodule DeepEvalEx.MixProject do
       source_ref: "v#{@version}",
       extras: [
         {"README.md", [title: "Overview", filename: "overview"]},
+        {"CHANGELOG.md", [title: "Changelog"]},
         {"LICENSE", [title: "License"]},
         {"NOTICE", [title: "Notice"]},
         {"ROADMAP.md", [title: "Roadmap"]},

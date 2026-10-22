@@ -253,6 +253,14 @@ devcontainer exec --workspace-folder . mix test test/deep_eval_ex/parity_test.ex
 A difference is a bug to fix in DeepEvalEx, not something to normalise away;
 see the [fixtures README](test/fixtures/deepeval/README.md).
 
+### Changelog
+
+Every user-visible change adds an entry under `## [Unreleased]` in
+[CHANGELOG.md](CHANGELOG.md), in the same commit as the change, following
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) (Added, Changed,
+Deprecated, Removed, Fixed, Security). On release, `[Unreleased]` becomes the
+new version section.
+
 See the [Roadmap](ROADMAP.md) for what is shipped and what is planned.
 
 ## License
