@@ -52,6 +52,20 @@ defmodule DeepEvalEx.LLM.Adapters.MockTest do
       assert {:ok, %{"verdicts" => []}} = Mock.generate_with_schema("Second", @verdicts_schema)
     end
 
+    test "replays a text response to a schema step as the judge's raw text" do
+      Mock.script(%{"verdicts" => [~s(```json\n{"verdicts": [],}\n```)]})
+
+      assert {:ok, ~s(```json\n{"verdicts": [],}\n```)} =
+               Mock.generate_with_schema("First", @verdicts_schema)
+    end
+
+    test "has a raw text response parsed by DeepEvalEx.LLM.Adapter, as deepeval does" do
+      Mock.script(%{"verdicts" => [~s(```json\n{"verdicts": [],}\n```)]})
+
+      assert {:ok, %{"verdicts" => []}} =
+               Adapter.generate_with_schema("First", @verdicts_schema, adapter: :mock)
+    end
+
     test "replays text responses for generate/2" do
       Mock.script(%{"text" => ["Hello."]})
 

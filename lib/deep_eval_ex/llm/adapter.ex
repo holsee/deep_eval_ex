@@ -33,6 +33,21 @@ defmodule DeepEvalEx.LLM.Adapter do
         def supports_log_probs?, do: false
       end
 
+  ## Judges Without Structured Outputs
+
+  As in deepeval, a judge need not enforce the schema. `generate_with_schema/3`
+  loads the text such a judge answers with deepeval's `trimAndLoadJson` (see
+  `DeepEvalEx.Metrics.Utils.Generation.trim_and_load_json/1`), and fails with
+  `DeepEvalEx.LLM.InvalidJSONError` when it holds no valid JSON:
+
+  - an adapter whose `supports_structured_outputs?/0` is `false` is asked with
+    `generate/2`, and its text loaded, as deepeval's `DeepEvalBaseLLM` falls
+    back to `generate` for a model that takes no schema
+  - an adapter whose `generate_with_schema/3` returns a string, for instance
+    from a JSON mode (`supports_json_mode?/0`), has the string loaded, as
+    deepeval's `generate_with_schema_and_extract` loads any answer that is not
+    a schema instance
+
   ## Reporting Token Usage
 
   Adapters report the token usage of each call with
@@ -49,6 +64,7 @@ defmodule DeepEvalEx.LLM.Adapter do
   """
 
   alias DeepEvalEx.LLM.Usage
+  alias DeepEvalEx.Metrics.Utils.Generation
 
   @type prompt :: String.t()
   @type schema :: module() | map()
@@ -104,7 +120,8 @@ defmodule DeepEvalEx.LLM.Adapter do
   Returns whether this adapter supports structured outputs.
 
   When true, `generate_with_schema/3` uses native structured output
-  features. When false, it falls back to parsing JSON from the response.
+  features. When false, `DeepEvalEx.LLM.Adapter.generate_with_schema/3`
+  calls `generate/2` instead and loads the JSON from its text.
   """
   @callback supports_structured_outputs?() :: boolean()
 
@@ -120,9 +137,26 @@ defmodule DeepEvalEx.LLM.Adapter do
   """
   @callback supports_multimodal?() :: boolean()
 
-  @optional_callbacks [supports_multimodal?: 0]
+  @doc """
+  Returns whether the model `opts` name accepts a sampling temperature,
+  deepeval's `supports_temperature()`. Adapters leave `:temperature` out of
+  requests to models that reject it.
 
-  # Default implementation for multimodal
+  Defaults to `true`, as deepeval's model data does.
+  """
+  @callback supports_temperature?(opts()) :: boolean()
+
+  @doc """
+  Returns whether the provider can constrain an answer to JSON without
+  enforcing a schema, deepeval's `supports_json_mode()`.
+
+  Defaults to `false`.
+  """
+  @callback supports_json_mode?() :: boolean()
+
+  @optional_callbacks [supports_multimodal?: 0, supports_temperature?: 1, supports_json_mode?: 0]
+
+  # Defaults for the optional capabilities
   defmacro __using__(_opts) do
     quote do
       @behaviour DeepEvalEx.LLM.Adapter
@@ -130,8 +164,39 @@ defmodule DeepEvalEx.LLM.Adapter do
       @impl true
       def supports_multimodal?, do: false
 
-      defoverridable supports_multimodal?: 0
+      @impl true
+      def supports_temperature?(_opts), do: true
+
+      @impl true
+      def supports_json_mode?, do: false
+
+      defoverridable supports_multimodal?: 0, supports_temperature?: 1, supports_json_mode?: 0
     end
+  end
+
+  @doc """
+  Whether `adapter` (a module or provider atom) accepts a temperature for the
+  model `opts` name: its `c:supports_temperature?/1`, or `true` when it does
+  not implement it.
+  """
+  @spec supports_temperature?(module(), opts()) :: boolean()
+  def supports_temperature?(adapter, opts \\ []) do
+    capability(get_adapter(adapter), :supports_temperature?, [opts], true)
+  end
+
+  @doc """
+  Whether `adapter` (a module or provider atom) has a JSON mode: its
+  `c:supports_json_mode?/0`, or `false` when it does not implement it.
+  """
+  @spec supports_json_mode?(module()) :: boolean()
+  def supports_json_mode?(adapter) do
+    capability(get_adapter(adapter), :supports_json_mode?, [], false)
+  end
+
+  defp capability(adapter, name, args, default) do
+    if Code.ensure_loaded?(adapter) and function_exported?(adapter, name, length(args)),
+      do: apply(adapter, name, args),
+      else: default
   end
 
   @doc """
@@ -237,14 +302,36 @@ defmodule DeepEvalEx.LLM.Adapter do
   @doc """
   Generates a structured response using the default or specified adapter.
 
+  A judge without structured outputs answers with text, which is loaded
+  with deepeval's `trimAndLoadJson`; text holding no valid JSON is
+  `{:error, %DeepEvalEx.LLM.InvalidJSONError{}}` (see "Judges Without
+  Structured Outputs" above).
+
   Records usage like `generate/2`.
   """
   @spec generate_with_schema(prompt(), schema(), opts()) :: {:ok, map()} | error()
   def generate_with_schema(prompt, schema, opts \\ []) do
     {adapter, model} = resolve_adapter(opts)
     opts = Keyword.put_new(opts, :model, model)
-    with_usage(adapter, opts, fn -> adapter.generate_with_schema(prompt, schema, opts) end)
+
+    with_usage(adapter, opts, fn ->
+      with {:ok, answer} <- ask_for_schema(adapter, prompt, schema, opts) do
+        load_json(answer)
+      end
+    end)
   end
+
+  defp ask_for_schema(adapter, prompt, schema, opts) do
+    if adapter.supports_structured_outputs?(),
+      do: adapter.generate_with_schema(prompt, schema, opts),
+      else: adapter.generate(prompt, opts)
+  end
+
+  # Only text is loaded: a map was decoded by the adapter already.
+  defp load_json(answer) when is_binary(answer) or is_nil(answer),
+    do: Generation.trim_and_load_json(answer)
+
+  defp load_json(answer), do: {:ok, answer}
 
   @doc """
   Returns the name of the judge model that `generate/2` and

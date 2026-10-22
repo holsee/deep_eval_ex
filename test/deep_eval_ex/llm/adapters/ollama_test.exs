@@ -354,5 +354,10 @@ defmodule DeepEvalEx.LLM.Adapters.OllamaTest do
       refute Ollama.supports_log_probs?()
       assert Ollama.model_name(model: "llama3.2") == "llama3.2"
     end
+
+    test "supports JSON mode and temperature" do
+      assert Ollama.supports_json_mode?()
+      assert Ollama.supports_temperature?(model: "llama3.2")
+    end
   end
 end

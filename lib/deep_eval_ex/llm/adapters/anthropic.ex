@@ -61,6 +61,16 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
   `input_schema` is the JSON schema and forces it with `tool_choice`. The
   `tool_use` block's `input` is returned as a map with string keys.
 
+  A field of that map that Claude sent as a JSON-encoded string where the
+  schema expects an array or object is decoded in place. This works on the
+  fields of an answer that is already a map, inside the adapter; the answer as
+  a whole is never text here, so the text fallback of
+  `DeepEvalEx.LLM.Adapter.generate_with_schema/3` (deepeval's
+  `trimAndLoadJson`) does not come into play. deepeval has no counterpart, as
+  its `AnthropicModel` uses no tool: it asks for the schema with structured
+  outputs (`output_config.format`) and loads the answer's text block with its
+  model-level `trim_and_load_json` either way.
+
   ## Usage and Cost
 
   The `usage.input_tokens` and `usage.output_tokens` of every response are
@@ -147,6 +157,14 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
   @impl true
   def supports_log_probs?, do: false
 
+  @impl true
+  def supports_temperature?(opts),
+    do: not MapSet.member?(@temperature_rejecting_models, model_name(opts))
+
+  # Every entry of deepeval's ANTHROPIC_MODELS_DATA has `supports_json=True`.
+  @impl true
+  def supports_json_mode?, do: true
+
   # Private functions
 
   defp base_body(prompt, opts) do
@@ -175,7 +193,7 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
         Application.get_env(:deep_eval_ex, :anthropic_temperature)
       end)
 
-    if is_nil(temperature) or MapSet.member?(@temperature_rejecting_models, model),
+    if is_nil(temperature) or not supports_temperature?(model: model),
       do: body,
       else: Map.put(body, :temperature, temperature)
   end
@@ -209,8 +227,11 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
   # Claude sometimes returns a nested array or object in tool input as a
   # JSON-encoded string, at times with trailing debris (`"[...]}\\n"`). Where
   # the schema expects an array or object and a string arrived, decode it
-  # from its first opening bracket, as deepeval's trimAndLoadJson does; a
-  # string that does not decode to the expected type is left as is.
+  # from its first opening bracket; a string that does not decode to the
+  # expected type is left as is. Unlike trimAndLoadJson
+  # (DeepEvalEx.Metrics.Utils.Generation), which loads a whole answer that
+  # came back as text and only ever an object, this repairs single fields of
+  # an answer that came back as a map, arrays included, so both are kept.
   defp decode_stringified(value, %{"type" => type} = schema)
        when type in ["array", "object"] and is_binary(value) do
     case decode_embedded(value, type) do

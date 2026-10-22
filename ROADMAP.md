@@ -74,6 +74,12 @@ These are fixed in [P1](#p1-correct-the-existing-metric-surface):
 - **No GEval logprob weighting.** 4.3.1 weights the GEval score by the judge's
   top logprobs when the provider returns them; DeepEvalEx uses the raw score.
 
+This one is fixed in [P2](#p2-evaluation-engine-and-output-parity) (P2.2):
+
+- **Errored metric success.** A metric that errors is measured with `success`
+  `false`, as deepeval's `evaluate()` records it with `ignore_errors`;
+  deepeval's `measure()` raises instead and leaves `success` as `None`.
+
 ---
 
 ## Plan

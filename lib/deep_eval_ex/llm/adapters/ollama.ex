@@ -108,6 +108,11 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
   @impl true
   def supports_structured_outputs?, do: true
 
+  # Ollama's `format: "json"`; nearly every entry of deepeval's
+  # OLLAMA_MODELS_DATA has `supports_json=True`.
+  @impl true
+  def supports_json_mode?, do: true
+
   @impl true
   def supports_log_probs?, do: false
 

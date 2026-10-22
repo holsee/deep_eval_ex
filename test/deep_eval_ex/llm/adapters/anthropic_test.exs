@@ -540,5 +540,12 @@ defmodule DeepEvalEx.LLM.Adapters.AnthropicTest do
       assert Anthropic.model_name([]) == "claude-opus-5"
       assert Anthropic.model_name(model: "claude-haiku-4-5") == "claude-haiku-4-5"
     end
+
+    test "supports JSON mode, and temperature except for the models that reject it" do
+      assert Anthropic.supports_json_mode?()
+      assert Anthropic.supports_temperature?(model: "claude-haiku-4-5")
+      refute Anthropic.supports_temperature?(model: "claude-opus-5")
+      refute Anthropic.supports_temperature?([])
+    end
   end
 end

@@ -411,6 +411,10 @@ class ScriptedJudge(DeepEvalBaseLLM):
     same call in deepeval and in DeepEvalEx whatever the prompt says.
     DeepEvalEx.LLM.Adapters.Mock's scripted mode replays the same script.
 
+    A response is validated against the schema, except a string, which is
+    returned as the judge's raw text, as a judge without structured outputs
+    answers: deepeval then parses it with trimAndLoadJson.
+
     Records every prompt with its step. Raises when a step has no response
     left, so a script missing a response fails the run.
     """
@@ -437,7 +441,9 @@ class ScriptedJudge(DeepEvalBaseLLM):
             response = self.responses[step][index]
         except (KeyError, IndexError):
             raise RuntimeError(f"script has no response {index} for step {step!r}") from None
-        return schema.model_validate(response) if schema is not None else response
+        if schema is None or isinstance(response, str):
+            return response
+        return schema.model_validate(response)
 
     async def a_generate(self, prompt, schema=None):
         return self.generate(prompt, schema)
@@ -515,7 +521,13 @@ def run_scripted_scenario(name):
 
     # measure(): the metric's own state, and the prompts it sent.
     measured, judge = build_scripted_metric(script)
-    measured.measure(build_test_case(script["test_case"]), _show_indicator=False)
+    try:
+        measured.measure(build_test_case(script["test_case"]), _show_indicator=False)
+    except ValueError:
+        # trimAndLoadJson sets metric.error before raising; keep the state
+        # the metric was left in.
+        if measured.error is None:
+            raise
     prompts = judge.prompts if judge else []
     if judge:
         judge.assert_exhausted()

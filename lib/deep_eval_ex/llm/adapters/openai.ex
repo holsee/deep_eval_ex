@@ -127,6 +127,16 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   @impl true
   def supports_multimodal?, do: true
 
+  # The `supports_temperature=False` entries of deepeval's OpenAI model
+  # registry: reasoning models reject a `temperature`.
+  @impl true
+  def supports_temperature?(opts) do
+    not Regex.match?(@reasoning_model_pattern, base_model(model_name(opts)))
+  end
+
+  @impl true
+  def supports_json_mode?, do: true
+
   # Private functions
 
   defp base_body(prompt, opts) do
@@ -152,9 +162,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   # Defaults to 0.0 like deepeval's GPTModel; reasoning models reject it
   # outright, so it is dropped for them whatever was configured.
   defp temperature(model, opts) do
-    if Regex.match?(@reasoning_model_pattern, base_model(model)) do
-      nil
-    else
+    if supports_temperature?(model: model) do
       Keyword.get_lazy(opts, :temperature, fn ->
         Application.get_env(:deep_eval_ex, :openai_temperature, @default_temperature)
       end)

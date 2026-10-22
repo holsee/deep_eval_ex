@@ -202,8 +202,13 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
 
   `responses` maps a step (see `step_key/1`) to the responses of its
   successive calls: maps for `generate_with_schema/3`, strings for
-  `generate/2` (step `"text"`). Replaces any script the process loaded
-  before, along with its recorded prompts. The script is dropped when the
+  `generate/2` (step `"text"`). A string for a schema step is returned as
+  is, the raw text of a judge without structured outputs, which
+  `DeepEvalEx.LLM.Adapter.generate_with_schema/3` loads with deepeval's
+  `trimAndLoadJson`, as deepeval does with the same script.
+
+  Replaces any script the process loaded before, along with its recorded
+  prompts. The script is dropped when the
   process exits, or with `stop_script/0`.
 
   ## Options

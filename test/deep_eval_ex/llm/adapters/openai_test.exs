@@ -373,4 +373,14 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
       assert {{:ok, "hi"}, []} = Usage.track(fn -> OpenAI.generate("hello", @base_opts) end)
     end
   end
+
+  describe "capabilities" do
+    test "supports JSON mode, and temperature except for reasoning models" do
+      assert OpenAI.supports_json_mode?()
+      assert OpenAI.supports_temperature?(model: "gpt-4o")
+      assert OpenAI.supports_temperature?([])
+      refute OpenAI.supports_temperature?(model: "o3-mini")
+      refute OpenAI.supports_temperature?(model: "aws-bedrock-runtime/openai/gpt-5@global")
+    end
+  end
 end

@@ -100,7 +100,10 @@ calling an LLM. A script holds:
 - `test_case` - keyword arguments of deepeval's `LLMTestCase`
 - `judge_model` - the name the judge reports as the evaluation model
 - `responses` - the judge's answers, keyed by metric kind, then by step, then
-  listed by call index. A step is the sorted, comma-separated field names of
+  listed by call index. An answer is an object the judge returns as the
+  schema, or a string it returns as its raw text, as a judge without
+  structured outputs does; deepeval then loads the string with
+  `trimAndLoadJson`, and DeepEvalEx with `DeepEvalEx.LLM.Adapter`. A step is the sorted, comma-separated field names of
   the schema the metric asks for (`truths`, `claims`, `verdicts`, `reason`,
   `statements`, `steps`, `reason,score`; `text` for a call without one), so
   it names the same call in deepeval and DeepEvalEx whatever their prompts say
@@ -116,6 +119,8 @@ a missing or an unused response. Next to each script it writes:
   and test case, unchanged
 
 The generator checks that `measure()` and `evaluate()` sent the same prompts.
+When `measure()` raises after setting the metric's `error` (as
+`trimAndLoadJson` does), `measure.json` records the metric as it was left.
 
 The Elixir test loads the same script into the Mock adapter's scripted mode
 (`DeepEvalEx.LLM.Adapters.Mock.script/2`), runs the metric and compares with
@@ -130,7 +135,7 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | ExactMatch | `exact_match_pass`, `exact_match_fail` |
 | GEval | `g_eval_criteria_pass` (steps generated from criteria), `g_eval_steps_fail` (given steps), `g_eval_strict` |
 | Faithfulness | `faithfulness_pass`, `faithfulness_fail`, `faithfulness_borderline`, `faithfulness_penalize_ambiguous` (`penalize_ambiguous_claims`: the borderline verdict fails and is an `(Ambiguous)` contradiction), `faithfulness_no_claims` (empty list), `faithfulness_strict` |
-| Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_no_verdicts` (empty list), `hallucination_strict` |
+| Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_no_verdicts` (empty list), `hallucination_strict`, `hallucination_messy_json` (raw-text answers: prose, a code fence and trailing commas around the verdicts, a reason missing its closing brace), `hallucination_invalid_json` (a raw-text answer with no JSON: the metric errors) |
 | AnswerRelevancy | `answer_relevancy_pass`, `answer_relevancy_fail`, `answer_relevancy_no_statements` (empty list), `answer_relevancy_strict` |
 | ContextualPrecision | `contextual_precision_pass`, `contextual_precision_fail`, `contextual_precision_strict` |
 | ContextualRecall | `contextual_recall_pass`, `contextual_recall_fail`, `contextual_recall_strict` |
@@ -146,10 +151,9 @@ them:
   `AttributeError` fallback and uses the raw `score`, as for any judge without
   logprobs. Exercising the weighting needs a judge that replays canned
   logprob payloads, and a matching Mock path.
-- **Metric errors.** Every scripted scenario's `measure.json` has
-  `error: null`: no script makes a metric fail. An erroring metric's export is
-  covered by the `metric_error` and `missing_params` export scenarios above;
-  a scripted response that fails schema validation is not.
+- **Schema validation errors.** Only `hallucination_invalid_json` makes a
+  metric fail, with `trimAndLoadJson`'s invalid JSON error. A scripted
+  response that is valid JSON but fails schema validation is not covered.
 
 ### Known divergences
 
@@ -172,6 +176,7 @@ rows here.
 | measure | `g_eval_strict` | Strict score normalised over the 0-10 range (0.1, then clamped to 0), where deepeval takes the judge's 1 as the score (P1.11) | P1.11 |
 | verbose_logs | `g_eval_strict` | The logged score is the strict score above (P1.11) | P1.11 |
 | test_run | `g_eval_strict` | Strict scoring (P1.11) | P1.11 |
+| measure | `hallucination_invalid_json` | An errored result's `success` is `false`, as in deepeval's `evaluate()` with `ignore_errors`, where deepeval's `measure()` raises and leaves it `None` (P2.2) | P2.2 |
 
 ## Prompt goldens
 

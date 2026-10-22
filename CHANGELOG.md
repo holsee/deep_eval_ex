@@ -202,6 +202,25 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   formatting like Python's `json.dumps(indent=n, ensure_ascii=...)`.
 - `DeepEvalEx.Prompts.GEval.format_rubric/1`, formatting a rubric as
   deepeval's `format_rubrics`.
+- **JSON fallback for judges without structured outputs.**
+  `DeepEvalEx.LLM.Adapter.generate_with_schema/3` loads a judge's text answer
+  as deepeval's `trimAndLoadJson` does (from the first `{` to the last `}`,
+  adding a missing closing `}`, stripping trailing commas when a direct parse
+  fails), both when an adapter's `generate_with_schema/3` returns a string and
+  when its `supports_structured_outputs?/0` is `false`, in which case it is
+  asked with `generate/2`. Text holding no valid JSON fails the metric with
+  `{:error, %DeepEvalEx.LLM.InvalidJSONError{}}` and deepeval's message,
+  "Evaluation LLM outputted an invalid JSON. Please use a better evaluation
+  model." The loader is `DeepEvalEx.Metrics.Utils.Generation.trim_and_load_json/1`.
+- Adapter capability callbacks `supports_temperature?/1` (default `true`) and
+  `supports_json_mode?/0` (default `false`), deepeval's `supports_temperature()`
+  and `supports_json_mode()`, with `DeepEvalEx.LLM.Adapter.supports_temperature?/2`
+  and `supports_json_mode?/1` for adapters that do not implement them. The
+  OpenAI, Anthropic and Ollama adapters report JSON mode, and OpenAI and
+  Anthropic report the models that reject a temperature.
+- The Mock adapter's scripted mode returns a string response to a schema step
+  as the judge's raw text, and the scripted parity fixtures gain
+  `hallucination_messy_json` and `hallucination_invalid_json`.
 
 ### Changed
 
