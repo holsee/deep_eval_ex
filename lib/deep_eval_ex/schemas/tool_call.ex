@@ -116,6 +116,26 @@ defmodule DeepEvalEx.Schemas.ToolCall do
   defp normalize_type(attrs), do: attrs
 
   @doc """
+  Returns whether two tool calls are equal, as deepeval's `ToolCall.__eq__`:
+  same `:name`, `:input_parameters` and `:output`. `:type`, `:description`
+  and `:reasoning` are ignored, and `nil` input parameters differ from an
+  empty map.
+
+  ## Examples
+
+      iex> alias DeepEvalEx.Schemas.ToolCall
+      iex> ToolCall.equal?(
+      ...>   %ToolCall{name: "search", input_parameters: %{"q" => "paris"}, reasoning: "Needs data"},
+      ...>   %ToolCall{name: "search", input_parameters: %{"q" => "paris"}, type: :mcp}
+      ...> )
+      true
+  """
+  @spec equal?(t(), t()) :: boolean()
+  def equal?(%__MODULE__{} = a, %__MODULE__{} = b) do
+    a.name == b.name and a.input_parameters == b.input_parameters and a.output == b.output
+  end
+
+  @doc """
   Returns the JSON schema representation for structured output requests.
   """
   def json_schema do

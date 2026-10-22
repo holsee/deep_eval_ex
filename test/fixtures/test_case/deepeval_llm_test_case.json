@@ -1,0 +1,35 @@
+{
+  "input": "What's the weather in Paris?",
+  "actualOutput": "It is 18°C and partly cloudy in Paris.",
+  "expectedOutput": "18°C, partly cloudy.",
+  "context": ["Paris is the capital of France."],
+  "retrievalContext": ["Paris: 18°C, partly cloudy."],
+  "additionalMetadata": {"source": "weather-bot", "version": 2},
+  "toolsCalled": [
+    {
+      "name": "get_weather",
+      "type": "FUNCTION",
+      "description": "Fetch current weather for a city",
+      "inputParameters": {"city": "Paris"},
+      "output": {"temp_c": 18, "conditions": "partly cloudy"}
+    }
+  ],
+  "expectedTools": [
+    {"name": "get_weather", "type": "FUNCTION", "inputParameters": {"city": "Paris"}}
+  ],
+  "comments": "Hand-checked by the weather team.",
+  "tokenCost": 0.0021,
+  "inputTokenCount": 120,
+  "outputTokenCount": 18,
+  "completionTime": 2,
+  "flaky": true,
+  "name": "paris_weather",
+  "tags": ["weather", "tools"],
+  "customColumnKeyValues": {"team": "weather", "region": "eu"},
+  "expectedLabels": {"tone": "neutral"},
+  "multimodal": false,
+  "success": true,
+  "metricsData": [],
+  "runDuration": 0.5,
+  "order": 0
+}

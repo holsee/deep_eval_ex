@@ -3,6 +3,8 @@ defmodule DeepEvalEx.Schemas.ToolCallTest do
 
   alias DeepEvalEx.Schemas.ToolCall
 
+  doctest DeepEvalEx.Schemas.ToolCall
+
   describe "struct defaults" do
     test "type defaults to :function" do
       assert %ToolCall{name: "search"}.type == :function
@@ -64,6 +66,40 @@ defmodule DeepEvalEx.Schemas.ToolCallTest do
 
     test "requires a name" do
       assert {:error, _} = ToolCall.new(%{"type" => "MCP"})
+    end
+  end
+
+  describe "equal?/2" do
+    test "compares name, input_parameters and output only, as deepeval's ToolCall.__eq__" do
+      called = %ToolCall{
+        name: "search",
+        type: :function,
+        description: "Search the web",
+        reasoning: "Needs fresh data",
+        input_parameters: %{"q" => "paris"},
+        output: %{"hits" => 3}
+      }
+
+      expected = %ToolCall{
+        name: "search",
+        type: :mcp,
+        input_parameters: %{"q" => "paris"},
+        output: %{"hits" => 3}
+      }
+
+      assert ToolCall.equal?(called, expected)
+    end
+
+    test "is false when the name, input_parameters or output differ" do
+      tool = %ToolCall{name: "search", input_parameters: %{"q" => "paris"}, output: "ok"}
+
+      refute ToolCall.equal?(tool, %{tool | name: "lookup"})
+      refute ToolCall.equal?(tool, %{tool | input_parameters: %{"q" => "rome"}})
+      refute ToolCall.equal?(tool, %{tool | output: "error"})
+    end
+
+    test "does not treat nil input_parameters as an empty map" do
+      refute ToolCall.equal?(%ToolCall{name: "s"}, %ToolCall{name: "s", input_parameters: %{}})
     end
   end
 

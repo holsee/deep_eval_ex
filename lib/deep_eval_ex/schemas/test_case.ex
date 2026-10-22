@@ -26,9 +26,28 @@ defmodule DeepEvalEx.TestCase do
   - `:output_token_count` - Number of output tokens produced (integer)
   - `:completion_time` - Time the LLM took to respond, in seconds (float)
   - `:flaky` - Whether the test case is known to be flaky (default: `false`)
+  - `:custom_column_key_values` - Custom columns for the test case, a map of
+    string keys to string values
+  - `:expected_labels` - The label each classifier should give the test
+    case, a map of classifier name to label (both strings)
 
-  The last six fields mirror deepeval's `LLMTestCase` and are carried through
-  to results and exports unchanged; no metric reads them.
+  `:comments` through `:flaky` mirror deepeval's `LLMTestCase` and are
+  carried through to results and exports unchanged; no metric reads them.
+  `:custom_column_key_values` and `:expected_labels` are deepeval's too and
+  are kept on the struct; deepeval does not export them in a test run, and
+  neither does DeepEvalEx.
+
+  ## deepeval keys
+
+  `new/1` accepts the keys deepeval's `LLMTestCase` accepts, as atoms or
+  strings: each field name, and deepeval's camelCase aliases
+  (`actualOutput`, `expectedOutput`, `retrievalContext`, `toolsCalled`,
+  `expectedTools`, `tokenCost`, `inputTokenCount`, `outputTokenCount`,
+  `completionTime`, `customColumnKeyValues`, `expectedLabels`), plus
+  `additionalMetadata` and `additional_metadata` for `:metadata`. When
+  several keys name one field, the one deepeval lists first wins (the
+  camelCase alias, or `metadata`). As deepeval's `extra="ignore"`, any other
+  key is dropped, so a test case exported by deepeval loads as it is.
 
   As in deepeval 4.3.1, `:context` and `:retrieval_context` are separate
   fields: neither stands in for the other, and each is exported only when
@@ -80,7 +99,9 @@ defmodule DeepEvalEx.TestCase do
           input_token_count: non_neg_integer() | nil,
           output_token_count: non_neg_integer() | nil,
           completion_time: float() | nil,
-          flaky: boolean()
+          flaky: boolean(),
+          custom_column_key_values: %{optional(String.t()) => String.t()} | nil,
+          expected_labels: %{optional(String.t()) => String.t()} | nil
         }
 
   defstruct [
@@ -97,6 +118,8 @@ defmodule DeepEvalEx.TestCase do
     :input_token_count,
     :output_token_count,
     :completion_time,
+    :custom_column_key_values,
+    :expected_labels,
     tools_called: [],
     expected_tools: [],
     flaky: false
@@ -106,6 +129,30 @@ defmodule DeepEvalEx.TestCase do
 
   @tool_call_keys [:tools_called, :expected_tools]
   @float_keys [:token_cost, :completion_time]
+
+  # deepeval 4.3.1's LLMTestCase validation aliases, in deepeval's order of
+  # precedence. Keys not listed here are dropped, as deepeval's
+  # extra="ignore".
+  @key_aliases [
+    input: ["input"],
+    actual_output: ["actualOutput", "actual_output"],
+    expected_output: ["expectedOutput", "expected_output"],
+    context: ["context"],
+    retrieval_context: ["retrievalContext", "retrieval_context"],
+    metadata: ["metadata", "additionalMetadata", "additional_metadata"],
+    tools_called: ["toolsCalled", "tools_called"],
+    comments: ["comments"],
+    expected_tools: ["expectedTools", "expected_tools"],
+    token_cost: ["tokenCost", "token_cost"],
+    input_token_count: ["inputTokenCount", "input_token_count"],
+    output_token_count: ["outputTokenCount", "output_token_count"],
+    completion_time: ["completionTime", "completion_time"],
+    flaky: ["flaky"],
+    name: ["name"],
+    tags: ["tags"],
+    custom_column_key_values: ["customColumnKeyValues", "custom_column_key_values"],
+    expected_labels: ["expectedLabels", "expected_labels"]
+  ]
 
   defschema(:test_case_schema, %{
     input: {:required, :string},
@@ -123,7 +170,9 @@ defmodule DeepEvalEx.TestCase do
     input_token_count: :integer,
     output_token_count: :integer,
     completion_time: :float,
-    flaky: {:boolean, {:default, false}}
+    flaky: {:boolean, {:default, false}},
+    custom_column_key_values: {:map, :string, :string},
+    expected_labels: {:map, :string, :string}
   })
 
   @doc """
@@ -147,8 +196,11 @@ defmodule DeepEvalEx.TestCase do
   - `:output_token_count` - Output tokens produced
   - `:completion_time` - Response time in seconds (integers are cast to floats)
   - `:flaky` - Whether the test case is flaky (default: `false`)
+  - `:custom_column_key_values` - Map of string column names to string values
+  - `:expected_labels` - Map of string classifier names to string labels
 
-  Keys may be atoms or strings. Tool calls may be `DeepEvalEx.Schemas.ToolCall`
+  Keys may be atoms or strings, and may be deepeval's camelCase aliases;
+  unknown keys are dropped (see "deepeval keys" above). Tool calls may be `DeepEvalEx.Schemas.ToolCall`
   structs or maps, and accept deepeval's `"inputParameters"` alias and
   `"FUNCTION"` / `"MCP"` type values.
   """
@@ -184,6 +236,7 @@ defmodule DeepEvalEx.TestCase do
   """
   def json_schema do
     tool_call_schema = ToolCall.json_schema()
+    string_map_schema = %{"type" => "object", "additionalProperties" => %{"type" => "string"}}
 
     %{
       "type" => "object",
@@ -203,7 +256,9 @@ defmodule DeepEvalEx.TestCase do
         "input_token_count" => %{"type" => "integer"},
         "output_token_count" => %{"type" => "integer"},
         "completion_time" => %{"type" => "number"},
-        "flaky" => %{"type" => "boolean"}
+        "flaky" => %{"type" => "boolean"},
+        "custom_column_key_values" => string_map_schema,
+        "expected_labels" => string_map_schema
       },
       "required" => ["input"],
       "additionalProperties" => false
@@ -250,19 +305,25 @@ defmodule DeepEvalEx.TestCase do
     end
   end
 
-  # Normalize string keys to atoms
+  # Maps deepeval's keys (atoms or strings, field names or aliases) to
+  # fields, dropping the rest
   defp normalize_attrs(attrs) when is_map(attrs) do
-    attrs
-    |> Enum.map(fn
-      {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
-      {k, v} -> {k, v}
+    attrs = Map.new(attrs, fn {k, v} -> {key_string(k), v} end)
+
+    @key_aliases
+    |> Enum.flat_map(fn {field, aliases} ->
+      case Enum.find(aliases, &Map.has_key?(attrs, &1)) do
+        nil -> []
+        key -> [{field, Map.fetch!(attrs, key)}]
+      end
     end)
     |> Map.new()
     |> normalize_tool_calls()
     |> normalize_floats()
-  rescue
-    ArgumentError -> attrs
   end
+
+  defp key_string(key) when is_atom(key), do: Atom.to_string(key)
+  defp key_string(key), do: key
 
   defp normalize_tool_calls(attrs) do
     Enum.reduce(@tool_call_keys, attrs, fn key, acc ->

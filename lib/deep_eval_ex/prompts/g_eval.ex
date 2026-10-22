@@ -11,6 +11,8 @@ defmodule DeepEvalEx.Prompts.GEval do
   Based on the G-Eval framework: https://arxiv.org/pdf/2303.16634.pdf
   """
 
+  alias DeepEvalEx.Params.SingleTurn
+
   @doc """
   Generates a prompt to create evaluation steps from criteria.
 
@@ -167,17 +169,20 @@ defmodule DeepEvalEx.Prompts.GEval do
 
   @doc """
   Formats parameters list as a human-readable string.
+
+  Each param is named as deepeval's GEval names it (see
+  `DeepEvalEx.Params.SingleTurn.display_name/1`), e.g. `:tools_called` as
+  `Tools Called`.
   """
   def format_params(params) when is_list(params) do
     Enum.map_join(params, ", ", &format_param_name/1)
   end
 
-  defp format_param_name(:input), do: "Input"
-  defp format_param_name(:actual_output), do: "Actual Output"
-  defp format_param_name(:expected_output), do: "Expected Output"
-  defp format_param_name(:retrieval_context), do: "Retrieval Context"
-  defp format_param_name(:context), do: "Context"
-  defp format_param_name(param), do: param |> to_string() |> String.capitalize()
+  # deepeval's G_EVAL_PARAMS names; params it does not name keep a
+  # capitalised field name.
+  defp format_param_name(param) do
+    SingleTurn.display_name(param) || param |> to_string() |> String.capitalize()
+  end
 
   defp format_value(nil), do: "(not provided)"
   defp format_value(value) when is_list(value), do: Enum.join(value, "\n---\n")

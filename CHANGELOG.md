@@ -93,6 +93,25 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `assert_evaluation` does not count a score-only result as a failure, and
   `assert_passes`/`assert_fails` report that a score-only metric has no
   threshold.
+- **deepeval test case keys.** `DeepEvalEx.TestCase.new/1` accepts the keys
+  deepeval 4.3.1's `LLMTestCase` accepts, as atoms or strings: the camelCase
+  aliases (`actualOutput`, `expectedOutput`, `retrievalContext`,
+  `toolsCalled`, `expectedTools`, `tokenCost`, `inputTokenCount`,
+  `outputTokenCount`, `completionTime`, `customColumnKeyValues`,
+  `expectedLabels`) and `additionalMetadata` / `additional_metadata` for
+  `:metadata`, with deepeval's precedence when several name one field. Any
+  other key is dropped, as deepeval's `extra="ignore"`, so a deepeval-shaped
+  JSON test case loads as it is.
+- **`custom_column_key_values` and `expected_labels` on `DeepEvalEx.TestCase`**,
+  string-to-string maps as in deepeval's `LLMTestCase`. Like deepeval, the
+  test run export leaves them out.
+- **`DeepEvalEx.Params.SingleTurn`**, deepeval's `SingleTurnParams`: `all/0`
+  lists its thirteen members (including `:metadata`, `:tags` and the MCP
+  params) in deepeval's order, `member?/1` checks one, and `display_name/1`
+  gives deepeval's GEval name for it (`G_EVAL_PARAMS`).
+- **`DeepEvalEx.Schemas.ToolCall.equal?/2`**, deepeval's `ToolCall.__eq__`:
+  equal when `name`, `input_parameters` and `output` are, whatever the
+  `type`, `description` and `reasoning`.
 - **Scripted mode for the Mock adapter.** `Mock.script/2` replays judge
   responses keyed by step (named by the requested schema's fields, see
   `Mock.step_key/1`) and call index, reports the script's judge model and
@@ -277,6 +296,14 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   retry count; it is now 1s, 2s, 4s.
 - Test cases that finish in under a second export `runDuration` as `0`, as
   deepeval does.
+- `DeepEvalEx.TestCase.new/1` no longer stops normalising a test case when a
+  string key is not an existing atom: it used to skip normalisation
+  altogether, so tool calls' `inputParameters` and `"FUNCTION"` / `"MCP"`
+  types and integer `token_cost` / `completion_time` were left unconverted.
+  Unknown keys are now dropped and the rest normalised.
+- GEval prompts name `:tools_called`, `:expected_tools`, `:metadata` and
+  `:tags` as deepeval does (`Tools Called`, `Expected Tools`, `Metadata`,
+  `Tags`), instead of `Tools_called` and `Expected_tools`.
 
 ### Security
 

@@ -1,6 +1,7 @@
 defmodule DeepEvalEx.TestCaseTest do
   use ExUnit.Case, async: true
 
+  alias DeepEvalEx.Schemas.ToolCall
   alias DeepEvalEx.TestCase
 
   doctest DeepEvalEx.TestCase
@@ -223,8 +224,6 @@ defmodule DeepEvalEx.TestCaseTest do
   end
 
   describe "tool calls" do
-    alias DeepEvalEx.Schemas.ToolCall
-
     test "default type to :function and accept :mcp" do
       test_case =
         TestCase.new!(
@@ -276,6 +275,141 @@ defmodule DeepEvalEx.TestCaseTest do
     end
   end
 
+  describe "new/1 with deepeval keys" do
+    @fixture Path.expand("../fixtures/test_case/deepeval_llm_test_case.json", __DIR__)
+
+    test "loads a deepeval-shaped JSON test case as deepeval 4.3.1's LLMTestCase does" do
+      attrs = @fixture |> File.read!() |> Jason.decode!()
+
+      assert {:ok, test_case} = TestCase.new(attrs)
+
+      assert test_case.input == "What's the weather in Paris?"
+      assert test_case.actual_output == "It is 18°C and partly cloudy in Paris."
+      assert test_case.expected_output == "18°C, partly cloudy."
+      assert test_case.context == ["Paris is the capital of France."]
+      assert test_case.retrieval_context == ["Paris: 18°C, partly cloudy."]
+      assert test_case.metadata == %{"source" => "weather-bot", "version" => 2}
+      assert test_case.comments == "Hand-checked by the weather team."
+      assert test_case.token_cost == 0.0021
+      assert test_case.input_token_count == 120
+      assert test_case.output_token_count == 18
+      assert test_case.completion_time == 2.0
+      assert test_case.flaky == true
+      assert test_case.name == "paris_weather"
+      assert test_case.tags == ["weather", "tools"]
+      assert test_case.custom_column_key_values == %{"team" => "weather", "region" => "eu"}
+      assert test_case.expected_labels == %{"tone" => "neutral"}
+
+      assert [
+               %ToolCall{
+                 name: "get_weather",
+                 type: :function,
+                 description: "Fetch current weather for a city",
+                 input_parameters: %{"city" => "Paris"},
+                 output: %{"temp_c" => 18, "conditions" => "partly cloudy"}
+               }
+             ] = test_case.tools_called
+
+      assert [%ToolCall{name: "get_weather", input_parameters: %{"city" => "Paris"}}] =
+               test_case.expected_tools
+    end
+
+    test "accepts every camelCase alias of deepeval's LLMTestCase" do
+      attrs = %{
+        "input" => "Q",
+        "actualOutput" => "A",
+        "expectedOutput" => "E",
+        "retrievalContext" => ["r"],
+        "toolsCalled" => [%{"name" => "search"}],
+        "expectedTools" => [%{"name" => "lookup"}],
+        "tokenCost" => 0.5,
+        "inputTokenCount" => 3,
+        "outputTokenCount" => 4,
+        "completionTime" => 1.5,
+        "customColumnKeyValues" => %{"k" => "v"},
+        "expectedLabels" => %{"c" => "l"}
+      }
+
+      assert {:ok, test_case} = TestCase.new(attrs)
+
+      assert %TestCase{
+               actual_output: "A",
+               expected_output: "E",
+               retrieval_context: ["r"],
+               tools_called: [%ToolCall{name: "search"}],
+               expected_tools: [%ToolCall{name: "lookup"}],
+               token_cost: 0.5,
+               input_token_count: 3,
+               output_token_count: 4,
+               completion_time: 1.5,
+               custom_column_key_values: %{"k" => "v"},
+               expected_labels: %{"c" => "l"}
+             } = test_case
+    end
+
+    test "accepts additionalMetadata and additional_metadata for metadata" do
+      assert TestCase.new!(%{"input" => "Q", "additionalMetadata" => %{"a" => 1}}).metadata ==
+               %{"a" => 1}
+
+      assert TestCase.new!(%{"input" => "Q", "additional_metadata" => %{"b" => 2}}).metadata ==
+               %{"b" => 2}
+
+      assert TestCase.new!(input: "Q", additional_metadata: %{c: 3}).metadata == %{c: 3}
+    end
+
+    test "prefers the alias deepeval lists first when several are given" do
+      test_case =
+        TestCase.new!(%{
+          "input" => "Q",
+          "actual_output" => "snake",
+          "actualOutput" => "camel",
+          "metadata" => %{"a" => 1},
+          "additional_metadata" => %{"b" => 2}
+        })
+
+      assert test_case.actual_output == "camel"
+      assert test_case.metadata == %{"a" => 1}
+    end
+
+    test "accepts camelCase atom keys" do
+      assert TestCase.new!(input: "Q", actualOutput: "A").actual_output == "A"
+    end
+
+    test "drops unknown string keys instead of failing to convert them to atoms" do
+      key = "not_a_deepeval_field_#{System.unique_integer([:positive])}"
+
+      assert {:ok, test_case} =
+               TestCase.new(%{
+                 "input" => "Q",
+                 key => "ignored",
+                 "actualOutput" => "A",
+                 "toolsCalled" => [%{"name" => "search", "inputParameters" => %{"q" => "x"}}]
+               })
+
+      assert test_case.actual_output == "A"
+      assert [%ToolCall{name: "search", input_parameters: %{"q" => "x"}}] = test_case.tools_called
+    end
+
+    test "drops unknown atom keys and deepeval fields DeepEvalEx does not port" do
+      assert {:ok, test_case} =
+               TestCase.new(%{
+                 "input" => "Q",
+                 "multimodal" => true,
+                 "mcpServers" => [],
+                 "success" => true,
+                 :bogus => 1
+               })
+
+      refute Map.has_key?(test_case, :bogus)
+      refute Map.has_key?(test_case, :multimodal)
+    end
+
+    test "requires custom_column_key_values and expected_labels to map strings to strings" do
+      assert {:error, _} = TestCase.new(input: "Q", custom_column_key_values: %{"a" => 1})
+      assert {:error, _} = TestCase.new(input: "Q", expected_labels: %{"tone" => :neutral})
+    end
+  end
+
   describe "json_schema/0" do
     test "includes the deepeval LLMTestCase fields" do
       props = TestCase.json_schema()["properties"]
@@ -286,6 +420,13 @@ defmodule DeepEvalEx.TestCaseTest do
       assert props["output_token_count"] == %{"type" => "integer"}
       assert props["completion_time"] == %{"type" => "number"}
       assert props["flaky"] == %{"type" => "boolean"}
+
+      assert props["custom_column_key_values"] == %{
+               "type" => "object",
+               "additionalProperties" => %{"type" => "string"}
+             }
+
+      assert props["expected_labels"] == props["custom_column_key_values"]
       assert props["tools_called"]["items"]["properties"]["type"]["enum"] == ["function", "mcp"]
     end
   end
