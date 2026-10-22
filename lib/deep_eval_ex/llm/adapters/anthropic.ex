@@ -209,8 +209,8 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
   # Claude sometimes returns a nested array or object in tool input as a
   # JSON-encoded string, at times with trailing debris (`"[...]}\\n"`). Where
   # the schema expects an array or object and a string arrived, decode it
-  # from its outermost brackets, as deepeval's trimAndLoadJson does; a string
-  # that does not decode to the expected type is left as is.
+  # from its first opening bracket, as deepeval's trimAndLoadJson does; a
+  # string that does not decode to the expected type is left as is.
   defp decode_stringified(value, %{"type" => type} = schema)
        when type in ["array", "object"] and is_binary(value) do
     case decode_embedded(value, type) do
@@ -233,19 +233,35 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
 
   defp decode_stringified(value, _schema), do: value
 
+  # The JSON ends at the last closing bracket unless the debris itself holds
+  # one (an object field's debris is the enclosing object's `}`), so each
+  # closing bracket is tried in turn, from the last back.
   defp decode_embedded(string, type) do
     {open, close, guard} =
       if type == "array", do: {"[", "]", &is_list/1}, else: {"{", "}", &is_map/1}
 
-    with [_, rest] <- String.split(string, open, parts: 2),
-         candidate = open <> rest,
-         [_ | _] = parts <- String.split(candidate, close),
-         json = Enum.join(Enum.drop(parts, -1), close) <> close,
-         {:ok, decoded} <- Jason.decode(json),
+    case String.split(string, open, parts: 2) do
+      [_, rest] ->
+        candidate = open <> rest
+
+        candidate
+        |> :binary.matches(close)
+        |> Enum.reverse()
+        |> Enum.find_value(:error, fn {position, _length} ->
+          decode_prefix(candidate, position + 1, guard)
+        end)
+
+      [_] ->
+        :error
+    end
+  end
+
+  defp decode_prefix(candidate, length, guard) do
+    with {:ok, decoded} <- Jason.decode(binary_part(candidate, 0, length)),
          true <- guard.(decoded) do
       {:ok, decoded}
     else
-      _ -> :error
+      _ -> nil
     end
   end
 

@@ -163,7 +163,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - Anthropic: a base URL that already ends in `/v1` no longer produces
   `/v1/v1/messages`.
 - Anthropic: a nested array or object that Claude returns in tool input as a
-  JSON-encoded string is decoded, instead of failing the metric.
+  JSON-encoded string is decoded, instead of failing the metric, including
+  when the debris after it repeats its closing bracket (`{...}}`).
 - Blank environment variables and blank config values (common when tooling
   forwards unset variables as empty strings) are treated as unset, instead of
   producing an empty base URL or API key.

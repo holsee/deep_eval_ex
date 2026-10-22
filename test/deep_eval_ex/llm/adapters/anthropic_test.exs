@@ -388,6 +388,55 @@ defmodule DeepEvalEx.LLM.Adapters.AnthropicTest do
              }
     end
 
+    test "decodes a stringified field whose trailing debris repeats its closing bracket" do
+      # The debris Claude leaves is the enclosing tool input's closing
+      # bracket; for an object field that is the same `}` that closes it.
+      stub_tool_use(%{
+        "meta" => ~s({"confidence": 0.9}}\n),
+        "steps" => ~s(["Read the input.", "Cite [1]."]]\n)
+      })
+
+      schema = %{
+        "type" => "object",
+        "properties" => %{
+          "steps" => %{"type" => "array", "items" => %{"type" => "string"}},
+          "meta" => %{
+            "type" => "object",
+            "properties" => %{"confidence" => %{"type" => "number"}}
+          }
+        }
+      }
+
+      assert {:ok, result} = Anthropic.generate_with_schema("Plan", schema, @base_opts)
+
+      assert result == %{
+               "meta" => %{"confidence" => 0.9},
+               "steps" => ["Read the input.", "Cite [1]."]
+             }
+    end
+
+    test "decodes stringified objects inside an array of objects" do
+      stub_tool_use(%{
+        "verdicts" => [~s({"verdict": "yes"}), %{"verdict" => "no"}]
+      })
+
+      schema = %{
+        "type" => "object",
+        "properties" => %{
+          "verdicts" => %{
+            "type" => "array",
+            "items" => %{
+              "type" => "object",
+              "properties" => %{"verdict" => %{"type" => "string"}}
+            }
+          }
+        }
+      }
+
+      assert {:ok, %{"verdicts" => [%{"verdict" => "yes"}, %{"verdict" => "no"}]}} =
+               Anthropic.generate_with_schema("Judge", schema, @base_opts)
+    end
+
     test "leaves a stringified field alone when it does not decode to the expected type" do
       stub_tool_use(%{"steps" => "not json at all"})
 
