@@ -1,0 +1,132 @@
+[
+ {
+  "name": "null",
+  "input": "null",
+  "expected": "null"
+ },
+ {
+  "name": "true",
+  "input": "true",
+  "expected": "true"
+ },
+ {
+  "name": "false",
+  "input": "false",
+  "expected": "false"
+ },
+ {
+  "name": "zero",
+  "input": "0",
+  "expected": "0"
+ },
+ {
+  "name": "negative_int",
+  "input": "-42",
+  "expected": "-42"
+ },
+ {
+  "name": "big_int",
+  "input": "1180591620717411303424",
+  "expected": "1180591620717411303424"
+ },
+ {
+  "name": "float_one",
+  "input": "1.0",
+  "expected": "1.0"
+ },
+ {
+  "name": "float_half",
+  "input": "0.5",
+  "expected": "0.5"
+ },
+ {
+  "name": "float_tenth_sum",
+  "input": "0.30000000000000004",
+  "expected": "0.30000000000000004"
+ },
+ {
+  "name": "negative_zero",
+  "input": "-0.0",
+  "expected": "-0.0"
+ },
+ {
+  "name": "empty_string",
+  "input": "\"\"",
+  "expected": "\"\""
+ },
+ {
+  "name": "empty_list",
+  "input": "[]",
+  "expected": "[]"
+ },
+ {
+  "name": "empty_object",
+  "input": "{}",
+  "expected": "{}"
+ },
+ {
+  "name": "ascii_string",
+  "input": "\"Hello, world! /path?a=1&b=2 <tag> ~\"",
+  "expected": "\"Hello, world! /path?a=1&b=2 <tag> ~\""
+ },
+ {
+  "name": "quotes_and_backslash",
+  "input": "\"say \\\"hi\\\" \\\\ there\"",
+  "expected": "\"say \\\"hi\\\" \\\\ there\""
+ },
+ {
+  "name": "short_escapes",
+  "input": "\"\\b\\f\\n\\r\\t\"",
+  "expected": "\"\\b\\f\\n\\r\\t\""
+ },
+ {
+  "name": "control_chars",
+  "input": "\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\\u0006\\u0007\\b\\t\\n\\u000b\\f\\r\\u000e\\u000f\\u0010\\u0011\\u0012\\u0013\\u0014\\u0015\\u0016\\u0017\\u0018\\u0019\\u001a\\u001b\\u001c\\u001d\\u001e\\u001f\"",
+  "expected": "\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\\u0006\\u0007\\b\\t\\n\\u000b\\f\\r\\u000e\\u000f\\u0010\\u0011\\u0012\\u0013\\u0014\\u0015\\u0016\\u0017\\u0018\\u0019\\u001a\\u001b\\u001c\\u001d\\u001e\\u001f\""
+ },
+ {
+  "name": "delete_char",
+  "input": "\"ab\"",
+  "expected": "\"a\\u007fb\""
+ },
+ {
+  "name": "latin1",
+  "input": "\"café naïve\"",
+  "expected": "\"caf\\u00e9 na\\u00efve\""
+ },
+ {
+  "name": "bmp",
+  "input": "\"✓ — “quoted” € 中文   \"",
+  "expected": "\"\\u2713 \\u2014 \\u201cquoted\\u201d \\u20ac \\u4e2d\\u6587 \\u2028\\u2029\""
+ },
+ {
+  "name": "astral",
+  "input": "\"emoji 😀 and 𝄞\"",
+  "expected": "\"emoji \\ud83d\\ude00 and \\ud834\\udd1e\""
+ },
+ {
+  "name": "lone_ascii_object_keys",
+  "input": "{\"z\": 1, \"a\": 2, \"m\": 3}",
+  "expected": "{\"z\": 1, \"a\": 2, \"m\": 3}"
+ },
+ {
+  "name": "unicode_keys",
+  "input": "{\"clé\": \"valeur\", \"✓\": true}",
+  "expected": "{\"cl\\u00e9\": \"valeur\", \"\\u2713\": true}"
+ },
+ {
+  "name": "nested",
+  "input": "{\"testCases\": [{\"name\": \"test_case_0\", \"input\": \"What is 1+1?\", \"metricsData\": [{\"name\": \"M1\", \"threshold\": 0.5, \"success\": true, \"score\": 1.0}, {\"name\": \"M2\", \"threshold\": 0.7, \"success\": false, \"score\": 0.25}], \"runDuration\": 0.0, \"order\": 0, \"metadata\": {\"k\": [1, 2.0, null, true, {\"x\": []}]}}], \"conversationalTestCases\": [], \"metricsScores\": [{\"metric\": \"M1\", \"scores\": [1.0, 0.9], \"passes\": 2, \"fails\": 0, \"errors\": 0}], \"prompts\": [], \"official\": false}",
+  "expected": "{\"testCases\": [{\"name\": \"test_case_0\", \"input\": \"What is 1+1?\", \"metricsData\": [{\"name\": \"M1\", \"threshold\": 0.5, \"success\": true, \"score\": 1.0}, {\"name\": \"M2\", \"threshold\": 0.7, \"success\": false, \"score\": 0.25}], \"runDuration\": 0.0, \"order\": 0, \"metadata\": {\"k\": [1, 2.0, null, true, {\"x\": []}]}}], \"conversationalTestCases\": [], \"metricsScores\": [{\"metric\": \"M1\", \"scores\": [1.0, 0.9], \"passes\": 2, \"fails\": 0, \"errors\": 0}], \"prompts\": [], \"official\": false}"
+ },
+ {
+  "name": "list_of_mixed",
+  "input": "[1, -1.5, \"two\", null, false, [[]], {}]",
+  "expected": "[1, -1.5, \"two\", null, false, [[]], {}]"
+ },
+ {
+  "name": "float_values",
+  "input": "[1e+16, 1000000000000000.0, 1e+17, 1.2345678901234568e+17, 1e-05, 0.0001, 0.0001234, 2.5e-07, 1.7976931348623157e+308, 5e-324, 2.2250738585072014e-308, 0.001, 0.003, 0.006, 3.14159, -273.15, 100.0, 1e+22, 9007199254740992.0]",
+  "expected": "[1e+16, 1000000000000000.0, 1e+17, 1.2345678901234568e+17, 1e-05, 0.0001, 0.0001234, 2.5e-07, 1.7976931348623157e+308, 5e-324, 2.2250738585072014e-308, 0.001, 0.003, 0.006, 3.14159, -273.15, 100.0, 1e+22, 9007199254740992.0]"
+ }
+]

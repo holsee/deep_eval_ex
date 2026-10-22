@@ -79,6 +79,28 @@ defmodule DeepEvalEx.EvaluatorTest do
     TestCase.new!(input: "What is 2 + 2?", actual_output: "4", expected_output: "4")
   end
 
+  describe "evaluate_with_durations/3" do
+    test "returns each test case's duration in seconds alongside its results" do
+      assert {[[%Result{metric: "SleepMetric"}], [%Result{metric: "SleepMetric"}]], durations} =
+               Evaluator.evaluate_with_durations(
+                 [test_case(), test_case()],
+                 [%SleepMetric{sleep: 50}]
+               )
+
+      for duration <- durations do
+        assert is_float(duration) and duration >= 0.05
+      end
+    end
+
+    test "reports a timed-out test case as having taken its timeout" do
+      assert {[[%Result{error: "Evaluation timed out"}]], [0.02]} =
+               Evaluator.evaluate_with_durations([test_case()], [SlowMetric],
+                 timeout: 20,
+                 metric_timeout: :infinity
+               )
+    end
+  end
+
   describe "evaluate/3" do
     test "returns one flat result list per test case" do
       assert [[%Result{metric: "Exact Match", success: true}]] =

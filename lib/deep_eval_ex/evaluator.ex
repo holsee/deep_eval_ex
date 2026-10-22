@@ -79,6 +79,20 @@ defmodule DeepEvalEx.Evaluator do
   """
   @spec evaluate([TestCase.t()], [module() | struct()], keyword()) :: [[Result.t()]]
   def evaluate(test_cases, metrics, opts \\ []) do
+    {results, _durations} = evaluate_with_durations(test_cases, metrics, opts)
+    results
+  end
+
+  @doc """
+  Evaluates test cases like `evaluate/3`, also returning how long each took.
+
+  Returns `{results, durations}` where `durations` holds the seconds spent
+  on each test case, in the same order. A test case that timed out is
+  reported as having taken its timeout; one whose process crashed as `0.0`.
+  """
+  @spec evaluate_with_durations([TestCase.t()], [module() | struct()], keyword()) ::
+          {[[Result.t()]], [float()]}
+  def evaluate_with_durations(test_cases, metrics, opts \\ []) do
     concurrency = Keyword.get(opts, :concurrency, @default_concurrency)
     timeout = case_timeout(metrics, opts)
 
@@ -93,21 +107,29 @@ defmodule DeepEvalEx.Evaluator do
 
     start_time = System.monotonic_time(:millisecond)
 
-    results =
+    {results, durations} =
       test_cases
       |> Task.async_stream(
         fn test_case ->
-          evaluate_single(test_case, metrics, opts)
+          started = System.monotonic_time()
+          results = evaluate_single(test_case, metrics, opts)
+          {results, seconds_since(started)}
         end,
         max_concurrency: concurrency,
         timeout: timeout,
         on_timeout: :kill_task
       )
       |> Enum.map(fn
-        {:ok, results} -> results
-        {:exit, :timeout} -> error_results("Evaluation timed out", metrics, opts)
-        {:exit, reason} -> error_results("Evaluation failed: #{inspect(reason)}", metrics, opts)
+        {:ok, timed_results} ->
+          timed_results
+
+        {:exit, :timeout} ->
+          {error_results("Evaluation timed out", metrics, opts), timeout / 1000}
+
+        {:exit, reason} ->
+          {error_results("Evaluation failed: #{inspect(reason)}", metrics, opts), 0.0}
       end)
+      |> Enum.unzip()
 
     duration = System.monotonic_time(:millisecond) - start_time
 
@@ -117,7 +139,7 @@ defmodule DeepEvalEx.Evaluator do
       %{}
     )
 
-    results
+    {results, durations}
   end
 
   @doc """
@@ -166,6 +188,10 @@ defmodule DeepEvalEx.Evaluator do
       {:ok, result} -> result
       {:error, reason} -> error_result(reason, metric, opts)
     end
+  end
+
+  defp seconds_since(started) do
+    System.convert_time_unit(System.monotonic_time() - started, :native, :microsecond) / 1_000_000
   end
 
   defp metric_concurrency(metrics, opts) do
