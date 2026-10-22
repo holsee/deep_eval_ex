@@ -41,7 +41,19 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   - The result's `:evaluation_model`, `:input_tokens`, `:output_tokens` and
     `:evaluation_cost`, collected from the LLM calls made while measuring.
     Calls made from tasks the metric spawns are only counted when the tasks
-    are started with `DeepEvalEx.LLM.Usage.async/1`
+    are started with `DeepEvalEx.LLM.Usage.async/1`. The usage of a
+    measurement that errors is passed on to the caller's usage scope, where
+    `DeepEvalEx.Evaluator` puts it on the errored result
+
+  ## LLM-judged metrics
+
+  Implement the optional `c:evaluation_model/1` callback to report the judge
+  model a metric is configured with. Like deepeval's `evaluation_model`,
+  which is set when the metric is created, it is reported even when no LLM
+  call was made, including on errored results:
+
+      @impl true
+      defdelegate evaluation_model(opts), to: DeepEvalEx.LLM.Adapter, as: :model_name
 
   You can override any of these defaults.
   """
@@ -108,7 +120,18 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   """
   @callback default_opts() :: keyword()
 
-  @optional_callbacks [default_opts: 0, metric_name: 1]
+  @doc """
+  Optional callback returning the name of the judge model the metric calls
+  with `opts`, or `nil` when it calls none.
+
+  Used as the result's `:evaluation_model` when the measurement recorded no
+  LLM usage, so that LLM metrics name their judge even when they decide
+  without a call or error first. Metrics that never call an LLM, such as
+  `DeepEvalEx.Metrics.ExactMatch`, leave it unimplemented.
+  """
+  @callback evaluation_model(opts()) :: String.t() | nil
+
+  @optional_callbacks [default_opts: 0, metric_name: 1, evaluation_model: 1]
 
   defmacro __using__(opts \\ []) do
     default_threshold = Keyword.get(opts, :default_threshold, 0.5)
@@ -172,7 +195,10 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
             latency = System.monotonic_time(:millisecond) - start_time
 
             result =
-              unquote(__MODULE__).put_usage(%{result | latency_ms: latency}, usages)
+              unquote(__MODULE__).put_usage(
+                %{result | latency_ms: latency},
+                unquote(__MODULE__).usage_fields(__MODULE__, opts, usages)
+              )
 
             :telemetry.execute(
               [:deep_eval_ex, :metric, :stop],
@@ -185,7 +211,10 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
           {:error, reason} = error ->
             :telemetry.execute(
               [:deep_eval_ex, :metric, :exception],
-              %{duration: System.monotonic_time(:millisecond) - start_time},
+              unquote(__MODULE__).exception_measurements(
+                System.monotonic_time(:millisecond) - start_time,
+                usages
+              ),
               Map.put(metadata, :error, reason)
             )
 
@@ -220,15 +249,52 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   end
 
   @doc false
-  # Sets a result's evaluation model, token counts and cost from the usage of
-  # the LLM calls made while measuring it. A metric that made no LLM call
-  # keeps them nil, as deepeval does for non-LLM metrics.
-  @spec put_usage(Result.t(), [Usage.t()]) :: Result.t()
-  def put_usage(result, usages) do
-    case Usage.summarize(usages) do
-      nil -> result
-      summary -> struct!(result, summary)
+  # The evaluation model, token counts and cost to report for a measurement
+  # of `module` with `opts` that recorded `usages`, as `DeepEvalEx.Result`
+  # fields. Without recorded usage the model is the metric's configured judge
+  # (`c:evaluation_model/1`), as deepeval reports it for every LLM metric; it
+  # stays nil for metrics that call no LLM.
+  @spec usage_fields(module(), keyword(), [Usage.t()]) :: Usage.summary()
+  def usage_fields(module, opts, usages) do
+    summary =
+      Usage.summarize(usages) ||
+        %{evaluation_model: nil, input_tokens: nil, output_tokens: nil, evaluation_cost: nil}
+
+    Map.update!(summary, :evaluation_model, &(&1 || evaluation_model(module, opts)))
+  end
+
+  @doc false
+  # Sets the usage fields on a result. Fields the metric set itself are kept
+  # when nothing was recorded for them.
+  @spec put_usage(Result.t(), Usage.summary()) :: Result.t()
+  def put_usage(result, fields) do
+    Enum.reduce(fields, result, fn
+      {_key, nil}, result -> result
+      {key, value}, result -> Map.put(result, key, value)
+    end)
+  end
+
+  defp evaluation_model(module, opts) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :evaluation_model, 1) do
+      module.evaluation_model(opts)
     end
+  end
+
+  @doc false
+  # Measurements of the `[:deep_eval_ex, :metric, :exception]` event: the
+  # tokens and cost spent before the error, when known.
+  @spec exception_measurements(integer(), [Usage.t()]) :: map()
+  def exception_measurements(duration, usages) do
+    usages
+    |> Usage.summarize()
+    |> Kernel.||(%{})
+    |> Map.take([:input_tokens, :output_tokens, :evaluation_cost])
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Map.new(fn
+      {:evaluation_cost, cost} -> {:cost, cost}
+      pair -> pair
+    end)
+    |> Map.put(:duration, duration)
   end
 
   @doc false

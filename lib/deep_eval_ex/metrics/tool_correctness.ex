@@ -67,6 +67,18 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   def required_params, do: [:tools_called, :expected_tools]
 
   @doc """
+  Returns the judge model this metric calls with `opts`: only when
+  `:available_tools` are given, as tool selection is the only LLM-scored part.
+  """
+  @impl true
+  def evaluation_model(opts) do
+    case Keyword.get(opts, :available_tools) do
+      tools when is_list(tools) and tools != [] -> Adapter.model_name(opts)
+      _ -> nil
+    end
+  end
+
+  @doc """
   Override validate_test_case to allow empty lists.
 
   Python DeepEval allows empty tools_called/expected_tools and returns

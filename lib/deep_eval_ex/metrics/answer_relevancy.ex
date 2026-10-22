@@ -57,6 +57,12 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   def required_params, do: [:input, :actual_output]
 
   @doc """
+  Returns the judge model this metric calls with `opts`.
+  """
+  @impl true
+  defdelegate evaluation_model(opts), to: Adapter, as: :model_name
+
+  @doc """
   Measures answer relevancy of the actual output to the input.
 
   ## Options

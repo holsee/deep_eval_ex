@@ -2,7 +2,9 @@ defmodule DeepEvalEx.EvaluatorTest do
   use ExUnit.Case, async: true
 
   alias DeepEvalEx.{Evaluator, Result, TestCase}
-  alias DeepEvalEx.Metrics.{ExactMatch, GEval}
+  alias DeepEvalEx.LLM.Usage
+  alias DeepEvalEx.Metrics.{ExactMatch, Faithfulness, GEval, ToolCorrectness}
+  alias DeepEvalEx.Schemas.ToolCall
 
   defmodule SlowMetric do
     @moduledoc false
@@ -45,6 +47,43 @@ defmodule DeepEvalEx.EvaluatorTest do
     def default_threshold, do: 0.7
 
     def measure(_test_case, _opts), do: {:error, {:api_error, 500}}
+  end
+
+  defmodule JudgeThenFailMetric do
+    @moduledoc false
+
+    use DeepEvalEx.Metrics.BaseMetric
+
+    @impl true
+    def metric_name, do: "JudgeThenFail"
+
+    @impl true
+    def required_params, do: []
+
+    # Two judge calls are paid for before the metric gives up, as when a
+    # judge returns JSON that does not match the expected schema.
+    def do_measure(_test_case, _opts) do
+      Usage.record(Usage.new("gpt-4o-mini", 1_000, 200))
+      Usage.record(Usage.new("gpt-4o-mini", 500, 100))
+      {:error, "judge returned invalid JSON"}
+    end
+  end
+
+  defmodule SlowJudge do
+    @moduledoc false
+
+    use DeepEvalEx.Metrics.BaseMetric
+
+    @impl true
+    def metric_name, do: "SlowJudge"
+
+    @impl true
+    def required_params, do: []
+
+    @impl true
+    defdelegate evaluation_model(opts), to: DeepEvalEx.LLM.Adapter, as: :model_name
+
+    def do_measure(_test_case, _opts), do: Process.sleep(:infinity)
   end
 
   defmodule ConfigurableMetric do
@@ -318,6 +357,88 @@ defmodule DeepEvalEx.EvaluatorTest do
 
       assert %Result{threshold: 0.5, reason: "default"} =
                Evaluator.evaluate_metric(test_case(), metric, [])
+    end
+  end
+
+  describe "evaluate_metric/3 usage on errored results" do
+    test "an errored result keeps the model, tokens and cost of the judge calls made" do
+      result = Evaluator.evaluate_metric(test_case(), JudgeThenFailMetric, [])
+
+      assert %Result{
+               error: "judge returned invalid JSON",
+               score: nil,
+               evaluation_model: "gpt-4o-mini",
+               input_tokens: 1_500,
+               output_tokens: 300
+             } = result
+
+      assert_in_delta result.evaluation_cost, (1_500 * 0.15 + 300 * 0.60) / 1_000_000, 1.0e-12
+    end
+
+    test "an errored LLM metric reports its configured judge model without any call" do
+      incomplete = %TestCase{input: "Q", actual_output: "A"}
+
+      assert %Result{evaluation_model: "mock-model", input_tokens: nil, evaluation_cost: nil} =
+               result = Evaluator.evaluate_metric(incomplete, Faithfulness, adapter: :mock)
+
+      assert Result.errored?(result)
+
+      assert %Result{evaluation_model: "gpt-4o"} =
+               Evaluator.evaluate_metric(incomplete, Faithfulness,
+                 adapter: :openai,
+                 model: "gpt-4o"
+               )
+    end
+
+    test "an errored GEval reports the judge model it is configured with" do
+      metric =
+        GEval.new(
+          name: "Correctness",
+          criteria: "Is it correct?",
+          evaluation_params: [:expected_output],
+          model: {:openai, "gpt-4.1"}
+        )
+
+      incomplete = %TestCase{input: "Q", actual_output: "A"}
+
+      assert %Result{evaluation_model: "gpt-4.1"} =
+               Evaluator.evaluate_metric(incomplete, metric, adapter: :mock)
+    end
+
+    test "metrics that call no LLM report no judge model" do
+      incomplete = %TestCase{input: "Q", actual_output: nil, expected_output: "A"}
+
+      assert %Result{evaluation_model: nil} =
+               Evaluator.evaluate_metric(incomplete, ExactMatch, adapter: :mock)
+
+      no_tools = %TestCase{input: "Q", actual_output: "A", tools_called: nil}
+
+      assert %Result{evaluation_model: nil} =
+               result = Evaluator.evaluate_metric(no_tools, ToolCorrectness, adapter: :mock)
+
+      assert Result.errored?(result)
+    end
+
+    test "ToolCorrectness reports a judge model only when given available_tools" do
+      incomplete = %TestCase{input: "Q", actual_output: "A", tools_called: nil}
+      tools = [%ToolCall{name: "search"}]
+
+      assert %Result{evaluation_model: "mock-model"} =
+               result =
+               Evaluator.evaluate_metric(incomplete, ToolCorrectness,
+                 adapter: :mock,
+                 available_tools: tools
+               )
+
+      assert Result.errored?(result)
+    end
+
+    test "a timed-out LLM metric still reports its configured judge model" do
+      assert [%Result{error: "Metric timed out", evaluation_model: "mock-model"}] =
+               Evaluator.evaluate_single(test_case(), [SlowJudge],
+                 adapter: :mock,
+                 metric_timeout: 50
+               )
     end
   end
 end

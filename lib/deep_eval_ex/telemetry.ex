@@ -20,7 +20,8 @@ defmodule DeepEvalEx.Telemetry do
     - Metadata: `%{metric: String.t(), test_case_id: String.t() | nil}`
 
   - `[:deep_eval_ex, :metric, :exception]` - Metric evaluation failed
-    - Measurements: `%{duration: integer()}`
+    - Measurements: `%{duration: integer()}`, plus `input_tokens`,
+      `output_tokens` and `cost` when LLM calls made before the error reported them
     - Metadata: `%{metric: String.t(), error: term()}`
 
   ### Evaluation Events

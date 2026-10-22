@@ -72,6 +72,12 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   def required_params, do: [:input, :retrieval_context, :expected_output]
 
   @doc """
+  Returns the judge model this metric calls with `opts`.
+  """
+  @impl true
+  defdelegate evaluation_model(opts), to: Adapter, as: :model_name
+
+  @doc """
   Measures contextual precision of the retrieval context ranking.
 
   ## Options

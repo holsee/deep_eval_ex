@@ -62,6 +62,12 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
   def required_params, do: [:input, :actual_output, :retrieval_context]
 
   @doc """
+  Returns the judge model this metric calls with `opts`.
+  """
+  @impl true
+  defdelegate evaluation_model(opts), to: Adapter, as: :model_name
+
+  @doc """
   Measures faithfulness of the actual output against retrieval context.
 
   ## Options

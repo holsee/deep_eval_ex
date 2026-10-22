@@ -180,6 +180,18 @@ defmodule DeepEvalEx.Metrics.GEval do
   def required_params, do: []
 
   @doc """
+  Returns the judge model this metric calls with `opts`, honouring a
+  `:model` given as `{provider, model}`.
+  """
+  @impl true
+  def evaluation_model(opts) do
+    opts
+    |> Keyword.get(:model)
+    |> adapter_opts(opts)
+    |> Adapter.model_name()
+  end
+
+  @doc """
   Measures a test case using the GEval metric configuration.
 
   ## With a metric struct (recommended):
@@ -282,10 +294,12 @@ defmodule DeepEvalEx.Metrics.GEval do
     end
   end
 
-  defp build_adapter_opts(metric, opts) do
+  defp build_adapter_opts(metric, opts), do: adapter_opts(metric.model, opts)
+
+  defp adapter_opts(model, opts) do
     base_opts = Keyword.take(opts, [:adapter, :api_key, :timeout])
 
-    case metric.model do
+    case model do
       nil -> base_opts
       {provider, model} -> Keyword.merge(base_opts, adapter: provider, model: model)
       model when is_binary(model) -> Keyword.put(base_opts, :model, model)

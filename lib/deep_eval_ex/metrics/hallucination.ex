@@ -59,6 +59,12 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   def required_params, do: [:input, :actual_output, :context]
 
   @doc """
+  Returns the judge model this metric calls with `opts`.
+  """
+  @impl true
+  defdelegate evaluation_model(opts), to: Adapter, as: :model_name
+
+  @doc """
   Measures hallucination of the actual output against context.
 
   ## Options

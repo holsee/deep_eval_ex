@@ -55,6 +55,7 @@ defmodule DeepEvalEx.Evaluator do
       ]
   """
 
+  alias DeepEvalEx.Metrics.BaseMetric
   alias DeepEvalEx.{Result, TestCase}
 
   @default_concurrency System.schedulers_online() * 2
@@ -176,7 +177,9 @@ defmodule DeepEvalEx.Evaluator do
 
   When the metric returns `{:error, reason}` the result is an errored
   `DeepEvalEx.Result` (see `DeepEvalEx.Result.error/3`) carrying the
-  metric's resolved threshold rather than a zero score.
+  metric's resolved threshold rather than a zero score. As in deepeval, it
+  also carries the judge model and the tokens and cost of any LLM calls made
+  before the error.
   """
   @spec evaluate_metric(TestCase.t(), module() | struct(), keyword()) :: Result.t()
   def evaluate_metric(test_case, metric, opts) do
@@ -184,9 +187,12 @@ defmodule DeepEvalEx.Evaluator do
     merged_opts = metric_opts(metric, opts)
     module = metric_module(metric)
 
-    case module.measure(test_case, merged_opts) do
+    {outcome, usages} =
+      BaseMetric.track_usage(fn -> module.measure(test_case, merged_opts) end)
+
+    case outcome do
       {:ok, result} -> result
-      {:error, reason} -> error_result(reason, metric, opts)
+      {:error, reason} -> error_result(reason, metric, opts, usages)
     end
   end
 
@@ -243,11 +249,17 @@ defmodule DeepEvalEx.Evaluator do
     Enum.map(metrics, &error_result(reason, &1, opts))
   end
 
-  defp error_result(reason, metric, opts) do
+  # Errored results carry the metric's judge model even when the metric was
+  # killed or made no call, and the usage of the calls it made before erroring.
+  defp error_result(reason, metric, opts, usages \\ []) do
     module = metric_module(metric)
+    merged_opts = metric_opts(metric, opts)
+    usage_fields = BaseMetric.usage_fields(module, merged_opts, usages)
 
-    Result.error(metric_name(metric), reason,
-      threshold: resolve_threshold(module, metric_opts(metric, opts))
+    Result.error(
+      metric_name(metric),
+      reason,
+      [threshold: resolve_threshold(module, merged_opts)] ++ Map.to_list(usage_fields)
     )
   end
 

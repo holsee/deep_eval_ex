@@ -194,6 +194,28 @@ defmodule DeepEvalEx.LLM.Adapter do
     with_usage(adapter, opts, fn -> adapter.generate_with_schema(prompt, schema, opts) end)
   end
 
+  @doc """
+  Returns the name of the judge model that `generate/2` and
+  `generate_with_schema/3` would call with `opts`, or `nil` when the adapter
+  cannot be loaded.
+
+  Mirrors deepeval, where an LLM metric's `evaluation_model` is its model's
+  `get_model_name()`, known from initialisation whether or not a call is made.
+
+  ## Examples
+
+      DeepEvalEx.LLM.Adapter.model_name(adapter: :openai, model: "gpt-4o")
+      #=> "gpt-4o"
+  """
+  @spec model_name(opts()) :: String.t() | nil
+  def model_name(opts \\ []) do
+    {adapter, model} = resolve_adapter(opts)
+
+    if Code.ensure_loaded?(adapter) and function_exported?(adapter, :model_name, 1) do
+      adapter.model_name(Keyword.put_new(opts, :model, model))
+    end
+  end
+
   # Passes on the usage the adapter recorded. A successful call that reported
   # none still records the adapter's model, so the judge model is known even
   # when its tokens and cost are not.

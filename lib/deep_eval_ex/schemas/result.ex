@@ -44,7 +44,10 @@ defmodule DeepEvalEx.Result do
   `inputTokenCount`, `outputTokenCount`), these are filled in by
   `DeepEvalEx.Metrics.BaseMetric` from the usage of every LLM call made while
   measuring (see `DeepEvalEx.LLM.Usage`). They stay `nil` for metrics that
-  make no LLM call, such as `DeepEvalEx.Metrics.ExactMatch`.
+  make no LLM call, such as `DeepEvalEx.Metrics.ExactMatch`. LLM metrics
+  report their configured judge as `:evaluation_model` even without a call,
+  and errored results keep the usage of the calls made before the error, as
+  deepeval's `MetricData` does.
 
   ## Errored vs failed
 

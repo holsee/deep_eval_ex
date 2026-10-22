@@ -65,6 +65,9 @@ Emitted when a metric evaluation fails.
 | Measurement | Type | Description |
 |-------------|------|-------------|
 | `duration` | integer | Duration in milliseconds |
+| `input_tokens` | integer | Prompt tokens spent before the error (when reported) |
+| `output_tokens` | integer | Completion tokens spent before the error (when reported) |
+| `cost` | float | USD cost of the calls made before the error (when priced) |
 
 | Metadata | Type | Description |
 |----------|------|-------------|

@@ -194,6 +194,11 @@ result.evaluation_cost   # => 0.00055185
 ```
 
 - Metrics that make no LLM call (e.g. `ExactMatch`) leave all four `nil`.
+- LLM-based metrics report their configured judge as `evaluation_model` even
+  when they made no call, as deepeval sets it when the metric is created.
+  `ToolCorrectness` only has a judge when given `:available_tools`.
+- Errored results keep the judge model and the tokens and cost of the calls
+  made before the error, like deepeval's errored `MetricData`.
 - Token counts are `nil` when the adapter does not report usage.
 - `evaluation_cost` is `nil` when any call's model has no price in
   `DeepEvalEx.LLM.Pricing`; add one with the `:model_pricing` config.
