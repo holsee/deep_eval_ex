@@ -220,10 +220,22 @@ defmodule DeepEvalEx.Evaluator do
   defp error_result(reason, metric, opts) do
     module = metric_module(metric)
 
-    Result.error(module.metric_name(), reason,
+    Result.error(metric_name(metric), reason,
       threshold: resolve_threshold(module, metric_opts(metric, opts))
     )
   end
+
+  # A configured struct may name its results after its configuration (e.g.
+  # GEval's "<name> [GEval]"); otherwise fall back to the module's name.
+  defp metric_name(%{__struct__: module} = metric) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :metric_name, 1) do
+      module.metric_name(metric)
+    else
+      module.metric_name()
+    end
+  end
+
+  defp metric_name(module) when is_atom(module), do: module.metric_name()
 
   # The threshold the metric would have used: its own configuration, then
   # the run-level option, then the metric's default (when it exposes one).

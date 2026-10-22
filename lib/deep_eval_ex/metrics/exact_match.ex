@@ -33,7 +33,7 @@ defmodule DeepEvalEx.Metrics.ExactMatch do
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 1.0
 
   @impl true
-  def metric_name, do: "ExactMatch"
+  def metric_name, do: "Exact Match"
 
   @impl true
   def required_params, do: [:input, :actual_output, :expected_output]

@@ -81,7 +81,7 @@ defmodule DeepEvalEx.Result do
   ## Examples
 
       DeepEvalEx.Result.new(
-        metric: "GEval",
+        metric: "Helpfulness [GEval]",
         score: 0.8,
         threshold: 0.5,
         reason: "The response is accurate and relevant."

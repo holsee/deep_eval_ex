@@ -410,7 +410,7 @@ defmodule DeepEvalEx.ExUnitTest do
           assert_passes(test_case, ExactMatch)
         end
 
-      assert error.message =~ "ExactMatch"
+      assert error.message =~ "Exact Match"
       assert error.message =~ "0.0"
       assert error.message =~ "0%"
     end

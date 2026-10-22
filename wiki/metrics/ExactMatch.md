@@ -86,6 +86,8 @@ result.score  # => 1.0
 | 1.0 | Exact match (after normalization if enabled) |
 | 0.0 | No match |
 
+Results are named `"Exact Match"`, matching deepeval's metric name.
+
 ## Result Metadata
 
 The result includes metadata for debugging:

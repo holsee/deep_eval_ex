@@ -36,8 +36,8 @@ metrics = [
 
 results = Evaluator.evaluate(test_cases, metrics)
 # => [
-#   [%Result{metric: "ExactMatch"}, %Result{metric: "Faithfulness"}, %Result{metric: "AnswerRelevancy"}],
-#   [%Result{metric: "ExactMatch"}, %Result{metric: "Faithfulness"}, %Result{metric: "AnswerRelevancy"}],
+#   [%Result{metric: "Exact Match"}, %Result{metric: "Faithfulness"}, %Result{metric: "Answer Relevancy"}],
+#   [%Result{metric: "Exact Match"}, %Result{metric: "Faithfulness"}, %Result{metric: "Answer Relevancy"}],
 #   ...
 # ]
 ```

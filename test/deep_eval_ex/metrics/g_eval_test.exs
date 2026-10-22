@@ -94,6 +94,26 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
     end
   end
 
+  describe "metric_name/1" do
+    test "suffixes the configured name with [GEval] like deepeval's __name__" do
+      metric = GEval.new(name: "Helpfulness", criteria: "c", evaluation_params: [:input])
+
+      assert GEval.metric_name(metric) == "Helpfulness [GEval]"
+    end
+
+    test "returns the bare name when the suffix is disabled" do
+      metric =
+        GEval.new(
+          name: "Helpfulness",
+          criteria: "c",
+          evaluation_params: [:input],
+          include_g_eval_suffix: false
+        )
+
+      assert GEval.metric_name(metric) == "Helpfulness"
+    end
+  end
+
   describe "evaluate/2 with mock adapter" do
     test "evaluates test case with pre-defined steps" do
       # Mock the evaluation response
@@ -262,6 +282,24 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
                )
 
       assert result.score == 0.8
+      assert result.metric == "Inline [GEval]"
+    end
+
+    test "names the result with the bare name when the suffix is disabled" do
+      Mock.set_schema_response(~r/evaluator/i, %{"score" => 8, "reason" => "Good."})
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A")
+
+      assert {:ok, result} =
+               GEval.do_measure(test_case,
+                 name: "Inline",
+                 evaluation_params: [:input, :actual_output],
+                 evaluation_steps: ["Check"],
+                 include_g_eval_suffix: false,
+                 adapter: :mock
+               )
+
+      assert result.metric == "Inline"
     end
 
     test "returns error without configuration" do

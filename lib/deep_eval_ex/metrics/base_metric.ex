@@ -50,8 +50,21 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
 
   @doc """
   Returns the name of this metric.
+
+  The name keys results in reports and exports, so built-in metrics return
+  the same name as deepeval's `__name__` (e.g. `"Exact Match"`).
   """
   @callback metric_name() :: String.t()
+
+  @doc """
+  Optional callback returning the name of a configured metric struct.
+
+  Implement it when the name depends on configuration, as with
+  `DeepEvalEx.Metrics.GEval` (`"<name> [GEval]"`). The evaluator prefers it
+  over `c:metric_name/0` when given a metric struct, so even errored results
+  carry the configured name.
+  """
+  @callback metric_name(metric :: struct()) :: String.t()
 
   @doc """
   Returns the list of required test case parameters for this metric.
@@ -90,7 +103,7 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   """
   @callback default_opts() :: keyword()
 
-  @optional_callbacks [default_opts: 0]
+  @optional_callbacks [default_opts: 0, metric_name: 1]
 
   defmacro __using__(opts \\ []) do
     default_threshold = Keyword.get(opts, :default_threshold, 0.5)

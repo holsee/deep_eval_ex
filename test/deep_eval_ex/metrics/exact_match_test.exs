@@ -15,7 +15,7 @@ defmodule DeepEvalEx.Metrics.ExactMatchTest do
       assert {:ok, result} = ExactMatch.measure(test_case)
       assert result.score == 1.0
       assert result.success == true
-      assert result.metric == "ExactMatch"
+      assert result.metric == "Exact Match"
       assert result.reason =~ "exact match"
     end
 
@@ -106,7 +106,7 @@ defmodule DeepEvalEx.Metrics.ExactMatchTest do
 
   describe "metric_name/0" do
     test "returns correct name" do
-      assert ExactMatch.metric_name() == "ExactMatch"
+      assert ExactMatch.metric_name() == "Exact Match"
     end
   end
 

@@ -45,6 +45,13 @@ end
 | `required_params/0` | Returns list of required TestCase fields |
 | `do_measure/2` | Implements the evaluation logic |
 
+### Optional Callbacks
+
+| Callback | Description |
+|----------|-------------|
+| `metric_name/1` | Returns the name for a configured metric struct (e.g. GEval's `"<name> [GEval]"`); the evaluator prefers it over `metric_name/0`, including for errored results |
+| `default_opts/0` | Returns default options for the metric |
+
 ### What `use BaseMetric` Provides
 
 - `measure/2` wrapper with validation and telemetry

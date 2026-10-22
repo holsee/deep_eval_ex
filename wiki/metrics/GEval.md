@@ -75,6 +75,7 @@ result.success # => true (score >= threshold)
 | `:score_range` | tuple | {0, 10} | Min/max score range |
 | `:strict_mode` | boolean | false | Binary 0/1 scoring |
 | `:model` | tuple/string | default | LLM model to use |
+| `:include_g_eval_suffix` | boolean | true | Name results `"<name> [GEval]"`; when false, just `"<name>"` |
 
 ## Pre-defined Evaluation Steps
 

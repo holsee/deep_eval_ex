@@ -2,7 +2,7 @@ defmodule DeepEvalEx.EvaluatorTest do
   use ExUnit.Case, async: true
 
   alias DeepEvalEx.{Evaluator, Result, TestCase}
-  alias DeepEvalEx.Metrics.ExactMatch
+  alias DeepEvalEx.Metrics.{ExactMatch, GEval}
 
   defmodule SlowMetric do
     @moduledoc false
@@ -81,7 +81,7 @@ defmodule DeepEvalEx.EvaluatorTest do
 
   describe "evaluate/3" do
     test "returns one flat result list per test case" do
-      assert [[%Result{metric: "ExactMatch", success: true}]] =
+      assert [[%Result{metric: "Exact Match", success: true}]] =
                Evaluator.evaluate([test_case()], [ExactMatch])
     end
 
@@ -93,7 +93,7 @@ defmodule DeepEvalEx.EvaluatorTest do
                  metric_timeout: :infinity
                )
 
-      assert [%Result{metric: "SlowMetric"}, %Result{metric: "ExactMatch"}] = results
+      assert [%Result{metric: "SlowMetric"}, %Result{metric: "Exact Match"}] = results
 
       for result <- results do
         assert Result.errored?(result)
@@ -202,8 +202,8 @@ defmodule DeepEvalEx.EvaluatorTest do
       test_case = %{test_case() | name: name}
       Evaluator.evaluate_single(test_case, [ExactMatch, ExactMatch])
 
-      assert_receive {:metric_stop, "ExactMatch"}
-      assert_receive {:metric_stop, "ExactMatch"}
+      assert_receive {:metric_stop, "Exact Match"}
+      assert_receive {:metric_stop, "Exact Match"}
     end
   end
 
@@ -237,6 +237,37 @@ defmodule DeepEvalEx.EvaluatorTest do
     test "errored results use the run-level threshold over the metric default" do
       assert %Result{threshold: 0.3} =
                Evaluator.evaluate_metric(test_case(), FailingMetric, threshold: 0.3)
+    end
+
+    test "errored GEval results carry the configured [GEval] name" do
+      metric =
+        GEval.new(
+          name: "Correctness",
+          criteria: "Is it correct?",
+          evaluation_params: [:input, :actual_output, :expected_output],
+          threshold: 0.6
+        )
+
+      incomplete = %TestCase{input: "Q", actual_output: "A", expected_output: nil}
+
+      assert %Result{metric: "Correctness [GEval]", threshold: 0.6, score: nil} =
+               result = Evaluator.evaluate_metric(incomplete, metric, [])
+
+      assert Result.errored?(result)
+    end
+
+    test "errored GEval results use the bare name when the suffix is disabled" do
+      metric =
+        GEval.new(
+          name: "Correctness",
+          criteria: "Is it correct?",
+          evaluation_params: [:expected_output],
+          include_g_eval_suffix: false
+        )
+
+      incomplete = %TestCase{input: "Q", actual_output: "A", expected_output: nil}
+
+      assert %Result{metric: "Correctness"} = Evaluator.evaluate_metric(incomplete, metric, [])
     end
 
     test "errored results use a metric struct's own threshold" do

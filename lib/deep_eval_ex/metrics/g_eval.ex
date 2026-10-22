@@ -80,6 +80,8 @@ defmodule DeepEvalEx.Metrics.GEval do
   - `:score_range` - Min/max score range (default: {0, 10})
   - `:strict_mode` - Binary 0/1 scoring (default: false)
   - `:model` - LLM model to use for evaluation
+  - `:include_g_eval_suffix` - Name results `"<name> [GEval]"` rather than
+    just `"<name>"` (default: true, as in deepeval)
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
@@ -98,7 +100,8 @@ defmodule DeepEvalEx.Metrics.GEval do
     :threshold,
     :score_range,
     :strict_mode,
-    :model
+    :model,
+    include_g_eval_suffix: true
   ]
 
   @type rubric_entry :: {integer(), String.t()}
@@ -112,7 +115,8 @@ defmodule DeepEvalEx.Metrics.GEval do
           threshold: float(),
           score_range: {integer(), integer()},
           strict_mode: boolean(),
-          model: tuple() | nil
+          model: tuple() | nil,
+          include_g_eval_suffix: boolean()
         }
 
   @doc """
@@ -129,6 +133,7 @@ defmodule DeepEvalEx.Metrics.GEval do
   - `:score_range` - Score range (default: {0, 10})
   - `:strict_mode` - Binary scoring (default: false)
   - `:model` - LLM model (optional, uses default)
+  - `:include_g_eval_suffix` - Append `" [GEval]"` to the name (default: true)
   """
   @spec new(keyword()) :: t()
   def new(opts) do
@@ -152,12 +157,24 @@ defmodule DeepEvalEx.Metrics.GEval do
       threshold: Keyword.get(opts, :threshold, 0.5),
       score_range: Keyword.get(opts, :score_range, {0, 10}),
       strict_mode: Keyword.get(opts, :strict_mode, false),
-      model: Keyword.get(opts, :model)
+      model: Keyword.get(opts, :model),
+      include_g_eval_suffix: Keyword.get(opts, :include_g_eval_suffix, true)
     }
   end
 
   @impl true
   def metric_name, do: "GEval"
+
+  @doc """
+  Returns the name results of this configured metric carry.
+
+  Mirrors deepeval's `GEval.__name__`: `"<name> [GEval]"`, or just
+  `"<name>"` when `:include_g_eval_suffix` is false.
+  """
+  @impl true
+  @spec metric_name(t()) :: String.t()
+  def metric_name(%__MODULE__{name: name, include_g_eval_suffix: true}), do: "#{name} [GEval]"
+  def metric_name(%__MODULE__{name: name}), do: name
 
   @impl true
   def required_params, do: []
@@ -233,7 +250,7 @@ defmodule DeepEvalEx.Metrics.GEval do
 
           {:ok,
            Result.new(
-             metric: "#{metric.name} [GEval]",
+             metric: metric_name(metric),
              score: normalized_score,
              threshold: threshold,
              reason: reason,
