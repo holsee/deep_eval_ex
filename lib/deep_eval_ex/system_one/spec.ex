@@ -3,7 +3,8 @@ defmodule DeepEvalEx.SystemOne.Spec do
   What a metric asks a System One model at one of its `:hybrid` decision
   points, ports of deepeval 4.3.1's `SystemOneBinarySpec`,
   `SystemOneChoiceSpec` and `SystemOneScoreSpec`
-  (`deepeval/metrics/utils/decision.py`).
+  (`deepeval/metrics/utils/decision.py`) and `SystemOneVerdictSpec`
+  (`deepeval/metrics/utils/qag.py`).
 
   A metric builds a spec next to the LLM prompt the decision would
   otherwise take, and hands it to `DeepEvalEx.SystemOne.Decision`:
@@ -14,6 +15,8 @@ defmodule DeepEvalEx.SystemOne.Spec do
     (`DeepEvalEx.SystemOne.Decision.choice/2`)
   - `DeepEvalEx.SystemOne.Spec.Score` - one of the ordered `levels`
     (`DeepEvalEx.SystemOne.Decision.score/2`)
+  - `DeepEvalEx.SystemOne.Spec.Verdicts` - one QAG verdict per item
+    (`DeepEvalEx.SystemOne.Decision.verdicts/3`)
 
   ## State
 
@@ -77,5 +80,35 @@ defmodule DeepEvalEx.SystemOne.Spec do
           }
 
     defstruct [:instructions, :levels, state: []]
+  end
+
+  defmodule Verdicts do
+    @moduledoc """
+    A QAG decision, one verdict per item, deepeval's `SystemOneVerdictSpec`:
+    asked as one Noul per item whose instructions are
+    `{item_key: item, "question": instructions}`.
+
+    - `items` - what the verdicts are about (claims, statements, nodes...),
+      in order; sent in the state under `"<item_key>s"`
+    - `item_key` - the singular name of an item, e.g. `"claim"`; the
+      questions are keyed `"<item_key>_<i>"`
+    - `state` - the rest of the state, see `DeepEvalEx.SystemOne.Spec`
+    - `criteria` - `{true, false}`, what each outcome means, sent as every
+      Noul's `true` and `false`, or `nil`
+    - `build_verdict` - a function of the item, its verdict and P(yes)
+      that builds the item's verdict, or `nil` for
+      `%{verdict: verdict, reason: "P(yes)=0.91"}`
+    """
+
+    @type t :: %__MODULE__{
+            instructions: term(),
+            items: [term()],
+            item_key: String.t(),
+            state: DeepEvalEx.SystemOne.Spec.state(),
+            criteria: {term(), term()} | nil,
+            build_verdict: (term(), DeepEvalEx.Metrics.QAG.verdict(), number() -> term()) | nil
+          }
+
+    defstruct [:instructions, :items, :item_key, state: [], criteria: nil, build_verdict: nil]
   end
 end

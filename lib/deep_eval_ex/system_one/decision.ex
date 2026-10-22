@@ -1,9 +1,10 @@
 defmodule DeepEvalEx.SystemOne.Decision do
   @moduledoc """
   The `:hybrid` decision points of a metric: where a metric that still
-  extracts with its LLM asks a System One model for one decision instead.
+  extracts with its LLM asks a System One model for its decisions instead.
   A port of the System One helpers of deepeval 4.3.1's
-  `deepeval/metrics/utils/decision.py`.
+  `deepeval/metrics/utils/decision.py` and of the System One section of
+  `deepeval/metrics/utils/qag.py`.
 
   Each helper takes a `DeepEvalEx.SystemOne.Spec` (or `nil`, for a
   decision with no System One form) and the options `do_measure/2` got,
@@ -16,6 +17,13 @@ defmodule DeepEvalEx.SystemOne.Decision do
     `DeepEvalEx.SystemOne.Spec.Choice`
   - `score/2` - a `DeepEvalEx.SystemOne.Spec.Score` on `0..1`, deepeval's
     `system_one_score`
+  - `verdicts/3` - one QAG verdict per item of a
+    `DeepEvalEx.SystemOne.Spec.Verdicts`, the System One branch of
+    deepeval's `generate_qag_verdicts`
+
+  `verdict_from_probability/2` thresholds a P(yes) into a QAG vocabulary,
+  and `split_sentences/1` splits a text into the sentences a metric asks
+  verdicts about when its LLM prompt would split and judge in one step.
 
   `format_reason/3` writes the reason that stands in for the LLM's when
   the model made a decision the LLM would have explained.
@@ -33,7 +41,8 @@ defmodule DeepEvalEx.SystemOne.Decision do
   `DeepEvalEx.DeepEvalError`, as deepeval does.
 
   A decision asks one question keyed `"verdict"` about the spec's state, in
-  one request through `DeepEvalEx.SystemOne.decide/3`. The request's usage
+  one request through `DeepEvalEx.SystemOne.decide/3`; `verdicts/3` asks one
+  question per item in one request, and none for no items. The request's usage
   is booked in the measure's usage scope and its confidence folded into the
   measure's (the minimum, see `DeepEvalEx.SystemOne.Ledger`). As in
   deepeval, these helpers do not pre-check the context budget: a request
@@ -74,6 +83,7 @@ defmodule DeepEvalEx.SystemOne.Decision do
 
   alias DeepEvalEx.{ContextWindowExceededError, DeepEvalError, SystemOne}
   alias DeepEvalEx.LLM.Usage
+  alias DeepEvalEx.Metrics.QAG
   alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.SystemOne.{Answers, Context, Error, Ledger, Model, Question, Spec}
   alias Jason.OrderedObject
@@ -81,13 +91,22 @@ defmodule DeepEvalEx.SystemOne.Decision do
   # The key of a decision's one question.
   @key "verdict"
 
+  # deepeval's SYSTEM_ONE_YES_THRESHOLD and SYSTEM_ONE_BORDERLINE_LOW/HIGH.
+  @yes_threshold 0.5
+  @borderline_low 0.35
+  @borderline_high 0.65
+
+  # deepeval's _SENTENCE_END.
+  @sentence_end ~r/(?<=[.!?])\s+/u
+
   @doc """
   P(yes) of a yes/no decision, from `0.0` to `1.0`, or `:llm`. Asks one
   Noul with the spec's instructions.
   """
   @spec probability(Spec.Binary.t() | nil, keyword()) :: {:ok, number()} | :llm
   def probability(spec, opts) do
-    with {:ok, %Answers.Noul{probability: probability}} <- ask(spec, opts, :nouls),
+    with {:ok, answers} <- ask(spec, opts, :nouls),
+         %Answers.Noul{probability: probability} <- Map.fetch!(answers, @key),
          do: {:ok, probability}
   end
 
@@ -97,7 +116,9 @@ defmodule DeepEvalEx.SystemOne.Decision do
   Choice whose options have no descriptions.
   """
   @spec choice(Spec.Choice.t() | nil, keyword()) :: {:ok, Answers.Choice.t()} | :llm
-  def choice(spec, opts), do: ask(spec, opts, :choices)
+  def choice(spec, opts) do
+    with {:ok, answers} <- ask(spec, opts, :choices), do: {:ok, Map.fetch!(answers, @key)}
+  end
 
   @doc """
   A graded decision on `0..1` (the chosen level index over the highest,
@@ -106,8 +127,110 @@ defmodule DeepEvalEx.SystemOne.Decision do
   """
   @spec score(Spec.Score.t() | nil, keyword()) :: {:ok, float()} | :llm
   def score(spec, opts) do
-    with {:ok, %Answers.Score{} = answer} <- ask(spec, opts, :scores),
+    with {:ok, answers} <- ask(spec, opts, :scores),
+         %Answers.Score{} = answer <- Map.fetch!(answers, @key),
          do: {:ok, Answers.normalized(answer)}
+  end
+
+  @doc """
+  One QAG verdict per item of the spec, in order, or `:llm`: the System One
+  branch of deepeval's `generate_qag_verdicts`.
+
+  Asks one Noul per item, keyed `"<item_key>_<i>"`, whose instructions are
+  `{item_key: item, "question": instructions}`, about the spec's state plus
+  `"<item_key>s"`: the items (replacing a state key of that name in place).
+  No items is `{:ok, []}`, with no request. Each P(yes) becomes a verdict in
+  `allowed` (`verdict_from_probability/2`), and each verdict is
+  `%{verdict: verdict, reason: "P(yes)=0.91"}` unless the spec's
+  `build_verdict` builds it.
+
+  An item with no answer raises deepeval's "System One model returned no
+  answer for claim 1." `DeepEvalEx.DeepEvalError`, never a fallback.
+
+  ## Examples
+
+      spec = %DeepEvalEx.SystemOne.Spec.Verdicts{
+        instructions: "Is `claim` supported by the facts in `retrieval_context`?",
+        items: claims,
+        item_key: "claim",
+        state: [retrieval_context: truths]
+      }
+
+      case DeepEvalEx.SystemOne.Decision.verdicts(spec, QAG.yes_no_borderline(), opts) do
+        {:ok, verdicts} -> {:ok, verdicts}
+        :llm -> llm_verdicts(claims, truths, opts)
+      end
+  """
+  @spec verdicts(Spec.Verdicts.t() | nil, [QAG.verdict()], keyword()) :: {:ok, [term()]} | :llm
+  def verdicts(spec, allowed, opts) when is_list(allowed) do
+    with {:ok, answers} <- ask(spec, opts, :nouls) do
+      %Spec.Verdicts{items: items, item_key: item_key, build_verdict: build} = spec
+
+      verdicts =
+        for {item, i} <- Enum.with_index(items) do
+          probability =
+            case Map.fetch(answers, "#{item_key}_#{i}") do
+              {:ok, %Answers.Noul{probability: probability}} ->
+                probability
+
+              :error ->
+                raise DeepEvalError,
+                  message: "System One model returned no answer for #{item_key} #{i}."
+            end
+
+          verdict = verdict_from_probability(probability, allowed)
+
+          if build,
+            do: build.(item, verdict, probability),
+            else: %{verdict: verdict, reason: "P(yes)=#{Python.format_fixed(probability, 2)}"}
+        end
+
+      {:ok, verdicts}
+    end
+  end
+
+  @doc """
+  Thresholds a P(yes) into a verdict of `allowed`, deepeval's
+  `verdict_from_probability`. With `:borderline` in `allowed`, above `0.65`
+  is `:yes`, below `0.35` is `:no` and anything between is `:borderline`;
+  without it, `0.5` and above is `:yes`.
+
+  ## Examples
+
+      iex> DeepEvalEx.SystemOne.Decision.verdict_from_probability(0.5, [:yes, :no, :borderline])
+      :borderline
+
+      iex> DeepEvalEx.SystemOne.Decision.verdict_from_probability(0.5, [:yes, :no])
+      :yes
+  """
+  @spec verdict_from_probability(number(), [QAG.verdict()]) :: QAG.verdict()
+  def verdict_from_probability(probability, allowed \\ QAG.yes_no())
+      when is_number(probability) and is_list(allowed) do
+    cond do
+      :borderline not in allowed -> if probability >= @yes_threshold, do: :yes, else: :no
+      probability > @borderline_high -> :yes
+      probability < @borderline_low -> :no
+      true -> :borderline
+    end
+  end
+
+  @doc """
+  Splits a text into sentences after `.`, `!` or `?` and whitespace,
+  deepeval's `split_sentences`: each sentence trimmed, empty ones dropped.
+  Under `:hybrid` a metric whose LLM prompt splits and judges in one step
+  splits with this instead, so the System One model judges each sentence.
+
+  ## Examples
+
+      iex> DeepEvalEx.SystemOne.Decision.split_sentences("Pi is 3.14. It never ends!  Right?")
+      ["Pi is 3.14.", "It never ends!", "Right?"]
+  """
+  @spec split_sentences(String.t() | nil) :: [String.t()]
+  def split_sentences(text) do
+    for sentence <- Regex.split(@sentence_end, text || ""),
+        sentence = String.trim(sentence),
+        sentence != "",
+        do: sentence
   end
 
   @doc """
@@ -198,30 +321,35 @@ defmodule DeepEvalEx.SystemOne.Decision do
     end
   end
 
+  # The answers of one kind to the spec's questions, {:ok, %{key => answer}},
+  # or :llm. deepeval's _system_one_active, then its request, booking and
+  # failure handling.
   defp ask(spec, opts, kind) do
-    if active?(spec, opts) do
-      %Context{mode: mode, model: model} = context(opts)
-      {state, question} = request(spec)
+    if active?(spec, opts), do: call(spec, opts, kind), else: :llm
+  end
 
-      decided =
-        SystemOne.decide(state, [{@key, question}],
-          system_one_model: model,
-          mode: mode,
-          metrics: List.wrap(Keyword.get(opts, :metric_name))
-        )
+  defp call(%Spec.Verdicts{items: []}, _opts, _kind), do: {:ok, %{}}
 
-      case decided do
-        {:ok, answers, usage} ->
-          answers = Map.fetch!(answers, kind)
-          book(usage)
-          Ledger.record_confidence(answers)
-          {:ok, Map.fetch!(answers, @key)}
+  defp call(spec, opts, kind) do
+    %Context{mode: mode, model: model} = context(opts)
+    {state, questions} = request(spec)
 
-        {:error, error} ->
-          handle_failure(error, opts)
-      end
-    else
-      :llm
+    decided =
+      SystemOne.decide(state, questions,
+        system_one_model: model,
+        mode: mode,
+        metrics: List.wrap(Keyword.get(opts, :metric_name))
+      )
+
+    case decided do
+      {:ok, answers, usage} ->
+        answers = Map.fetch!(answers, kind)
+        book(usage)
+        Ledger.record_confidence(answers)
+        {:ok, answers}
+
+      {:error, error} ->
+        handle_failure(error, opts)
     end
   end
 
@@ -252,20 +380,49 @@ defmodule DeepEvalEx.SystemOne.Decision do
   end
 
   defp request(%Spec.Binary{instructions: instructions, state: state}),
-    do: {state(state), %Question.Noul{instructions: instructions}}
+    do: {state(state), [{@key, %Question.Noul{instructions: instructions}}]}
 
   defp request(%Spec.Choice{instructions: instructions, options: options, state: state}),
     do:
       {state(state),
-       %Question.Choice{instructions: instructions, options: Enum.map(options, &{&1, nil})}}
+       [
+         {@key,
+          %Question.Choice{instructions: instructions, options: Enum.map(options, &{&1, nil})}}
+       ]}
 
   defp request(%Spec.Score{instructions: instructions, levels: levels, state: state}),
-    do: {state(state), %Question.Score{instructions: instructions, levels: levels}}
+    do: {state(state), [{@key, %Question.Score{instructions: instructions, levels: levels}}]}
+
+  # deepeval's _system_one_request.
+  defp request(%Spec.Verdicts{item_key: item_key} = spec) do
+    item_key = to_string(item_key)
+    {yes, no} = spec.criteria || {nil, nil}
+
+    questions =
+      for {item, i} <- Enum.with_index(spec.items) do
+        instructions = OrderedObject.new([{item_key, item}, {"question", spec.instructions}])
+        {"#{item_key}_#{i}", %Question.Noul{instructions: instructions, true: yes, false: no}}
+      end
+
+    {put_state(state(spec.state), item_key <> "s", spec.items), questions}
+  end
 
   defp state(state) when is_map(state), do: state
 
   defp state(pairs) when is_list(pairs),
     do: OrderedObject.new(for {key, value} <- pairs, do: {to_string(key), value})
+
+  # Python's {**state, key: value}: an existing key keeps its place.
+  defp put_state(%OrderedObject{values: values}, key, value) do
+    values =
+      if List.keymember?(values, key, 0),
+        do: List.keyreplace(values, key, 0, {key, value}),
+        else: values ++ [{key, value}]
+
+    OrderedObject.new(values)
+  end
+
+  defp put_state(state, key, value) when is_map(state), do: Map.put(state, key, value)
 
   # An unpriced request (nil) voids the measure's summed cost, as deepeval's
   # _accrue_cost(None).

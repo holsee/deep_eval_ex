@@ -209,6 +209,25 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     An exception that is not a System One error always propagates.
   - `Decision.format_reason/3`, deepeval's `format_decision_reason`:
     `"Decided by fake-jev: tool selection 0.75, confidence 0.25."`.
+- **QAG verdicts via System One** (ADR-0009), a port of the System One
+  section of deepeval 4.3.1's `metrics/utils/qag.py`. No built-in metric
+  calls it yet.
+  - `DeepEvalEx.SystemOne.Spec.Verdicts` (deepeval's `SystemOneVerdictSpec`)
+    describes one verdict per item: the question, the items and their
+    `item_key`, the rest of the state, optional `{true, false}` criteria and
+    an optional `build_verdict` function.
+  - `Decision.verdicts/3` asks one Noul per item, keyed `"<item_key>_<i>"`
+    with instructions `{item_key: item, "question": ...}`, about the state
+    plus `"<item_key>s"`: the items. It returns `{:ok, verdicts}` with
+    `%{verdict: verdict, reason: "P(yes)=0.91"}` per item, `{:ok, []}` with
+    no request for no items, or `:llm` as the other helpers do. An item
+    with no answer raises deepeval's "System One model returned no answer
+    for claim 1." `DeepEvalError`.
+  - `Decision.verdict_from_probability/2`: with `:borderline` in the
+    vocabulary, above `0.65` is `:yes`, below `0.35` is `:no` and anything
+    between is `:borderline`; without it, `0.5` and above is `:yes`.
+  - `Decision.split_sentences/1`, deepeval's `split_sentences`: splits after
+    `.`, `!` or `?` and whitespace, trimming and dropping empty sentences.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in

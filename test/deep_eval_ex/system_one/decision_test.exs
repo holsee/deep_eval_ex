@@ -3,6 +3,7 @@ defmodule DeepEvalEx.SystemOne.DecisionTest do
 
   alias DeepEvalEx.{ContextWindowExceededError, DeepEvalError}
   alias DeepEvalEx.LLM.Usage
+  alias DeepEvalEx.Metrics.QAG
   alias DeepEvalEx.SystemOne.Adapters.Mock
   alias DeepEvalEx.SystemOne.{Answers, Context, Decision, Error, Ledger, Model, Question, Spec}
   alias DeepEvalEx.TestRun.JSON
@@ -391,6 +392,211 @@ defmodule DeepEvalEx.SystemOne.DecisionTest do
     end
   end
 
+  describe "verdicts/3" do
+    @claims %Spec.Verdicts{
+      instructions: "Is `claim` supported by `retrieval_context`?",
+      items: ["Claim A.", "Claim B.", "Claim C."],
+      item_key: "claim",
+      state: [retrieval_context: ["Fact."]]
+    }
+
+    test "asks one Noul per item, keyed <item_key>_<i>, about the state plus the items" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.9))
+
+      measure(fn -> Decision.verdicts(@claims, QAG.yes_no(), opts(:hybrid, mock)) end)
+
+      assert [call] = Mock.calls(mock)
+
+      assert call.state ==
+               OrderedObject.new([
+                 {"retrieval_context", ["Fact."]},
+                 {"claims", ["Claim A.", "Claim B.", "Claim C."]}
+               ])
+
+      assert call.questions ==
+               for(
+                 {claim, i} <- Enum.with_index(@claims.items),
+                 do:
+                   {"claim_#{i}",
+                    %Question.Noul{
+                      instructions:
+                        OrderedObject.new([
+                          {"claim", claim},
+                          {"question", "Is `claim` supported by `retrieval_context`?"}
+                        ])
+                    }}
+               )
+    end
+
+    test "thresholds each P(yes) into the vocabulary, with a P(yes)=0.xx reason" do
+      mock =
+        Mock.new(
+          answers: %Answers{
+            nouls: %{
+              "claim_0" => %Answers.Noul{probability: 0.95},
+              "claim_1" => %Answers.Noul{probability: 0.5},
+              "claim_2" => %Answers.Noul{probability: 0.1}
+            }
+          }
+        )
+
+      assert {{:ok, verdicts}, [%Usage{source: :system_one}], ledger} =
+               measure(fn ->
+                 Decision.verdicts(@claims, QAG.yes_no_borderline(), opts(:hybrid, mock))
+               end)
+
+      assert verdicts == [
+               %{verdict: :yes, reason: "P(yes)=0.95"},
+               %{verdict: :borderline, reason: "P(yes)=0.50"},
+               %{verdict: :no, reason: "P(yes)=0.10"}
+             ]
+
+      assert ledger.confidence == 0.0
+    end
+
+    test "builds each verdict with the spec's build_verdict" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.75))
+      spec = %{@claims | build_verdict: &%{claim: &1, verdict: &2, p: &3}}
+
+      assert {{:ok, [first | _]}, _usages, _ledger} =
+               measure(fn -> Decision.verdicts(spec, QAG.yes_no(), opts(:hybrid, mock)) end)
+
+      assert first == %{claim: "Claim A.", verdict: :yes, p: 0.75}
+    end
+
+    test "sends the spec's criteria as each Noul's true and false" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.9))
+      spec = %{@claims | criteria: {"supported", "unsupported"}}
+
+      measure(fn -> Decision.verdicts(spec, QAG.yes_no(), opts(:hybrid, mock)) end)
+
+      assert [call] = Mock.calls(mock)
+
+      assert Enum.all?(
+               call.questions,
+               &match?({_key, %Question.Noul{true: "supported", false: "unsupported"}}, &1)
+             )
+    end
+
+    test "replaces a state key named like the items in place" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.9))
+      spec = %{@claims | state: [claims: "stale", retrieval_context: ["Fact."]]}
+
+      measure(fn -> Decision.verdicts(spec, QAG.yes_no(), opts(:hybrid, mock)) end)
+
+      assert [call] = Mock.calls(mock)
+
+      assert call.state ==
+               OrderedObject.new([
+                 {"claims", ["Claim A.", "Claim B.", "Claim C."]},
+                 {"retrieval_context", ["Fact."]}
+               ])
+    end
+
+    test "decides no items with no request" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.9))
+      spec = %{@claims | items: []}
+
+      assert {{:ok, []}, [], %Ledger{confidence: nil}} =
+               measure(fn -> Decision.verdicts(spec, QAG.yes_no(), opts(:hybrid, mock)) end)
+
+      assert Mock.calls(mock) == []
+    end
+
+    test "is :llm under the llm mode or without a spec" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.9))
+
+      assert Decision.verdicts(@claims, QAG.yes_no(), opts(:llm, nil)) == :llm
+      assert Decision.verdicts(nil, QAG.yes_no(), opts(:hybrid, mock)) == :llm
+      assert Mock.calls(mock) == []
+    end
+
+    test "raises deepeval's error when an item has no answer" do
+      mock =
+        Mock.new(answers: %Answers{nouls: %{"claim_0" => %Answers.Noul{probability: 0.9}}})
+
+      assert_raise DeepEvalError, "System One model returned no answer for claim 1.", fn ->
+        measure(fn -> Decision.verdicts(@claims, QAG.yes_no(), opts(:hybrid, mock)) end)
+      end
+    end
+
+    test "falls back to the LLM when the request fails under hybrid" do
+      mock = Mock.new(raises: @jev_down)
+
+      {result, _usages, ledger} =
+        measure(fn -> Decision.verdicts(@claims, QAG.yes_no(), opts(:hybrid, mock)) end)
+
+      assert result == :llm
+      assert Ledger.fallback_reason(ledger) == "ConnectionError: Jev is down"
+    end
+  end
+
+  describe "verdict_from_probability/2" do
+    test "with borderline: above 0.65 is yes, below 0.35 is no, otherwise borderline" do
+      allowed = QAG.yes_no_borderline()
+
+      assert Decision.verdict_from_probability(0.66, allowed) == :yes
+      assert Decision.verdict_from_probability(0.65, allowed) == :borderline
+      assert Decision.verdict_from_probability(0.5, allowed) == :borderline
+      assert Decision.verdict_from_probability(0.35, allowed) == :borderline
+      assert Decision.verdict_from_probability(0.34, allowed) == :no
+    end
+
+    test "without borderline: 0.5 and above is yes" do
+      assert Decision.verdict_from_probability(0.5, QAG.yes_no()) == :yes
+      assert Decision.verdict_from_probability(0.49, QAG.yes_no()) == :no
+      assert Decision.verdict_from_probability(0.65) == :yes
+      assert Decision.verdict_from_probability(0.35) == :no
+    end
+  end
+
+  describe "split_sentences/1" do
+    test "splits after sentence-ending punctuation and drops empty sentences" do
+      assert Decision.split_sentences("One. Two!  Three?\nFour") ==
+               ["One.", "Two!", "Three?", "Four"]
+
+      assert Decision.split_sentences("  Pi is 3.14 exactly.   ") == ["Pi is 3.14 exactly."]
+      assert Decision.split_sentences("") == []
+      assert Decision.split_sentences(nil) == []
+    end
+  end
+
+  # deepeval's QAG metrics ask their verdicts through generate_qag_verdicts:
+  # replaying each hybrid fixture's recorded request through verdicts/3 must
+  # ask the same questions and reach the same verdicts and reasons.
+  describe "QAG verdict hybrid fixtures" do
+    for {scenario, allowed} <- [
+          {"answer_relevancy_hybrid", :yes_no_borderline},
+          {"contextual_precision_hybrid", :yes_no},
+          {"contextual_recall_hybrid", :yes_no},
+          {"faithfulness_hybrid", :yes_no_borderline},
+          {"hallucination_hybrid", :yes_no}
+        ] do
+      test "#{scenario} decides each item as deepeval does" do
+        fixture = verdicts_fixture(unquote(scenario))
+        mock = Mock.from_fixture(fixture.input["system_one"])
+        allowed = apply(QAG, unquote(allowed), [])
+
+        {{:ok, verdicts}, _usages, ledger} =
+          measure(fn -> Decision.verdicts(fixture.spec, allowed, opts(:hybrid, mock)) end)
+
+        [measured] = fixture.measure
+        assert ledger.confidence == measured["confidence"]
+        assert dump(Mock.dump_calls(mock)) == dump(hd(fixture.decide["measure"]))
+
+        assert Enum.map(verdicts, &[Atom.to_string(&1.verdict), &1.reason]) ==
+                 logged_verdicts(measured["verbose_logs"])
+      end
+    end
+
+    test "contextual recall's sentences are split_sentences of expected_output" do
+      fixture = verdicts_fixture("contextual_recall_hybrid")
+
+      assert Decision.split_sentences(fixture.input["test_case"]["expected_output"]) ==
+               fixture.spec.items
+    end
+  end
+
   # deepeval's ToolCorrectness asks its tool-selection Score through
   # system_one_score: replaying the fixture's recorded request through
   # score/2 must ask the same question and decide the same way.
@@ -454,6 +660,39 @@ defmodule DeepEvalEx.SystemOne.DecisionTest do
         state: call["state"]
       }
     }
+  end
+
+  # The spec of a QAG fixture's one recorded request: the items are the last
+  # state key (the item key plus "s"), the rest of the state is the spec's.
+  defp verdicts_fixture(scenario) do
+    load = fn file ->
+      [@fixtures, scenario, file]
+      |> Path.join()
+      |> File.read!()
+      |> Jason.decode!(objects: :ordered_objects)
+    end
+
+    decide = load.("decide.json")
+    [[call]] = decide["measure"]
+    {state, [{items_key, items}]} = Enum.split(call["state"].values, -1)
+    [{_key, question} | _] = call["questions"].values
+
+    %{
+      input: load.("input.json"),
+      decide: decide,
+      measure: load.("measure.json"),
+      spec: %Spec.Verdicts{
+        instructions: question["instructions"]["question"],
+        items: items,
+        item_key: String.replace_suffix(items_key, "s", ""),
+        state: state
+      }
+    }
+  end
+
+  defp logged_verdicts(verbose_logs) do
+    [_, verdicts] = String.split(verbose_logs, "Verdicts:\n")
+    for v <- Jason.decode!(verdicts), do: [v["verdict"], v["reason"]]
   end
 
   defp dump(calls), do: JSON.encode!(calls, indent: 2, ensure_ascii: false)
