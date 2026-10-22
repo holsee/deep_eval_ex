@@ -25,6 +25,16 @@ defmodule DeepEvalEx.LLM.PricingTest do
       assert Pricing.price("o3-mini") == %{input: 1.10, output: 4.40}
     end
 
+    test "returns deepeval's per-1M-token prices for known Anthropic models" do
+      assert Pricing.price("claude-opus-5") == %{input: 5.00, output: 25.00}
+      assert Pricing.price("claude-opus-5-5") == %{input: 4.00, output: 20.00}
+      assert Pricing.price("claude-sonnet-5") == %{input: 2.00, output: 10.00}
+      assert Pricing.price("claude-haiku-4-5-20251001") == %{input: 1.00, output: 5.00}
+      assert Pricing.price("claude-3-haiku-20240307") == %{input: 0.25, output: 1.25}
+      assert Pricing.price("claude-3-5-haiku-latest") == %{input: 0.80, output: 4.00}
+      assert Pricing.price("claude-fable-5-1") == %{input: 10.00, output: 50.00}
+    end
+
     test "returns nil for unknown models and models deepeval leaves unpriced" do
       assert Pricing.price("my-local-llama") == nil
       assert Pricing.price("o1-mini") == nil

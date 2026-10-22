@@ -11,7 +11,7 @@ DeepEvalEx uses adapters to abstract away differences between LLM providers. The
 | Adapter | Module | Status |
 |---------|--------|--------|
 | OpenAI | `DeepEvalEx.LLM.Adapters.OpenAI` | Implemented |
-| Anthropic | `DeepEvalEx.LLM.Adapters.Anthropic` | Planned |
+| Anthropic | `DeepEvalEx.LLM.Adapters.Anthropic` | Implemented |
 | Ollama | `DeepEvalEx.LLM.Adapters.Ollama` | Planned |
 | Mock | `DeepEvalEx.LLM.Adapters.Mock` | For testing |
 
@@ -134,6 +134,86 @@ end)
 )
 ```
 
+## Anthropic Adapter
+
+### Configuration
+
+```elixir
+config :deep_eval_ex,
+  anthropic_api_key: System.get_env("ANTHROPIC_API_KEY"),
+  anthropic_base_url: "https://api.anthropic.com",  # optional
+  anthropic_temperature: 0.0                         # optional, unset by default
+```
+
+The API key comes from `:api_key`, then `:anthropic_api_key`, then the
+`ANTHROPIC_API_KEY` environment variable.
+
+### Base URL
+
+Requests go to `{base_url}/v1/messages`. The base URL is resolved in this
+order, with a trailing slash stripped:
+
+1. `:base_url` option
+2. `:anthropic_base_url` application config
+3. `ANTHROPIC_BASE_URL` environment variable
+4. `"https://api.anthropic.com"`
+
+### Request Parameters
+
+Defaults mirror deepeval's `AnthropicModel`:
+
+- `model` defaults to `"claude-opus-5"`.
+- `max_tokens` defaults to `8192`, or `4096` for Claude 3 models
+  (`claude-3-opus`, `claude-3-sonnet`, `claude-3-haiku`), which reject more.
+- `temperature` comes from `:temperature`, then the `:anthropic_temperature`
+  config, and is otherwise omitted (Anthropic's own default applies). It is
+  never sent to models that reject it (`claude-opus-4-7`, `claude-opus-4-8`,
+  `claude-opus-5`, `claude-opus-5-5`, `claude-sonnet-5`, `claude-fable-5`,
+  `claude-fable-5-1`).
+- Models that support extended thinking get `thinking: %{type: "disabled"}`.
+
+### Structured Outputs
+
+`generate_with_schema/3` sends the JSON schema as the `input_schema` of a
+single `"response"` tool and forces it with
+`tool_choice: %{type: "tool", name: "response"}`. The `tool_use` block's
+`input` is returned as a map with string keys, the same shape the OpenAI
+adapter returns.
+
+### Testing
+
+```elixir
+Req.Test.stub(DeepEvalEx.LLM.Adapters.Anthropic, fn conn ->
+  Req.Test.json(conn, %{"content" => [%{"type" => "text", "text" => "4"}]})
+end)
+
+{:ok, "4"} =
+  DeepEvalEx.LLM.Adapters.Anthropic.generate("What is 2+2?",
+    api_key: "sk-ant-test",
+    req_options: [plug: {Req.Test, DeepEvalEx.LLM.Adapters.Anthropic}]
+  )
+```
+
+### Features
+
+| Feature | Supported |
+|---------|-----------|
+| Structured Outputs | Yes (forced tool use) |
+| Log Probabilities | No |
+| Multimodal | No |
+
+### Usage
+
+```elixir
+{:ok, result} = Faithfulness.measure(test_case,
+  adapter: :anthropic,
+  model: "claude-haiku-4-5"
+)
+```
+
+Token usage (`usage.input_tokens` / `usage.output_tokens`) is recorded and
+priced with deepeval's Anthropic price table.
+
 ## Mock Adapter
 
 For testing without API calls:
@@ -224,11 +304,12 @@ Options passed to adapter functions:
 | Option | Description |
 |--------|-------------|
 | `:model` | Model name/identifier |
-| `:temperature` | Sampling temperature (0.0-2.0); OpenAI adapter defaults to `0.0` |
-| `:max_completion_tokens` | Maximum tokens in response (`:max_tokens` is an alias) |
+| `:temperature` | Sampling temperature (0.0-2.0); OpenAI adapter defaults to `0.0`, Anthropic omits it unless set |
+| `:max_completion_tokens` | Maximum tokens in response, OpenAI (`:max_tokens` is an alias) |
+| `:max_tokens` | Maximum tokens in response, Anthropic |
 | `:api_key` | API key (overrides config) |
-| `:base_url` | API base URL (OpenAI adapter) |
-| `:req_options` | Extra `Req` options (OpenAI adapter) |
+| `:base_url` | API base URL (OpenAI and Anthropic adapters) |
+| `:req_options` | Extra `Req` options (OpenAI and Anthropic adapters) |
 
 ```elixir
 {:ok, response} = Adapter.generate(prompt,

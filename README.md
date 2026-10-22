@@ -101,7 +101,7 @@ See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation 
 DeepEvalEx supports multiple LLM providers:
 
 - **OpenAI** - GPT-4o, GPT-4o-mini, GPT-3.5-turbo
-- **Anthropic** - Claude 3 family (planned)
+- **Anthropic** - Claude Opus, Sonnet and Haiku via the Messages API
 - **Ollama** - Local models (planned)
 
 See [LLM Adapters](wiki/api/LLM-Adapters.md) and [Custom LLM Adapters](wiki/guides/Custom-LLM-Adapters.md) for details.

@@ -50,7 +50,7 @@ defmodule DeepEvalEx do
   Supports multiple LLM backends:
 
   - OpenAI (gpt-4o, gpt-4o-mini, gpt-3.5-turbo)
-  - Anthropic (claude-3-opus, claude-3-sonnet, claude-3-haiku)
+  - Anthropic (claude-opus-5, claude-sonnet-4-6, claude-haiku-4-5, ...)
   - Ollama (local models)
 
   ## Configuration

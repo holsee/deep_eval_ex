@@ -2,10 +2,11 @@ defmodule DeepEvalEx.LLM.Pricing do
   @moduledoc """
   Per-model token prices used to compute `DeepEvalEx.Result` evaluation costs.
 
-  Prices are USD per 1M tokens. The built-in table mirrors the OpenAI prices in
-  deepeval's model registry (`deepeval/models/llms/constants.py`). A model that
-  is not priced has a `nil` cost: DeepEvalEx never guesses a price, just as
-  deepeval leaves `evaluation_cost` as `None` for models it cannot price.
+  Prices are USD per 1M tokens. The built-in table mirrors the OpenAI and
+  Anthropic prices in deepeval's model registry
+  (`deepeval/models/llms/constants.py`). A model that is not priced has a
+  `nil` cost: DeepEvalEx never guesses a price, just as deepeval leaves
+  `evaluation_cost` as `None` for models it cannot price.
 
   ## Overriding prices
 
@@ -80,6 +81,50 @@ defmodule DeepEvalEx.LLM.Pricing do
     "gpt-6-luna" => {0.10, 0.50}
   }
 
+  # USD per 1M tokens, copied from deepeval 4.3.1's ANTHROPIC_MODELS_DATA.
+  @anthropic_prices %{
+    "claude-3-opus-20240229" => {15.00, 75.00},
+    "claude-3-sonnet-20240229" => {3.00, 15.00},
+    "claude-3-haiku-20240307" => {0.25, 1.25},
+    "claude-3-5-sonnet-20240620" => {3.00, 15.00},
+    "claude-3-5-sonnet-20241022" => {3.00, 15.00},
+    "claude-3-5-haiku-20241022" => {0.80, 4.00},
+    "claude-3-7-sonnet-20250219" => {3.00, 15.00},
+    "claude-opus-4-20250514" => {15.00, 75.00},
+    "claude-opus-4-1-20250805" => {15.00, 75.00},
+    "claude-sonnet-4-20250514" => {3.00, 15.00},
+    "claude-sonnet-4-5-20250929" => {3.00, 15.00},
+    "claude-haiku-4-5-20251001" => {1.00, 5.00},
+    "claude-opus-4-5-20251124" => {5.00, 25.00},
+    "claude-opus-4-6-20250610" => {5.00, 25.00},
+    "claude-sonnet-4-6-20250514" => {3.00, 15.00},
+    "claude-3-opus" => {15.00, 75.00},
+    "claude-3-sonnet" => {3.00, 15.00},
+    "claude-3-haiku" => {0.25, 1.25},
+    "claude-3-5-sonnet" => {3.00, 15.00},
+    "claude-3-5-haiku" => {0.80, 4.00},
+    "claude-opus-4" => {15.00, 75.00},
+    "claude-sonnet-4" => {3.00, 15.00},
+    "claude-sonnet-4-5" => {3.00, 15.00},
+    "claude-haiku-4-5" => {1.00, 5.00},
+    "claude-opus-4-5" => {5.00, 25.00},
+    "claude-opus-4-7" => {5.00, 25.00},
+    "claude-opus-4-8" => {5.00, 25.00},
+    "claude-opus-5" => {5.00, 25.00},
+    "claude-opus-5-5" => {4.00, 20.00},
+    "claude-sonnet-5" => {2.00, 10.00},
+    "claude-fable-5" => {10.00, 50.00},
+    "claude-fable-5-1" => {10.00, 50.00},
+    "claude-opus-4-6" => {5.00, 25.00},
+    "claude-sonnet-4-6" => {3.00, 15.00},
+    "claude-3-7-sonnet-latest" => {3.00, 15.00},
+    "claude-3-5-sonnet-latest" => {3.00, 15.00},
+    "claude-3-5-haiku-latest" => {0.80, 4.00},
+    "claude-3-opus-latest" => {15.00, 75.00}
+  }
+
+  @prices Map.merge(@openai_prices, @anthropic_prices)
+
   @doc """
   Returns the per-1M-token price of `model`, or `nil` when it is not priced.
 
@@ -104,7 +149,7 @@ defmodule DeepEvalEx.LLM.Pricing do
         validate_price!(model, price)
 
       :error ->
-        case Map.fetch(@openai_prices, model) do
+        case Map.fetch(@prices, model) do
           {:ok, {input, output}} -> %{input: input, output: output}
           :error -> nil
         end

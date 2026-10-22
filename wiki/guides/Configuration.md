@@ -28,6 +28,7 @@ config :deep_eval_ex,
 | `OPENAI_API_KEY` | OpenAI API key | `sk-...` |
 | `OPENAI_BASE_URL` | OpenAI-compatible API base URL | `https://gateway.example.com/v1` |
 | `ANTHROPIC_API_KEY` | Anthropic API key | `sk-ant-...` |
+| `ANTHROPIC_BASE_URL` | Anthropic API base URL | `https://gateway.example.com/anthropic` |
 | `DEEP_EVAL_DEFAULT_MODEL` | Override default model | `gpt-4o` |
 
 ## LLM Providers
@@ -74,14 +75,35 @@ sent for them.
 
 ```elixir
 config :deep_eval_ex,
-  default_model: {:anthropic, "claude-3-haiku-20240307"},
+  default_model: {:anthropic, "claude-haiku-4-5"},
   anthropic_api_key: "sk-ant-..."
 ```
 
-Available models:
-- `claude-3-opus-20240229` - Most capable
-- `claude-3-sonnet-20240229` - Balanced
-- `claude-3-haiku-20240307` - Fast and efficient
+The API key is taken from the `api_key:` option, then `:anthropic_api_key`,
+then `ANTHROPIC_API_KEY`. Without a model the adapter uses deepeval's default,
+`claude-opus-5`. Any model in deepeval's Anthropic registry is priced, e.g.:
+- `claude-opus-5` - Most capable (deepeval's default)
+- `claude-sonnet-4-6` - Balanced
+- `claude-haiku-4-5` - Fast and cost-effective
+
+#### Base URL
+
+The first one set wins (a trailing slash is stripped; requests go to
+`{base_url}/v1/messages`):
+
+1. `base_url:` runtime option
+2. `config :deep_eval_ex, anthropic_base_url: "..."`
+3. `ANTHROPIC_BASE_URL` environment variable
+4. `https://api.anthropic.com`
+
+#### Temperature and Token Limit
+
+As in deepeval's `AnthropicModel`, `temperature` is only sent when set with
+the `temperature:` option or `config :deep_eval_ex, anthropic_temperature:
+0.0` (the option wins), and never to models that reject it (`claude-opus-4-7`
+and later Opus models, `claude-sonnet-5`, `claude-fable-5`). `max_tokens`
+defaults to `8192`, or `4096` for Claude 3 models; override it with
+`max_tokens:`.
 
 ### Ollama (Local)
 
@@ -117,7 +139,7 @@ Override configuration at evaluation time:
 ## Model Pricing
 
 Results report `evaluation_cost` from per-model token prices (USD per 1M
-tokens). DeepEvalEx ships deepeval's OpenAI price table; models it does not
+tokens). DeepEvalEx ships deepeval's OpenAI and Anthropic price tables; models it does not
 know get a `nil` cost rather than a guess. Price other models, or override a
 built-in price, with `:model_pricing`:
 
