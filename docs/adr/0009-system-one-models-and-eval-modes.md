@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Date
 
@@ -612,7 +612,11 @@ This is the base of this ADR.
 
 - **Rejected:** a second result-building path next to `measure/2` would drift on strict handling, telemetry and usage. The prefetch gives the same output through one path.
 
-## Decisions Needed From the Maintainer
+## Decisions
+
+The maintainer accepted every recommended option below (2026-10-22).
+
+### Decisions Needed From the Maintainer (resolved)
 
 1. **Where the whole-chain runner is called.**
    - (a) Each metric calls `Runner.run/3` in `do_measure` (one `case` per metric).
