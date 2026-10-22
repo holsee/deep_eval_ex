@@ -13,6 +13,7 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 - [Overview](metrics/Overview.md)
 - [ExactMatch](metrics/ExactMatch.md)
 - [PatternMatch](metrics/PatternMatch.md) - Regular expression full match
+- [JsonCorrectness](metrics/JsonCorrectness.md) - JSON output against a schema
 - [GEval](metrics/GEval.md) - Flexible LLM-as-judge evaluation
 - [Faithfulness](metrics/Faithfulness.md) - RAG context verification
 - [Hallucination](metrics/Hallucination.md) - Unsupported claim detection

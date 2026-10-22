@@ -1,0 +1,12 @@
+{
+  "score": 0,
+  "success": false,
+  "reason": null,
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "LLM outputed Json:\n[{\"name\": \"José Saramago\"}]"
+}

@@ -65,6 +65,7 @@ config :deep_eval_ex,
 |--------|---------|
 | **ExactMatch** | Simple string comparison |
 | **PatternMatch** | Whole output matches a regular expression |
+| **JsonCorrectness** | Output is JSON matching an expected JSON Schema |
 | **GEval** | Flexible criteria-based evaluation using LLM-as-judge |
 | **Faithfulness** | RAG: claims supported by retrieval context |
 | **Hallucination** | Detects unsupported statements |

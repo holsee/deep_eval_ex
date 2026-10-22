@@ -1,0 +1,98 @@
+{
+  "description": "JsonCorrectness in hybrid mode: decided in code, the LLM explains the failure",
+  "metrics": [
+    {
+      "kind": "json_correctness",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5,
+        "expected_schema": {
+          "$defs": {
+            "Address": {
+              "properties": {
+                "city": {
+                  "title": "City",
+                  "type": "string"
+                },
+                "postcode": {
+                  "title": "Postcode",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city",
+                "postcode"
+              ],
+              "title": "Address",
+              "type": "object"
+            }
+          },
+          "properties": {
+            "name": {
+              "description": "Full name, e.g. José Saramago",
+              "title": "Name",
+              "type": "string"
+            },
+            "age": {
+              "title": "Age",
+              "type": "integer"
+            },
+            "tags": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Tags",
+              "type": "array"
+            },
+            "address": {
+              "$ref": "#/$defs/Address"
+            },
+            "nickname": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Nickname"
+            }
+          },
+          "required": [
+            "name",
+            "age",
+            "tags",
+            "address"
+          ],
+          "title": "Person",
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Return the customer's profile as JSON.",
+    "actual_output": "{\"name\": \"José Saramago\", \"age\": \"eighty-seven\", \"tags\": [\"writer\"]}"
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {}
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "json_correctness": {
+      "reason": [
+        {
+          "reason": "The generated Json is not valid because 'age' is a string where the schema expects an integer and 'address' is missing."
+        }
+      ]
+    }
+  }
+}

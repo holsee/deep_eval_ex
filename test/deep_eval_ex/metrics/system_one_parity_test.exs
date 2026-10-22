@@ -45,12 +45,14 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
     argument_correctness_system_one argument_correctness_hybrid
     argument_correctness_hybrid_fallback
     tool_correctness_system_one tool_correctness_hybrid tool_correctness_hybrid_fallback
+    json_correctness_system_one json_correctness_hybrid
     jev_eval jev_eval_strict_not_applicable
   )
 
   @batched_scenarios ~w(
     batch_system_one batch_system_one_retrieval batch_system_one_safety
-    batch_system_one_pii_alignment batch_system_one_agent batch_system_one_down
+    batch_system_one_pii_alignment batch_system_one_agent batch_system_one_json
+    batch_system_one_down
   )
 
   for scenario <- @scenarios ++ @batched_scenarios,

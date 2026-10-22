@@ -18,7 +18,9 @@ defmodule DeepEvalEx.SystemOne.Context do
     `:hybrid` for a metric without `system_one_eval_spec/2`
   - `:model` - the initialised `DeepEvalEx.SystemOne.Model`, `nil` under
     `:llm`, where no System One model is built (so a missing TypeSafe key
-    is not an error)
+    is not an error), and in every mode for a metric whose
+    `c:DeepEvalEx.Metrics.BaseMetric.system_one_model?/0` returns `false`
+    (JsonCorrectness, which decides in code)
   - `:llm?` - whether the metric has an LLM: `false` under `:system_one`,
     where nothing falls back to the LLM, so no LLM adapter is resolved and
     no LLM key is needed (`initialize_model` returns `(None, True)`)
@@ -79,9 +81,17 @@ defmodule DeepEvalEx.SystemOne.Context do
 
       _ ->
         if system_one?(metric),
-          do: metric |> Mode.effective(opts) |> build(Keyword.get(opts, :system_one_model)),
+          do: metric |> Mode.effective(opts) |> build(model_spec(metric, opts)),
           else: llm_only(opts)
     end
+  end
+
+  # A metric whose system_one_model?/0 returns false (JsonCorrectness)
+  # follows its eval mode but never calls initialize_system_one_model.
+  defp model_spec(metric, opts) do
+    if function_exported?(metric, :system_one_model?, 0) and not metric.system_one_model?(),
+      do: :none,
+      else: Keyword.get(opts, :system_one_model)
   end
 
   # A metric whose system_one?/0 returns false (GEval, ExactMatch) never
@@ -99,6 +109,7 @@ defmodule DeepEvalEx.SystemOne.Context do
   end
 
   defp build(:llm, _model), do: %__MODULE__{mode: :llm, model: nil, llm?: true}
+  defp build(mode, :none), do: %__MODULE__{mode: mode, model: nil, llm?: mode != :system_one}
 
   defp build(mode, spec) do
     model = Model.resolve(spec)

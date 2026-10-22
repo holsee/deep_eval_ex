@@ -1,0 +1,12 @@
+{
+  "score": 1,
+  "success": true,
+  "reason": "The generated Json matches and is syntactically correct to the expected schema.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "LLM outputed Json:\n{\"name\": \"José Saramago\", \"age\": 87, \"tags\": [], \"address\": {\"city\": \"Lisbon\", \"postcode\": \"1100-148\"}, \"employer\": \"Caminho\"}"
+}

@@ -121,7 +121,7 @@ defmodule DeepEvalEx.SystemOne.ExportTest do
   end
 
   test "covers every hybrid scenario" do
-    assert length(@scenarios) == 24
+    assert length(@scenarios) == 25
   end
 
   for scenario <- @scenarios do
@@ -144,13 +144,21 @@ defmodule DeepEvalEx.SystemOne.ExportTest do
         model: input["judge_model"] || "exploding-llm",
         judge?: Map.has_key?(input, "responses"),
         threshold: metric["params"]["threshold"],
-        strict_mode: metric["params"]["strict_mode"] || false
+        strict_mode: strict_mode(metric)
       }
 
       {_results, _test_run, path} =
         DeepEvalEx.evaluate_run([test_case(scenario)], [replay], results_folder: tmp_dir)
 
       assert normalise(File.read!(path)) == normalise(theirs)
+    end
+  end
+
+  # deepeval's JsonCorrectness is strict unless told otherwise.
+  defp strict_mode(metric) do
+    case metric["params"]["strict_mode"] do
+      nil -> metric["kind"] == "json_correctness"
+      strict_mode -> strict_mode
     end
   end
 

@@ -743,10 +743,15 @@ defmodule DeepEvalEx.Evaluator do
   defp metric_module(metric) when is_atom(metric), do: metric
   defp metric_module(%{__struct__: module}), do: module
 
-  defp metric_opts(metric, opts) when is_atom(metric), do: Keyword.delete(opts, @contexts_key)
+  defp metric_opts(metric, opts) when is_atom(metric),
+    do: opts |> Keyword.delete(@contexts_key) |> BaseMetric.with_default_opts(metric)
 
-  defp metric_opts(metric, opts),
-    do: opts |> Keyword.delete(@contexts_key) |> Keyword.merge(struct_to_opts(metric))
+  defp metric_opts(metric, opts) do
+    opts
+    |> Keyword.delete(@contexts_key)
+    |> BaseMetric.with_default_opts(metric_module(metric))
+    |> Keyword.merge(struct_to_opts(metric))
+  end
 
   # Convert a metric struct to an options keyword list, dropping unset
   # (nil) fields so they neither mask run-level options nor shadow the

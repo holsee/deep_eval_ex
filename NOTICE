@@ -33,8 +33,8 @@ Verbatim prompt templates:
 The judge prompts in lib/deep_eval_ex/prompts/ (answer_relevancy.ex,
 argument_correctness.ex, bias.ex, contextual_precision.ex,
 contextual_recall.ex, contextual_relevancy.ex, faithfulness.ex, g_eval.ex,
-hallucination.ex, pii_leakage.ex, prompt_alignment.ex, tool_correctness.ex
-and toxicity.ex) contain text
+hallucination.ex, json_correctness.ex, pii_leakage.ex, prompt_alignment.ex,
+tool_correctness.ex and toxicity.ex) contain text
 copied verbatim from
 DeepEval 4.3.1's prompt templates (deepeval/metrics/*/templates/*.txt and
 deepeval/templates/metrics/fragments/*.txt), Copyright 2023-2024 Confident

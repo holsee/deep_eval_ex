@@ -82,6 +82,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
       {Prompts.ArgumentCorrectness, :generate_reason},
     "ToolCorrectnessMetric.get_tool_selection_score" =>
       {Prompts.ToolCorrectness, :get_tool_selection_score},
+    "JsonCorrectnessMetric.generate_reason" => {Prompts.JsonCorrectness, :generate_reason},
     "FaithfulnessMetric._experimental_system_one_questions" =>
       {Prompts.Faithfulness, :system_one_questions},
     "FaithfulnessMetric._experimental_system_one_verdict" =>
@@ -141,7 +142,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the thirteen LLM metrics" do
+  test "covers every template of the fourteen LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -159,6 +160,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.Faithfulness,
             Prompts.GEval,
             Prompts.Hallucination,
+            Prompts.JsonCorrectness,
             Prompts.PIILeakage,
             Prompts.PromptAlignment,
             Prompts.ToolCorrectness,
@@ -180,7 +182,11 @@ defmodule DeepEvalEx.PromptGoldenTest do
       {module, fun} = Map.fetch!(@templates, template)
 
       Code.ensure_loaded!(module)
-      args = if function_exported?(module, fun, 0), do: [], else: [options(template, inputs)]
+
+      args =
+        if function_exported?(module, fun, 0),
+          do: [],
+          else: [options(template, inputs, unquote(name))]
 
       assert apply(module, fun, args) ==
                File.read!(Path.join([@fixtures, unquote(name), "prompt.txt"]))
@@ -189,6 +195,23 @@ defmodule DeepEvalEx.PromptGoldenTest do
 
   defp input(name),
     do: Path.join([@fixtures, name, "input.json"]) |> File.read!() |> Jason.decode!()
+
+  # JsonCorrectness prints its expected schema in its key order, so the
+  # schema is read again with its order kept.
+  defp options("JsonCorrectnessMetric.generate_reason", inputs, name) do
+    ordered =
+      Path.join([@fixtures, name, "input.json"])
+      |> File.read!()
+      |> Jason.decode!(objects: :ordered_objects)
+
+    [
+      actual_output: inputs["actual_output"],
+      expected_schema: ordered["inputs"]["expected_schema"],
+      is_valid_json: inputs["is_valid_json"]
+    ]
+  end
+
+  defp options(template, inputs, _name), do: options(template, inputs)
 
   # The options the DeepEvalEx metric passes its prompt function for these
   # metric-level inputs.

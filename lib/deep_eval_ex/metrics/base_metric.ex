@@ -192,7 +192,13 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   @callback measure(test_case(), opts()) :: measure_result()
 
   @doc """
-  Optional callback to provide default options for the metric.
+  Optional callback to provide default options for the metric: the
+  defaults of deepeval's constructor that differ from every metric's, such
+  as JsonCorrectness's `strict_mode: true`.
+
+  They sit under any option given: `measure/2` merges the options it gets
+  over them, and `DeepEvalEx.Evaluator` the run's options and a metric
+  struct's fields (see `with_default_opts/2`).
   """
   @callback default_opts() :: keyword()
 
@@ -236,12 +242,27 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   """
   @callback system_one?() :: boolean()
 
+  @doc """
+  Optional callback returning `false` for a metric that follows its eval
+  mode but never builds a System One model, as deepeval's
+  `JsonCorrectnessMetric`, which calls `initialize_model` with its eval
+  mode (so it has no LLM under `:system_one`) and never
+  `initialize_system_one_model`.
+
+  Its `DeepEvalEx.SystemOne.Context` has no model in any mode, so a
+  missing TypeSafe key is not an error, and under `:system_one` its
+  result has no evaluation model. A metric that does not implement it
+  builds one.
+  """
+  @callback system_one_model?() :: boolean()
+
   @optional_callbacks [
     default_opts: 0,
     metric_name: 1,
     evaluation_model: 1,
     system_one_eval_spec: 2,
-    system_one?: 0
+    system_one?: 0,
+    system_one_model?: 0
   ]
 
   defmacro __using__(opts \\ []) do
@@ -298,6 +319,7 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
 
         opts =
           opts
+          |> unquote(__MODULE__).with_default_opts(__MODULE__)
           |> unquote(__MODULE__).strict_opts(default_threshold())
           |> unquote(__MODULE__).system_one_opts(__MODULE__)
 
@@ -412,6 +434,21 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
          score < threshold,
        do: 0,
        else: score
+  end
+
+  @doc """
+  `opts` over the metric's `c:default_opts/0`, when `module` implements it.
+
+  ## Examples
+
+      iex> DeepEvalEx.Metrics.BaseMetric.with_default_opts([threshold: 0.3], DeepEvalEx.Metrics.JsonCorrectness)
+      [strict_mode: true, threshold: 0.3]
+  """
+  @spec with_default_opts(keyword(), module()) :: keyword()
+  def with_default_opts(opts, module) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :default_opts, 0),
+      do: Keyword.merge(module.default_opts(), opts),
+      else: opts
   end
 
   @doc false
@@ -544,6 +581,8 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   defp configured_model(module, opts) do
     case Keyword.get(opts, :system_one) do
       %Context{llm?: false, model: %Model{name: name}} -> name
+      # No LLM and no System One model (JsonCorrectness under :system_one).
+      %Context{llm?: false, model: nil} -> nil
       _context -> evaluation_model(module, opts)
     end
   end

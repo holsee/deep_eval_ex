@@ -31,6 +31,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     Faithfulness,
     Hallucination,
     JevEval,
+    JsonCorrectness,
     PIILeakage,
     PromptAlignment,
     ToolCorrectness,
@@ -57,7 +58,8 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     "pii_leakage" => PIILeakage,
     "prompt_alignment" => PromptAlignment,
     "argument_correctness" => ArgumentCorrectness,
-    "tool_correctness" => ToolCorrectness
+    "tool_correctness" => ToolCorrectness,
+    "json_correctness" => JsonCorrectness
   }
 
   @eval_modes %{"llm" => :llm, "hybrid" => :hybrid, "system_one" => :system_one}
@@ -241,7 +243,12 @@ defmodule DeepEvalEx.Test.SystemOneParity do
         adapter: :mock,
         eval_mode: Map.fetch!(@eval_modes, eval_mode),
         system_one_model: mock
-      ] ++ Enum.map(params.values, fn {key, value} -> option(key, plain(value)) end)
+      ] ++
+        Enum.map(params.values, fn
+          # JsonCorrectness prints its schema in its key order.
+          {"expected_schema", schema} -> {:expected_schema, schema}
+          {key, value} -> option(key, plain(value))
+        end)
 
     configured(module, opts)
   end
@@ -251,6 +258,12 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   defp configured(PromptAlignment, opts) do
     {instructions, opts} = Keyword.pop!(opts, :prompt_instructions)
     {PromptAlignment.new(prompt_instructions: instructions), opts}
+  end
+
+  # JsonCorrectness's schema is its own, as deepeval's constructor param.
+  defp configured(JsonCorrectness, opts) do
+    {schema, opts} = Keyword.pop!(opts, :expected_schema)
+    {JsonCorrectness.new(expected_schema: schema), opts}
   end
 
   defp configured(module, opts), do: {module, opts}
@@ -297,7 +310,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
       "threshold" => result[:threshold],
       "error" => result[:error],
       "evaluation_model" => result[:evaluation_model],
-      "evaluation_cost" => result[:evaluation_cost],
+      "evaluation_cost" => seeded_cost(result),
       "input_tokens" => result[:input_tokens],
       "output_tokens" => result[:output_tokens],
       "verbose_logs" => result[:verbose_logs],
@@ -307,6 +320,12 @@ defmodule DeepEvalEx.Test.SystemOneParity do
       "raised" => raised && %{"type" => type(raised), "message" => Exception.message(raised)}
     }
   end
+
+  # Likewise for a metric with neither an LLM nor a System One model
+  # (JsonCorrectness under system_one): nothing adds to its seed.
+  defp seeded_cost(%{evaluation_cost: cost, evaluation_model: nil}) when cost === 0.0, do: 0
+
+  defp seeded_cost(result), do: result[:evaluation_cost]
 
   defp type(%DeepEvalEx.SystemOne.Error{type: type}) when is_binary(type), do: type
   defp type(%module{}), do: module |> Module.split() |> List.last()

@@ -43,6 +43,8 @@ defmodule DeepEvalEx do
   - `DeepEvalEx.Metrics.ExactMatch` - Simple string comparison
   - `DeepEvalEx.Metrics.PatternMatch` - Whole output matches a regular
     expression
+  - `DeepEvalEx.Metrics.JsonCorrectness` - Output is JSON matching an
+    expected JSON Schema
   - `DeepEvalEx.Metrics.GEval` - Flexible criteria-based evaluation
   - `DeepEvalEx.Metrics.Faithfulness` - RAG: claims supported by context
   - `DeepEvalEx.Metrics.Hallucination` - Detects unsupported statements

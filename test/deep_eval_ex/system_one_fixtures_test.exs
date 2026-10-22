@@ -33,8 +33,8 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     answer_relevancy_hybrid answer_relevancy_hybrid_fallback answer_relevancy_system_one
     argument_correctness_hybrid argument_correctness_hybrid_fallback
     argument_correctness_system_one
-    batch_system_one batch_system_one_agent batch_system_one_down batch_system_one_pii_alignment
-    batch_system_one_retrieval batch_system_one_safety
+    batch_system_one batch_system_one_agent batch_system_one_down batch_system_one_json
+    batch_system_one_pii_alignment batch_system_one_retrieval batch_system_one_safety
     bias_hybrid bias_hybrid_fallback bias_system_one
     contextual_precision_hybrid contextual_precision_hybrid_fallback
     contextual_precision_system_one
@@ -45,6 +45,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     faithfulness_system_one_strict
     hallucination_hybrid hallucination_hybrid_fallback hallucination_system_one
     jev_eval jev_eval_strict_not_applicable
+    json_correctness_hybrid json_correctness_system_one
     pii_leakage_hybrid pii_leakage_hybrid_fallback pii_leakage_system_one
     prompt_alignment_hybrid prompt_alignment_hybrid_fallback prompt_alignment_system_one
     refusal_classifier_system_one
@@ -54,6 +55,12 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
 
   @answer_kinds %{"noul" => "nouls", "score" => "scores", "choice" => "choices"}
 
+  # Metrics that ask System One nothing in any mode: JsonCorrectness decides
+  # in code. They have no hybrid_fallback scenario, as nothing can fail.
+  @asks_nothing ~w(json_correctness)
+
+  defp asks?(spec), do: spec["kind"] not in @asks_nothing
+
   defp load(scenario, file) do
     [@fixtures, scenario, file] |> Path.join() |> File.read!() |> Jason.decode!()
   end
@@ -62,12 +69,16 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     assert @scenarios == Enum.sort(@expected)
   end
 
-  test "covers every eval-mode metric in system_one, hybrid and hybrid fallback" do
+  test "covers every eval-mode metric in system_one, hybrid and, when it asks, hybrid fallback" do
     for kind <-
           ~w(faithfulness hallucination answer_relevancy contextual_precision contextual_recall
              contextual_relevancy bias toxicity pii_leakage prompt_alignment argument_correctness
              tool_correctness),
         suffix <- ~w(system_one hybrid hybrid_fallback) do
+      assert "#{kind}_#{suffix}" in @scenarios
+    end
+
+    for kind <- @asks_nothing, suffix <- ~w(system_one hybrid) do
       assert "#{kind}_#{suffix}" in @scenarios
     end
   end
@@ -108,10 +119,15 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
         assert length(measure) == count
       end
 
-      test "records well-formed decide() calls", %{decide: decide} do
+      test "records well-formed decide() calls", %{input: input, decide: decide} do
         calls = decide["evaluate"] ++ List.flatten(decide["measure"])
-        assert calls != []
+        specs = input["metrics"] || [input["classifier"]]
+        assert calls != [] or not Enum.any?(specs, &asks?/1)
         Enum.each(calls, &assert_call/1)
+
+        for {spec, measured} <- Enum.zip(specs, decide["measure"]), not asks?(spec) do
+          assert measured == []
+        end
       end
 
       test "batches evaluate() only when the scenario says so", %{input: input, decide: decide} do
@@ -121,7 +137,9 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
           prefixes =
             questions |> Map.keys() |> Enum.map(&hd(String.split(&1, "."))) |> Enum.uniq()
 
-          assert Enum.sort(prefixes) == Enum.map(0..(length(input["metrics"]) - 1), &"m#{&1}")
+          # Only the metrics that ask anything are in the request.
+          asking = Enum.count(input["metrics"], &asks?/1)
+          assert Enum.sort(prefixes) == Enum.map(0..(asking - 1), &"m#{&1}")
         else
           assert decide["evaluate"] == List.flatten(decide["measure"])
         end
@@ -150,7 +168,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
           end
 
           # Confidence comes from Jev's answers only.
-          assert is_number(state["confidence"]) != failed?
+          assert is_number(state["confidence"]) == (asks?(spec) and not failed?)
         end
       end
 

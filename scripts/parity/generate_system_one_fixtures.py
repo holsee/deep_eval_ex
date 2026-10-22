@@ -118,6 +118,7 @@ from deepeval.metrics import (  # noqa: E402
     FaithfulnessMetric,
     HallucinationMetric,
     JevEval,
+    JsonCorrectnessMetric,
     PIILeakageMetric,
     PromptAlignmentMetric,
     ToolCorrectnessMetric,
@@ -157,8 +158,13 @@ METRICS = {
     "prompt_alignment": PromptAlignmentMetric,
     "argument_correctness": ArgumentCorrectnessMetric,
     "tool_correctness": ToolCorrectnessMetric,
+    "json_correctness": JsonCorrectnessMetric,
     "jev_eval": JevEval,
 }
+
+# Metrics that follow their eval mode but never build a System One model, so
+# take no `system_one_model`: JsonCorrectness decides in code.
+WITHOUT_SYSTEM_ONE_MODEL = {"json_correctness"}
 
 JEV_QUESTIONS = {"noul": Noul, "score": Score, "choice": Choice}
 
@@ -250,6 +256,10 @@ def build_metric(spec, system_one_model, judge):
         return JevEval(system_one_model=system_one_model, **params)
     if "available_tools" in params:
         params["available_tools"] = [ToolCall(**tool) for tool in params["available_tools"]]
+    if "expected_schema" in params:
+        params["expected_schema"] = gf.build_expected_schema(params["expected_schema"])
+    if kind in WITHOUT_SYSTEM_ONE_MODEL:
+        return METRICS[kind](model=judge, eval_mode=spec["eval_mode"], **params)
     return METRICS[kind](
         model=judge, system_one_model=system_one_model, eval_mode=spec["eval_mode"], **params
     )
@@ -580,6 +590,32 @@ WEATHER = {
 
 FOUR_LEVELS_LOW = {"0": 0.1, "1": 0.6, "2": 0.2, "3": 0.1}
 FOUR_LEVELS_HIGH = {"0": 0.0, "1": 0.05, "2": 0.15, "3": 0.8}
+
+
+# JsonCorrectness checks `actual_output` against a pydantic model's JSON
+# schema in code, in every mode: Jev is never asked. Under system_one there
+# is no LLM either, so a failure's reason would be pydantic's own
+# ValidationError text, which DeepEvalEx does not reproduce (see the
+# fixtures' README); the system_one scenarios use matching output.
+PROFILE = {
+    "input": "Return the customer's profile as JSON.",
+    "actual_output": '{"name": "José Saramago", "age": 87, "tags": ["writer"], '
+                     '"address": {"city": "Lisbon", "postcode": "1100-148"}}',
+}
+PROFILE_INVALID = {
+    "input": "Return the customer's profile as JSON.",
+    "actual_output": '{"name": "José Saramago", "age": "eighty-seven", "tags": ["writer"]}',
+}
+JSON_CORRECTNESS_LLM = {
+    "reason": [{"reason": "The generated Json is not valid because 'age' is a string where "
+                          "the schema expects an integer and 'address' is missing."}],
+}
+NO_JEV = {"model": JEV, "cost": JEV_COST, "answers": {}}
+
+
+def json_correctness(eval_mode):
+    # Strict by default: the threshold is 1 whatever `threshold` says.
+    return metric("json_correctness", eval_mode, expected_schema=gf.PERSON_SCHEMA)
 
 
 def faithfulness(eval_mode, **params):
@@ -1172,6 +1208,30 @@ SCENARIOS = {
                            "scores": {"m0.q_2": score(2, {"0": 0.05, "1": 0.3, "2": 0.55, "3": 0.1}, 0.4),
                                       "m1.q_2": score(3, FOUR_LEVELS_HIGH, 0.8)},
                        }},
+    },
+    "json_correctness_system_one": {
+        "description": "JsonCorrectness under system_one: decided in code, with neither Jev nor an LLM",
+        "metrics": [json_correctness("system_one")],
+        "test_case": PROFILE,
+        "system_one": NO_JEV,
+    },
+    "json_correctness_hybrid": {
+        "description": "JsonCorrectness in hybrid mode: decided in code, the LLM explains the failure",
+        "metrics": [json_correctness("hybrid")],
+        "test_case": PROFILE_INVALID,
+        "system_one": NO_JEV,
+        "judge_model": JUDGE,
+        "responses": {"json_correctness": JSON_CORRECTNESS_LLM},
+    },
+    "batch_system_one_json": {
+        "description": "Bias and JsonCorrectness under system_one in evaluate(): JsonCorrectness "
+                       "counts towards batching but asks nothing, so the request holds Bias alone",
+        "batched": True,
+        "metrics": [metric("bias", "system_one"), json_correctness("system_one")],
+        "test_case": PROFILE,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"m0.q_0": noul(0.9)},
+                                   "scores": {"m0.q_1": score(3, FOUR_LEVELS_HIGH, 0.8)}}},
     },
     "batch_system_one_down": {
         "description": "Two system_one metrics batched with Jev down: no fallback, each metric errors",

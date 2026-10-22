@@ -1121,8 +1121,67 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   byte. The scripted parity harness captures what a metric in verbose mode
   prints. The metrics have wiki pages, and rows in the metrics overview's
   Non-LLM Metrics and Agent Metrics.
+- **`DeepEvalEx.Metrics.JsonCorrectness`**, a port of deepeval 4.3.1's
+  `JsonCorrectnessMetric`: whether the actual output is JSON matching an
+  expected schema. Named `"Json Correctness"`, it requires `input` and
+  `actual_output` and takes `:expected_schema` (required).
+  - deepeval's schema is a pydantic model; DeepEvalEx takes the model's
+    JSON Schema (`model_json_schema()`, what deepeval shows the judge) as
+    a JSON string, decoded keeping its key order, a `Jason.OrderedObject`,
+    or a map with string or atom keys. A missing schema, or one that is
+    not a JSON object, raises `ArgumentError`.
+  - The score is the integer `1` for a match, else `0`. The metric is
+    strict by default, as deepeval's (`strict_mode: true`, threshold the
+    integer `1`); `strict_mode: false` gives the `0.5` default threshold.
+  - A match gets deepeval's fixed reason with no judge call; a failure is
+    explained by the judge with deepeval's `generate_reason` prompt
+    (`DeepEvalEx.Prompts.JsonCorrectness`), which prints the schema as
+    `json.dumps(indent=4)`. `include_reason: false` makes no call. The
+    verbose logs are deepeval's `"LLM outputed Json:\n<output>"`, and
+    `metadata.validation_error` holds the validation error.
+  - The score is decided in code in every mode, so, as in deepeval,
+    `system_one_eval_spec/2` is `nil` and no System One model is built or
+    asked. Under `:system_one` there is no LLM: a failure's reason is the
+    validation error, and the result has no evaluation model and a zero
+    cost. It counts towards batching a test case's `:system_one` metrics
+    but asks nothing in the batch.
+  - `JsonCorrectness.new/1` builds a configured metric, so `evaluate/3` can
+    run several schemas, or one beside other metrics.
+- **`DeepEvalEx.Metrics.Utils.JSONSchema`**, a JSON Schema validator with
+  no new dependency, for JsonCorrectness: `type`, `enum`, `const`, object,
+  array, string and number keywords, `anyOf`, `oneOf`, `allOf`, `not`,
+  boolean schemas and `$ref` within the schema (`#/$defs/...`).
+  `validate_json/2` lays errors out as pydantic's `ValidationError`
+  (`"2 validation errors for Person\nage\n  Input should be a valid
+  integer..."`), pydantic's messages without its `[type=...]` details.
+  Validation follows JSON Schema rather than pydantic's lax mode, which
+  also accepts numeric strings for numbers and `"yes"` or `1` for booleans.
+- **`c:DeepEvalEx.Metrics.BaseMetric.system_one_model?/0`**, an optional
+  callback for a metric that follows its eval mode but never builds a
+  System One model (JsonCorrectness): its
+  `DeepEvalEx.SystemOne.Context` has no model in any mode, so no TypeSafe
+  key is needed, and under `:system_one` it reports no evaluation model.
+- **Parity fixtures for JsonCorrectness**, written by deepeval 4.3.1:
+  scripted-judge scenarios `json_correctness_pass` (an empty list, an
+  omitted optional field and an undeclared key), `_fail` (valid JSON
+  failing a nested `$defs` model), `_invalid_json` and `_not_strict`
+  (`strict_mode: false`, `include_reason: false`, verbose mode); the
+  `json_correctness_generate_reason` prompt golden; and the System One
+  fixtures `json_correctness_system_one`, `json_correctness_hybrid` and
+  `batch_system_one_json` (Bias batched alone while JsonCorrectness counts
+  as a candidate). The scripted generator rebuilds each script's pydantic
+  model from its JSON Schema and checks that the model's own schema is the
+  same, key order included. DeepEvalEx matches every facet byte for byte.
+  The metric has a wiki page and rows in the README and metrics overview.
 
 ### Changed
+
+- `c:DeepEvalEx.Metrics.BaseMetric.default_opts/0`, until now unused, is
+  applied: `measure/2` and `DeepEvalEx.Evaluator` merge a metric's default
+  options under the options given (the run's, then a metric struct's
+  fields). JsonCorrectness uses it for deepeval's `strict_mode=True`
+  default, so the strict mode is exported and errored results carry the
+  strict threshold whether the metric is passed as a module or a struct.
 
 - **BREAKING:** `DeepEvalEx.TestCase`'s `:tools_called` and
   `:expected_tools` default to `nil`, deepeval's `None`, instead of `[]`, so

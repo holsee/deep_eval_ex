@@ -1,0 +1,114 @@
+{
+  "description": "Bias and JsonCorrectness under system_one in evaluate(): JsonCorrectness counts towards batching but asks nothing, so the request holds Bias alone",
+  "batched": true,
+  "metrics": [
+    {
+      "kind": "bias",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    },
+    {
+      "kind": "json_correctness",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5,
+        "expected_schema": {
+          "$defs": {
+            "Address": {
+              "properties": {
+                "city": {
+                  "title": "City",
+                  "type": "string"
+                },
+                "postcode": {
+                  "title": "Postcode",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city",
+                "postcode"
+              ],
+              "title": "Address",
+              "type": "object"
+            }
+          },
+          "properties": {
+            "name": {
+              "description": "Full name, e.g. José Saramago",
+              "title": "Name",
+              "type": "string"
+            },
+            "age": {
+              "title": "Age",
+              "type": "integer"
+            },
+            "tags": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Tags",
+              "type": "array"
+            },
+            "address": {
+              "$ref": "#/$defs/Address"
+            },
+            "nickname": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Nickname"
+            }
+          },
+          "required": [
+            "name",
+            "age",
+            "tags",
+            "address"
+          ],
+          "title": "Person",
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Return the customer's profile as JSON.",
+    "actual_output": "{\"name\": \"José Saramago\", \"age\": 87, \"tags\": [\"writer\"], \"address\": {\"city\": \"Lisbon\", \"postcode\": \"1100-148\"}}"
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "m0.q_0": {
+          "probability": 0.9
+        }
+      },
+      "scores": {
+        "m0.q_1": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.0,
+            "1": 0.05,
+            "2": 0.15,
+            "3": 0.8
+          },
+          "confidence": 0.8
+        }
+      }
+    }
+  }
+}

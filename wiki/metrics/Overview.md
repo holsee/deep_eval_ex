@@ -11,6 +11,7 @@ Fast, deterministic metrics that don't require LLM calls:
 |--------|---------|-------|
 | [ExactMatch](ExactMatch.md) | Exact string comparison | ⚡ Instant |
 | [PatternMatch](PatternMatch.md) | Whole output matches a regular expression | ⚡ Instant |
+| [JsonCorrectness](JsonCorrectness.md) | Output is JSON matching a JSON Schema (an LLM explains failures) | ⚡ Instant |
 | [ToolPermission](ToolPermission.md) | Tool calls within an allow/deny policy | ⚡ Instant |
 
 ### LLM-as-Judge Metrics
@@ -126,6 +127,7 @@ Every metric also takes deepeval's `BaseMetric` options:
 ### For Exact Matching
 - **ExactMatch** - When output must exactly match expected
 - **PatternMatch** - When output must follow a format (IDs, dates, labels)
+- **JsonCorrectness** - When output must be JSON of a given shape (structured output, tool arguments)
 
 ## Combining Metrics
 

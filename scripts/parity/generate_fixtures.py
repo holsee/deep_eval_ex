@@ -46,7 +46,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the thirteen LLM-judged metrics, the way the metric itself renders it
+uses for the fourteen LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -122,6 +122,7 @@ from deepeval.metrics import (  # noqa: E402
     FaithfulnessMetric,
     GEval,
     HallucinationMetric,
+    JsonCorrectnessMetric,
     PatternMatchMetric,
     PIILeakageMetric,
     PromptAlignmentMetric,
@@ -155,7 +156,10 @@ from deepeval.test_case import (  # noqa: E402
     ToolCallParams,
 )
 from deepeval.tracing import observe, update_current_span, update_current_trace  # noqa: E402
+from deepeval.utils import serialize_to_json  # noqa: E402
 from openai.types.chat import ChatCompletion  # noqa: E402
+from pydantic import Field, create_model  # noqa: E402
+from typing import List, Union  # noqa: E402
 
 DEEPEVAL_VERSION = "4.3.1"
 
@@ -249,6 +253,53 @@ def build_metric(spec):
             model=ScriptedJudge(spec["judge_model"], {}),
         )
     raise ValueError(f"unknown metric kind {kind!r}")
+
+
+# The Python types of the JSON schema types a pydantic field can have here.
+JSON_SCHEMA_TYPES = {
+    "string": str,
+    "integer": int,
+    "number": float,
+    "boolean": bool,
+    "null": type(None),
+}
+
+
+def build_expected_schema(schema):
+    """The pydantic model JsonCorrectnessMetric takes as `expected_schema`,
+    from the JSON schema a script holds: the model's `model_json_schema()`,
+    which DeepEvalEx's JsonCorrectness takes as it is. Fields, `$defs`
+    models, arrays, `anyOf` unions, descriptions and defaults are rebuilt;
+    the model's own schema must then be `schema`, key order included, so
+    both sides validate against and prompt with the same schema."""
+    defs = schema.get("$defs", {})
+    models = {}
+
+    def field_type(prop):
+        if "$ref" in prop:
+            name = prop["$ref"].rsplit("/", 1)[1]
+            if name not in models:
+                models[name] = build_model(defs[name])
+            return models[name]
+        if "anyOf" in prop:
+            return Union[tuple(field_type(branch) for branch in prop["anyOf"])]
+        if prop["type"] == "array":
+            return List[field_type(prop["items"])]
+        return JSON_SCHEMA_TYPES[prop["type"]]
+
+    def build_model(spec):
+        fields = {}
+        for name, prop in spec["properties"].items():
+            default = ... if name in spec.get("required", []) else prop.get("default")
+            kwargs = {"description": prop["description"]} if "description" in prop else {}
+            fields[name] = (field_type(prop), Field(default, **kwargs))
+        return create_model(spec["title"], **fields)
+
+    model = build_model(schema)
+    built = json.dumps(model.model_json_schema())
+    if built != json.dumps(schema):
+        raise RuntimeError(f"expected_schema is not a pydantic model's schema; built {built}")
+    return model
 
 
 def build_test_case(spec):
@@ -559,6 +610,7 @@ SCRIPTED_METRICS = {
     "pii_leakage": PIILeakageMetric,
     "prompt_alignment": PromptAlignmentMetric,
     "argument_correctness": ArgumentCorrectnessMetric,
+    "json_correctness": JsonCorrectnessMetric,
     "tool_correctness": ToolCorrectnessMetric,
     "pattern_match": PatternMatchMetric,
     "tool_permission": ToolPermissionMetric,
@@ -580,6 +632,8 @@ def build_scripted_metric(script):
             params["evaluation_params"] = [ToolCallParams(p) for p in params["evaluation_params"]]
         if "available_tools" in params:
             params["available_tools"] = [ToolCall(**tool) for tool in params["available_tools"]]
+    if kind == "json_correctness":
+        params["expected_schema"] = build_expected_schema(params["expected_schema"])
     if kind in JUDGELESS_METRICS:
         return SCRIPTED_METRICS[kind](**params), None
     judge = ScriptedJudge(script["judge_model"], script["responses"].get(kind, {}))
@@ -701,6 +755,20 @@ def _prompt_alignment(method, inputs, **kwargs):
         prompt_instructions=inputs["prompt_instructions"], model=_prompt_judge()
     )
     return metric._get_prompt(method, multimodal=False, **kwargs)
+
+
+def _json_correctness_reason(inputs):
+    # JsonCorrectnessMetric requires its expected schema at construction, and
+    # prints it as serialize_to_json(model_json_schema(), indent=4).
+    schema = build_expected_schema(inputs["expected_schema"])
+    metric = JsonCorrectnessMetric(expected_schema=schema, model=_prompt_judge())
+    return metric._get_prompt(
+        "generate_reason",
+        multimodal=False,
+        actual_output=inputs["actual_output"],
+        expected_schema=serialize_to_json(schema.model_json_schema(), indent=4),
+        is_valid_json=inputs["is_valid_json"],
+    )
 
 
 PROMPT_RENDERERS = {
@@ -862,6 +930,7 @@ PROMPT_RENDERERS = {
         input=i["input"],
         score=_score(i),
     ),
+    "JsonCorrectnessMetric.generate_reason": _json_correctness_reason,
     # System One (`eval_mode`) templates: the questions of the whole metric
     # under `system_one`, and the question asked about each item under
     # `hybrid`. They take no arguments.
@@ -966,6 +1035,37 @@ GOLDEN_TOOLS = [
     {"name": "get_weather", "description": "Fetch current weather for a city"},
     {"name": "search_web", "description": "Search the web"},
 ]
+
+# A pydantic model's model_json_schema(), as JsonCorrectness takes it: a
+# nested model in $defs, an optional field, a list and a non-ASCII
+# description, which the reason prompt escapes as json.dumps does.
+PERSON_SCHEMA = {
+    "$defs": {
+        "Address": {
+            "properties": {
+                "city": {"title": "City", "type": "string"},
+                "postcode": {"title": "Postcode", "type": "string"},
+            },
+            "required": ["city", "postcode"],
+            "title": "Address",
+            "type": "object",
+        },
+    },
+    "properties": {
+        "name": {"description": "Full name, e.g. José Saramago", "title": "Name", "type": "string"},
+        "age": {"title": "Age", "type": "integer"},
+        "tags": {"items": {"type": "string"}, "title": "Tags", "type": "array"},
+        "address": {"$ref": "#/$defs/Address"},
+        "nickname": {
+            "anyOf": [{"type": "string"}, {"type": "null"}],
+            "default": None,
+            "title": "Nickname",
+        },
+    },
+    "required": ["name", "age", "tags", "address"],
+    "title": "Person",
+    "type": "object",
+}
 
 PROMPT_CASES = {
     "g_eval_generate_evaluation_steps": {
@@ -1294,6 +1394,14 @@ PROMPT_CASES = {
             "input": "Book a table for two in Zürich on Friday.",
         },
     },
+    "json_correctness_generate_reason": {
+        "template": "JsonCorrectnessMetric.generate_reason",
+        "inputs": {
+            "actual_output": '{"name": "José", "age": "forty-one", "tags": ["a", 2]}',
+            "expected_schema": PERSON_SCHEMA,
+            "is_valid_json": False,
+        },
+    },
     "faithfulness_experimental_system_one_questions": {
         "template": "FaithfulnessMetric._experimental_system_one_questions",
         "inputs": {},
@@ -1408,7 +1516,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the thirteen metrics is rendered
+    """Fails unless every bundled template of the fourteen metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()

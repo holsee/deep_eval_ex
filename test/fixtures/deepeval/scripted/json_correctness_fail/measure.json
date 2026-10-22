@@ -1,0 +1,12 @@
+{
+  "score": 0,
+  "success": false,
+  "reason": "The generated Json is not valid because 'age' is a string where the schema expects an integer, 'tags' holds a number and 'address' lacks 'postcode'.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "LLM outputed Json:\n{\"name\": \"José Saramago\", \"age\": \"eighty-seven\", \"tags\": [\"writer\", 1998], \"address\": {\"city\": \"Lisbon\"}, \"nickname\": null}"
+}

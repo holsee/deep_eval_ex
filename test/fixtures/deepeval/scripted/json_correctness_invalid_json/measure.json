@@ -1,0 +1,12 @@
+{
+  "score": 0,
+  "success": false,
+  "reason": "The generated Json is not valid because it is prose followed by an unterminated object, not JSON.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "LLM outputed Json:\nSure! Here is the profile: {\"name\": \"José Saramago\", \"age\": 87"
+}

@@ -30,6 +30,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     Faithfulness,
     GEval,
     Hallucination,
+    JsonCorrectness,
     PatternMatch,
     PIILeakage,
     PromptAlignment,
@@ -58,6 +59,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "pii_leakage" => PIILeakage,
     "prompt_alignment" => PromptAlignment,
     "argument_correctness" => ArgumentCorrectness,
+    "json_correctness" => JsonCorrectness,
     "tool_correctness" => ToolCorrectness,
     "pattern_match" => PatternMatch,
     "tool_permission" => ToolPermission
@@ -259,10 +261,21 @@ defmodule DeepEvalEx.Test.ScriptedParity do
 
   defp load(scenario) do
     path = fixture(scenario, "script.json")
-    # The test case keeps its JSON objects' key order, as the export does.
+    # The test case keeps its JSON objects' key order, as the export does,
+    # and so does JsonCorrectness's expected schema, as its prompt prints it.
     script = path |> File.read!() |> Jason.decode!()
     %OrderedObject{} = ordered = path |> File.read!() |> decode()
-    Map.put(script, "test_case", ordered["test_case"])
+
+    script
+    |> Map.put("test_case", ordered["test_case"])
+    |> keep_order(ordered, ["metric", "params", "expected_schema"])
+  end
+
+  defp keep_order(script, ordered, path) do
+    case get_in(ordered, path) do
+      nil -> script
+      value -> put_in(script, path, value)
+    end
   end
 
   defp load_script(%{"metric" => %{"kind" => kind}} = script) do

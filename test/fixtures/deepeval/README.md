@@ -7,7 +7,7 @@ Fixtures written by **deepeval 4.3.1**, in five sets:
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
-  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's sixteen
+  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's seventeen
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
 - [prompt goldens](#prompt-goldens) (`prompts/`), used by
@@ -129,8 +129,12 @@ calling an LLM. A script holds:
 - `metric` - `kind` (`exact_match`, `g_eval`, `faithfulness`, `hallucination`,
   `answer_relevancy`, `contextual_precision`, `contextual_recall`,
   `contextual_relevancy`, `bias`, `toxicity`, `pii_leakage`, `prompt_alignment`,
-  `argument_correctness`, `tool_correctness`, `pattern_match` or
-  `tool_permission`) and the metric's constructor `params`
+  `argument_correctness`, `json_correctness`, `tool_correctness`,
+  `pattern_match` or `tool_permission`) and the metric's constructor
+  `params`. JsonCorrectness's `expected_schema` is a pydantic model's
+  `model_json_schema()`: the generator rebuilds the model from it
+  (`build_expected_schema`) and fails unless the model's own schema is the
+  same, key order included; DeepEvalEx takes the schema as it is
 - `test_case` - keyword arguments of deepeval's `LLMTestCase`
 - `judge_model` - the name the judge reports as the evaluation model
 - `responses` - the judge's answers, keyed by metric kind, then by step, then
@@ -190,6 +194,7 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | ArgumentCorrectness | `argument_correctness_pass`, `argument_correctness_fail` (an MCP tool call, a call with no input parameters, a `no` verdict without a reason, listed as `None` in the reason prompt), `argument_correctness_no_tool_calls` (`tools_called: []`: no judge call, the float `1.0`, `"No tool calls provided"`, and `toolsCalled: []` in the export), `argument_correctness_strict`; each tool call reaches the verdicts prompt as its `ToolCall.__repr__` |
 | ToolCorrectness | `tool_correctness_pass`, `tool_correctness_fail`, `tool_correctness_available_tools` (LLM-scored tool selection), `tool_correctness_strict` |
 | PatternMatch | `pattern_match_pass` (a trimmed pattern and output, `\w` matching a non-ASCII letter), `pattern_match_fail` (a match of part of the output only), `pattern_match_ignore_case` (`ignore_case`, an alternation whose first branch matches a prefix only, and `verbose_mode`, whose printed logs the Elixir side captures); no judge |
+| JsonCorrectness | `json_correctness_pass` (an empty list, an omitted optional field, a key the schema does not declare; strict by default: the integer `1`, threshold `1`; no judge call), `json_correctness_fail` (valid JSON failing the schema: a string for an integer, a number in a list of strings, a nested `$defs` model missing a field), `json_correctness_invalid_json` (prose around an unterminated object), `json_correctness_not_strict` (`strict_mode=False`: threshold `0.5`; a JSON array for an object; `include_reason=False`: no judge call; `verbose_mode`); the reason prompt prints the schema as `json.dumps(indent=4)`, non-ASCII escaped |
 | ToolPermission | `tool_permission_pass`, `tool_permission_fail` (a denied tool that is also allowed, a denied tool, a tool off the allowlist), `tool_permission_no_tool_calls` (`tools_called: []`: the float `1.0`), `tool_permission_denylist_only` (`Allowed=ANY`, a repeated denied call, a lower threshold, `include_reason=False`), `tool_permission_strict` (the integer `0`, threshold the float `1.0`); no judge |
 
 ### Not covered
@@ -222,7 +227,7 @@ scenarios, why it fails and its tag.
 ## Prompt goldens
 
 `prompts/<case>/` holds one prompt deepeval 4.3.1 renders for one of the
-thirteen LLM-judged metrics, for fixed inputs:
+fourteen LLM-judged metrics, for fixed inputs:
 
 - `input.json` - `template`, deepeval's template class key and method (e.g.
   `FaithfulnessMetric.generate_truths`, from
@@ -288,6 +293,7 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.PromptAlignment.generate_reason/1` | `PromptAlignmentMetric.generate_reason` (`prompt_alignment/templates/generate_reason.txt`) | `unalignment_reasons` (list, `None` included), `input`, `actual_output`, `score` (`.2f`) | `prompt_alignment_generate_reason` |
 | `Prompts.ArgumentCorrectness.generate_verdicts/1` | `ArgumentCorrectnessMetric.generate_verdicts` (`argument_correctness/templates/generate_verdicts.txt`) | `input`, `tools_called` (a Python list of `ToolCall.__repr__`: every set field, `type` always, `input_parameters` and a dict `output` as `json.dumps(indent=4, ensure_ascii=False)`, any other `output` as its `repr()`; the multimodal rules left out for a text-only test case) | `argument_correctness_generate_verdicts` |
 | `Prompts.ArgumentCorrectness.generate_reason/1` | `ArgumentCorrectnessMetric.generate_reason` (`argument_correctness/templates/generate_reason.txt`) | `incorrect_tool_calls_reasons` (list, `None` included), `input`, `score` (`.2f`) | `argument_correctness_generate_reason` |
+| `Prompts.JsonCorrectness.generate_reason/1` | `JsonCorrectnessMetric.generate_reason` (`json_correctness/templates/generate_reason.txt`) | `actual_output`, `expected_schema` (`serialize_to_json(model_json_schema(), indent=4)`; the case holds the schema, from which the generator rebuilds the pydantic model), `is_valid_json` (a Python bool); the multimodal input rules are included unconditionally | `json_correctness_generate_reason` |
 | `Prompts.ToolCorrectness.get_tool_selection_score/1` | `ToolCorrectnessMetric.get_tool_selection_score` (`tool_correctness/templates/get_tool_selection_score.txt`) | `user_input`, `tools_called`, `available_tools` (both `print_tools_called`) | `tool_correctness_get_tool_selection_score` |
 | `Prompts.Faithfulness.system_one_questions/0` | `FaithfulnessMetric._experimental_system_one_questions` (`faithfulness/templates/_experimental_system_one_questions.txt`) | none | `faithfulness_experimental_system_one_questions` |
 | `Prompts.Faithfulness.system_one_verdict/0` | `FaithfulnessMetric._experimental_system_one_verdict` (`faithfulness/templates/_experimental_system_one_verdict.txt`) | none | `faithfulness_experimental_system_one_verdict` |
@@ -365,6 +371,16 @@ ordered levels) or a **Choice** (one of a closed set of options). A metric's
   one Noul per claim (`claim_<i>`), statement, node, sentence or context. A
   Jev call that fails hands that decision to the LLM and is recorded in
   `system_one_fallback_reason` (`"ConnectionError: Jev is down"`).
+
+JsonCorrectness decides in code in every mode, so Jev is never asked: its
+`_system_one_eval_spec` is `None`, it builds no System One model, and under
+`system_one` it has no LLM either, so a failure's reason is pydantic's
+`ValidationError` text (DeepEvalEx lays its own validation error out the same
+way, with pydantic's messages but without its `[type=...]` details and links,
+so its `system_one` scenarios use matching output). It has no
+`hybrid_fallback` scenario, as nothing can fail over. Under `evaluate()` it
+still counts as a `system_one` candidate, so a test case's one other
+`system_one` metric is batched alone (`m0.` keys).
 
 ToolCorrectness has no whole-metric form, so under `system_one` it runs as
 `hybrid`; its only Jev decision is the tool-selection Score (five levels,
@@ -450,16 +466,20 @@ Each `system_one/<scenario>/` holds:
 | `batch_system_one_retrieval` | ContextualRelevancy and ContextualPrecision batched into one request by `evaluate()` |
 | `batch_system_one_safety` | Bias and Toxicity batched into one request about `actual_output` by `evaluate()` |
 | `batch_system_one_pii_alignment` | PIILeakage and PromptAlignment (with its own `prompt_instructions`) batched into one request by `evaluate()` |
+| `json_correctness_system_one` | JsonCorrectness decided in code with neither Jev nor an LLM: no `decide()` call, no evaluation model, the cost seeded at `0` |
+| `json_correctness_hybrid` | JsonCorrectness in `hybrid`: no `decide()` call, the LLM explains the failure (`prompts.json`) |
+| `batch_system_one_json` | Bias and JsonCorrectness under `system_one` in `evaluate()`: JsonCorrectness makes two candidates but asks nothing, so the one request holds Bias's questions alone, keyed `m0.` |
 | `batch_system_one_agent` | ArgumentCorrectness and AnswerRelevancy batched into one request by `evaluate()`, the state merging `input`, `tools_called` and `actual_output` |
 | `batch_system_one_down` | Two batched metrics with Jev down: no fallback, `measure()` raises and `evaluate()` records the error on each metric |
 | `refusal_classifier_system_one` | `RefusalClassifier` on Jev: one Choice over its labels, deterministic reason |
 
 The Elixir test checks that every scenario has its files, that each call's
 questions are well formed and answered under their own type and nothing
-else, that a batched request prefixes its keys per metric (and an unbatched
-`evaluate()` repeats `measure()`'s calls), that fallbacks, raised errors and
-confidence appear exactly when Jev failed or answered, and that the export
-agrees with `measure()` on evaluation model and reason.
+else, that a batched request prefixes its keys per metric that asks
+anything (and an unbatched `evaluate()` repeats `measure()`'s calls), that a
+metric that asks nothing (JsonCorrectness) makes no call, that fallbacks,
+raised errors and confidence appear exactly when Jev failed or answered, and
+that the export agrees with `measure()` on evaluation model and reason.
 
 `test/deep_eval_ex/metrics/system_one_parity_test.exs`
 (`DeepEvalEx.Test.SystemOneParity`) measures the scenarios of the metrics
@@ -470,6 +490,7 @@ Mock adapter's script, and compares the `decide()` calls of `measure()` and
 the fixture, byte for byte. It covers Faithfulness, AnswerRelevancy,
 ContextualPrecision, ContextualRecall, ContextualRelevancy, Hallucination,
 Bias, Toxicity, PIILeakage, PromptAlignment, ArgumentCorrectness and ToolCorrectness: each one's `system_one`, `hybrid` and `hybrid_fallback`
-scenarios, and `faithfulness_system_one_strict`, and
+scenarios, JsonCorrectness's `system_one` and `hybrid`, and
+`faithfulness_system_one_strict`, and
 `DeepEvalEx.Metrics.JevEval` (`jev_eval` and
 `jev_eval_strict_not_applicable`), and the batched scenarios.
