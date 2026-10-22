@@ -290,7 +290,7 @@ defmodule DeepEvalEx.TestRun.LoadTest do
   end
 
   describe "to_results/1" do
-    test "returns DeepEvalEx test cases and results, like evaluate_batch/3" do
+    test "returns DeepEvalEx test cases and results, like evaluate_run/3" do
       {[test_case | _], [results | _]} =
         fixture("rag_and_tools") |> load!() |> TestRun.to_results()
 

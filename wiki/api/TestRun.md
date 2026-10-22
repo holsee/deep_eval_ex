@@ -31,7 +31,7 @@ variable) nothing is written and `path` is `nil`. To build and encode a run
 yourself:
 
 ```elixir
-results = DeepEvalEx.evaluate_batch(test_cases, metrics)
+{results, _test_run, _path} = DeepEvalEx.evaluate_run(test_cases, metrics)
 
 json =
   test_cases
@@ -69,7 +69,7 @@ the file: scores, reasons, errors, evaluation model, token counts, cost,
 strict mode and flakiness (each metric's own, from its result). A score-only
 metric's data has `threshold: nil` and `success: nil`, as deepeval writes it
 without either key. `to_results/1` converts them to the structs the
-rest of DeepEvalEx uses, in the shape `DeepEvalEx.evaluate_batch/3`
+rest of DeepEvalEx uses, in the shape `DeepEvalEx.evaluate_run/3`
 returns:
 
 ```elixir

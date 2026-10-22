@@ -23,6 +23,7 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 ### API Reference
 - [TestCase](api/TestCase.md)
 - [Result](api/Result.md)
+- [EvaluationResult](api/EvaluationResult.md) - what `evaluate/3` returns
 - [Evaluator](api/Evaluator.md)
 - [TestRun](api/TestRun.md) - deepeval-compatible test run export and import
 - [LLM Adapters](api/LLM-Adapters.md)

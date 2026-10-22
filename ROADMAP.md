@@ -448,7 +448,7 @@ Never built, with the Elixir alternative where there is one:
 ## Architecture
 
 ```
-lib/deep_eval_ex.ex              # Public API: evaluate, evaluate_batch, evaluate_run
+lib/deep_eval_ex.ex              # Public API: evaluate, evaluate_run (evaluate_batch deprecated)
 lib/deep_eval_ex/
 ├── evaluator.ex                 # Concurrent evaluation engine
 ├── ex_unit.ex                   # ExUnit assertions

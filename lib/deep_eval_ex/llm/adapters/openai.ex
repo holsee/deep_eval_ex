@@ -14,7 +14,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
 
   Or pass it directly:
 
-      DeepEvalEx.evaluate(test_case, [metric],
+      DeepEvalEx.evaluate([test_case], [metric],
         adapter: :openai,
         api_key: "sk-..."
       )

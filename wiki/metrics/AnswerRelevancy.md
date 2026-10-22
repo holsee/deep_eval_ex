@@ -210,7 +210,7 @@ metrics = [
   Hallucination     # Does it contradict context?
 ]
 
-results = DeepEvalEx.evaluate(test_case, metrics)
+{:ok, evaluation} = DeepEvalEx.evaluate([test_case], metrics)
 ```
 
 ### Performance Considerations

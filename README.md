@@ -89,6 +89,7 @@ See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation 
 
 - [TestCase](wiki/api/TestCase.md) - Test case structure
 - [Result](wiki/api/Result.md) - Evaluation results
+- [EvaluationResult](wiki/api/EvaluationResult.md) - What `evaluate/3` returns
 - [Evaluator](wiki/api/Evaluator.md) - Batch evaluation
 - [TestRun](wiki/api/TestRun.md) - deepeval-compatible test run export and import
 - [LLM Adapters](wiki/api/LLM-Adapters.md) - Provider adapters
@@ -143,9 +144,12 @@ test_cases = [
   TestCase.new!(input: "Q2", actual_output: "A2", expected_output: "A2")
 ]
 
-results = DeepEvalEx.evaluate_batch(test_cases, [Metrics.ExactMatch],
-  concurrency: 20
-)
+{:ok, %DeepEvalEx.EvaluationResult{test_results: test_results}} =
+  DeepEvalEx.evaluate(test_cases, [Metrics.ExactMatch], concurrency: 20)
+
+# One DeepEvalEx.TestResult per test case, in order
+Enum.map(test_results, &{&1.name, &1.success})
+#=> [{"test_case_0", true}, {"test_case_1", true}]
 ```
 
 ## Telemetry
@@ -178,8 +182,9 @@ DeepEvalEx.evaluate_run(test_cases, [DeepEvalEx.Metrics.ExactMatch],
 
 `DEEPEVAL_RESULTS_FOLDER` is honoured as in deepeval. Names map directly:
 `LLMTestCase` is `DeepEvalEx.TestCase` (snake_case fields, same names),
-`MetricData` is `DeepEvalEx.Result` and `evaluate()` is
-`DeepEvalEx.evaluate_run/3`. See [TestRun](wiki/api/TestRun.md) for what is
+`MetricData` is `DeepEvalEx.Result`, `evaluate()` is `DeepEvalEx.evaluate/3`
+(returning a `DeepEvalEx.EvaluationResult` of `DeepEvalEx.TestResult`s) and
+`DeepEvalEx.evaluate_run/3` also returns the saved run. See [TestRun](wiki/api/TestRun.md) for what is
 kept on import.
 
 ## Development

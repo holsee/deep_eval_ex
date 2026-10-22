@@ -117,11 +117,12 @@ test_cases = [
   TestCase.new!(input: "Q3", actual_output: "A3", expected_output: "A3")
 ]
 
-results = DeepEvalEx.evaluate_batch(test_cases, [Metrics.ExactMatch])
+{:ok, %DeepEvalEx.EvaluationResult{test_results: test_results}} =
+  DeepEvalEx.evaluate(test_cases, [Metrics.ExactMatch])
 
-# Results is a list of result lists (one per test case)
-Enum.each(results, fn [result] ->
-  IO.puts("#{result.metric}: #{result.score}")
+# One DeepEvalEx.TestResult per test case, with its metrics' results
+Enum.each(test_results, fn %{name: name, success: success, metrics_data: [result]} ->
+  IO.puts("#{name} (#{success}): #{result.metric} #{result.score}")
 end)
 ```
 

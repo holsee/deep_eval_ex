@@ -14,7 +14,7 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
       DeepEvalEx.LLM.Adapters.Mock.set_response(~r/capital.*France/, "Paris")
 
       # Use the mock adapter
-      {:ok, result} = DeepEvalEx.evaluate(test_case, [metric],
+      {:ok, evaluation} = DeepEvalEx.evaluate([test_case], [metric],
         adapter: :mock
       )
 
@@ -31,7 +31,7 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   `:output_tokens`) to have every call record that usage, priced for
   `"mock-model"` (unpriced unless set in the `:model_pricing` config):
 
-      DeepEvalEx.evaluate(test_case, [metric],
+      DeepEvalEx.evaluate([test_case], [metric],
         adapter: :mock,
         mock_usage: [input_tokens: 100, output_tokens: 20]
       )
@@ -55,7 +55,7 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
         model: "scripted-judge"
       )
 
-      DeepEvalEx.evaluate(test_case, [metric], adapter: :mock)
+      DeepEvalEx.evaluate([test_case], [metric], adapter: :mock)
 
       DeepEvalEx.LLM.Adapters.Mock.scripted_prompts()
       #=> [%{step: "claims", prompt: "..."}, %{step: "verdicts", prompt: "..."}]

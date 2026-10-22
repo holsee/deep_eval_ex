@@ -67,7 +67,7 @@ defmodule DeepEvalEx.LLM.Adapter do
 
   ## Using a Custom Adapter
 
-      DeepEvalEx.evaluate(test_case, [metric],
+      DeepEvalEx.evaluate([test_case], [metric],
         adapter: MyApp.CustomLLMAdapter,
         model: "custom-model-v2"
       )

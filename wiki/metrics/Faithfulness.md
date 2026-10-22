@@ -237,7 +237,7 @@ metrics = [
   ContextualPrecision
 ]
 
-results = DeepEvalEx.evaluate(test_case, metrics)
+{:ok, evaluation} = DeepEvalEx.evaluate([test_case], metrics)
 ```
 
 ### Performance Considerations

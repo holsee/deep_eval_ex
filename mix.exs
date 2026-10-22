@@ -125,6 +125,7 @@ defmodule DeepEvalEx.MixProject do
         # API
         "wiki/api/TestCase.md",
         "wiki/api/Result.md",
+        "wiki/api/EvaluationResult.md",
         "wiki/api/Evaluator.md",
         "wiki/api/TestRun.md",
         "wiki/api/LLM-Adapters.md",
@@ -151,6 +152,8 @@ defmodule DeepEvalEx.MixProject do
           DeepEvalEx,
           DeepEvalEx.TestCase,
           DeepEvalEx.Result,
+          DeepEvalEx.EvaluationResult,
+          DeepEvalEx.TestResult,
           DeepEvalEx.Evaluator
         ],
         Metrics: ~r/DeepEvalEx\.Metrics\..*/,

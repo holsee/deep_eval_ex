@@ -13,7 +13,7 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
 
   Or per evaluation:
 
-      DeepEvalEx.evaluate(test_case, [metric],
+      DeepEvalEx.evaluate([test_case], [metric],
         adapter: :ollama,
         model: "qwen3:8b"
       )

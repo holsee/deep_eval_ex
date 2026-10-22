@@ -259,7 +259,7 @@ config :deep_eval_ex,
   max_concurrency: 20
 
 # At runtime
-results = DeepEvalEx.evaluate_batch(test_cases, metrics,
+{:ok, evaluation} = DeepEvalEx.evaluate(test_cases, metrics,
   concurrency: 50
 )
 ```

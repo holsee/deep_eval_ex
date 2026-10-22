@@ -12,6 +12,17 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Added
 
+- **`DeepEvalEx.EvaluationResult` and `DeepEvalEx.TestResult`**, ports of
+  deepeval 4.3.1's `EvaluationResult` and `TestResult`. A `TestResult` is built
+  as deepeval's `create_test_result` builds one: the test case's name (or
+  `"test_case_<index>"`), `success`, its metrics' `DeepEvalEx.Result`s as
+  `metrics_data` (skipped ones left out), `conversational: false`, `index`,
+  the test case's input, outputs, contexts and metadata, and
+  `classifications: []`. `success` is `false` when a non-flaky metric failed,
+  else `true`, and folds in classifications like deepeval's `_local_success`
+  (`nil` when no metric ran and no classification gave a verdict).
+  `EvaluationResult.from_results/2` builds one from `evaluate_run/3`'s result
+  lists; `confident_link` and `test_run_id` are always `nil`.
 - **deepeval-compatible test run export.** `DeepEvalEx.evaluate_run/3` evaluates
   test cases and returns `{results, %DeepEvalEx.TestRun{}, path}`. With
   `:results_folder` (or the `DEEPEVAL_RESULTS_FOLDER` environment variable) it
@@ -282,6 +293,15 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Changed
 
+- **BREAKING: `DeepEvalEx.evaluate/3` takes a list of test cases and returns
+  `{:ok, %DeepEvalEx.EvaluationResult{}}`**, with one `DeepEvalEx.TestResult`
+  per test case in input order, as deepeval's `evaluate()` returns an
+  `EvaluationResult`. It takes all of `evaluate_batch/3`'s options
+  (`:concurrency`, `:metric_concurrency`, `:metric_timeout`, ...). Passing a
+  single test case still returns the old `{:ok, [%DeepEvalEx.Result{}]}` for
+  one release, through a compatibility clause that warns (see Deprecated).
+  `evaluate_run/3` is unchanged and stays the way to get the result lists
+  together with the `DeepEvalEx.TestRun` and saved path.
 - **GEval scores from OpenAI judges are logprob-weighted.** With the default
   judge (`gpt-4o-mini`) or any OpenAI model deepeval lists with logprobs,
   GEval scores are now fractional averages (e.g. `0.783` rather than `0.8`),
@@ -418,6 +438,12 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Deprecated
 
+- Passing a single `DeepEvalEx.TestCase` to `DeepEvalEx.evaluate/3`: wrap it
+  in a list. It still returns `{:ok, [%DeepEvalEx.Result{}]}`, with a warning,
+  and will be removed in the next release.
+- `DeepEvalEx.evaluate_batch/3`: use `DeepEvalEx.evaluate/3`, or
+  `DeepEvalEx.evaluate_run/3` for the same result lists. It still works, with
+  a warning, and will be removed in the next release.
 - `{score, description}` GEval rubric entries. `GEval.new/1` converts each to
   `Rubric.new!(score_range: {score, score}, expected_outcome: description)`
   and warns; they will be removed in the next release.

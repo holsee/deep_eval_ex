@@ -2,10 +2,11 @@ defmodule DeepEvalExTest do
   # Not async: some tests set the DEEPEVAL_RESULTS_FOLDER environment variable.
   use ExUnit.Case, async: false
 
+  import ExUnit.CaptureIO
   import ExUnit.CaptureLog
 
+  alias DeepEvalEx.{EvaluationResult, Result, TestCase, TestResult, TestRun}
   alias DeepEvalEx.Metrics.ExactMatch
-  alias DeepEvalEx.{Result, TestCase, TestRun}
 
   @moduletag :tmp_dir
 
@@ -190,48 +191,98 @@ defmodule DeepEvalExTest do
     end
   end
 
-  describe "evaluate_batch/3" do
-    test "still returns the result lists and writes the test run", %{tmp_dir: dir} do
-      capture_log(fn ->
-        assert [[%Result{success: true}], [%Result{success: false}]] =
-                 DeepEvalEx.evaluate_batch(test_cases(), [ExactMatch], results_folder: dir)
-      end)
-
-      assert [_path] = written(dir)
-    end
-  end
-
   describe "evaluate/3" do
-    test "still returns {:ok, results} and writes the test run", %{tmp_dir: dir} do
-      [test_case | _] = test_cases()
+    test "returns {:ok, %EvaluationResult{}} with a TestResult per test case" do
+      assert {:ok,
+              %EvaluationResult{confident_link: nil, test_run_id: nil, test_results: results}} =
+               DeepEvalEx.evaluate(test_cases(), [ExactMatch])
 
+      assert [
+               %TestResult{
+                 name: "test_case_0",
+                 index: 0,
+                 success: true,
+                 conversational: false,
+                 input: "2 + 2?",
+                 actual_output: "4",
+                 expected_output: "4",
+                 metrics_data: [%Result{metric: "Exact Match", success: true}],
+                 classifications: []
+               },
+               %TestResult{name: "wrong", index: 1, success: false}
+             ] = results
+    end
+
+    test "writes the test run", %{tmp_dir: dir} do
       capture_log(fn ->
-        assert {:ok, [%Result{success: true}]} =
-                 DeepEvalEx.evaluate(test_case, [ExactMatch], results_folder: dir)
+        assert {:ok, %EvaluationResult{}} =
+                 DeepEvalEx.evaluate(test_cases(), [ExactMatch], results_folder: dir)
       end)
 
       assert [path] = written(dir)
-      assert File.read!(path) =~ ~s("testPassed": 1, "testFailed": 0)
+      assert File.read!(path) =~ ~s("testPassed": 1, "testFailed": 1)
+    end
+
+    test "returns no test results for no test cases" do
+      assert {:ok, %EvaluationResult{test_results: []}} = DeepEvalEx.evaluate([], [ExactMatch])
     end
 
     test "raises like deepeval when no metric has a threshold" do
-      [test_case | _] = test_cases()
-
       assert_raise ArgumentError, @no_threshold_message, fn ->
-        DeepEvalEx.evaluate(test_case, [ScoreOnlyMetric])
-      end
-
-      assert_raise ArgumentError, @no_threshold_message, fn ->
-        DeepEvalEx.evaluate_batch(test_cases(), [ScoreOnlyMetric])
+        DeepEvalEx.evaluate(test_cases(), [ScoreOnlyMetric])
       end
     end
 
     test "writes nothing without a results folder", %{tmp_dir: dir} do
       File.cd!(dir, fn ->
-        assert {:ok, [_]} = DeepEvalEx.evaluate(hd(test_cases()), [ExactMatch])
+        assert {:ok, %EvaluationResult{}} = DeepEvalEx.evaluate(test_cases(), [ExactMatch])
       end)
 
       assert File.ls!(dir) == []
+    end
+  end
+
+  describe "deprecated result shapes" do
+    test "evaluate/3 with a single test case still returns {:ok, results}, with a warning",
+         %{tmp_dir: dir} do
+      [test_case | _] = test_cases()
+
+      warning =
+        capture_io(:stderr, fn ->
+          capture_log(fn ->
+            assert {:ok, [%Result{success: true}]} =
+                     DeepEvalEx.evaluate(test_case, [ExactMatch], results_folder: dir)
+          end)
+        end)
+
+      assert warning =~ "Passing a single test case to DeepEvalEx.evaluate/3 is deprecated"
+      assert [path] = written(dir)
+      assert File.read!(path) =~ ~s("testPassed": 1, "testFailed": 0)
+    end
+
+    test "evaluate_batch/3 still returns the result lists, with a warning", %{tmp_dir: dir} do
+      warning =
+        capture_io(:stderr, fn ->
+          capture_log(fn ->
+            assert [[%Result{success: true}], [%Result{success: false}]] =
+                     DeepEvalEx.evaluate_batch(test_cases(), [ExactMatch], results_folder: dir)
+          end)
+        end)
+
+      assert warning =~ "DeepEvalEx.evaluate_batch/3 is deprecated"
+      assert [_path] = written(dir)
+    end
+
+    test "still raise like deepeval when no metric has a threshold" do
+      capture_io(:stderr, fn ->
+        assert_raise ArgumentError, @no_threshold_message, fn ->
+          DeepEvalEx.evaluate(hd(test_cases()), [ScoreOnlyMetric])
+        end
+
+        assert_raise ArgumentError, @no_threshold_message, fn ->
+          DeepEvalEx.evaluate_batch(test_cases(), [ScoreOnlyMetric])
+        end
+      end)
     end
   end
 

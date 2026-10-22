@@ -7,7 +7,7 @@ defmodule DeepEvalEx.TestRun do
   structure from DeepEvalEx results, so tools that read deepeval's exports
   can read DeepEvalEx's too.
 
-      results = DeepEvalEx.evaluate_batch(test_cases, metrics)
+      {results, _test_run, _path} = DeepEvalEx.evaluate_run(test_cases, metrics)
       test_run = DeepEvalEx.TestRun.from_results(test_cases, results)
 
       test_run
@@ -287,7 +287,7 @@ defmodule DeepEvalEx.TestRun do
   Builds a test run from test cases and their results.
 
   `results` holds one result list per test case, as returned by
-  `DeepEvalEx.evaluate_batch/3`. Skipped results (`DeepEvalEx.Result.skipped/2`)
+  `DeepEvalEx.evaluate_run/3`. Skipped results (`DeepEvalEx.Result.skipped/2`)
   are left out, and so are test cases without other results, as deepeval
   leaves out test cases no metric ran on; the others keep their position in
   `test_cases` as their `order`. Each metric's `strictMode` and `flaky` come
@@ -490,7 +490,7 @@ defmodule DeepEvalEx.TestRun do
 
   Returns `{test_cases, results}` with one `DeepEvalEx.TestCase` and one
   list of `DeepEvalEx.Result`s per evaluated test case, in the shape
-  `DeepEvalEx.evaluate_batch/3` returns. See `TestCase.to_test_case/1` and
+  `DeepEvalEx.evaluate_run/3` returns. See `TestCase.to_test_case/1` and
   `MetricData.to_result/1` for what is kept.
   """
   @spec to_results(t()) :: {[EvalTestCase.t()], [[Result.t()]]}

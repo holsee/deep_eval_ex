@@ -14,7 +14,7 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
 
   Or pass it directly:
 
-      DeepEvalEx.evaluate(test_case, [metric],
+      DeepEvalEx.evaluate([test_case], [metric],
         adapter: :anthropic,
         api_key: "sk-ant-..."
       )

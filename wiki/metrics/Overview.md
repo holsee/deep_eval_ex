@@ -108,7 +108,7 @@ metrics = [
   )
 ]
 
-results = DeepEvalEx.evaluate_batch([test_case], metrics)
+{:ok, evaluation} = DeepEvalEx.evaluate([test_case], metrics)
 ```
 
 ## Performance Considerations

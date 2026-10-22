@@ -237,7 +237,7 @@ criteria: "The response should be good"
 
 - Use `gpt-4o-mini` for faster, cheaper evaluations
 - Pre-define `evaluation_steps` to skip generation step
-- Run evaluations concurrently with `evaluate_batch/3`
+- Run evaluations concurrently with `DeepEvalEx.evaluate/3`
 
 ## Error Handling
 

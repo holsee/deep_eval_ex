@@ -31,7 +31,12 @@ defmodule DeepEvalEx do
       )
 
       # Evaluate
-      {:ok, results} = DeepEvalEx.evaluate(test_case, [metric])
+      {:ok, %DeepEvalEx.EvaluationResult{test_results: [test_result]}} =
+        DeepEvalEx.evaluate([test_case], [metric])
+
+      test_result.success
+      test_result.metrics_data
+      #=> [%DeepEvalEx.Result{metric: "Correctness [GEval]", score: 0.9, ...}]
 
   ## Metrics
 
@@ -76,13 +81,30 @@ defmodule DeepEvalEx do
 
   require Logger
 
-  alias DeepEvalEx.{Evaluator, Result, TestCase, TestRun}
+  alias DeepEvalEx.{EvaluationResult, Evaluator, Result, TestCase, TestRun}
   alias DeepEvalEx.TestRun.LocalStore
 
   @export_opts [:results_folder, :results_subfolder, :identifier, :hyperparameters]
 
   @doc """
-  Evaluate a single test case against one or more metrics.
+  Evaluates test cases against one or more metrics, as deepeval's
+  `evaluate()`.
+
+  Returns `{:ok, %DeepEvalEx.EvaluationResult{}}` holding one
+  `DeepEvalEx.TestResult` per test case, in the order of `test_cases`. Each
+  carries the test case's fields, its metrics' `DeepEvalEx.Result`s as
+  `:metrics_data` and whether it passed (`:success`). Evaluation errors do
+  not make it return an error: an errored metric is an errored result (see
+  `DeepEvalEx.Result.error/3`), as in deepeval.
+
+  Test cases are evaluated concurrently, and so are the metrics of each test
+  case (see `DeepEvalEx.Evaluator`). With `:results_folder` (or
+  `config :deep_eval_ex, results_folder:` or the `DEEPEVAL_RESULTS_FOLDER`
+  environment variable) set, the run is also saved in deepeval's format; see
+  `evaluate_run/3`, which also returns the `DeepEvalEx.TestRun`.
+
+  Raises `ArgumentError` when no metric has a threshold, as deepeval does
+  (see `evaluate_run/3`).
 
   ## Options
 
@@ -91,74 +113,90 @@ defmodule DeepEvalEx do
   - `:strict_mode` - Force every metric's threshold to `1` (default: false)
   - `:flaky` - Report every metric without letting it decide success
   - `:model` - LLM model to use for evaluation
-  - `:timeout` - Timeout per metric in milliseconds (default: 60_000)
+  - `:concurrency` - Max test cases evaluated at once (default: schedulers * 2)
+  - `:metric_concurrency` - Max metrics run at once within a test case
+    (default: the number of metrics)
+  - `:timeout` - Timeout in milliseconds (default: 60_000); the default for
+    `:metric_timeout` and the minimum per-test-case timeout
+  - `:metric_timeout` - Timeout per metric in milliseconds (default: the
+    `:timeout` value). A slow metric yields an errored result while the
+    test case's other metrics still complete
   - `:results_folder`, `:results_subfolder`, `:identifier`,
     `:hyperparameters` - Save the run in deepeval's format, see
     `evaluate_run/3`
 
   ## Examples
 
-      {:ok, results} = DeepEvalEx.evaluate(test_case, [metric])
+      {:ok, %DeepEvalEx.EvaluationResult{test_results: [test_result]}} =
+        DeepEvalEx.evaluate([test_case], [metric])
+
+      test_result.success
+      #=> true
 
       # With options
-      {:ok, results} = DeepEvalEx.evaluate(test_case, [metric],
-        threshold: 0.7,
-        model: {:openai, "gpt-4o"}
-      )
+      {:ok, evaluation} =
+        DeepEvalEx.evaluate(test_cases, [metric],
+          threshold: 0.7,
+          model: {:openai, "gpt-4o"},
+          concurrency: 20
+        )
+
+  ## Deprecated: a single test case
+
+  Passing a single `DeepEvalEx.TestCase` instead of a list still works for
+  one release, with a deprecation warning, and returns the old
+  `{:ok, [%DeepEvalEx.Result{}]}`. Wrap it in a list instead.
   """
-  @spec evaluate(TestCase.t(), [module() | struct()], keyword()) ::
-          {:ok, [Result.t()]} | {:error, term()}
-  def evaluate(test_case, metrics, opts \\ []) do
-    case evaluate_run([test_case], metrics, opts) do
-      {[results], _test_run, _path} -> {:ok, results}
-      {error, _test_run, _path} -> {:error, error}
-    end
+  @spec evaluate([TestCase.t()], [module() | struct()], keyword()) ::
+          {:ok, EvaluationResult.t()}
+  @spec evaluate(TestCase.t(), [module() | struct()], keyword()) :: {:ok, [Result.t()]}
+  def evaluate(test_cases, metrics, opts \\ [])
+
+  def evaluate(test_cases, metrics, opts) when is_list(test_cases) do
+    {results, _test_run, _path} = evaluate_run(test_cases, metrics, opts)
+    {:ok, EvaluationResult.from_results(test_cases, results)}
   end
 
+  def evaluate(%TestCase{} = test_case, metrics, opts) do
+    IO.warn(
+      "Passing a single test case to DeepEvalEx.evaluate/3 is deprecated and will be " <>
+        "removed in the next release; pass a list, which returns " <>
+        "{:ok, %DeepEvalEx.EvaluationResult{}}"
+    )
+
+    {[results], _test_run, _path} = evaluate_run([test_case], metrics, opts)
+    {:ok, results}
+  end
+
+  @doc deprecated: "Use DeepEvalEx.evaluate/3, or evaluate_run/3 for the result lists"
   @doc """
-  Evaluate multiple test cases against metrics concurrently.
+  Evaluates test cases and returns their result lists, one per test case.
 
-  Leverages BEAM's lightweight processes for parallel evaluation.
-
-  ## Options
-
-  - `:concurrency` - Max test cases evaluated at once (default: schedulers * 2)
-  - `:metric_concurrency` - Max metrics run at once within a test case
-    (default: the number of metrics)
-  - `:threshold` - Score threshold for pass/fail (default: 0.5)
-  - `:model` - LLM model to use for evaluation
-  - `:timeout` - Timeout in milliseconds (default: 60_000); the default for
-    `:metric_timeout` and the minimum per-test-case timeout
-  - `:metric_timeout` - Timeout per metric in milliseconds (default: the
-    `:timeout` value). A slow metric yields an errored result while the
-    test case's other metrics still complete
-
-  The metrics of a test case run concurrently and results keep the order of
-  `metrics`. See `DeepEvalEx.Evaluator` for how the timeouts interact.
-
-  With `:results_folder` (or `config :deep_eval_ex, results_folder:` or the
-  `DEEPEVAL_RESULTS_FOLDER` environment variable) set, the run is also saved in deepeval's format; see
-  `evaluate_run/3` for that and the `:results_subfolder`, `:identifier`
-  and `:hyperparameters` options.
-
-  ## Examples
-
-      results = DeepEvalEx.evaluate_batch(test_cases, [metric1, metric2],
-        concurrency: 20
-      )
+  Deprecated: use `evaluate/3`, which returns a
+  `DeepEvalEx.EvaluationResult`, or `evaluate_run/3` for these result lists.
+  Still works for one release, with a deprecation warning, and takes the
+  options of `evaluate/3`.
   """
   @spec evaluate_batch([TestCase.t()], [module() | struct()], keyword()) :: [[Result.t()]]
   def evaluate_batch(test_cases, metrics, opts \\ []) do
+    IO.warn(
+      "DeepEvalEx.evaluate_batch/3 is deprecated and will be removed in the next release; " <>
+        "use DeepEvalEx.evaluate/3, or evaluate_run/3 for the result lists"
+    )
+
     {results, _test_run, _path} = evaluate_run(test_cases, metrics, opts)
     results
   end
 
   @doc """
-  Evaluates test cases like `evaluate_batch/3` and returns the run as a
+  Evaluates test cases like `evaluate/3` and also returns the run as a
   `DeepEvalEx.TestRun`, saving it the way deepeval's `evaluate()` does.
 
-  Returns `{results, test_run, path}`: the result lists of
-  `evaluate_batch/3`, the run in deepeval's `TestRun` format and the path
+  Returns `{results, test_run, path}`: one list of `DeepEvalEx.Result`s per
+  test case, in the order of `test_cases` and of `metrics` (build a
+  `DeepEvalEx.EvaluationResult` from them with
+  `DeepEvalEx.EvaluationResult.from_results/2`), the run in deepeval's
+  `TestRun` format and the path
   of the `test_run_<YYYYMMDD_HHMMSS>.json` file written, or `nil` when
   nothing was written.
 
@@ -170,7 +208,7 @@ defmodule DeepEvalEx do
 
   ## Options
 
-  All `evaluate_batch/3` options, plus:
+  All `evaluate/3` options, including:
 
   - `:results_folder` - Folder to save the run in (default: the
     `:results_folder` setting, see `DeepEvalEx.Config`)
@@ -187,8 +225,8 @@ defmodule DeepEvalEx do
   As deepeval's `evaluate()`, raises `ArgumentError` before evaluating when
   no metric has a threshold or every metric with one is `:flaky`, since no
   test case could then pass or fail (see
-  `DeepEvalEx.Evaluator.check_at_least_one_metric_has_threshold!/2`). So do
-  `evaluate/3` and `evaluate_batch/3`. Metrics with a `nil` threshold are
+  `DeepEvalEx.Evaluator.check_at_least_one_metric_has_threshold!/2`). So
+  does `evaluate/3`. Metrics with a `nil` threshold are
   score-only: their results have `success: nil` and never decide a test
   case's success, nor do flaky metrics' results.
 
