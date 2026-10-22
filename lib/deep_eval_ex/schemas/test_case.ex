@@ -15,6 +15,17 @@ defmodule DeepEvalEx.TestCase do
   - `:tools_called` - List of tool calls made by the LLM
   - `:expected_tools` - Expected tool calls for tool use evaluation
   - `:metadata` - Additional metadata for the test case
+  - `:name` - Optional name identifying the test case
+  - `:tags` - Optional list of tags
+  - `:comments` - Free-text comments about the test case
+  - `:token_cost` - Cost of the LLM call that produced `:actual_output` (float)
+  - `:input_token_count` - Number of input tokens consumed (integer)
+  - `:output_token_count` - Number of output tokens produced (integer)
+  - `:completion_time` - Time the LLM took to respond, in seconds (float)
+  - `:flaky` - Whether the test case is known to be flaky (default: `false`)
+
+  The last six fields mirror deepeval's `LLMTestCase` and are carried through
+  to results and exports unchanged; no metric reads them.
 
   ## Examples
 
@@ -56,7 +67,13 @@ defmodule DeepEvalEx.TestCase do
           expected_tools: [ToolCall.t()],
           metadata: map() | nil,
           name: String.t() | nil,
-          tags: [String.t()] | nil
+          tags: [String.t()] | nil,
+          comments: String.t() | nil,
+          token_cost: float() | nil,
+          input_token_count: non_neg_integer() | nil,
+          output_token_count: non_neg_integer() | nil,
+          completion_time: float() | nil,
+          flaky: boolean()
         }
 
   defstruct [
@@ -68,17 +85,20 @@ defmodule DeepEvalEx.TestCase do
     :metadata,
     :name,
     :tags,
+    :comments,
+    :token_cost,
+    :input_token_count,
+    :output_token_count,
+    :completion_time,
     tools_called: [],
-    expected_tools: []
+    expected_tools: [],
+    flaky: false
   ]
 
-  @tool_call_schema %{
-    name: {:required, :string},
-    description: :string,
-    reasoning: :string,
-    input_parameters: :map,
-    output: :string
-  }
+  @tool_call_schema ToolCall.schema()
+
+  @tool_call_keys [:tools_called, :expected_tools]
+  @float_keys [:token_cost, :completion_time]
 
   defschema(:test_case_schema, %{
     input: {:required, :string},
@@ -90,7 +110,13 @@ defmodule DeepEvalEx.TestCase do
     expected_tools: {:list, @tool_call_schema},
     metadata: :map,
     name: :string,
-    tags: {:list, :string}
+    tags: {:list, :string},
+    comments: :string,
+    token_cost: :float,
+    input_token_count: :integer,
+    output_token_count: :integer,
+    completion_time: :float,
+    flaky: {:boolean, {:default, false}}
   })
 
   @doc """
@@ -106,6 +132,18 @@ defmodule DeepEvalEx.TestCase do
   - `:tools_called` - List of tool calls made
   - `:expected_tools` - Expected tool calls
   - `:metadata` - Additional metadata map
+  - `:name` - Optional test case name
+  - `:tags` - Optional list of tags
+  - `:comments` - Free-text comments
+  - `:token_cost` - Cost of producing the output (integers are cast to floats)
+  - `:input_token_count` - Input tokens consumed
+  - `:output_token_count` - Output tokens produced
+  - `:completion_time` - Response time in seconds (integers are cast to floats)
+  - `:flaky` - Whether the test case is flaky (default: `false`)
+
+  Keys may be atoms or strings. Tool calls may be `DeepEvalEx.Schemas.ToolCall`
+  structs or maps, and accept deepeval's `"inputParameters"` alias and
+  `"FUNCTION"` / `"MCP"` type values.
   """
   @spec new(keyword() | map()) :: {:ok, t()} | {:error, term()}
   def new(attrs) when is_list(attrs), do: new(Map.new(attrs))
@@ -153,7 +191,13 @@ defmodule DeepEvalEx.TestCase do
         "expected_tools" => %{"type" => "array", "items" => tool_call_schema},
         "metadata" => %{"type" => "object"},
         "name" => %{"type" => "string"},
-        "tags" => %{"type" => "array", "items" => %{"type" => "string"}}
+        "tags" => %{"type" => "array", "items" => %{"type" => "string"}},
+        "comments" => %{"type" => "string"},
+        "token_cost" => %{"type" => "number"},
+        "input_token_count" => %{"type" => "integer"},
+        "output_token_count" => %{"type" => "integer"},
+        "completion_time" => %{"type" => "number"},
+        "flaky" => %{"type" => "boolean"}
       },
       "required" => ["input"],
       "additionalProperties" => false
@@ -195,8 +239,35 @@ defmodule DeepEvalEx.TestCase do
       {k, v} -> {k, v}
     end)
     |> Map.new()
+    |> normalize_tool_calls()
+    |> normalize_floats()
   rescue
     ArgumentError -> attrs
+  end
+
+  defp normalize_tool_calls(attrs) do
+    Enum.reduce(@tool_call_keys, attrs, fn key, acc ->
+      case Map.get(acc, key) do
+        tools when is_list(tools) ->
+          Map.put(acc, key, Enum.map(tools, &normalize_tool_call/1))
+
+        _ ->
+          acc
+      end
+    end)
+  end
+
+  defp normalize_tool_call(tool) when is_map(tool) or is_list(tool), do: ToolCall.normalize(tool)
+  defp normalize_tool_call(tool), do: tool
+
+  # deepeval (pydantic) accepts ints for float fields; do the same
+  defp normalize_floats(attrs) do
+    Enum.reduce(@float_keys, attrs, fn key, acc ->
+      case Map.get(acc, key) do
+        value when is_integer(value) -> Map.put(acc, key, value / 1)
+        _ -> acc
+      end
+    end)
   end
 
   # If context is provided but retrieval_context is not, use context as retrieval_context
