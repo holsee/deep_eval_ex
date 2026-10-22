@@ -81,7 +81,7 @@ defmodule DeepEvalEx do
 
   require Logger
 
-  alias DeepEvalEx.{EvaluationResult, Evaluator, Result, TestCase, TestRun}
+  alias DeepEvalEx.{Config, EvaluationResult, Evaluator, Result, TestCase, TestRun}
   alias DeepEvalEx.TestRun.LocalStore
 
   @export_opts [:results_folder, :results_subfolder, :identifier, :hyperparameters]
@@ -223,6 +223,15 @@ defmodule DeepEvalEx do
   there is at least one test case. As in deepeval, failing to write it does
   not fail the evaluation: a warning is logged and `path` is `nil`.
 
+  Every run with at least one test case also overwrites
+  `.deepeval/.latest_run_full.json` (the same content) and
+  `.deepeval/.latest_test_run.json` (`{"testRunData": ...}`), as deepeval's
+  `save_test_run_locally` and `wrap_up_test_run` do, unless
+  `DEEPEVAL_FILE_SYSTEM=READ_ONLY`; see "Latest-run snapshots" in
+  `DeepEvalEx.TestRun.LocalStore`. A snapshot that cannot be written only
+  logs a warning. An invalid `DEEPEVAL_FILE_SYSTEM` raises `ArgumentError`
+  before evaluating.
+
   ## Options
 
   All `evaluate/3` options, including:
@@ -264,6 +273,10 @@ defmodule DeepEvalEx do
 
     if metrics != [], do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, eval_opts)
 
+    # Read before evaluating so an invalid DEEPEVAL_FILE_SYSTEM fails fast, as
+    # deepeval fails to load its settings, rather than after the LLM calls.
+    export_opts = Keyword.put(export_opts, :read_only, Config.read_only?())
+
     started = System.monotonic_time()
     {results, durations} = Evaluator.evaluate_with_durations(test_cases, metrics, eval_opts)
 
@@ -284,7 +297,22 @@ defmodule DeepEvalEx do
 
   defp save_test_run(%TestRun{test_cases: []}, _opts), do: nil
 
+  # deepeval's save_test_run_locally (rolling snapshot, then the results
+  # folder), then wrap_up_test_run's LATEST_TEST_RUN_FILE_PATH.
   defp save_test_run(test_run, opts) do
+    warn_on_error(LocalStore.write_rolling(test_run, opts), "write rolling snapshot to")
+    path = save_to_results_folder(test_run, opts)
+    warn_on_error(LocalStore.write_latest(test_run, opts), "write")
+    path
+  end
+
+  defp warn_on_error({:error, {path, reason}}, action) do
+    Logger.warning("DeepEvalEx failed to #{action} #{path}: #{inspect(reason)}")
+  end
+
+  defp warn_on_error(_ok_or_skip, _action), do: :ok
+
+  defp save_to_results_folder(test_run, opts) do
     case LocalStore.write(test_run, opts) do
       {:ok, path} ->
         Logger.info("Test run saved at #{path}")

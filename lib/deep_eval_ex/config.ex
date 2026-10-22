@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Ported from deepeval/config/settings.py, deepeval/config/utils.py
-# (parse_bool) and deepeval/config/eval_mode.py (normalize_eval_mode)
+# (parse_bool), deepeval/config/eval_mode.py (normalize_eval_mode) and
+# deepeval/utils.py (is_read_only_env)
 # Original: https://github.com/confident-ai/deepeval
 
 defmodule DeepEvalEx.Config do
@@ -36,6 +37,8 @@ defmodule DeepEvalEx.Config do
   | `:retry_jitter` | `DEEPEVAL_RETRY_JITTER` | float >= 0 | `2.0` |
   | `:retry_cap_seconds` | `DEEPEVAL_RETRY_CAP_SECONDS` | float >= 0 | `5.0` |
   | `:eval_mode` | `DEEPEVAL_EVAL_MODE` | `:llm`, `:hybrid` or `:system_one` | `nil` |
+  | `:file_system` | `DEEPEVAL_FILE_SYSTEM` | `:read_only` | `nil` |
+  | `:cache_folder` | `DEEPEVAL_CACHE_FOLDER` | string | `".deepeval"` |
   | `:typesafe_api_key` | `TYPESAFE_API_KEY` | string | `nil` |
   | `:typesafe_model_name` | `TYPESAFE_MODEL_NAME` | string | `nil` |
   | `:typesafe_cost_per_input_token` | `TYPESAFE_COST_PER_INPUT_TOKEN` | float > 0 | `nil` |
@@ -52,6 +55,9 @@ defmodule DeepEvalEx.Config do
     the variable, where deepeval fails to load its settings.
   - `:eval_mode` case-insensitively, as `normalize_eval_mode`; an
     unrecognised value counts as unset.
+  - `:file_system` case-insensitively: `READ_ONLY`, `READ-ONLY`, `READONLY`
+    and `RO` are `:read_only`, and any other value raises an
+    `ArgumentError`, as deepeval's settings validator rejects it.
 
   Application config may hold the native value (`true`, `3`, `:hybrid`) or
   the same strings as the environment variable.
@@ -83,10 +89,15 @@ defmodule DeepEvalEx.Config do
     retry_jitter: {"DEEPEVAL_RETRY_JITTER", {:float, :>=, 0}, 2.0},
     retry_cap_seconds: {"DEEPEVAL_RETRY_CAP_SECONDS", {:float, :>=, 0}, 5.0},
     eval_mode: {"DEEPEVAL_EVAL_MODE", :eval_mode, nil},
+    file_system: {"DEEPEVAL_FILE_SYSTEM", :file_system, nil},
+    cache_folder: {"DEEPEVAL_CACHE_FOLDER", :string, ".deepeval"},
     typesafe_api_key: {"TYPESAFE_API_KEY", :string, nil},
     typesafe_model_name: {"TYPESAFE_MODEL_NAME", :string, nil},
     typesafe_cost_per_input_token: {"TYPESAFE_COST_PER_INPUT_TOKEN", {:float, :>, 0}, nil}
   ]
+
+  # deepeval's Settings._normalize_fs aliases.
+  @read_only_aliases ~w(READ_ONLY READ-ONLY READONLY RO)
 
   # deepeval's config/utils.py tokens.
   @truthy ~w(1 true t yes y on enable enabled)
@@ -106,6 +117,8 @@ defmodule DeepEvalEx.Config do
           | :retry_jitter
           | :retry_cap_seconds
           | :eval_mode
+          | :file_system
+          | :cache_folder
           | :typesafe_api_key
           | :typesafe_model_name
           | :typesafe_cost_per_input_token
@@ -174,6 +187,20 @@ defmodule DeepEvalEx.Config do
     end
   end
 
+  @doc """
+  Whether DeepEvalEx must not write to disk, deepeval's `is_read_only_env`:
+  the `:file_system` setting (`DEEPEVAL_FILE_SYSTEM`) is `READ_ONLY`.
+
+  `DeepEvalEx.TestRun.LocalStore` then skips the `.deepeval` snapshots.
+
+  ## Examples
+
+      iex> DeepEvalEx.Config.read_only?()
+      false
+  """
+  @spec read_only?() :: boolean()
+  def read_only?, do: get(:file_system) == :read_only
+
   defp setting!(key) do
     case Keyword.fetch(@settings, key) do
       {:ok, setting} -> setting
@@ -191,6 +218,15 @@ defmodule DeepEvalEx.Config do
 
   defp parse(value, :boolean, _source), do: parse_bool(value)
   defp parse(value, :eval_mode, _source), do: normalize_eval_mode(value)
+  defp parse(:read_only, :file_system, _source), do: :read_only
+
+  defp parse(value, :file_system, source) when is_binary(value) do
+    if String.upcase(String.trim(value)) in @read_only_aliases,
+      do: :read_only,
+      else: raise_file_system(value, source)
+  end
+
+  defp parse(value, :file_system, source), do: raise_file_system(value, source)
 
   defp parse(value, {kind, op, bound} = type, source) do
     number = to_number(value, kind)
@@ -198,6 +234,11 @@ defmodule DeepEvalEx.Config do
     if number != nil and compare(number, op, bound),
       do: number,
       else: raise(ArgumentError, "#{source} must be #{describe(type)}, got: #{inspect(value)}")
+  end
+
+  defp raise_file_system(value, source) do
+    raise ArgumentError,
+          "#{source} must be READ_ONLY (case-insensitive), got: #{inspect(value)}"
   end
 
   defp to_number(value, :float) when is_number(value), do: value / 1

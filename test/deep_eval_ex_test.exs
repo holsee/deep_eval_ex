@@ -233,14 +233,124 @@ defmodule DeepEvalExTest do
       end
     end
 
-    test "writes nothing without a results folder", %{tmp_dir: dir} do
-      File.cd!(dir, fn ->
-        assert {:ok, %EvaluationResult{}} = DeepEvalEx.evaluate(test_cases(), [ExactMatch])
+    test "writes only the .deepeval snapshots without a results folder", %{tmp_dir: dir} do
+      without_cache_folder_config(fn ->
+        File.cd!(dir, fn ->
+          assert {:ok, %EvaluationResult{}} = DeepEvalEx.evaluate(test_cases(), [ExactMatch])
+        end)
       end)
 
-      assert File.ls!(dir) == []
+      assert File.ls!(dir) == [".deepeval"]
+
+      assert dir |> Path.join(".deepeval") |> File.ls!() |> Enum.sort() ==
+               [".latest_run_full.json", ".latest_test_run.json"]
     end
   end
+
+  describe "latest-run snapshots" do
+    setup %{tmp_dir: dir} do
+      previous = Application.fetch_env(:deep_eval_ex, :cache_folder)
+      previous_fs = System.get_env("DEEPEVAL_FILE_SYSTEM")
+      cache = Path.join(dir, "cache")
+      Application.put_env(:deep_eval_ex, :cache_folder, cache)
+
+      on_exit(fn ->
+        restore_cache_folder(previous)
+
+        if previous_fs,
+          do: System.put_env("DEEPEVAL_FILE_SYSTEM", previous_fs),
+          else: System.delete_env("DEEPEVAL_FILE_SYSTEM")
+      end)
+
+      %{cache: cache}
+    end
+
+    test "overwrite .latest_run_full.json and .latest_test_run.json after every run",
+         %{tmp_dir: dir, cache: cache} do
+      {_results, _first, nil} = DeepEvalEx.evaluate_run(test_cases(), [ExactMatch])
+
+      {{_results, test_run, path}, _log} =
+        with_log(fn ->
+          DeepEvalEx.evaluate_run(Enum.take(test_cases(), 1), [ExactMatch],
+            results_folder: Path.join(dir, "out")
+          )
+        end)
+
+      body = File.read!(path)
+      assert body == test_run |> TestRun.to_map() |> TestRun.JSON.encode!()
+      assert body =~ ~s("testPassed": 1, "testFailed": 0)
+      assert File.read!(Path.join(cache, ".latest_run_full.json")) == body
+
+      assert File.read!(Path.join(cache, ".latest_test_run.json")) ==
+               ~s({"testRunData": ) <> body <> "}"
+    end
+
+    test "are not written with DEEPEVAL_FILE_SYSTEM=READ_ONLY; the results folder still is",
+         %{tmp_dir: dir, cache: cache} do
+      System.put_env("DEEPEVAL_FILE_SYSTEM", "READ_ONLY")
+      out = Path.join(dir, "out")
+
+      capture_log(fn ->
+        assert {_results, _test_run, path} =
+                 DeepEvalEx.evaluate_run(test_cases(), [ExactMatch], results_folder: out)
+
+        assert [^path] = written(out)
+      end)
+
+      refute File.exists?(cache)
+    end
+
+    test "raise before evaluating on an invalid DEEPEVAL_FILE_SYSTEM" do
+      System.put_env("DEEPEVAL_FILE_SYSTEM", "nope")
+
+      assert_raise ArgumentError, ~r/DEEPEVAL_FILE_SYSTEM must be READ_ONLY/, fn ->
+        DeepEvalEx.evaluate_run([TestCase.new!(input: "x")], [OptsMetric], test_pid: self())
+      end
+
+      refute_received {:opts, _}
+    end
+
+    test "are not written for a run without test cases", %{cache: cache} do
+      assert {[], %TestRun{}, nil} = DeepEvalEx.evaluate_run([], [ExactMatch])
+      refute File.exists?(cache)
+    end
+
+    test "log a warning, and the evaluation still succeeds, when they cannot be written",
+         %{tmp_dir: dir, cache: cache} do
+      File.write!(cache, "")
+
+      {{results, _test_run, path}, log} =
+        with_log(fn ->
+          DeepEvalEx.evaluate_run(test_cases(), [ExactMatch],
+            results_folder: Path.join(dir, "out")
+          )
+        end)
+
+      assert [[%Result{success: true}], [%Result{success: false}]] = results
+      assert [^path] = written(Path.join(dir, "out"))
+
+      assert log =~
+               "failed to write rolling snapshot to #{Path.join(cache, ".latest_run_full.json")}"
+
+      assert log =~ "failed to write #{Path.join(cache, ".latest_test_run.json")}"
+    end
+  end
+
+  defp without_cache_folder_config(fun) do
+    previous = Application.fetch_env(:deep_eval_ex, :cache_folder)
+    Application.delete_env(:deep_eval_ex, :cache_folder)
+
+    try do
+      fun.()
+    after
+      restore_cache_folder(previous)
+    end
+  end
+
+  defp restore_cache_folder({:ok, value}),
+    do: Application.put_env(:deep_eval_ex, :cache_folder, value)
+
+  defp restore_cache_folder(:error), do: Application.delete_env(:deep_eval_ex, :cache_folder)
 
   describe "deprecated result shapes" do
     test "evaluate/3 with a single test case still returns {:ok, results}, with a warning",

@@ -330,6 +330,21 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   with traces, prompts and a dataset now round-trips byte for byte, checked
   against a new `round_trip/traced_dataset` fixture generated with
   `evals_iterator()` over an `@observe`d app.
+- **Latest-run snapshots in `.deepeval/`.** Every `evaluate/3` and
+  `evaluate_run/3` run with at least one test case now overwrites
+  `.deepeval/.latest_run_full.json` (the same bytes as the timestamped
+  `test_run_*.json`) and `.deepeval/.latest_test_run.json`
+  (`{"testRunData": <the run>}`), as deepeval 4.3.1's
+  `write_rolling_test_run` and `wrap_up_test_run` do, whether or not a
+  results folder is set. The folder is the new `:cache_folder` setting
+  (`DEEPEVAL_CACHE_FOLDER`, default `.deepeval` in the working directory).
+  With the new `:file_system` setting `DEEPEVAL_FILE_SYSTEM=READ_ONLY`
+  (aliases `READ-ONLY`, `READONLY`, `RO`; see `DeepEvalEx.Config.read_only?/0`)
+  neither snapshot is written, while the results folder still is, as in
+  deepeval; any other value raises `ArgumentError` before evaluating. A
+  snapshot that cannot be written logs a warning and never fails the run.
+  Also exposed as `DeepEvalEx.TestRun.LocalStore.write_rolling/2` and
+  `write_latest/2`; `.deepeval/` is now git-ignored.
 
 ### Changed
 

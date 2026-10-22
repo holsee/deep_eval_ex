@@ -17,6 +17,23 @@ defmodule DeepEvalEx.TestRun.LocalStore do
         results_folder: "eval_results",
         results_subfolder: "nightly"
       )
+
+  ## Latest-run snapshots
+
+  Like deepeval's `save_test_run_locally` and `wrap_up_test_run`, every run
+  also overwrites two files in the cache folder, whether or not a results
+  folder is set:
+
+  - `.latest_run_full.json` (`write_rolling/2`, deepeval's
+    `write_rolling_test_run`): the same content as the timestamped file
+  - `.latest_test_run.json` (`write_latest/2`, deepeval's
+    `LATEST_TEST_RUN_FILE_PATH`): `{"testRunData": <the run>}`
+
+  The cache folder is the `:cache_folder` option or setting
+  (`DEEPEVAL_CACHE_FOLDER`), by default `.deepeval` in the working
+  directory, as deepeval's `HIDDEN_DIR`. With `DEEPEVAL_FILE_SYSTEM=READ_ONLY`
+  (see `DeepEvalEx.Config.read_only?/0`) neither is written; as in deepeval,
+  the timestamped file still is.
   """
 
   alias DeepEvalEx.{Config, TestRun}
@@ -69,8 +86,73 @@ defmodule DeepEvalEx.TestRun.LocalStore do
     end
   end
 
+  @rolling_file ".latest_run_full.json"
+  @latest_file ".latest_test_run.json"
+  @latest_data_key "testRunData"
+
+  @doc """
+  Overwrites `.latest_run_full.json` in the cache folder with `test_run`, as
+  deepeval's `write_rolling_test_run`.
+
+  The content is the same as the file `write/2` writes. The file is replaced
+  atomically, so a reader never sees a partial run.
+
+  ## Options
+
+  - `:cache_folder` - Folder to write to (default: the `:cache_folder`
+    setting, `DEEPEVAL_CACHE_FOLDER` or `".deepeval"`)
+  - `:read_only` - Skip the write (default: `DeepEvalEx.Config.read_only?/0`)
+
+  ## Returns
+
+  - `{:ok, path}` - The file written
+  - `:skip` - The file system is read-only
+  - `{:error, {path, reason}}` - The file at `path` could not be written
+  """
+  @spec write_rolling(TestRun.t(), keyword()) ::
+          {:ok, Path.t()} | :skip | {:error, {Path.t(), term()}}
+  def write_rolling(%TestRun{} = test_run, opts \\ []) do
+    write_snapshot(@rolling_file, encode(test_run), opts)
+  end
+
+  @doc """
+  Overwrites `.latest_test_run.json` in the cache folder with
+  `{"testRunData": test_run}`, as deepeval's `wrap_up_test_run` saves its
+  `LATEST_TEST_RUN_FILE_PATH` when the run is not uploaded to Confident AI.
+
+  Takes the options and returns the values of `write_rolling/2`.
+  """
+  @spec write_latest(TestRun.t(), keyword()) ::
+          {:ok, Path.t()} | :skip | {:error, {Path.t(), term()}}
+  def write_latest(%TestRun{} = test_run, opts \\ []) do
+    # Python's json.dump of {key: body}: the encoded body, wrapped.
+    write_snapshot(@latest_file, [~s({"#{@latest_data_key}": ), encode(test_run), "}"], opts)
+  end
+
+  defp write_snapshot(file_name, content, opts) do
+    if Keyword.get_lazy(opts, :read_only, &Config.read_only?/0) do
+      :skip
+    else
+      dir = presence(opts[:cache_folder]) || Config.get(:cache_folder)
+      path = Path.join(dir, file_name)
+      tmp = "#{path}.#{System.unique_integer([:positive])}.tmp"
+
+      with :ok <- File.mkdir_p(dir),
+           :ok <- File.write(tmp, content),
+           :ok <- File.rename(tmp, path) do
+        {:ok, path}
+      else
+        {:error, reason} ->
+          File.rm(tmp)
+          {:error, {path, reason}}
+      end
+    end
+  end
+
+  defp encode(test_run), do: test_run |> TestRun.to_map() |> JSON.encode!()
+
   defp write_to_dir(dir, test_run, opts) do
-    content = test_run |> TestRun.to_map() |> JSON.encode!()
+    content = encode(test_run)
 
     timestamp =
       opts

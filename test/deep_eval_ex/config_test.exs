@@ -22,6 +22,8 @@ defmodule DeepEvalEx.ConfigTest do
     retry_jitter: "DEEPEVAL_RETRY_JITTER",
     retry_cap_seconds: "DEEPEVAL_RETRY_CAP_SECONDS",
     eval_mode: "DEEPEVAL_EVAL_MODE",
+    file_system: "DEEPEVAL_FILE_SYSTEM",
+    cache_folder: "DEEPEVAL_CACHE_FOLDER",
     typesafe_api_key: "TYPESAFE_API_KEY",
     typesafe_model_name: "TYPESAFE_MODEL_NAME",
     typesafe_cost_per_input_token: "TYPESAFE_COST_PER_INPUT_TOKEN"
@@ -289,6 +291,45 @@ defmodule DeepEvalEx.ConfigTest do
       System.put_env("DEEPEVAL_EVAL_MODE", "hybrid")
       Application.put_env(:deep_eval_ex, :eval_mode, :system_one)
       assert Config.get(:eval_mode) == :system_one
+    end
+  end
+
+  describe "file_system and read_only?/0" do
+    test "is nil, not read-only, when unset" do
+      assert Config.get(:file_system) == nil
+      refute Config.read_only?()
+    end
+
+    test "accepts deepeval's READ_ONLY aliases, case-insensitively" do
+      for value <- ["READ_ONLY", " read-only ", "ReadOnly", "ro"] do
+        System.put_env("DEEPEVAL_FILE_SYSTEM", value)
+        assert Config.get(:file_system) == :read_only, "expected :read_only for #{inspect(value)}"
+        assert Config.read_only?()
+      end
+    end
+
+    test "accepts :read_only in application config" do
+      Application.put_env(:deep_eval_ex, :file_system, :read_only)
+      assert Config.read_only?()
+    end
+
+    test "raises like deepeval's settings on any other value" do
+      System.put_env("DEEPEVAL_FILE_SYSTEM", "READ_WRITE")
+
+      assert_raise ArgumentError,
+                   "DEEPEVAL_FILE_SYSTEM must be READ_ONLY (case-insensitive), got: \"READ_WRITE\"",
+                   fn -> Config.read_only?() end
+    end
+  end
+
+  describe "cache_folder" do
+    test "defaults to deepeval's .deepeval" do
+      assert Config.get(:cache_folder) == ".deepeval"
+    end
+
+    test "reads DEEPEVAL_CACHE_FOLDER" do
+      System.put_env("DEEPEVAL_CACHE_FOLDER", "/var/cache/deepeval")
+      assert Config.get(:cache_folder) == "/var/cache/deepeval"
     end
   end
 

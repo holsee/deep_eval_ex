@@ -1,5 +1,6 @@
 defmodule DeepEvalEx.TestRun.LocalStoreTest do
-  # Not async: some tests set the DEEPEVAL_RESULTS_FOLDER environment variable.
+  # Not async: some tests set DEEPEVAL_* environment variables, change the
+  # working directory or override application config.
   use ExUnit.Case, async: false
 
   alias DeepEvalEx.{Result, TestCase, TestRun}
@@ -10,6 +11,22 @@ defmodule DeepEvalEx.TestRun.LocalStoreTest do
   @now ~N[2026-10-22 09:23:59]
 
   setup do
+    previous_cache = Application.fetch_env(:deep_eval_ex, :cache_folder)
+    previous_fs = System.get_env("DEEPEVAL_FILE_SYSTEM")
+    previous_cache_env = System.get_env("DEEPEVAL_CACHE_FOLDER")
+    System.delete_env("DEEPEVAL_FILE_SYSTEM")
+    System.delete_env("DEEPEVAL_CACHE_FOLDER")
+
+    on_exit(fn ->
+      restore_env("DEEPEVAL_FILE_SYSTEM", previous_fs)
+      restore_env("DEEPEVAL_CACHE_FOLDER", previous_cache_env)
+
+      case previous_cache do
+        {:ok, value} -> Application.put_env(:deep_eval_ex, :cache_folder, value)
+        :error -> Application.delete_env(:deep_eval_ex, :cache_folder)
+      end
+    end)
+
     previous = System.get_env("DEEPEVAL_RESULTS_FOLDER")
     previous_config = Application.fetch_env(:deep_eval_ex, :results_folder)
     System.delete_env("DEEPEVAL_RESULTS_FOLDER")
@@ -141,4 +158,93 @@ defmodule DeepEvalEx.TestRun.LocalStoreTest do
       assert Path.basename(path) =~ ~r/\Atest_run_\d{8}_\d{6}\.json\z/
     end
   end
+
+  describe "write_rolling/2" do
+    test "overwrites .deepeval/.latest_run_full.json in the working directory with the run",
+         %{tmp_dir: dir, test_run: test_run} do
+      Application.delete_env(:deep_eval_ex, :cache_folder)
+
+      other =
+        TestRun.from_results([%TestCase{input: "b"}], [[Result.new(metric: "M", score: 0.0)]])
+
+      File.cd!(dir, fn ->
+        assert {:ok, ".deepeval/.latest_run_full.json"} = LocalStore.write_rolling(other)
+        assert {:ok, path} = LocalStore.write_rolling(test_run)
+
+        assert File.read!(path) == test_run |> TestRun.to_map() |> JSON.encode!()
+        assert File.ls!(".deepeval") == [".latest_run_full.json"]
+      end)
+    end
+
+    test "writes to the cache folder: option, config, then DEEPEVAL_CACHE_FOLDER",
+         %{tmp_dir: dir, test_run: test_run} do
+      System.put_env("DEEPEVAL_CACHE_FOLDER", Path.join(dir, "env"))
+      Application.delete_env(:deep_eval_ex, :cache_folder)
+      assert {:ok, env_path} = LocalStore.write_rolling(test_run)
+      assert env_path == Path.join([dir, "env", ".latest_run_full.json"])
+
+      Application.put_env(:deep_eval_ex, :cache_folder, Path.join(dir, "config"))
+      assert {:ok, config_path} = LocalStore.write_rolling(test_run)
+      assert config_path == Path.join([dir, "config", ".latest_run_full.json"])
+
+      assert {:ok, opt_path} = LocalStore.write_rolling(test_run, cache_folder: dir)
+      assert opt_path == Path.join(dir, ".latest_run_full.json")
+      assert File.exists?(opt_path)
+    end
+
+    test "writes nothing when DEEPEVAL_FILE_SYSTEM is READ_ONLY",
+         %{tmp_dir: dir, test_run: test_run} do
+      System.put_env("DEEPEVAL_FILE_SYSTEM", "READ_ONLY")
+
+      assert LocalStore.write_rolling(test_run, cache_folder: dir) == :skip
+      assert LocalStore.write_rolling(test_run, cache_folder: dir, read_only: true) == :skip
+      assert File.ls!(dir) == []
+
+      assert {:ok, _path} =
+               LocalStore.write_rolling(test_run, cache_folder: dir, read_only: false)
+    end
+
+    test "returns an error when the cache folder is a file", %{tmp_dir: dir, test_run: test_run} do
+      file = Path.join(dir, "taken")
+      File.write!(file, "")
+
+      path = Path.join(file, ".latest_run_full.json")
+      assert {:error, {^path, _reason}} = LocalStore.write_rolling(test_run, cache_folder: file)
+    end
+  end
+
+  describe "write_latest/2" do
+    test "writes the run under testRunData in .deepeval/.latest_test_run.json",
+         %{tmp_dir: dir, test_run: test_run} do
+      Application.delete_env(:deep_eval_ex, :cache_folder)
+
+      File.cd!(dir, fn ->
+        assert {:ok, ".deepeval/.latest_test_run.json" = path} = LocalStore.write_latest(test_run)
+
+        body = test_run |> TestRun.to_map() |> JSON.encode!()
+        assert File.read!(path) == ~s({"testRunData": ) <> body <> "}"
+        assert {:ok, %{"testRunData" => _}} = Jason.decode(File.read!(path))
+      end)
+    end
+
+    test "overwrites the previous run", %{tmp_dir: dir, test_run: test_run} do
+      other =
+        TestRun.from_results([%TestCase{input: "b"}], [[Result.new(metric: "M", score: 0.0)]])
+
+      assert {:ok, path} = LocalStore.write_latest(other, cache_folder: dir)
+      assert {:ok, ^path} = LocalStore.write_latest(test_run, cache_folder: dir)
+      assert File.read!(path) =~ ~s("input": "a")
+      assert File.ls!(dir) == [".latest_test_run.json"]
+    end
+
+    test "writes nothing when read-only", %{tmp_dir: dir, test_run: test_run} do
+      System.put_env("DEEPEVAL_FILE_SYSTEM", "ro")
+
+      assert LocalStore.write_latest(test_run, cache_folder: dir) == :skip
+      assert File.ls!(dir) == []
+    end
+  end
+
+  defp restore_env(var, nil), do: System.delete_env(var)
+  defp restore_env(var, value), do: System.put_env(var, value)
 end

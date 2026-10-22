@@ -38,6 +38,9 @@ CLAUDE.md
 # Test artifacts
 /tmp/
 
+# deepeval's cache folder and latest-run snapshots
+.deepeval/
+
 # Reference checkouts
 /_ref/
 
