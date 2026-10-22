@@ -136,8 +136,8 @@ defmodule DeepEvalEx do
   The metrics of a test case run concurrently and results keep the order of
   `metrics`. See `DeepEvalEx.Evaluator` for how the timeouts interact.
 
-  With `:results_folder` (or the `DEEPEVAL_RESULTS_FOLDER` environment
-  variable) set, the run is also saved in deepeval's format; see
+  With `:results_folder` (or `config :deep_eval_ex, results_folder:` or the
+  `DEEPEVAL_RESULTS_FOLDER` environment variable) set, the run is also saved in deepeval's format; see
   `evaluate_run/3` for that and the `:results_subfolder`, `:identifier`
   and `:hyperparameters` options.
 
@@ -162,8 +162,9 @@ defmodule DeepEvalEx do
   of the `test_run_<YYYYMMDD_HHMMSS>.json` file written, or `nil` when
   nothing was written.
 
-  The file is written when `:results_folder` or the `DEEPEVAL_RESULTS_FOLDER`
-  environment variable is set (see `DeepEvalEx.TestRun.LocalStore`) and
+  The file is written when `:results_folder`, `config :deep_eval_ex,
+  results_folder:` or the `DEEPEVAL_RESULTS_FOLDER` environment variable is
+  set (see `DeepEvalEx.TestRun.LocalStore`) and
   there is at least one test case. As in deepeval, failing to write it does
   not fail the evaluation: a warning is logged and `path` is `nil`.
 
@@ -172,7 +173,7 @@ defmodule DeepEvalEx do
   All `evaluate_batch/3` options, plus:
 
   - `:results_folder` - Folder to save the run in (default: the
-    `DEEPEVAL_RESULTS_FOLDER` environment variable)
+    `:results_folder` setting, see `DeepEvalEx.Config`)
   - `:results_subfolder` - Subfolder of the results folder to save it in
   - `:identifier` - Name for the run
   - `:hyperparameters` - Keyword list or map of the settings that produced

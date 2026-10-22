@@ -105,21 +105,4 @@ defmodule DeepEvalEx.Metrics.Utils.VerboseTest do
       assert Verbose.verbose_mode?(verbose_mode: true)
     end
   end
-
-  describe "parse_env_bool/1" do
-    test "reads deepeval's truthy and falsy tokens, ignoring case, quotes and whitespace" do
-      for value <- ~w(1 true T yes y ON enable Enabled) ++ [~s( "true" )] do
-        assert Verbose.parse_env_bool(value) == true, "expected #{inspect(value)} to be true"
-      end
-
-      for value <- ~w(0 false f no n off disable disabled) do
-        assert Verbose.parse_env_bool(value) == false
-      end
-    end
-
-    test "is false when unset or unrecognised, deepeval's default" do
-      assert Verbose.parse_env_bool(nil) == false
-      assert Verbose.parse_env_bool("maybe") == false
-    end
-  end
 end

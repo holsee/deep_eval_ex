@@ -37,6 +37,66 @@ a blank application config value (such as
 `openai_api_key: System.get_env("OPENAI_API_KEY")` when the variable is empty),
 so resolution falls through to the next source.
 
+## deepeval Settings
+
+DeepEvalEx reads the settings deepeval 4.3.1 defines in
+`deepeval/config/settings.py` under the same environment variable names, so a
+`.env` shared with a Python deepeval project configures both.
+`DeepEvalEx.Config.get/1` resolves each one: `config :deep_eval_ex` first,
+then the environment variable, then deepeval's default.
+
+```elixir
+config :deep_eval_ex,
+  results_folder: "eval_results",
+  verbose_mode: true,
+  retry_max_attempts: 3
+```
+
+| Config key | Environment variable | Type | Default | Read by |
+|------------|----------------------|------|---------|---------|
+| `:results_folder` | `DEEPEVAL_RESULTS_FOLDER` | string | unset | `DeepEvalEx.TestRun.LocalStore`: where `evaluate_run/3` writes `test_run_<timestamp>.json` |
+| `:verbose_mode` | `DEEPEVAL_VERBOSE_MODE` | boolean | `false` | `DeepEvalEx.ExUnit` assertions: verbose mode for every metric |
+| `:identifier` | `DEEPEVAL_IDENTIFIER` | string | unset | not yet read |
+| `:ignore_errors` | `IGNORE_DEEPEVAL_ERRORS` | boolean | `false` | not yet read |
+| `:skip_on_missing_params` | `SKIP_DEEPEVAL_MISSING_PARAMS` | boolean | `false` | not yet read |
+| `:use_cache` | `ENABLE_DEEPEVAL_CACHE` | boolean | `false` | not yet read |
+| `:per_task_timeout_seconds_override` | `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE` | number >= 0 | unset | not yet read |
+| `:retry_max_attempts` | `DEEPEVAL_RETRY_MAX_ATTEMPTS` | integer >= 1 | `2` | not yet read |
+| `:retry_initial_seconds` | `DEEPEVAL_RETRY_INITIAL_SECONDS` | number >= 0 | `1.0` | not yet read |
+| `:retry_exp_base` | `DEEPEVAL_RETRY_EXP_BASE` | number >= 1 | `2.0` | not yet read |
+| `:retry_jitter` | `DEEPEVAL_RETRY_JITTER` | number >= 0 | `2.0` | not yet read |
+| `:retry_cap_seconds` | `DEEPEVAL_RETRY_CAP_SECONDS` | number >= 0 | `5.0` | not yet read |
+| `:eval_mode` | `DEEPEVAL_EVAL_MODE` | `:llm`, `:hybrid` or `:system_one` | unset | not yet read |
+| `:typesafe_api_key` | `TYPESAFE_API_KEY` | string | unset | not yet read |
+| `:typesafe_model_name` | `TYPESAFE_MODEL_NAME` | string | unset | not yet read |
+| `:typesafe_cost_per_input_token` | `TYPESAFE_COST_PER_INPUT_TOKEN` | number > 0 | unset | not yet read |
+
+Settings marked "not yet read" are resolved with deepeval's names, types and
+defaults so the features that use them (error handling, timeouts, retries,
+System One eval modes; see the roadmap) pick them up without new
+configuration.
+
+Values are parsed as deepeval parses them:
+
+- **Booleans** follow deepeval's `parse_bool`: `1`, `true`, `t`, `yes`, `y`,
+  `on`, `enable` and `enabled` are `true` (case, surrounding whitespace and
+  quotes are ignored); anything else is `false`. Application config may also
+  hold `true` or `false`.
+- **Numbers** follow pydantic: whitespace is ignored and an integer setting
+  accepts `"2.0"`. A value that is not a number or breaks the setting's bound
+  (such as `DEEPEVAL_RETRY_MAX_ATTEMPTS=0`) raises an `ArgumentError` naming
+  the variable when the setting is read, where deepeval fails to load its
+  settings.
+- **`DEEPEVAL_EVAL_MODE`** is case-insensitive; an unrecognised value counts as
+  unset, as in deepeval.
+
+Blank values are unset here too. Unlike deepeval, which rejects an empty
+numeric variable such as `DEEPEVAL_RETRY_MAX_ATTEMPTS=`, DeepEvalEx reads it as
+the default. `DEEPEVAL_RESULTS_FOLDER` is used as given (after trimming): `~`
+is not expanded, as deepeval's results writer does not expand it either.
+deepeval's retry log level settings (`DEEPEVAL_RETRY_BEFORE_LOG_LEVEL`,
+`DEEPEVAL_RETRY_AFTER_LOG_LEVEL`) are not read; configure `Logger` instead.
+
 ## LLM Providers
 
 ### OpenAI (Default)
@@ -260,6 +320,6 @@ Or custom handler:
 ## Configuration Priority
 
 1. Runtime options (highest)
-2. Environment variables
-3. Application config
+2. Application config
+3. Environment variables
 4. Default values (lowest)

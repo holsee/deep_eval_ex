@@ -132,6 +132,31 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `print_verbose_logs`; ExUnit assertions default it from the
   `DEEPEVAL_VERBOSE_MODE` environment variable, as deepeval's `assert_test`
   does. The helpers live in `DeepEvalEx.Metrics.Utils.Verbose`.
+- **deepeval settings from application config and environment variables.**
+  `DeepEvalEx.Config.get/1` resolves deepeval 4.3.1's settings under their
+  `config/settings.py` names, so a `.env` shared with a deepeval project
+  configures both: `DEEPEVAL_RESULTS_FOLDER`, `DEEPEVAL_IDENTIFIER`,
+  `IGNORE_DEEPEVAL_ERRORS`, `SKIP_DEEPEVAL_MISSING_PARAMS`,
+  `DEEPEVAL_VERBOSE_MODE`, `ENABLE_DEEPEVAL_CACHE`,
+  `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE`, `DEEPEVAL_RETRY_MAX_ATTEMPTS`,
+  `DEEPEVAL_RETRY_INITIAL_SECONDS`, `DEEPEVAL_RETRY_EXP_BASE`,
+  `DEEPEVAL_RETRY_JITTER`, `DEEPEVAL_RETRY_CAP_SECONDS`, `DEEPEVAL_EVAL_MODE`,
+  `TYPESAFE_API_KEY`, `TYPESAFE_MODEL_NAME` and
+  `TYPESAFE_COST_PER_INPUT_TOKEN`. Each also has a `config :deep_eval_ex` key
+  (`:results_folder`, `:verbose_mode`, `:retry_max_attempts`, ...), which
+  takes precedence over the variable; blank values in either are unset.
+  Values get deepeval's types, defaults and parsing: booleans with
+  `parse_bool` (`DeepEvalEx.Config.parse_bool/2`), numbers with pydantic's
+  rules and bounds (an invalid value raises an `ArgumentError` naming the
+  variable), and `DEEPEVAL_EVAL_MODE` case-insensitively, unrecognised
+  values counting as unset. The test run writer now also takes the results
+  folder from `config :deep_eval_ex, results_folder:` and treats a
+  whitespace-only `DEEPEVAL_RESULTS_FOLDER` as unset; ExUnit assertions take
+  verbose mode from `config :deep_eval_ex, verbose_mode:` before
+  `DEEPEVAL_VERBOSE_MODE`. The other settings are read by later parity work
+  (error handling, timeouts, retries, eval modes). `Adapter.env/1` and
+  `config/1` now delegate to `DeepEvalEx.Config.env/1` and `config/1`.
+  Documented in the Configuration guide.
 - **Scripted mode for the Mock adapter.** `Mock.script/2` replays judge
   responses keyed by step (named by the requested schema's fields, see
   `Mock.step_key/1`) and call index, reports the script's judge model and

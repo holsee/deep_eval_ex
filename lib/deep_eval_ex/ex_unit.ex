@@ -45,13 +45,15 @@ defmodule DeepEvalEx.ExUnit do
   ## Verbose mode
 
   As deepeval's `assert_test`, the assertions put every metric in verbose
-  mode when the `DEEPEVAL_VERBOSE_MODE` environment variable is set to a
-  truthy value (`1`, `true`, `yes`, ...), printing each metric's verbose
-  logs (see `DeepEvalEx.Metrics.Utils.Verbose`). An explicit
-  `verbose_mode:` option wins over the environment variable.
+  mode when the `:verbose_mode` setting is on, printing each metric's
+  verbose logs (see `DeepEvalEx.Metrics.Utils.Verbose`). The setting is
+  `config :deep_eval_ex, verbose_mode: true` or, when that is not set, the
+  `DEEPEVAL_VERBOSE_MODE` environment variable set to a truthy value (`1`,
+  `true`, `yes`, ...); see `DeepEvalEx.Config`. An explicit `verbose_mode:`
+  option wins over both.
   """
 
-  alias DeepEvalEx.{Evaluator, Metrics.BaseMetric, Metrics.Utils.Verbose, Result}
+  alias DeepEvalEx.{Config, Evaluator, Metrics.BaseMetric, Result}
 
   @doc """
   Imports DeepEvalEx.ExUnit macros into your test module.
@@ -191,7 +193,7 @@ defmodule DeepEvalEx.ExUnit do
   end
 
   defp run_metric(test_case, metric, opts) do
-    opts = Keyword.put_new_lazy(opts, :verbose_mode, &Verbose.env_verbose_mode?/0)
+    opts = Keyword.put_new_lazy(opts, :verbose_mode, fn -> Config.get(:verbose_mode) end)
 
     case metric.measure(test_case, opts) do
       {:ok, result} ->

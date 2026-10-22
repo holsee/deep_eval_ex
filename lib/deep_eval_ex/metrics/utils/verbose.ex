@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Ported from deepeval/metrics/utils/verbose.py and deepeval/utils.py
-# (prettify_list) and deepeval/config/utils.py (parse_bool)
+# (prettify_list)
 # Original: https://github.com/confident-ai/deepeval
 
 defmodule DeepEvalEx.Metrics.Utils.Verbose do
@@ -24,20 +24,15 @@ defmodule DeepEvalEx.Metrics.Utils.Verbose do
 
   A metric is in verbose mode when its options have `verbose_mode: true`
   (`verbose_mode?/1`), as deepeval's `verbose_mode` constructor argument.
-  `DeepEvalEx.ExUnit`'s assertions default it from the
-  `DEEPEVAL_VERBOSE_MODE` environment variable, as deepeval's `assert_test`
-  does (see `env_verbose_mode?/0`).
+  `DeepEvalEx.ExUnit`'s assertions default it from the `:verbose_mode`
+  setting (`config :deep_eval_ex, verbose_mode: true` or the
+  `DEEPEVAL_VERBOSE_MODE` environment variable, see `DeepEvalEx.Config`),
+  as deepeval's `assert_test` does.
   """
 
   alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.TestRun.JSON
   alias Jason.OrderedObject
-
-  @env_var "DEEPEVAL_VERBOSE_MODE"
-
-  # deepeval's truthy tokens; its falsy ones and anything else read as its
-  # default, false.
-  @truthy ~w(1 true t yes y on enable enabled)
 
   # Python's str.splitlines() line boundaries.
   @line_boundaries ~r/\r\n|[\n\r\x0b\x0c\x1c\x1d\x1e\x{85}\x{2028}\x{2029}]/u
@@ -182,41 +177,4 @@ defmodule DeepEvalEx.Metrics.Utils.Verbose do
   """
   @spec verbose_mode?(keyword()) :: boolean()
   def verbose_mode?(opts), do: Keyword.get(opts, :verbose_mode) == true
-
-  @doc """
-  Whether the `DEEPEVAL_VERBOSE_MODE` environment variable turns verbose
-  mode on, read with `parse_env_bool/1`.
-  """
-  @spec env_verbose_mode?() :: boolean()
-  def env_verbose_mode?, do: @env_var |> System.get_env() |> parse_env_bool()
-
-  @doc """
-  Reads an environment variable's value as a boolean, as deepeval's
-  `parse_bool`: surrounding whitespace and quotes are ignored, and case
-  does not matter.
-
-  `1`, `true`, `t`, `yes`, `y`, `on`, `enable` and `enabled` are `true`; any
-  other value, or no value, is `false`.
-
-  ## Examples
-
-      iex> DeepEvalEx.Metrics.Utils.Verbose.parse_env_bool("YES")
-      true
-
-      iex> DeepEvalEx.Metrics.Utils.Verbose.parse_env_bool(nil)
-      false
-  """
-  @spec parse_env_bool(String.t() | nil) :: boolean()
-  def parse_env_bool(nil), do: false
-
-  def parse_env_bool(value) when is_binary(value) do
-    token =
-      value
-      |> String.trim()
-      |> String.trim("\"")
-      |> String.trim("'")
-      |> String.downcase()
-
-    token in @truthy
-  end
 end

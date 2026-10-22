@@ -9,8 +9,9 @@ defmodule DeepEvalEx.TestRun.LocalStore do
   `DeepEvalEx.TestRun.JSON`, byte-compatible with deepeval's own files.
 
   The results folder is the `:results_folder` option or, when that is not
-  set, the `DEEPEVAL_RESULTS_FOLDER` environment variable, as in deepeval.
-  With neither set nothing is written.
+  set, the `:results_folder` setting: `config :deep_eval_ex, results_folder:`
+  or the `DEEPEVAL_RESULTS_FOLDER` environment variable, as in deepeval (see
+  `DeepEvalEx.Config`). With none set nothing is written.
 
       {:ok, path} = DeepEvalEx.TestRun.LocalStore.write(test_run,
         results_folder: "eval_results",
@@ -18,10 +19,8 @@ defmodule DeepEvalEx.TestRun.LocalStore do
       )
   """
 
-  alias DeepEvalEx.TestRun
+  alias DeepEvalEx.{Config, TestRun}
   alias DeepEvalEx.TestRun.JSON
-
-  @env_var "DEEPEVAL_RESULTS_FOLDER"
 
   @doc """
   Writes `test_run` to the configured results folder.
@@ -31,8 +30,8 @@ defmodule DeepEvalEx.TestRun.LocalStore do
 
   ## Options
 
-  - `:results_folder` - Folder to write to (default: the
-    `DEEPEVAL_RESULTS_FOLDER` environment variable)
+  - `:results_folder` - Folder to write to (default: the `:results_folder`
+    setting, see `DeepEvalEx.Config`)
   - `:results_subfolder` - Subfolder of the results folder to write to
   - `:now` - `NaiveDateTime` used for the file name (default: the current
     local time)
@@ -55,13 +54,13 @@ defmodule DeepEvalEx.TestRun.LocalStore do
   @doc """
   Resolves the folder test runs are written to, or `nil` when none is set.
 
-  `results_folder` falls back to the `DEEPEVAL_RESULTS_FOLDER` environment
-  variable; empty values count as unset. A non-empty `results_subfolder` is
-  joined to it.
+  `results_folder` falls back to `config :deep_eval_ex, results_folder:`,
+  then the `DEEPEVAL_RESULTS_FOLDER` environment variable; empty values
+  count as unset. A non-empty `results_subfolder` is joined to it.
   """
   @spec resolve_target_dir(Path.t() | nil, Path.t() | nil) :: Path.t() | nil
   def resolve_target_dir(results_folder, results_subfolder \\ nil) do
-    case presence(results_folder) || presence(System.get_env(@env_var)) do
+    case presence(results_folder) || Config.get(:results_folder) do
       nil ->
         nil
 

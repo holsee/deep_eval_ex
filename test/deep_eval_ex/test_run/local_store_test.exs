@@ -11,12 +11,19 @@ defmodule DeepEvalEx.TestRun.LocalStoreTest do
 
   setup do
     previous = System.get_env("DEEPEVAL_RESULTS_FOLDER")
+    previous_config = Application.fetch_env(:deep_eval_ex, :results_folder)
     System.delete_env("DEEPEVAL_RESULTS_FOLDER")
+    Application.delete_env(:deep_eval_ex, :results_folder)
 
     on_exit(fn ->
       if previous,
         do: System.put_env("DEEPEVAL_RESULTS_FOLDER", previous),
         else: System.delete_env("DEEPEVAL_RESULTS_FOLDER")
+
+      case previous_config do
+        {:ok, value} -> Application.put_env(:deep_eval_ex, :results_folder, value)
+        :error -> Application.delete_env(:deep_eval_ex, :results_folder)
+      end
     end)
 
     test_run =
@@ -47,6 +54,20 @@ defmodule DeepEvalEx.TestRun.LocalStoreTest do
       assert LocalStore.resolve_target_dir(nil, nil) == "env-out"
       assert LocalStore.resolve_target_dir(nil, "sub") == Path.join("env-out", "sub")
       assert LocalStore.resolve_target_dir("explicit", nil) == "explicit"
+    end
+
+    test "prefers config :deep_eval_ex, :results_folder over DEEPEVAL_RESULTS_FOLDER" do
+      System.put_env("DEEPEVAL_RESULTS_FOLDER", "env-out")
+      Application.put_env(:deep_eval_ex, :results_folder, "config-out")
+
+      assert LocalStore.resolve_target_dir(nil, nil) == "config-out"
+      assert LocalStore.resolve_target_dir("explicit", nil) == "explicit"
+    end
+
+    test "treats a blank DEEPEVAL_RESULTS_FOLDER as unset" do
+      System.put_env("DEEPEVAL_RESULTS_FOLDER", "  ")
+
+      assert LocalStore.resolve_target_dir(nil, nil) == nil
     end
   end
 

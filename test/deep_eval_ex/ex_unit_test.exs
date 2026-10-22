@@ -556,11 +556,18 @@ defmodule DeepEvalEx.ExUnitTest do
   describe "DEEPEVAL_VERBOSE_MODE" do
     setup do
       previous = System.get_env("DEEPEVAL_VERBOSE_MODE")
+      previous_config = Application.fetch_env(:deep_eval_ex, :verbose_mode)
+      Application.delete_env(:deep_eval_ex, :verbose_mode)
 
       on_exit(fn ->
         if previous,
           do: System.put_env("DEEPEVAL_VERBOSE_MODE", previous),
           else: System.delete_env("DEEPEVAL_VERBOSE_MODE")
+
+        case previous_config do
+          {:ok, value} -> Application.put_env(:deep_eval_ex, :verbose_mode, value)
+          :error -> Application.delete_env(:deep_eval_ex, :verbose_mode)
+        end
       end)
 
       %{test_case: TestCase.new!(input: "Q", actual_output: "4", expected_output: "4")}
@@ -583,6 +590,22 @@ defmodule DeepEvalEx.ExUnitTest do
 
       System.put_env("DEEPEVAL_VERBOSE_MODE", "0")
       assert %Result{verbose_logs: nil} = assert_passes(test_case, ExactMatch)
+    end
+
+    test "is read from config :deep_eval_ex, :verbose_mode first", %{test_case: test_case} do
+      System.put_env("DEEPEVAL_VERBOSE_MODE", "true")
+      Application.put_env(:deep_eval_ex, :verbose_mode, false)
+      assert %Result{verbose_logs: nil} = assert_passes(test_case, ExactMatch)
+
+      System.delete_env("DEEPEVAL_VERBOSE_MODE")
+      Application.put_env(:deep_eval_ex, :verbose_mode, true)
+
+      output =
+        ExUnit.CaptureIO.capture_io(fn ->
+          assert %Result{verbose_logs: "Score: 1.00"} = assert_passes(test_case, ExactMatch)
+        end)
+
+      assert output =~ "Exact Match Verbose Logs"
     end
 
     test "is overridden by an explicit :verbose_mode", %{test_case: test_case} do

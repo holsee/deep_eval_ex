@@ -242,7 +242,8 @@ defmodule DeepEvalEx.LLM.Adapter do
 
   @doc """
   Reads an environment variable for adapter configuration, treating a blank
-  value as unset and trimming surrounding whitespace from a set one.
+  value as unset and trimming surrounding whitespace from a set one. Same as
+  `DeepEvalEx.Config.env/1`.
 
   Tooling such as dev containers often forwards unset host variables as empty
   strings; an empty `OPENAI_BASE_URL` must fall back to the default rather
@@ -259,12 +260,13 @@ defmodule DeepEvalEx.LLM.Adapter do
       "sk-test"
   """
   @spec env(String.t()) :: String.t() | nil
-  def env(name), do: name |> System.get_env() |> present()
+  defdelegate env(name), to: DeepEvalEx.Config
 
   @doc """
   Reads a `:deep_eval_ex` application config value for adapter configuration,
   treating a blank string as unset and trimming surrounding whitespace from a
-  set one. Non-string values are returned unchanged.
+  set one. Non-string values are returned unchanged. Same as
+  `DeepEvalEx.Config.config/1`.
 
   Config such as `openai_api_key: System.get_env("OPENAI_API_KEY")` stores an
   empty string when the variable is set but empty; that must fall through to
@@ -281,16 +283,7 @@ defmodule DeepEvalEx.LLM.Adapter do
       "https://example.com/v1"
   """
   @spec config(atom()) :: term()
-  def config(key), do: :deep_eval_ex |> Application.get_env(key) |> present()
-
-  defp present(value) when is_binary(value) do
-    case String.trim(value) do
-      "" -> nil
-      trimmed -> trimmed
-    end
-  end
-
-  defp present(value), do: value
+  defdelegate config(key), to: DeepEvalEx.Config
 
   @doc """
   Gets the configured adapter module for a provider.
