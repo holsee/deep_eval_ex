@@ -14,10 +14,21 @@ defmodule DeepEvalEx.Prompts.Python do
   - `repr/1` - Python's `repr()` of strings, lists, dicts, numbers, `None`,
     booleans and deepeval `ToolCall`s
   - `format_fixed/2` - Python's `format(number, ".<n>f")`
+  - `format_g/1` - Python's `format(number, "g")`, as in deepeval's
+    `f"weight={weight:g}"`
+  - `round/2` - Python's `round(number, ndigits)`, as in deepeval's
+    `round(p, 3)` before a dict of probabilities is printed
+
+  Floats are rounded from their exact binary value, ties to even, as
+  CPython does, and `round/2` returns the float nearest the rounded
+  decimal, so `repr/1` of the result prints what Python prints.
   """
 
   alias DeepEvalEx.Schemas.ToolCall
   alias DeepEvalEx.TestRun.JSON
+
+  # Python's default precision for the "g" format.
+  @g_precision 6
 
   defmodule EnumMember do
     @moduledoc """
@@ -95,7 +106,8 @@ defmodule DeepEvalEx.Prompts.Python do
   Formats `number` like Python's `format(number, ".<decimals>f")`.
 
   The number is rounded from its exact binary value, ties to even, as
-  Python does: `0.125` is `"0.12"`, `0.375` is `"0.38"`.
+  Python does: `0.125` is `"0.12"`, `0.375` is `"0.38"`. A negative number
+  keeps its sign when it rounds to zero, `-0.0` included: `"-0.00"`.
 
   ## Examples
 
@@ -126,24 +138,132 @@ defmodule DeepEvalEx.Prompts.Python do
     sign <> int <> frac
   end
 
+  @doc """
+  Formats `number` like Python's `format(number, "g")`.
+
+  Six significant digits, rounded ties to even from the exact binary
+  value. Numbers whose rounded decimal exponent is from -4 to 5 are
+  written in fixed point, the rest in scientific notation with at least
+  two exponent digits; trailing zeros and a trailing point are dropped.
+  An integer is formatted as the float it converts to, as Python does.
+
+  ## Examples
+
+      iex> DeepEvalEx.Prompts.Python.format_g(1.0)
+      "1"
+
+      iex> DeepEvalEx.Prompts.Python.format_g(0.00001)
+      "1e-05"
+
+      iex> DeepEvalEx.Prompts.Python.format_g(1_234_567)
+      "1.23457e+06"
+  """
+  @spec format_g(number()) :: String.t()
+  def format_g(number) when is_integer(number), do: format_g(number * 1.0)
+
+  def format_g(float) when is_float(float) do
+    {sign, numerator, denominator} = rational(float)
+
+    if numerator == 0 do
+      sign <> "0"
+    else
+      {digits, exponent} = significant_digits(float, numerator, denominator, @g_precision)
+      sign <> g_notation(Integer.to_string(digits), exponent)
+    end
+  end
+
+  @doc """
+  Rounds `number` like Python's `round(number, ndigits)`.
+
+  A float is rounded to `ndigits` decimal places (tens, hundreds, ... when
+  `ndigits` is negative) from its exact binary value, ties to even, and the
+  result is the float nearest that decimal, keeping the sign of a value
+  rounded to zero. An integer stays an integer: unchanged when `ndigits`
+  is not negative, else rounded ties to even. Raises `ArgumentError`
+  (Python's `OverflowError`) when the result is too large for a float.
+
+  ## Examples
+
+      iex> DeepEvalEx.Prompts.Python.round(0.6666666666666666, 3)
+      0.667
+
+      iex> DeepEvalEx.Prompts.Python.round(2.675, 2)
+      2.67
+
+      iex> DeepEvalEx.Prompts.Python.round(25, -1)
+      20
+  """
+  @spec round(float(), integer()) :: float()
+  @spec round(integer(), integer()) :: integer()
+  def round(integer, ndigits) when is_integer(integer) and is_integer(ndigits) do
+    if ndigits >= 0 do
+      integer
+    else
+      scale = Integer.pow(10, -ndigits)
+      rounded = round_ratio(abs(integer), scale) * scale
+      if integer < 0, do: -rounded, else: rounded
+    end
+  end
+
+  # CPython's NDIGITS_MAX and NDIGITS_MIN: beyond them a float is returned
+  # as it is, or as a zero of its sign.
+  def round(float, ndigits) when is_float(float) and is_integer(ndigits) and ndigits > 323,
+    do: float
+
+  def round(float, ndigits) when is_float(float) and is_integer(ndigits) and ndigits < -308,
+    do: to_float(sign(float), 0, 1)
+
+  def round(float, ndigits) when is_float(float) and is_integer(ndigits) do
+    {sign, numerator, denominator} = rational(float)
+    {numerator, denominator} = scale10(numerator, denominator, ndigits)
+    rounded = round_ratio(numerator, denominator)
+    {numerator, denominator} = scale10(rounded, 1, -ndigits)
+    to_float(sign, numerator, denominator)
+  end
+
   # A float as sign, integer mantissa and binary exponent:
   # |float| == mantissa * 2^exponent, exactly.
   defp decompose(float) do
-    <<sign::1, biased::11, fraction::52>> = <<float::float>>
-    sign = if sign == 1 and float != 0.0, do: "-", else: ""
+    <<_sign::1, biased::11, fraction::52>> = <<float::float>>
 
     case biased do
-      0 -> {sign, fraction, -1074}
-      _ -> {sign, fraction + Bitwise.bsl(1, 52), biased - 1075}
+      0 -> {sign(float), fraction, -1074}
+      _ -> {sign(float), fraction + Bitwise.bsl(1, 52), biased - 1075}
     end
   end
+
+  # The sign of a float, "-" for -0.0 too.
+  defp sign(float) do
+    <<sign::1, _::63>> = <<float::float>>
+    if sign == 1, do: "-", else: ""
+  end
+
+  # A float as sign, numerator and denominator:
+  # |float| == numerator / denominator, exactly.
+  defp rational(float) do
+    {sign, mantissa, exponent} = decompose(float)
+
+    if exponent >= 0,
+      do: {sign, Bitwise.bsl(mantissa, exponent), 1},
+      else: {sign, mantissa, Bitwise.bsl(1, -exponent)}
+  end
+
+  # numerator / denominator * 10^power, as a ratio of integers.
+  defp scale10(numerator, denominator, power) when power >= 0,
+    do: {numerator * Integer.pow(10, power), denominator}
+
+  defp scale10(numerator, denominator, power),
+    do: {numerator, denominator * Integer.pow(10, -power)}
 
   # round(numerator * 2^exponent), ties to even.
   defp round_scaled(numerator, exponent) when exponent >= 0,
     do: Bitwise.bsl(numerator, exponent)
 
-  defp round_scaled(numerator, exponent) do
-    denominator = Bitwise.bsl(1, -exponent)
+  defp round_scaled(numerator, exponent),
+    do: round_ratio(numerator, Bitwise.bsl(1, -exponent))
+
+  # round(numerator / denominator), ties to even, for non-negative values.
+  defp round_ratio(numerator, denominator) do
     quotient = div(numerator, denominator)
     remainder = rem(numerator, denominator) * 2
 
@@ -153,6 +273,124 @@ defmodule DeepEvalEx.Prompts.Python do
       true -> quotient
     end
   end
+
+  # The `precision` significant digits of numerator / denominator (> 0),
+  # rounded ties to even, and the decimal exponent of the first digit:
+  # the value is close to 0.d1d2... * 10^(exponent + 1).
+  defp significant_digits(float, numerator, denominator, precision) do
+    exponent =
+      float
+      |> abs()
+      |> :math.log10()
+      |> floor()
+      |> fix_exponent(numerator, denominator)
+
+    {scaled, scale} = scale10(numerator, denominator, precision - 1 - exponent)
+    digits = round_ratio(scaled, scale)
+
+    if digits == Integer.pow(10, precision),
+      do: {Integer.pow(10, precision - 1), exponent + 1},
+      else: {digits, exponent}
+  end
+
+  # Corrects a floating-point estimate of floor(log10(n / d)) exactly.
+  defp fix_exponent(exponent, numerator, denominator) do
+    cond do
+      not at_least_pow10?(numerator, denominator, exponent) ->
+        fix_exponent(exponent - 1, numerator, denominator)
+
+      at_least_pow10?(numerator, denominator, exponent + 1) ->
+        fix_exponent(exponent + 1, numerator, denominator)
+
+      true ->
+        exponent
+    end
+  end
+
+  # n / d >= 10^power
+  defp at_least_pow10?(numerator, denominator, power) when power >= 0,
+    do: numerator >= denominator * Integer.pow(10, power)
+
+  defp at_least_pow10?(numerator, denominator, power),
+    do: numerator * Integer.pow(10, -power) >= denominator
+
+  # Python's "g" layout of `digits` (the significant digits as a string)
+  # whose first digit has decimal exponent `exponent`.
+  defp g_notation(digits, exponent) when exponent >= -4 and exponent < @g_precision do
+    {int, frac} =
+      if exponent >= 0,
+        do: String.split_at(digits, exponent + 1),
+        else: {"0", String.duplicate("0", -exponent - 1) <> digits}
+
+    case String.trim_trailing(frac, "0") do
+      "" -> int
+      frac -> int <> "." <> frac
+    end
+  end
+
+  defp g_notation(digits, exponent) do
+    {first, rest} = String.split_at(digits, 1)
+
+    mantissa =
+      case String.trim_trailing(rest, "0") do
+        "" -> first
+        rest -> first <> "." <> rest
+      end
+
+    exponent_sign = if exponent < 0, do: "-", else: "+"
+
+    mantissa <>
+      "e" <>
+      exponent_sign <>
+      (exponent |> abs() |> Integer.to_string() |> String.pad_leading(2, "0"))
+  end
+
+  # The float nearest numerator / denominator, ties to even, with `sign`.
+  defp to_float(sign, 0, _denominator), do: if(sign == "-", do: -0.0, else: 0.0)
+
+  defp to_float(sign, numerator, denominator) do
+    exponent = bit_length(numerator) - bit_length(denominator) - 53
+
+    exponent =
+      if at_least_pow2?(numerator, denominator, exponent + 53),
+        do: exponent + 1,
+        else: exponent
+
+    exponent = max(exponent, -1074)
+    mantissa = round_ratio_pow2(numerator, denominator, exponent)
+
+    {mantissa, exponent} =
+      if mantissa == Bitwise.bsl(1, 53),
+        do: {Bitwise.bsl(1, 52), exponent + 1},
+        else: {mantissa, exponent}
+
+    if exponent > 971, do: raise(ArgumentError, "rounding overflowed")
+
+    sign_bit = if sign == "-", do: 1, else: 0
+
+    <<float::float>> =
+      if mantissa >= Bitwise.bsl(1, 52),
+        do: <<sign_bit::1, exponent + 1075::11, mantissa - Bitwise.bsl(1, 52)::52>>,
+        else: <<sign_bit::1, 0::11, mantissa::52>>
+
+    float
+  end
+
+  # n / d >= 2^power
+  defp at_least_pow2?(numerator, denominator, power) when power >= 0,
+    do: numerator >= Bitwise.bsl(denominator, power)
+
+  defp at_least_pow2?(numerator, denominator, power),
+    do: Bitwise.bsl(numerator, -power) >= denominator
+
+  # round(n / d / 2^exponent), ties to even.
+  defp round_ratio_pow2(numerator, denominator, exponent) when exponent >= 0,
+    do: round_ratio(numerator, Bitwise.bsl(denominator, exponent))
+
+  defp round_ratio_pow2(numerator, denominator, exponent),
+    do: round_ratio(Bitwise.bsl(numerator, -exponent), denominator)
+
+  defp bit_length(integer), do: integer |> Integer.to_string(2) |> byte_size()
 
   defp do_repr(nil), do: "None"
   defp do_repr(true), do: "True"

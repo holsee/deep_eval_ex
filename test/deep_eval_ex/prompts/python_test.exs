@@ -6,6 +6,21 @@ defmodule DeepEvalEx.Prompts.PythonTest do
 
   doctest Python
 
+  # Expected outputs were produced by CPython 3.11 (see
+  # test/fixtures/python_format/generate.py).
+  @fixtures Path.expand("../../fixtures/python_format", __DIR__)
+  @external_resource Path.join(@fixtures, "format_g.json")
+  @external_resource Path.join(@fixtures, "format_g_ints.json")
+  @external_resource Path.join(@fixtures, "format_fixed.json")
+  @external_resource Path.join(@fixtures, "round.json")
+  @external_resource Path.join(@fixtures, "round_ints.json")
+
+  @format_g @fixtures |> Path.join("format_g.json") |> File.read!() |> Jason.decode!()
+  @format_g_ints @fixtures |> Path.join("format_g_ints.json") |> File.read!() |> Jason.decode!()
+  @format_fixed @fixtures |> Path.join("format_fixed.json") |> File.read!() |> Jason.decode!()
+  @round @fixtures |> Path.join("round.json") |> File.read!() |> Jason.decode!()
+  @round_ints @fixtures |> Path.join("round_ints.json") |> File.read!() |> Jason.decode!()
+
   # Expected strings are what Python 3.11 prints for the same values.
   describe "repr/1 on strings" do
     test "quotes with single quotes unless only a single quote appears" do
@@ -113,5 +128,115 @@ defmodule DeepEvalEx.Prompts.PythonTest do
       # 2.675 is just below the tie in binary.
       assert Python.format_fixed(2.675, 2) == "2.67"
     end
+
+    test "keeps the sign of a negative number rounded to zero, as Python does" do
+      assert Python.format_fixed(-0.001, 2) == "-0.00"
+      assert Python.format_fixed(-0.0, 2) == "-0.00"
+    end
+
+    test "matches CPython's format(x, \".<n>f\") for every float in the table" do
+      mismatches =
+        for [bits, decimals, expected] <- @format_fixed,
+            float = float(bits),
+            (actual = Python.format_fixed(float, decimals)) != expected,
+            do: {float, decimals, actual, expected}
+
+      assert length(@format_fixed) > 5_000
+      assert mismatches == []
+    end
+  end
+
+  describe "format_g/1" do
+    test "formats like Python's format(x, \"g\")" do
+      assert Python.format_g(1.0) == "1"
+      assert Python.format_g(0.5) == "0.5"
+      assert Python.format_g(2) == "2"
+      assert Python.format_g(1 / 3) == "0.333333"
+      assert Python.format_g(1_234_567) == "1.23457e+06"
+      assert Python.format_g(0.0001) == "0.0001"
+      assert Python.format_g(0.00001) == "1e-05"
+      assert Python.format_g(-0.0) == "-0"
+      assert Python.format_g(999_999.5) == "1e+06"
+      assert Python.format_g(1.0e100) == "1e+100"
+    end
+
+    test "matches CPython for every float in the table" do
+      mismatches =
+        for [bits, expected] <- @format_g,
+            float = float(bits),
+            (actual = Python.format_g(float)) != expected,
+            do: {float, actual, expected}
+
+      assert length(@format_g) > 2_000
+      assert mismatches == []
+    end
+
+    test "matches CPython for every integer in the table" do
+      mismatches =
+        for [int, expected] <- @format_g_ints,
+            (actual = Python.format_g(int)) != expected,
+            do: {int, actual, expected}
+
+      assert mismatches == []
+    end
+  end
+
+  describe "round/2" do
+    test "rounds like Python's round(x, n)" do
+      assert Python.round(0.123456, 3) == 0.123
+      assert Python.round(2.675, 2) == 2.67
+      assert Python.round(0.125, 2) == 0.12
+      assert Python.round(0.375, 2) == 0.38
+      assert Python.round(2.5, 0) == 2.0
+      assert Python.round(15.0, -1) == 20.0
+      assert Python.round(25.0, -1) == 20.0
+      assert Python.round(0.6666666666666666, 3) |> Python.repr() == "0.667"
+    end
+
+    test "keeps the sign of a value rounded to zero" do
+      assert <<1::1, _::63>> = <<Python.round(-0.0001, 2)::float>>
+      assert <<0::1, _::63>> = <<Python.round(0.0001, 2)::float>>
+    end
+
+    test "returns an integer unchanged for non-negative ndigits and rounds it half to even otherwise" do
+      assert Python.round(7, 3) === 7
+      assert Python.round(15, -1) === 20
+      assert Python.round(25, -1) === 20
+      assert Python.round(-25, -1) === -20
+    end
+
+    test "raises like Python when the result overflows" do
+      assert_raise ArgumentError, "rounding overflowed", fn ->
+        Python.round(1.797_693_134_862_315_7e308, -308)
+      end
+    end
+
+    test "matches CPython for every float in the table, bit for bit" do
+      mismatches =
+        for [bits, ndigits, expected_bits, expected_repr] <- @round,
+            float = float(bits),
+            result = Python.round(float, ndigits),
+            {<<actual_bits::unsigned-64>>, actual_repr} =
+              {<<result::float>>, Python.repr(result)},
+            actual_bits != expected_bits or actual_repr != expected_repr,
+            do: {float, ndigits, result, expected_repr}
+
+      assert length(@round) > 8_000
+      assert mismatches == []
+    end
+
+    test "matches CPython for every integer in the table" do
+      mismatches =
+        for [int, ndigits, expected] <- @round_ints,
+            (actual = Python.round(int, ndigits)) !== expected,
+            do: {int, ndigits, actual, expected}
+
+      assert mismatches == []
+    end
+  end
+
+  defp float(bits) do
+    <<float::float-64>> = <<bits::unsigned-64>>
+    float
   end
 end
