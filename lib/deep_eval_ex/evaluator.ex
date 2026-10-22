@@ -40,6 +40,9 @@ defmodule DeepEvalEx.Evaluator do
   - `:flaky` - Default flakiness for all metrics
   - `:model` - Default LLM model for LLM-based metrics
   - `:adapter` - Default LLM adapter
+  - `:eval_mode` - Default eval mode for all metrics (`:llm`, `:hybrid` or
+    `:system_one`), see "System One"
+  - `:system_one_model` - Default System One model, see "System One"
   - `:ignore_errors` - Record a metric's error on its result instead of
     raising it (default: `false`), see "Errors"
   - `:skip_on_missing_params` - Skip a metric whose test case lacks its
@@ -51,6 +54,17 @@ defmodule DeepEvalEx.Evaluator do
   when the run sets `threshold: 0.5`. A struct's `:threshold` is its
   configuration even when `nil`: like deepeval's `threshold=None`, it makes
   that metric score-only whatever the run sets.
+
+  ## System One
+
+  Before any test case starts, every metric's
+  `DeepEvalEx.SystemOne.Context` is resolved from its options
+  (`DeepEvalEx.SystemOne.Context.resolve!/2`), once for the whole run, as
+  deepeval builds a metric's models when the metric is created. An
+  unrecognised `:eval_mode` or `:system_one_model` raises `ArgumentError`,
+  and a System One model whose `init/1` fails raises
+  `DeepEvalEx.DeepEvalError`, whatever `:ignore_errors` says. Each metric
+  then gets its context as `opts[:system_one]`.
 
   ## Concurrency
 
@@ -159,6 +173,10 @@ defmodule DeepEvalEx.Evaluator do
   alias DeepEvalEx.{Config, MetricError, MissingTestCaseParamsError, Result, TestCase}
   alias DeepEvalEx.Metrics.BaseMetric
   alias DeepEvalEx.Prompts.Python
+  alias DeepEvalEx.SystemOne.Context
+
+  # Where the run keeps each metric's resolved System One context.
+  @contexts_key :__system_one_contexts__
 
   # deepeval's AsyncConfig defaults.
   @default_max_concurrent 20
@@ -209,6 +227,7 @@ defmodule DeepEvalEx.Evaluator do
           {[[Result.t()]], [float()]}
   def evaluate_with_durations(test_cases, metrics, opts \\ []) do
     {opts, throttle_value} = async_config!(opts)
+    opts = preflight(metrics, opts)
     concurrency = Keyword.fetch!(opts, :concurrency)
     timeout = case_timeout(metrics, opts)
 
@@ -279,7 +298,7 @@ defmodule DeepEvalEx.Evaluator do
   @spec evaluate_single(TestCase.t(), [module() | struct()], keyword()) :: [Result.t()]
   def evaluate_single(test_case, metrics, opts \\ []) do
     {opts, _throttle_value} = async_config!(opts)
-    test_case |> run_single(metrics, opts) |> unwrap!()
+    test_case |> run_single(metrics, preflight(metrics, opts)) |> unwrap!()
   end
 
   # {:ok, results}, or the first metric error to raise in metrics order;
@@ -403,13 +422,38 @@ defmodule DeepEvalEx.Evaluator do
   """
   @spec evaluate_metric(TestCase.t(), module() | struct(), keyword()) :: Result.t()
   def evaluate_metric(test_case, metric, opts) do
-    test_case |> measure_metric(metric, opts) |> unwrap!()
+    test_case |> measure_metric(metric, preflight([metric], opts)) |> unwrap!()
+  end
+
+  # Resolves every metric's System One context up front (see "System One"),
+  # keeping those already resolved.
+  defp preflight(metrics, opts) do
+    contexts =
+      Enum.reduce(metrics, Keyword.get(opts, @contexts_key, %{}), fn metric, contexts ->
+        Map.put_new_lazy(contexts, metric, fn ->
+          Context.resolve!(metric_module(metric), metric_opts(metric, opts))
+        end)
+      end)
+
+    Keyword.put(opts, @contexts_key, contexts)
+  end
+
+  defp put_context(merged_opts, metric, opts) do
+    case Keyword.get(opts, @contexts_key, %{}) do
+      %{^metric => context} -> Keyword.put(merged_opts, :system_one, context)
+      _contexts -> merged_opts
+    end
   end
 
   defp measure_metric(test_case, metric, opts) do
     # Run-level options are defaults; a metric's own configuration wins.
     module = metric_module(metric)
-    merged_opts = BaseMetric.strict_opts(metric_opts(metric, opts), default_threshold(module))
+
+    merged_opts =
+      metric
+      |> metric_opts(opts)
+      |> BaseMetric.strict_opts(default_threshold(module))
+      |> put_context(metric, opts)
 
     {outcome, usages} =
       BaseMetric.track_usage(fn -> module.measure(test_case, merged_opts) end)
@@ -637,8 +681,10 @@ defmodule DeepEvalEx.Evaluator do
   defp metric_module(metric) when is_atom(metric), do: metric
   defp metric_module(%{__struct__: module}), do: module
 
-  defp metric_opts(metric, opts) when is_atom(metric), do: opts
-  defp metric_opts(metric, opts), do: Keyword.merge(opts, struct_to_opts(metric))
+  defp metric_opts(metric, opts) when is_atom(metric), do: Keyword.delete(opts, @contexts_key)
+
+  defp metric_opts(metric, opts),
+    do: opts |> Keyword.delete(@contexts_key) |> Keyword.merge(struct_to_opts(metric))
 
   # Convert a metric struct to an options keyword list, dropping unset
   # (nil) fields so they neither mask run-level options nor shadow the

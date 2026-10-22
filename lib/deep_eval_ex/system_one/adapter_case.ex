@@ -29,7 +29,9 @@ defmodule DeepEvalEx.SystemOne.AdapterCase do
   - with `:failing_model`, a failing request is a well-formed System One
     error (see `assert_error/1`)
   - with `:init_failure`, `init/1` rejects those options with a well-formed
-    `DeepEvalEx.SystemOne.Error`
+    `DeepEvalEx.SystemOne.Error`, and `DeepEvalEx.SystemOne.Context.resolve!/2`
+    raises it as a `DeepEvalEx.DeepEvalError` for a metric in `:hybrid`, so
+    it surfaces before any measure
 
   ## Options
 
@@ -47,8 +49,9 @@ defmodule DeepEvalEx.SystemOne.AdapterCase do
   `assert_error/1`, `assert_budget/1`), for a provider's own tests.
   """
 
+  alias DeepEvalEx.DeepEvalError
   alias DeepEvalEx.LLM.Usage
-  alias DeepEvalEx.SystemOne.{Adapter, Answers, Error, Model, Question}
+  alias DeepEvalEx.SystemOne.{Adapter, Answers, Context, Error, Model, Question}
   alias Jason.OrderedObject
 
   @reasons [
@@ -178,10 +181,22 @@ defmodule DeepEvalEx.SystemOne.AdapterCase do
     case Model.init(Model.resolve(spec)) do
       {:error, %Error{} = error} ->
         assert_error(error)
+        check_context_failure(spec, error)
 
       result ->
         fail!("expected init/1 to fail with a DeepEvalEx.SystemOne.Error, got #{inspect(result)}")
     end
+  end
+
+  defp check_context_failure(spec, error) do
+    Context.resolve!(DeepEvalEx.Metrics.Faithfulness, eval_mode: :hybrid, system_one_model: spec)
+    fail!("expected DeepEvalEx.SystemOne.Context.resolve!/2 to raise for a failing init/1")
+  rescue
+    exception in DeepEvalError ->
+      check(
+        String.contains?(exception.message, Exception.message(error)),
+        "Context.resolve!/2 did not carry init/1's error: #{inspect(exception.message)}"
+      )
   end
 
   defp init!(model) do

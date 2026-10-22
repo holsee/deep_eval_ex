@@ -80,11 +80,43 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   The result's `:strict_mode` and `:flaky` are set from these options, and
   exported per metric as deepeval's `strictMode` and `flaky`.
 
+  A metric that applies strict mode to its score itself, as System One's
+  whole-metric scoring does, sets the result's `:strict_applied`, and its
+  score is then left as it is (a float `0.0` is not turned into the integer
+  `0`).
+
+  ## System One
+
+  Every metric accepts deepeval's System One options:
+
+  - `:eval_mode` - who decides: `:llm`, `:hybrid` or `:system_one` (see
+    `DeepEvalEx.SystemOne.Mode`; default: the `:eval_mode` setting, else
+    `:llm`)
+  - `:system_one_model` - the System One model `:hybrid` and `:system_one`
+    decide with, anything `DeepEvalEx.SystemOne.Model.resolve/1` accepts
+    (default: the `:system_one_model` application config, else Jev)
+
+  `measure/2` resolves them into a `DeepEvalEx.SystemOne.Context`, deepeval's
+  `initialize_model` and `initialize_system_one_model`, and passes it to
+  `do_measure/2` as `opts[:system_one]`. Under `:system_one` the context has
+  no LLM, so no LLM key is needed. A metric runs as one System One request
+  under `:system_one` only when it implements the optional
+  `c:system_one_eval_spec/2`; any other metric runs `:system_one` as
+  `:hybrid`. A System One model whose `init/1` fails raises
+  `DeepEvalEx.DeepEvalError` before `do_measure/2` runs.
+
+  Each measure also gets a fresh `DeepEvalEx.SystemOne.Ledger` (deepeval's
+  `reset_system_one_state`). Its confidence and fallback reason are set on
+  the result as `:confidence` and `:system_one_fallback_reason`; a
+  confidence the metric put on the result itself is kept when the ledger
+  has none. Neither is exported.
+
   You can override any of these defaults.
   """
 
   alias DeepEvalEx.LLM.Usage
   alias DeepEvalEx.{Result, TestCase}
+  alias DeepEvalEx.SystemOne.{Context, Ledger}
 
   @type test_case :: TestCase.t()
   @type opts :: keyword()
@@ -159,7 +191,26 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   """
   @callback evaluation_model(opts()) :: String.t() | nil
 
-  @optional_callbacks [default_opts: 0, metric_name: 1, evaluation_model: 1]
+  @doc """
+  Optional callback describing how the metric runs as one System One
+  request under the `:system_one` eval mode, deepeval's
+  `_system_one_eval_spec`: the test case fields to send and the questions
+  to ask, or `nil` when it has no such form for `test_case`.
+
+  Implementing it is what lets the metric run `:system_one` at all
+  (deepeval's `has_whole_metric_form`); a metric without it runs
+  `:system_one` as `:hybrid` (see `DeepEvalEx.SystemOne.Mode.effective/2`).
+  It counts even when it returns `nil` for every test case, as for a metric
+  that makes its own System One decisions without a whole-chain form.
+  """
+  @callback system_one_eval_spec(test_case(), opts()) :: struct() | nil
+
+  @optional_callbacks [
+    default_opts: 0,
+    metric_name: 1,
+    evaluation_model: 1,
+    system_one_eval_spec: 2
+  ]
 
   defmacro __using__(opts \\ []) do
     default_threshold = Keyword.get(opts, :default_threshold, 0.5)
@@ -191,6 +242,10 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
 
       This wraps the underlying `do_measure/2` implementation with:
       - Parameter validation
+      - System One: `do_measure/2` gets the metric's
+        `DeepEvalEx.SystemOne.Context` as `opts[:system_one]` and runs with a
+        fresh `DeepEvalEx.SystemOne.Ledger`, whose confidence and fallback
+        reason are set on the result
       - Strict mode: `do_measure/2` gets `threshold: 1` when
         `:strict_mode` is set, and a returned score below the threshold
         becomes `0`. The result carries `:strict_mode` and `:flaky`
@@ -207,7 +262,11 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
               {:ok, Result.t()} | {:error, term()}
       def measure(test_case, opts \\ []) do
         start_time = System.monotonic_time(:millisecond)
-        opts = unquote(__MODULE__).strict_opts(opts, default_threshold())
+
+        opts =
+          opts
+          |> unquote(__MODULE__).strict_opts(default_threshold())
+          |> unquote(__MODULE__).system_one_opts(__MODULE__)
 
         metadata = %{
           metric: metric_name(),
@@ -220,8 +279,8 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
           metadata
         )
 
-        {outcome, usages} =
-          unquote(__MODULE__).track_usage(fn ->
+        {outcome, usages, ledger} =
+          unquote(__MODULE__).track_measure(fn ->
             with :ok <- validate_test_case(test_case), do: do_measure(test_case, opts)
           end)
 
@@ -236,6 +295,7 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
               |> unquote(__MODULE__).put_usage(
                 unquote(__MODULE__).usage_fields(__MODULE__, opts, usages)
               )
+              |> unquote(__MODULE__).put_system_one_state(ledger)
 
             :telemetry.execute(
               [:deep_eval_ex, :metric, :stop],
@@ -329,9 +389,17 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   end
 
   @doc false
+  # The options `do_measure/2` gets: `:system_one` is the metric's resolved
+  # System One context (see `DeepEvalEx.SystemOne.Context.resolve!/2`).
+  @spec system_one_opts(keyword(), module()) :: keyword()
+  def system_one_opts(opts, module),
+    do: Keyword.put(opts, :system_one, Context.resolve!(module, opts))
+
+  @doc false
   # Applies strict mode to a measured result and records the metric's strict
   # mode and flakiness on it. A clamped score cannot meet the threshold, so
-  # success is recomputed only then.
+  # success is recomputed only then. A result whose metric applied strict
+  # mode itself (`:strict_applied`) keeps its score.
   @spec apply_metric_semantics(Result.t(), keyword()) :: Result.t()
   def apply_metric_semantics(%Result{} = result, opts) do
     strict_opts = [
@@ -341,6 +409,7 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
 
     result =
       case strict_score(result.score, strict_opts) do
+        _score when result.strict_applied -> result
         score when score === result.score -> result
         score -> %{result | score: score, success: Result.successful?(score, result.threshold)}
       end
@@ -350,6 +419,18 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
       | strict_mode: Keyword.get(opts, :strict_mode, false),
         flaky: Keyword.get(opts, :flaky, false)
     }
+  end
+
+  @doc false
+  # Runs a measurement with a fresh System One ledger (deepeval's
+  # `reset_system_one_state`) in its own usage scope (see `track_usage/1`),
+  # and returns `{outcome, usages, ledger}`.
+  @spec track_measure((-> outcome)) ::
+          {outcome | {:raised, Exception.t(), Exception.stacktrace()}, [Usage.t()], Ledger.t()}
+        when outcome: term()
+  def track_measure(fun) do
+    {{outcome, usages}, ledger} = Ledger.track(fn -> track_usage(fun) end)
+    {outcome, usages, ledger}
   end
 
   @doc false
@@ -411,6 +492,20 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
       {_key, nil}, result -> result
       {key, value}, result -> Map.put(result, key, value)
     end)
+  end
+
+  @doc false
+  # Sets the measure's System One confidence and fallback reason from its
+  # ledger. A confidence the metric set itself is kept when the ledger has
+  # none.
+  @spec put_system_one_state(Result.t(), Ledger.t()) :: Result.t()
+  def put_system_one_state(%Result{} = result, %Ledger{} = ledger) do
+    %{
+      result
+      | confidence: ledger.confidence || result.confidence,
+        system_one_fallback_reason:
+          Ledger.fallback_reason(ledger) || result.system_one_fallback_reason
+    }
   end
 
   defp evaluation_model(module, opts) do

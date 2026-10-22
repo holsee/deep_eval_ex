@@ -22,6 +22,8 @@ defmodule DeepEvalEx.LLM.Usage do
   keeps concurrent metrics' usage apart. A metric that makes LLM calls from
   tasks of its own must start them with `async/1` and collect them with
   `await/2`, which carry the task's usage back into the caller's scope.
+  They carry the caller's `DeepEvalEx.SystemOne.Ledger` the same way: the
+  task sees it, and what the task records in it is folded back on `await/2`.
 
   ## Reporting usage from a custom adapter
 
@@ -37,6 +39,7 @@ defmodule DeepEvalEx.LLM.Usage do
   """
 
   alias DeepEvalEx.LLM.Pricing
+  alias DeepEvalEx.SystemOne.Ledger
 
   @typedoc """
   Where a usage comes from: `:llm` for an LLM judge call (the default), or
@@ -122,20 +125,30 @@ defmodule DeepEvalEx.LLM.Usage do
 
   @doc """
   Starts `fun` in a `Task` whose usage is tracked; collect it with `await/2`.
+
+  The task works on a copy of the caller's `DeepEvalEx.SystemOne.Ledger`,
+  when one is open, so it sees the measure's System One state.
   """
   @spec async((-> term())) :: Task.t()
   def async(fun) when is_function(fun, 0) do
-    Task.async(fn -> track(fun) end)
+    ledger = Ledger.current()
+
+    Task.async(fn ->
+      {{result, usages}, ledger} = Ledger.run_forked(ledger, fn -> track(fun) end)
+      {result, usages, ledger}
+    end)
   end
 
   @doc """
   Awaits a task started with `async/1`, records its usage in the caller's
-  scope and returns the task's result.
+  scope, folds what it recorded in the System One ledger into the caller's
+  and returns the task's result.
   """
   @spec await(Task.t(), timeout()) :: term()
   def await(task, timeout \\ 5_000) do
-    {result, usages} = Task.await(task, timeout)
+    {result, usages, ledger} = Task.await(task, timeout)
     record_all(usages)
+    Ledger.join(ledger)
     result
   end
 

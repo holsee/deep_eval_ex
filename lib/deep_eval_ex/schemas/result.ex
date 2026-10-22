@@ -18,6 +18,17 @@ defmodule DeepEvalEx.Result do
     decides a test case's success (default: `false`)
   - `:score_breakdown` - Per-component scores of a composite metric, as
     deepeval's `score_breakdown` (default: `nil`). Not exported
+  - `:confidence` - The least decisive System One answer that fed the
+    measure, deepeval's `confidence`; `nil` when no System One call was made.
+    Not exported
+  - `:system_one_fallback_reason` - Why `hybrid` decisions were handed back
+    to the LLM because their System One call failed, deepeval's
+    `system_one_fallback_reason` (reasons joined with `"; "`); `nil` when
+    none was. Not exported
+  - `:strict_applied` - Whether the metric applied strict mode to its score
+    itself, as System One's whole-metric scoring does, so that
+    `DeepEvalEx.Metrics.BaseMetric` leaves the score as it is (default:
+    `false`). Not exported
   - `:skipped` - Whether the metric was skipped instead of measured
     (default: `false`); skipped results are left out of the test run export
   - `:metadata` - Additional metric-specific data
@@ -92,7 +103,10 @@ defmodule DeepEvalEx.Result do
           error: String.t() | nil,
           strict_mode: boolean(),
           flaky: boolean(),
-          score_breakdown: map() | nil,
+          score_breakdown: map() | [map()] | nil,
+          confidence: number() | nil,
+          system_one_fallback_reason: String.t() | nil,
+          strict_applied: boolean(),
           skipped: boolean(),
           metadata: map() | nil,
           verbose_logs: String.t() | nil,
@@ -119,7 +133,10 @@ defmodule DeepEvalEx.Result do
     :output_tokens,
     :latency_ms,
     :score_breakdown,
+    :confidence,
+    :system_one_fallback_reason,
     strict_mode: false,
+    strict_applied: false,
     flaky: false,
     skipped: false
   ]
@@ -138,6 +155,9 @@ defmodule DeepEvalEx.Result do
   - `:strict_mode` / `:flaky` - See the module documentation
     (default: `false`)
   - `:score_breakdown` - Per-component scores
+  - `:confidence` / `:system_one_fallback_reason` - System One state, see
+    the module documentation
+  - `:strict_applied` - See the module documentation (default: `false`)
   - `:metadata` - Additional data
   - `:verbose_logs` - The metric's verbose logs
   - `:evaluation_model` - The judge model
@@ -172,6 +192,9 @@ defmodule DeepEvalEx.Result do
       strict_mode: Keyword.get(opts, :strict_mode, false),
       flaky: Keyword.get(opts, :flaky, false),
       score_breakdown: Keyword.get(opts, :score_breakdown),
+      confidence: Keyword.get(opts, :confidence),
+      system_one_fallback_reason: Keyword.get(opts, :system_one_fallback_reason),
+      strict_applied: Keyword.get(opts, :strict_applied, false),
       metadata: Keyword.get(opts, :metadata),
       verbose_logs: Keyword.get(opts, :verbose_logs),
       evaluation_model: Keyword.get(opts, :evaluation_model),
