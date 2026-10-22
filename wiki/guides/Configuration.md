@@ -112,7 +112,28 @@ config :deep_eval_ex,
   default_model: {:ollama, "llama3.2"}
 ```
 
-Requires Ollama running locally on port 11434.
+Requires an Ollama server with the model pulled (`ollama pull llama3.2`). No
+API key is needed, and calls report an `evaluation_cost` of `0.0`, as in
+deepeval.
+
+#### Server URL
+
+The first one set wins (a trailing slash is stripped; requests go to
+`{base_url}/api/chat`):
+
+1. `base_url:` runtime option
+2. `config :deep_eval_ex, ollama_base_url: "..."`
+3. `OLLAMA_HOST` environment variable (`host` or `host:port` is read as
+   `http`, on port `11434` when none is given)
+4. `http://localhost:11434`
+
+#### Model and Temperature
+
+There is no default model, as in deepeval: give one in `default_model`, the
+`model:` option or `config :deep_eval_ex, ollama_model: "llama3.2"`.
+`temperature` comes from the `temperature:` option, then `config
+:deep_eval_ex, ollama_temperature: 0.0`, and defaults to `0.0`. Other model
+options can be passed with `options: %{num_ctx: 8192}`.
 
 ## Runtime Options
 

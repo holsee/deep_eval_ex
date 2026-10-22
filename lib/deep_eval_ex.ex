@@ -51,7 +51,7 @@ defmodule DeepEvalEx do
 
   - OpenAI (gpt-4o, gpt-4o-mini, gpt-3.5-turbo)
   - Anthropic (claude-opus-5, claude-sonnet-4-6, claude-haiku-4-5, ...)
-  - Ollama (local models)
+  - Ollama (local models: llama3.2, qwen3, mistral, ...)
 
   ## Configuration
 

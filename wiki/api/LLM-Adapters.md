@@ -12,7 +12,7 @@ DeepEvalEx uses adapters to abstract away differences between LLM providers. The
 |---------|--------|--------|
 | OpenAI | `DeepEvalEx.LLM.Adapters.OpenAI` | Implemented |
 | Anthropic | `DeepEvalEx.LLM.Adapters.Anthropic` | Implemented |
-| Ollama | `DeepEvalEx.LLM.Adapters.Ollama` | Planned |
+| Ollama | `DeepEvalEx.LLM.Adapters.Ollama` | Implemented |
 | Mock | `DeepEvalEx.LLM.Adapters.Mock` | For testing |
 
 ## Using Adapters
@@ -211,6 +211,91 @@ end)
 )
 ```
 
+## Ollama Adapter
+
+Runs judges on local models through Ollama's native `/api/chat` endpoint,
+mirroring deepeval's `OllamaModel`. No API key is needed.
+
+### Configuration
+
+```elixir
+config :deep_eval_ex,
+  default_model: {:ollama, "llama3.2"},
+  ollama_base_url: "http://localhost:11434",  # optional
+  ollama_temperature: 0.0                     # optional, default 0.0
+```
+
+There is no default model, as in deepeval: pass `:model`, use a
+`{:ollama, model}` adapter tuple or `default_model`, or set `:ollama_model`.
+The model must already be pulled on the server (`ollama pull llama3.2`).
+
+### Base URL
+
+Requests go to `{base_url}/api/chat`. The base URL is resolved in this order,
+with a trailing slash stripped:
+
+1. `:base_url` option
+2. `:ollama_base_url` application config
+3. `OLLAMA_HOST` environment variable
+4. `"http://localhost:11434"`
+
+As in the Ollama clients, a value without a scheme (e.g. `OLLAMA_HOST=gpu-box`
+or `gpu-box:11434`) is read as `http`, on port `11434` when none is given.
+
+### Request Parameters
+
+Requests are sent with `stream: false`. `temperature` comes from
+`:temperature`, then the `:ollama_temperature` config, then defaults to `0.0`
+as in deepeval, and is always sent in the request's `options`. Further model
+options (deepeval's `generation_kwargs`) can be passed as a map with
+`:options`, e.g. `options: %{num_ctx: 8192}`; a `temperature` in it is
+ignored in favour of `:temperature`. The receive timeout (`:timeout`) defaults
+to `120_000` ms, as local models can be slow.
+
+### Structured Outputs
+
+`generate_with_schema/3` sends the JSON schema as the request's `format`
+(Ollama structured outputs) and decodes the message content into a map with
+string keys. Content that is not valid JSON returns
+`{:error, {:json_parse_error, error, content}}`.
+
+### Usage and Cost
+
+`prompt_eval_count` and `eval_count` are recorded as input and output tokens.
+Local models cost nothing: deepeval reports a cost of `0` for every Ollama
+call, so results report an `evaluation_cost` of `0.0` rather than `nil`.
+
+### Testing
+
+```elixir
+Req.Test.stub(DeepEvalEx.LLM.Adapters.Ollama, fn conn ->
+  Req.Test.json(conn, %{"message" => %{"role" => "assistant", "content" => "4"}})
+end)
+
+{:ok, "4"} =
+  DeepEvalEx.LLM.Adapters.Ollama.generate("What is 2+2?",
+    model: "llama3.2",
+    req_options: [plug: {Req.Test, DeepEvalEx.LLM.Adapters.Ollama}]
+  )
+```
+
+### Features
+
+| Feature | Supported |
+|---------|-----------|
+| Structured Outputs | Yes (`format` JSON schema) |
+| Log Probabilities | No |
+| Multimodal | No |
+
+### Usage
+
+```elixir
+{:ok, result} = Faithfulness.measure(test_case,
+  adapter: :ollama,
+  model: "llama3.2"
+)
+```
+
 Token usage (`usage.input_tokens` / `usage.output_tokens`) is recorded and
 priced with deepeval's Anthropic price table.
 
@@ -304,12 +389,13 @@ Options passed to adapter functions:
 | Option | Description |
 |--------|-------------|
 | `:model` | Model name/identifier |
-| `:temperature` | Sampling temperature (0.0-2.0); OpenAI adapter defaults to `0.0`, Anthropic omits it unless set |
+| `:temperature` | Sampling temperature (0.0-2.0); OpenAI and Ollama adapters default to `0.0`, Anthropic omits it unless set |
 | `:max_completion_tokens` | Maximum tokens in response, OpenAI (`:max_tokens` is an alias) |
 | `:max_tokens` | Maximum tokens in response, Anthropic |
-| `:api_key` | API key (overrides config) |
-| `:base_url` | API base URL (OpenAI and Anthropic adapters) |
-| `:req_options` | Extra `Req` options (OpenAI and Anthropic adapters) |
+| `:api_key` | API key (overrides config; not used by Ollama) |
+| `:options` | Extra model options map, Ollama |
+| `:base_url` | API base URL (OpenAI, Anthropic and Ollama adapters) |
+| `:req_options` | Extra `Req` options (OpenAI, Anthropic and Ollama adapters) |
 
 ```elixir
 {:ok, response} = Adapter.generate(prompt,
