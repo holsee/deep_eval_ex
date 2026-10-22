@@ -166,6 +166,8 @@ defmodule DeepEvalEx.MixProject do
         "Public API": [
           DeepEvalEx,
           DeepEvalEx.TestCase,
+          DeepEvalEx.ConversationalTestCase,
+          DeepEvalEx.Turn,
           DeepEvalEx.Result,
           DeepEvalEx.EvaluationResult,
           DeepEvalEx.TestResult,

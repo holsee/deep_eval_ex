@@ -188,6 +188,27 @@ defmodule DeepEvalEx.EvaluatorTest do
     TestCase.new!(input: "What is 2 + 2?", actual_output: "4", expected_output: "4")
   end
 
+  describe "check_valid_test_cases_type!/1" do
+    test "passes for single-turn or conversational test cases alone" do
+      conversational =
+        DeepEvalEx.ConversationalTestCase.new!(turns: [%{role: "user", content: "Hi"}])
+
+      assert :ok = Evaluator.check_valid_test_cases_type!([])
+      assert :ok = Evaluator.check_valid_test_cases_type!([test_case(), test_case()])
+      assert :ok = Evaluator.check_valid_test_cases_type!([conversational, conversational])
+    end
+
+    test "raises deepeval's ValueError message as an ArgumentError for a mixture" do
+      conversational =
+        DeepEvalEx.ConversationalTestCase.new!(turns: [%{role: "user", content: "Hi"}])
+
+      assert_raise ArgumentError,
+                   "You cannot supply a mixture of `LLMTestCase`(s) and " <>
+                     "`ConversationalTestCase`(s) as the list of test cases.",
+                   fn -> Evaluator.check_valid_test_cases_type!([test_case(), conversational]) end
+    end
+  end
+
   describe "check_at_least_one_metric_has_threshold!/2" do
     @message "You must provide at least one non-flaky metric with a 'threshold', " <>
                "otherwise test cases can never pass or fail."

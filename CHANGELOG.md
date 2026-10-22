@@ -1396,6 +1396,39 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `:dataset_version`**, written to the test run as `datasetAlias`,
   `datasetId` and `datasetVersion` (deepeval takes them from its test
   cases); like the other export options, they are not passed to metrics.
+- **Multi-turn test cases: `DeepEvalEx.ConversationalTestCase` and
+  `DeepEvalEx.Turn`**, ports of deepeval 4.3.1's `ConversationalTestCase`
+  and `Turn`. No metric evaluates them yet.
+  - `DeepEvalEx.Turn.new/1` builds a turn: a `:user` or `:assistant` role
+    (atom or string), its content, and the optional `:user_id`,
+    `:retrieval_context` (strings or `RetrievedContextData`),
+    `:tools_called` and `:metadata`. The voice fields `:audio` (deepeval's
+    `Audio`, as a plain map), `:latency_ms` (an integer is cast to a float),
+    `:interrupted` and `:provider_transcript` are kept as plain data.
+    `model_dump_for_prompt/1` returns deepeval's `model_dump_for_prompt()`
+    as a `Jason.OrderedObject`: every field in deepeval's order (the
+    unported MCP fields as `nil`), without `audio` and
+    `provider_transcript`.
+  - `DeepEvalEx.ConversationalTestCase.new/1` takes the turns (`Turn`s, or
+    maps that build them) with `:scenario`, `:context`, `:name`,
+    `:user_description`, `:expected_outcome`, `:chatbot_role`, `:metadata`,
+    `:comments`, `:tags`, `:flaky`, `:expectations`, `:expected_labels`,
+    `:call_recording_path`, `:multimodal` and `:voice`. It rejects empty
+    turns and invalid turns with deepeval's messages, and sets `:voice`
+    when a turn has audio and `:multimodal` when a `[DEEPEVAL:IMAGE:...]`
+    or `[DEEPEVAL:PDF:...]` placeholder appears where deepeval looks for
+    one.
+  - Both accept deepeval's camelCase aliases (`userId`, `latencyMs`,
+    `providerTranscript`, `userDescription`, `expectedOutcome`,
+    `chatbotRole`, ...) and `additionalMetadata`, and drop unknown keys.
+- **`DeepEvalEx.Params.MultiTurn`**, deepeval's `MultiTurnParams`: `all/0`
+  lists its sixteen members in deepeval's order, `member?/1` checks one,
+  and `display_name/1` gives deepeval's conversational G-Eval name for it
+  (`CONVERSATIONAL_G_EVAL_PARAMS`).
+- **`DeepEvalEx.Evaluator.check_valid_test_cases_type!/1`**, deepeval's
+  `check_valid_test_cases_type`: raises `ArgumentError` with deepeval's
+  message when a list mixes `DeepEvalEx.TestCase`s and conversational test
+  cases.
 
 ### Changed
 

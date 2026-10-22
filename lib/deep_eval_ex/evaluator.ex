@@ -616,6 +616,29 @@ defmodule DeepEvalEx.Evaluator do
   end
 
   @doc """
+  Raises when `test_cases` mixes single-turn `DeepEvalEx.TestCase`s with
+  multi-turn ones (`DeepEvalEx.ConversationalTestCase`), as deepeval's
+  `check_valid_test_cases_type` does before `evaluate()` runs. As deepeval
+  counts anything that is not an `LLMTestCase` as conversational, any item
+  that is not a `DeepEvalEx.TestCase` counts as multi-turn.
+
+  Raises `ArgumentError` with deepeval's `ValueError` message.
+  """
+  @spec check_valid_test_cases_type!([TestCase.t() | DeepEvalEx.ConversationalTestCase.t()]) ::
+          :ok
+  def check_valid_test_cases_type!(test_cases) do
+    {single_turn, multi_turn} = Enum.split_with(test_cases, &is_struct(&1, TestCase))
+
+    if single_turn != [] and multi_turn != [] do
+      raise ArgumentError,
+            "You cannot supply a mixture of `LLMTestCase`(s) and " <>
+              "`ConversationalTestCase`(s) as the list of test cases."
+    else
+      :ok
+    end
+  end
+
+  @doc """
   Raises unless at least one metric has a threshold and is not flaky, as
   deepeval's `check_at_least_one_metric_has_threshold` does before
   `evaluate()` and `assert_test()` run: otherwise no test case could ever
