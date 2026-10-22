@@ -80,6 +80,44 @@ defmodule DeepEvalEx.TestRunTest do
                [{"test_case_0", 0}, {"mine", 1}, {"test_case_2", 2}]
     end
 
+    # deepeval 4.3.1's create_api_test_case takes a test case's
+    # _dataset_rank as its order (and so its test_case_<order> name), and
+    # sort_test_cases writes testCases sorted by order. When two datasets'
+    # ranks collide, _assign_unique_orders renumbers the orders from 0 and
+    # leaves the names as they were.
+    test "orders and names test cases by their dataset rank, sorted by order" do
+      test_cases = [
+        %TestCase{input: "c", dataset_rank: 2},
+        %TestCase{input: "p"},
+        %TestCase{input: "a", dataset_rank: 0}
+      ]
+
+      results = List.duplicate([ok("M", 1.0)], 3)
+      test_run = TestRun.from_results(test_cases, results)
+
+      assert Enum.map(test_run.test_cases, &{&1.name, &1.order, &1.input}) ==
+               [{"test_case_0", 0, "a"}, {"test_case_1", 1, "p"}, {"test_case_2", 2, "c"}]
+    end
+
+    test "renumbers duplicate orders from 0 and keeps their names, as deepeval" do
+      # deepeval: [ds.test_cases[1], ds2.test_cases[0], ds.test_cases[0]]
+      test_cases = [
+        %TestCase{input: "b", dataset_rank: 1},
+        %TestCase{input: "z", dataset_rank: 0},
+        %TestCase{input: "a", dataset_rank: 0}
+      ]
+
+      results = [[ok("M", 1.0)], [ok("M", 0.5)], [ok("M", 0.0)]]
+      test_run = TestRun.from_results(test_cases, results)
+
+      assert Enum.map(test_run.test_cases, &{&1.name, &1.order, &1.input}) ==
+               [{"test_case_0", 0, "z"}, {"test_case_0", 1, "a"}, {"test_case_1", 2, "b"}]
+
+      # metricsScores are built before the sort, in the given order
+      assert [%{scores: scores}] = test_run.metrics_scores
+      assert scores == [1.0, 0.5, 0.0]
+    end
+
     test "counts passed and failed test cases" do
       test_cases = [%TestCase{input: "a"}, %TestCase{input: "b"}, %TestCase{input: "c"}]
 

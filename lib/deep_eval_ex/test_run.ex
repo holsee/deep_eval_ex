@@ -357,9 +357,14 @@ defmodule DeepEvalEx.TestRun do
   `results` holds one result list per test case, as returned by
   `DeepEvalEx.evaluate_run/3`. Skipped results (`DeepEvalEx.Result.skipped/2`)
   are left out, and so are test cases without other results, as deepeval
-  leaves out test cases no metric ran on; the others keep their position in
-  `test_cases` as their `order`. Each metric's `strictMode` and `flaky` come
-  from its result.
+  leaves out test cases no metric ran on. A test case's `order` (and so its
+  `"test_case_<order>"` name) is its `:dataset_rank`, else its position in
+  `test_cases`, as deepeval's `create_api_test_case`. As deepeval's
+  `sort_test_cases`, `testCases` are then sorted by order, and when two
+  test cases share one (test cases ranked by different datasets) the
+  orders are renumbered from 0 and the names left as they are; the
+  `metricsScores` keep the order of `test_cases`. Each metric's
+  `strictMode` and `flaky` come from its result.
 
   A test case succeeds unless a non-flaky metric failed: score-only results
   (`success: nil`) and flaky ones never decide it, as in deepeval's
@@ -396,15 +401,15 @@ defmodule DeepEvalEx.TestRun do
         {{test_case, Enum.reject(case_results, & &1.skipped), duration}, order}
       end)
       |> Enum.reject(fn {{_test_case, case_results, _duration}, _order} -> case_results == [] end)
-      |> Enum.map(fn {{test_case, case_results, duration}, order} ->
-        api_test_case(test_case, case_results, duration, order)
+      |> Enum.map(fn {{test_case, case_results, duration}, index} ->
+        api_test_case(test_case, case_results, duration, test_case.dataset_rank || index)
       end)
 
     {test_passed, test_failed} = count_successes(api_test_cases)
 
     %__MODULE__{
       test_file: Keyword.get(opts, :test_file),
-      test_cases: api_test_cases,
+      test_cases: sort_test_cases(api_test_cases),
       metrics_scores: metrics_scores(api_test_cases),
       identifier: Keyword.get(opts, :identifier),
       hyperparameters: process_hyperparameters(Keyword.get(opts, :hyperparameters)),
@@ -643,6 +648,21 @@ defmodule DeepEvalEx.TestRun do
 
   # deepeval's calculate_test_passes_and_fails: a test case without a
   # verdict (success None) neither passes nor fails.
+  # deepeval's sort_test_cases: a stable sort by order, then
+  # _assign_unique_orders renumbers every order from 0 when two are equal
+  # (every order is set here, so its gap filling never applies)
+  defp sort_test_cases(test_cases) do
+    sorted = Enum.sort_by(test_cases, & &1.order)
+
+    if sorted |> Enum.uniq_by(& &1.order) |> length() == length(sorted) do
+      sorted
+    else
+      sorted
+      |> Enum.with_index()
+      |> Enum.map(fn {test_case, order} -> %{test_case | order: order} end)
+    end
+  end
+
   defp count_successes(successes) do
     Enum.reduce(successes, {0, 0}, fn
       %{success: true}, {passed, failed} -> {passed + 1, failed}

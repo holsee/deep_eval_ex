@@ -37,6 +37,12 @@ defmodule DeepEvalEx.TestCase do
     case, a map of classifier name to label (both strings)
   - `:expectations` - Required and prohibited behaviour, plain data as
     `DeepEvalEx.Dataset.Expectations` describes
+  - `:dataset_rank` - The test case's position in the
+    `DeepEvalEx.Dataset.EvaluationDataset` it was added to, deepeval's
+    private `_dataset_rank`. An evaluation takes it as the test case's
+    `order`, and so its `"test_case_<order>"` name, in place of the test
+    case's position in the evaluated list. `nil` (the default) outside a
+    dataset; `new/1` never sets it
 
   `:comments` through `:flaky` mirror deepeval's `LLMTestCase` and are
   carried through to results and exports unchanged; no metric reads them.
@@ -113,7 +119,8 @@ defmodule DeepEvalEx.TestCase do
           flaky: boolean(),
           custom_column_key_values: %{optional(String.t()) => String.t()} | nil,
           expected_labels: %{optional(String.t()) => String.t()} | nil,
-          expectations: Expectations.t() | nil
+          expectations: Expectations.t() | nil,
+          dataset_rank: non_neg_integer() | nil
         }
 
   defstruct [
@@ -135,6 +142,7 @@ defmodule DeepEvalEx.TestCase do
     :expectations,
     :tools_called,
     :expected_tools,
+    :dataset_rank,
     flaky: false
   ]
 

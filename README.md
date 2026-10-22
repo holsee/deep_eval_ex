@@ -95,6 +95,7 @@ See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation 
 | [ExUnit Integration](wiki/guides/ExUnit-Integration.md) | Test assertions for CI/CD |
 | [Custom Metrics](wiki/guides/Custom-Metrics.md) | Build your own evaluation metrics |
 | [Telemetry](wiki/guides/Telemetry.md) | Observability and monitoring |
+| [Datasets](wiki/guides/Datasets.md) | Goldens and evaluation datasets |
 
 ### API Reference
 

@@ -45,6 +45,7 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 - [Custom Metrics](guides/Custom-Metrics.md)
 - [Custom LLM Adapters](guides/Custom-LLM-Adapters.md)
 - [Telemetry & Observability](guides/Telemetry.md)
+- [Datasets](guides/Datasets.md) - Goldens and evaluation datasets
 - [Phoenix LiveView Integration](guides/Phoenix-Integration.md) (planned)
 
 ## Attribution

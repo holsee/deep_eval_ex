@@ -442,6 +442,11 @@ defmodule DeepEvalEx.TestCaseTest do
       refute Map.has_key?(test_case, :multimodal)
     end
 
+    test "does not take a dataset rank, deepeval's private _dataset_rank" do
+      assert {:ok, %TestCase{dataset_rank: nil}} =
+               TestCase.new(%{"input" => "Q", "dataset_rank" => 3, "_dataset_rank" => 3})
+    end
+
     test "requires custom_column_key_values and expected_labels to map strings to strings" do
       assert {:error, _} = TestCase.new(input: "Q", custom_column_key_values: %{"a" => 1})
       assert {:error, _} = TestCase.new(input: "Q", expected_labels: %{"tone" => :neutral})

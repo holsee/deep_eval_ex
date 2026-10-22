@@ -18,8 +18,8 @@ defmodule DeepEvalEx.TestResult do
     skipped metrics; `[]` where deepeval has `None`
   - `:conversational` - Always `false`: DeepEvalEx has no conversational
     test cases yet
-  - `:index` - The test case's position in the evaluated list (deepeval's
-    `order`)
+  - `:index` - The test case's `:dataset_rank`, else its position in the
+    evaluated list (deepeval's `order`)
   - `:input`, `:actual_output`, `:expected_output`, `:context`,
     `:retrieval_context`, `:metadata` - The test case's own fields; of a
     `DeepEvalEx.Schemas.RetrievedContextData` in `:retrieval_context` only
@@ -69,7 +69,9 @@ defmodule DeepEvalEx.TestResult do
 
   @doc """
   Builds the test result of `test_case`, evaluated at position `index`
-  with `results`, as deepeval's `create_test_result`.
+  with `results`, as deepeval's `create_test_result`. A test case with a
+  `:dataset_rank` takes the rank as its index (and name) instead, as
+  deepeval's `create_api_test_case` takes `_dataset_rank` as the order.
 
   The test case starts successful, as deepeval's API test case does, and
   fails when a non-flaky result failed; score-only results (`success: nil`)
@@ -82,6 +84,7 @@ defmodule DeepEvalEx.TestResult do
   @spec new(TestCase.t(), [Result.t()], non_neg_integer(), [classification()]) :: t()
   def new(%TestCase{} = test_case, results, index, classifications \\ []) do
     metrics_data = Enum.reject(results, & &1.skipped)
+    index = test_case.dataset_rank || index
 
     %__MODULE__{
       name: test_case.name || "test_case_#{index}",

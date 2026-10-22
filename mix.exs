@@ -111,6 +111,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/guides/Custom-Metrics.md",
         "wiki/guides/Custom-LLM-Adapters.md",
         "wiki/guides/Telemetry.md",
+        "wiki/guides/Datasets.md",
         "wiki/guides/Phoenix-Integration.md",
         # Metrics
         {"wiki/metrics/Overview.md", [title: "Metrics Overview", filename: "metrics-overview"]},

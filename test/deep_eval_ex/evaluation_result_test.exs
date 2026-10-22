@@ -49,6 +49,11 @@ defmodule DeepEvalEx.EvaluationResultTest do
       assert %TestResult{name: "capital"} = TestResult.new(test_case(name: "capital"), [], 0)
     end
 
+    test "takes the name and index from the dataset rank, as deepeval's order" do
+      test_case = %{test_case() | dataset_rank: 4}
+      assert %TestResult{name: "test_case_4", index: 4} = TestResult.new(test_case, [], 1)
+    end
+
     test "fails when a non-flaky metric failed, as deepeval's update_metric_data" do
       assert TestResult.new(test_case(), [passed(), failed()], 0).success == false
       assert TestResult.new(test_case(), [passed(), failed("B", flaky: true)], 0).success

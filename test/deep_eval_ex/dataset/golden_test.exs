@@ -214,5 +214,12 @@ defmodule DeepEvalEx.Dataset.GoldenTest do
       assert Enum.map(test_cases, & &1.input) == ["one", "two"]
       assert Golden.convert_test_cases_to_goldens(test_cases) == goldens
     end
+
+    test "convert_goldens_to_test_cases/1 ranks the test cases by position, as deepeval" do
+      goldens = [Golden.new!(input: "one"), Golden.new!(input: "two")]
+
+      assert Enum.map(Golden.convert_goldens_to_test_cases(goldens), & &1.dataset_rank) == [0, 1]
+      assert Golden.to_test_case(hd(goldens)).dataset_rank == nil
+    end
   end
 end

@@ -1300,9 +1300,32 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - `DeepEvalEx.TestCase` gains `:expectations`, as deepeval's
     `LLMTestCase`, so they survive the conversions. Like deepeval, the test
     run export leaves them out.
+- **`DeepEvalEx.Dataset.EvaluationDataset`, an immutable port of deepeval
+  4.3.1's `EvaluationDataset`** core (`dataset/dataset.py`), with a Datasets
+  guide.
+  - `new/2` (goldens, plus the dataset's `:alias`, `:id` and `:version`),
+    `add_golden/2`, `put_goldens/2`, `add_test_case/2` and
+    `put_test_cases/2` return a new dataset. Anything but a
+    `DeepEvalEx.Dataset.Golden` raises `ArgumentError`, as deepeval raises
+    `TypeError`; like deepeval's `test_cases` setter, `put_test_cases/2`
+    skips items that are not `DeepEvalEx.TestCase`s. Datasets are
+    single-turn until conversational goldens and test cases are ported.
+  - A dataset implements `Enumerable` over its goldens.
+  - `DeepEvalEx.TestCase` gains `:dataset_rank`, deepeval's private
+    `_dataset_rank`: a dataset sets it to each test case's position, and so
+    does `Golden.convert_goldens_to_test_cases/1`, as deepeval's does.
+    `new/1` never sets it.
 
 ### Changed
 
+- A test case's `:dataset_rank`, when set, is its `order` and default
+  `"test_case_<order>"` name in `DeepEvalEx.TestRun.from_results/3` and its
+  `:index` and name in `DeepEvalEx.TestResult.new/4`, in place of its
+  position in the evaluated list, as deepeval's `create_api_test_case`.
+  The test run's `testCases` are sorted by order, and duplicate orders
+  (test cases ranked by different datasets) renumbered from 0 with their
+  names kept, as deepeval's `sort_test_cases`. Test cases without a rank
+  are unaffected.
 - `c:DeepEvalEx.Metrics.BaseMetric.default_opts/0`, until now unused, is
   applied: `measure/2` and `DeepEvalEx.Evaluator` merge a metric's default
   options under the options given (the run's, then a metric struct's

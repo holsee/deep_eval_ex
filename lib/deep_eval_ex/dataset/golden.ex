@@ -241,9 +241,17 @@ defmodule DeepEvalEx.Dataset.Golden do
   @doc """
   Converts goldens into test cases, in order, as deepeval's
   `convert_goldens_to_test_cases` (see `to_test_case/1`).
+
+  As deepeval, each test case's `:dataset_rank` is its golden's position,
+  so an evaluation names it `"test_case_<position>"` however the list is
+  later sliced.
   """
   @spec convert_goldens_to_test_cases([t()]) :: [TestCase.t()]
-  def convert_goldens_to_test_cases(goldens), do: Enum.map(goldens, &to_test_case/1)
+  def convert_goldens_to_test_cases(goldens) do
+    goldens
+    |> Enum.with_index()
+    |> Enum.map(fn {golden, rank} -> %{to_test_case(golden) | dataset_rank: rank} end)
+  end
 
   @doc """
   Converts test cases into goldens, in order, as deepeval's
