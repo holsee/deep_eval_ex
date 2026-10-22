@@ -1,0 +1,11 @@
+{
+  "template": "PromptAlignmentMetric.generate_verdicts",
+  "inputs": {
+    "prompt_instructions": [
+      "Reply in English.",
+      "Never mention the user's 'account' number."
+    ],
+    "input": "Où est ma commande ?",
+    "actual_output": "Your order ships tomorrow."
+  }
+}

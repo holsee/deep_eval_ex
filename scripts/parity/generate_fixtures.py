@@ -46,7 +46,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the ten LLM-judged metrics, the way the metric itself renders it
+uses for the twelve LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -121,6 +121,8 @@ from deepeval.metrics import (  # noqa: E402
     FaithfulnessMetric,
     GEval,
     HallucinationMetric,
+    PIILeakageMetric,
+    PromptAlignmentMetric,
     ToolCorrectnessMetric,
     ToxicityMetric,
 )
@@ -551,6 +553,8 @@ SCRIPTED_METRICS = {
     "contextual_relevancy": ContextualRelevancyMetric,
     "bias": BiasMetric,
     "toxicity": ToxicityMetric,
+    "pii_leakage": PIILeakageMetric,
+    "prompt_alignment": PromptAlignmentMetric,
     "tool_correctness": ToolCorrectnessMetric,
 }
 
@@ -682,6 +686,14 @@ def _prompt(metric_cls, method, **kwargs):
     return metric_cls(model=_prompt_judge())._get_prompt(method, multimodal=False, **kwargs)
 
 
+def _prompt_alignment(method, inputs, **kwargs):
+    # PromptAlignmentMetric requires its prompt instructions at construction.
+    metric = PromptAlignmentMetric(
+        prompt_instructions=inputs["prompt_instructions"], model=_prompt_judge()
+    )
+    return metric._get_prompt(method, multimodal=False, **kwargs)
+
+
 PROMPT_RENDERERS = {
     "GEval.generate_evaluation_steps": _render_g_eval_steps,
     "GEval.generate_evaluation_results": lambda i: _render_g_eval_results(i, False),
@@ -802,6 +814,32 @@ PROMPT_RENDERERS = {
         toxics=i["toxics"],
         score=_score(i),
     ),
+    "PIILeakageMetric.extract_pii": lambda i: _prompt(
+        PIILeakageMetric, "extract_pii",
+        actual_output=i["actual_output"],
+    ),
+    "PIILeakageMetric.generate_verdicts": lambda i: _prompt(
+        PIILeakageMetric, "generate_verdicts",
+        extracted_pii=i["extracted_pii"],
+    ),
+    "PIILeakageMetric.generate_reason": lambda i: _prompt(
+        PIILeakageMetric, "generate_reason",
+        privacy_violations=i["privacy_violations"],
+        score=_score(i),
+    ),
+    "PromptAlignmentMetric.generate_verdicts": lambda i: _prompt_alignment(
+        "generate_verdicts", i,
+        prompt_instructions=i["prompt_instructions"],
+        input=i["input"],
+        actual_output=i["actual_output"],
+    ),
+    "PromptAlignmentMetric.generate_reason": lambda i: _prompt_alignment(
+        "generate_reason", i,
+        unalignment_reasons=i["unalignment_reasons"],
+        input=i["input"],
+        actual_output=i["actual_output"],
+        score=_score(i),
+    ),
     # System One (`eval_mode`) templates: the questions of the whole metric
     # under `system_one`, and the question asked about each item under
     # `hybrid`. They take no arguments.
@@ -846,6 +884,20 @@ PROMPT_RENDERERS = {
     ),
     "ToxicityMetric._experimental_system_one_verdict": lambda i: _prompt(
         ToxicityMetric, "_experimental_system_one_verdict",
+    ),
+    "PIILeakageMetric._experimental_system_one_questions": lambda i: _prompt(
+        PIILeakageMetric, "_experimental_system_one_questions",
+    ),
+    "PIILeakageMetric._experimental_system_one_verdict": lambda i: _prompt(
+        PIILeakageMetric, "_experimental_system_one_verdict",
+    ),
+    # PromptAlignment's questions are one Noul per prompt instruction.
+    "PromptAlignmentMetric._experimental_system_one_questions": lambda i: _prompt_alignment(
+        "_experimental_system_one_questions", i,
+        prompt_instructions=i["prompt_instructions"],
+    ),
+    "PromptAlignmentMetric._experimental_system_one_verdict": lambda i: _prompt_alignment(
+        "_experimental_system_one_verdict", i,
     ),
     "HallucinationMetric._experimental_system_one_questions": lambda i: _prompt(
         HallucinationMetric, "_experimental_system_one_questions",
@@ -1132,6 +1184,50 @@ PROMPT_CASES = {
             "toxics": ["'Only an idiot would ask that' insults the reader.", None],
         },
     },
+    "pii_leakage_extract_pii": {
+        "template": "PIILeakageMetric.extract_pii",
+        "inputs": {
+            "actual_output": "Jane Doe lives at 12 Elm Street and her SSN is 123-45-6789. "
+                             "The office opens at nine.",
+        },
+    },
+    "pii_leakage_generate_verdicts": {
+        "template": "PIILeakageMetric.generate_verdicts",
+        "inputs": {
+            "extracted_pii": [
+                "Jane Doe lives at 12 Elm Street.",
+                "Her SSN is 123-45-6789.",
+            ],
+        },
+    },
+    "pii_leakage_generate_reason": {
+        "template": "PIILeakageMetric.generate_reason",
+        "inputs": {
+            "score": 0.5,
+            "privacy_violations": ["It reveals Jane Doe's home address.", None],
+        },
+    },
+    "prompt_alignment_generate_verdicts": {
+        "template": "PromptAlignmentMetric.generate_verdicts",
+        "inputs": {
+            "prompt_instructions": [
+                "Reply in English.",
+                "Never mention the user's 'account' number.",
+            ],
+            "input": "Où est ma commande ?",
+            "actual_output": "Your order ships tomorrow.",
+        },
+    },
+    "prompt_alignment_generate_reason": {
+        "template": "PromptAlignmentMetric.generate_reason",
+        "inputs": {
+            "prompt_instructions": ["Reply in English.", "End with a question."],
+            "score": 0.5,
+            "unalignment_reasons": [None],
+            "input": "Où est ma commande ?",
+            "actual_output": "Your order ships tomorrow.",
+        },
+    },
     "faithfulness_experimental_system_one_questions": {
         "template": "FaithfulnessMetric._experimental_system_one_questions",
         "inputs": {},
@@ -1188,6 +1284,29 @@ PROMPT_CASES = {
         "template": "ToxicityMetric._experimental_system_one_verdict",
         "inputs": {},
     },
+    "pii_leakage_experimental_system_one_questions": {
+        "template": "PIILeakageMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "pii_leakage_experimental_system_one_verdict": {
+        "template": "PIILeakageMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    # Each instruction goes through Jinja's `tojson`: JSON with non-ASCII,
+    # `<`, `>`, `&` and `'` escaped as \uXXXX.
+    "prompt_alignment_experimental_system_one_questions": {
+        "template": "PromptAlignmentMetric._experimental_system_one_questions",
+        "inputs": {
+            "prompt_instructions": [
+                "Reply in English.",
+                "Wrap code in <code> & never say \"can't\" \u2014 or \\n.",
+            ],
+        },
+    },
+    "prompt_alignment_experimental_system_one_verdict": {
+        "template": "PromptAlignmentMetric._experimental_system_one_verdict",
+        "inputs": {"prompt_instructions": ["Reply in English."]},
+    },
     "hallucination_experimental_system_one_questions": {
         "template": "HallucinationMetric._experimental_system_one_questions",
         "inputs": {},
@@ -1215,7 +1334,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the ten metrics is rendered
+    """Fails unless every bundled template of the twelve metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()

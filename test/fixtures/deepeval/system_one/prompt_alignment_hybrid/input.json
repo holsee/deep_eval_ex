@@ -1,0 +1,52 @@
+{
+  "description": "PromptAlignment in hybrid mode: Jev judges whether each instruction is followed",
+  "metrics": [
+    {
+      "kind": "prompt_alignment",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5,
+        "prompt_instructions": [
+          "Reply in English.",
+          "Respond in all upper case.",
+          "Use the word 'welcome'."
+        ]
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Say hello to the new team member.",
+    "actual_output": "Hello and welcome to the team!"
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "instruction_0": {
+          "probability": 0.97
+        },
+        "instruction_1": {
+          "probability": 0.49
+        },
+        "instruction_2": {
+          "probability": 0.5
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "prompt_alignment": {
+      "reason": [
+        {
+          "reason": "The score is 0.67 because the output is not in upper case."
+        }
+      ]
+    }
+  }
+}

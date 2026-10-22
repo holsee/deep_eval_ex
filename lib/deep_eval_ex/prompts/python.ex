@@ -18,6 +18,7 @@ defmodule DeepEvalEx.Prompts.Python do
     `f"weight={weight:g}"`
   - `round/2` - Python's `round(number, ndigits)`, as in deepeval's
     `round(p, 3)` before a dict of probabilities is printed
+  - `tojson/1` - Jinja's `tojson` filter on a string
 
   Floats are rounded from their exact binary value, ties to even, as
   CPython does, and `round/2` returns the float nearest the rounded
@@ -101,6 +102,29 @@ defmodule DeepEvalEx.Prompts.Python do
   """
   @spec repr(term()) :: String.t()
   def repr(term), do: term |> do_repr() |> IO.iodata_to_binary()
+
+  @doc """
+  Formats `string` like Jinja's `tojson` filter, which deepeval's templates
+  use to embed a value in JSON: Python's `json.dumps` (non-ASCII escaped as
+  `\\uXXXX`), then `<`, `>`, `&` and `'` escaped too, as Jinja's
+  `htmlsafe_json_dumps` does.
+
+  ## Examples
+
+      iex> DeepEvalEx.Prompts.Python.tojson("Use <b> & 'quotes'")
+      ~S("Use \\u003cb\\u003e \\u0026 \\u0027quotes\\u0027")
+  """
+  @spec tojson(String.t()) :: String.t()
+  def tojson(string) when is_binary(string) do
+    string
+    |> JSON.encode!()
+    |> String.replace(["<", ">", "&", "'"], fn
+      "<" -> "\\u003c"
+      ">" -> "\\u003e"
+      "&" -> "\\u0026"
+      "'" -> "\\u0027"
+    end)
+  end
 
   @doc """
   Formats `number` like Python's `format(number, ".<decimals>f")`.

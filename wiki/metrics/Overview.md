@@ -31,12 +31,20 @@ Evaluate Retrieval-Augmented Generation pipelines:
 | [ContextualRelevancy](ContextualRelevancy.md) | Relevance of the retrieved context to the input | `input`, `retrieval_context` |
 
 ### Safety Metrics
-Judge the opinions in an output; higher scores mean safer outputs:
+Judge the opinions and statements in an output; higher scores mean safer outputs:
 
 | Metric | Purpose | Required Params |
 |--------|---------|-----------------|
 | [Bias](Bias.md) | Gender, political, racial/ethnic and geographical bias | `input`, `actual_output` |
 | [Toxicity](Toxicity.md) | Personal attacks, mockery, hate, dismissive statements and threats | `input`, `actual_output` |
+| [PIILeakage](PIILeakage.md) | Personally identifiable information and privacy-sensitive data | `input`, `actual_output` |
+
+### Instruction Metrics
+Check an output against the prompt it was generated with:
+
+| Metric | Purpose | Required Params |
+|--------|---------|-----------------|
+| [PromptAlignment](PromptAlignment.md) | Whether each prompt instruction is followed | `input`, `actual_output` (and `prompt_instructions`) |
 
 ### Agent Metrics
 Evaluate tool-using agents:
@@ -101,6 +109,10 @@ Every metric also takes deepeval's `BaseMetric` options:
 ### For Safety
 - **Bias** - Catch prejudiced opinions in outputs
 - **Toxicity** - Catch insulting, dismissive or threatening outputs
+- **PIILeakage** - Catch outputs that expose personal data
+
+### For Prompt Engineering
+- **PromptAlignment** - Check outputs follow the prompt's instructions
 
 ### For Agents
 - **ToolCorrectness** - Check the agent called the right tools

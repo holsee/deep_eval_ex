@@ -1,0 +1,9 @@
+{
+  "template": "PromptAlignmentMetric._experimental_system_one_questions",
+  "inputs": {
+    "prompt_instructions": [
+      "Reply in English.",
+      "Wrap code in <code> & never say \"can't\" — or \\n."
+    ]
+  }
+}

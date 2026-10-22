@@ -73,6 +73,8 @@ config :deep_eval_ex,
 | **ContextualRelevancy** | RAG relevance of the retrieved context to the input |
 | **Bias** | Gender, political, racial/ethnic and geographical bias in the output |
 | **Toxicity** | Personal attacks, mockery, hate and threats in the output |
+| **PIILeakage** | Personally identifiable information and privacy-sensitive data in the output |
+| **PromptAlignment** | Whether the output follows the prompt template's instructions |
 | **ToolCorrectness** | Agent tool calls against the expected tools |
 | **JevEval** | Your own weighted Noul, Score and Choice questions, decided by a System One model (Jev) |
 

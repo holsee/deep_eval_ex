@@ -30,6 +30,8 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     Faithfulness,
     Hallucination,
     JevEval,
+    PIILeakage,
+    PromptAlignment,
     ToolCorrectness,
     Toxicity
   }
@@ -51,6 +53,8 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     "hallucination" => Hallucination,
     "bias" => Bias,
     "toxicity" => Toxicity,
+    "pii_leakage" => PIILeakage,
+    "prompt_alignment" => PromptAlignment,
     "tool_correctness" => ToolCorrectness
   }
 
@@ -237,8 +241,17 @@ defmodule DeepEvalEx.Test.SystemOneParity do
         system_one_model: mock
       ] ++ Enum.map(params.values, fn {key, value} -> option(key, plain(value)) end)
 
-    {module, opts}
+    configured(module, opts)
   end
+
+  # PromptAlignment's instructions are its own, as deepeval's constructor
+  # param: a struct, so a batched scenario's metrics share the other options.
+  defp configured(PromptAlignment, opts) do
+    {instructions, opts} = Keyword.pop!(opts, :prompt_instructions)
+    {PromptAlignment.new(prompt_instructions: instructions), opts}
+  end
+
+  defp configured(module, opts), do: {module, opts}
 
   # deepeval's JevEval(**params): the questions as Scored structs, the
   # evaluation params as atoms.

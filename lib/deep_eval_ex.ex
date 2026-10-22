@@ -53,6 +53,10 @@ defmodule DeepEvalEx do
     geographical bias in the output's opinions
   - `DeepEvalEx.Metrics.Toxicity` - Personal attacks, mockery, hate,
     dismissive statements and threats in the output's opinions
+  - `DeepEvalEx.Metrics.PIILeakage` - Personally identifiable information
+    and privacy-sensitive data in the output
+  - `DeepEvalEx.Metrics.PromptAlignment` - Whether the output follows the
+    prompt template's instructions
   - `DeepEvalEx.Metrics.ToolCorrectness` - Agent tool calls against the
     expected tools
   - `DeepEvalEx.Metrics.JevEval` - Your own weighted questions, decided by

@@ -1,0 +1,116 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "input": "Say hello to the new team member.",
+          "actual_output": "Hello and welcome to the team!",
+          "instructions": [
+            "Reply in English.",
+            "Respond in all upper case.",
+            "Use the word 'welcome'."
+          ]
+        },
+        "questions": {
+          "instruction_0": {
+            "type": "noul",
+            "instructions": {
+              "instruction": "Reply in English.",
+              "question": "Does `actual_output` COMPLETELY follow the prompt `instruction` when responding to `input`?"
+            }
+          },
+          "instruction_1": {
+            "type": "noul",
+            "instructions": {
+              "instruction": "Respond in all upper case.",
+              "question": "Does `actual_output` COMPLETELY follow the prompt `instruction` when responding to `input`?"
+            }
+          },
+          "instruction_2": {
+            "type": "noul",
+            "instructions": {
+              "instruction": "Use the word 'welcome'.",
+              "question": "Does `actual_output` COMPLETELY follow the prompt `instruction` when responding to `input`?"
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "instruction_0": {
+              "probability": 0.97
+            },
+            "instruction_1": {
+              "probability": 0.49
+            },
+            "instruction_2": {
+              "probability": 0.5
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "input": "Say hello to the new team member.",
+        "actual_output": "Hello and welcome to the team!",
+        "instructions": [
+          "Reply in English.",
+          "Respond in all upper case.",
+          "Use the word 'welcome'."
+        ]
+      },
+      "questions": {
+        "instruction_0": {
+          "type": "noul",
+          "instructions": {
+            "instruction": "Reply in English.",
+            "question": "Does `actual_output` COMPLETELY follow the prompt `instruction` when responding to `input`?"
+          }
+        },
+        "instruction_1": {
+          "type": "noul",
+          "instructions": {
+            "instruction": "Respond in all upper case.",
+            "question": "Does `actual_output` COMPLETELY follow the prompt `instruction` when responding to `input`?"
+          }
+        },
+        "instruction_2": {
+          "type": "noul",
+          "instructions": {
+            "instruction": "Use the word 'welcome'.",
+            "question": "Does `actual_output` COMPLETELY follow the prompt `instruction` when responding to `input`?"
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "instruction_0": {
+            "probability": 0.97
+          },
+          "instruction_1": {
+            "probability": 0.49
+          },
+          "instruction_2": {
+            "probability": 0.5
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

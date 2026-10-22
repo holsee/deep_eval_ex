@@ -1,0 +1,92 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "Say hello to the new team member.",
+            "actual_output": "Hello and welcome to the team!"
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "`actual_output` completely follows this prompt instruction when responding to `input`: Reply in English."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "`actual_output` completely follows this prompt instruction when responding to `input`: Respond in all upper case."
+          },
+          "q_2": {
+            "type": "noul",
+            "instructions": "`actual_output` completely follows this prompt instruction when responding to `input`: Use the word 'welcome'."
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.97
+            },
+            "q_1": {
+              "probability": 0.02
+            },
+            "q_2": {
+              "probability": 0.88
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "input": "Say hello to the new team member.",
+          "actual_output": "Hello and welcome to the team!"
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "`actual_output` completely follows this prompt instruction when responding to `input`: Reply in English."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "`actual_output` completely follows this prompt instruction when responding to `input`: Respond in all upper case."
+        },
+        "q_2": {
+          "type": "noul",
+          "instructions": "`actual_output` completely follows this prompt instruction when responding to `input`: Use the word 'welcome'."
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.97
+          },
+          "q_1": {
+            "probability": 0.02
+          },
+          "q_2": {
+            "probability": 0.88
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

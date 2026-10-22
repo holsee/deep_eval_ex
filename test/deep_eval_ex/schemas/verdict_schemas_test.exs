@@ -12,6 +12,8 @@ defmodule DeepEvalEx.Schemas.VerdictSchemasTest do
     ContextualRelevancy,
     Faithfulness,
     Hallucination,
+    PIILeakage,
+    PromptAlignment,
     Toxicity
   }
 
@@ -25,7 +27,9 @@ defmodule DeepEvalEx.Schemas.VerdictSchemasTest do
     {ContextualPrecision, ["yes", "no"]},
     {ContextualRelevancy, ["yes", "no"]},
     {Bias, ["yes", "no"]},
-    {Toxicity, ["yes", "no"]}
+    {Toxicity, ["yes", "no"]},
+    {PIILeakage, ["yes", "no"]},
+    {PromptAlignment, ["yes", "no"]}
   ]
 
   for {schema, vocabulary} <- @vocabularies do

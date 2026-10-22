@@ -113,6 +113,8 @@ Different metrics require different fields:
 | ContextualRelevancy | `input`, `retrieval_context` |
 | Bias | `input`, `actual_output` |
 | Toxicity | `input`, `actual_output` |
+| PIILeakage | `input`, `actual_output` |
+| PromptAlignment | `input`, `actual_output` (and the metric's `prompt_instructions`) |
 
 ## Helper Functions
 

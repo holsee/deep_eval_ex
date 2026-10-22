@@ -1,0 +1,15 @@
+{
+  "template": "PromptAlignmentMetric.generate_reason",
+  "inputs": {
+    "prompt_instructions": [
+      "Reply in English.",
+      "End with a question."
+    ],
+    "score": 0.5,
+    "unalignment_reasons": [
+      null
+    ],
+    "input": "Où est ma commande ?",
+    "actual_output": "Your order ships tomorrow."
+  }
+}

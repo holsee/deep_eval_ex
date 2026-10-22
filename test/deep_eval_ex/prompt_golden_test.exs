@@ -71,6 +71,11 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "ToxicityMetric.generate_opinions" => {Prompts.Toxicity, :generate_opinions},
     "ToxicityMetric.generate_verdicts" => {Prompts.Toxicity, :generate_verdicts},
     "ToxicityMetric.generate_reason" => {Prompts.Toxicity, :generate_reason},
+    "PIILeakageMetric.extract_pii" => {Prompts.PIILeakage, :extract_pii},
+    "PIILeakageMetric.generate_verdicts" => {Prompts.PIILeakage, :generate_verdicts},
+    "PIILeakageMetric.generate_reason" => {Prompts.PIILeakage, :generate_reason},
+    "PromptAlignmentMetric.generate_verdicts" => {Prompts.PromptAlignment, :generate_verdicts},
+    "PromptAlignmentMetric.generate_reason" => {Prompts.PromptAlignment, :generate_reason},
     "ToolCorrectnessMetric.get_tool_selection_score" =>
       {Prompts.ToolCorrectness, :get_tool_selection_score},
     "FaithfulnessMetric._experimental_system_one_questions" =>
@@ -98,6 +103,14 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "ToxicityMetric._experimental_system_one_questions" =>
       {Prompts.Toxicity, :system_one_questions},
     "ToxicityMetric._experimental_system_one_verdict" => {Prompts.Toxicity, :system_one_verdict},
+    "PIILeakageMetric._experimental_system_one_questions" =>
+      {Prompts.PIILeakage, :system_one_questions},
+    "PIILeakageMetric._experimental_system_one_verdict" =>
+      {Prompts.PIILeakage, :system_one_verdict},
+    "PromptAlignmentMetric._experimental_system_one_questions" =>
+      {Prompts.PromptAlignment, :system_one_questions},
+    "PromptAlignmentMetric._experimental_system_one_verdict" =>
+      {Prompts.PromptAlignment, :system_one_verdict},
     "HallucinationMetric._experimental_system_one_questions" =>
       {Prompts.Hallucination, :system_one_questions},
     "HallucinationMetric._experimental_system_one_verdict" =>
@@ -120,7 +133,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the ten LLM metrics" do
+  test "covers every template of the twelve LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -137,6 +150,8 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.Faithfulness,
             Prompts.GEval,
             Prompts.Hallucination,
+            Prompts.PIILeakage,
+            Prompts.PromptAlignment,
             Prompts.ToolCorrectness,
             Prompts.Toxicity
           ],
@@ -304,6 +319,35 @@ defmodule DeepEvalEx.PromptGoldenTest do
 
   defp options("ToxicityMetric.generate_reason", inputs),
     do: [score: inputs["score"], toxics: inputs["toxics"]]
+
+  defp options("PIILeakageMetric.extract_pii", inputs),
+    do: [actual_output: inputs["actual_output"]]
+
+  defp options("PIILeakageMetric.generate_verdicts", inputs),
+    do: [extracted_pii: inputs["extracted_pii"]]
+
+  defp options("PIILeakageMetric.generate_reason", inputs),
+    do: [score: inputs["score"], privacy_violations: inputs["privacy_violations"]]
+
+  defp options("PromptAlignmentMetric.generate_verdicts", inputs) do
+    [
+      prompt_instructions: inputs["prompt_instructions"],
+      input: inputs["input"],
+      actual_output: inputs["actual_output"]
+    ]
+  end
+
+  defp options("PromptAlignmentMetric.generate_reason", inputs) do
+    [
+      unalignment_reasons: inputs["unalignment_reasons"],
+      input: inputs["input"],
+      actual_output: inputs["actual_output"],
+      score: inputs["score"]
+    ]
+  end
+
+  defp options("PromptAlignmentMetric._experimental_system_one_questions", inputs),
+    do: [prompt_instructions: inputs["prompt_instructions"]]
 
   defp options("ToolCorrectnessMetric.get_tool_selection_score", inputs) do
     [

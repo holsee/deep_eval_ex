@@ -29,6 +29,8 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     Faithfulness,
     GEval,
     Hallucination,
+    PIILeakage,
+    PromptAlignment,
     ToolCorrectness,
     Toxicity
   }
@@ -50,6 +52,8 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "contextual_relevancy" => ContextualRelevancy,
     "bias" => Bias,
     "toxicity" => Toxicity,
+    "pii_leakage" => PIILeakage,
+    "prompt_alignment" => PromptAlignment,
     "tool_correctness" => ToolCorrectness
   }
 

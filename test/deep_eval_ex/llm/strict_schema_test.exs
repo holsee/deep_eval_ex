@@ -223,6 +223,8 @@ defmodule DeepEvalEx.LLM.StrictSchemaTest do
        [:claims_schema, :truths_schema, :verdicts_schema, :reason_schema]},
       {MetricOutputs.GEval, [:steps_schema, :reason_score_schema]},
       {MetricOutputs.Hallucination, [:verdicts_schema, :reason_schema]},
+      {MetricOutputs.PIILeakage, [:extracted_pii_schema, :verdicts_schema, :reason_schema]},
+      {MetricOutputs.PromptAlignment, [:verdicts_schema, :reason_schema]},
       {MetricOutputs.ToolCorrectness, [:tool_selection_score_schema]},
       {MetricOutputs.Toxicity, [:opinions_schema, :verdicts_schema, :reason_schema]}
     ]

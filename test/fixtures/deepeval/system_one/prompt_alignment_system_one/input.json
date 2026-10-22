@@ -1,0 +1,42 @@
+{
+  "description": "PromptAlignment decided by Jev: one Noul per prompt instruction",
+  "metrics": [
+    {
+      "kind": "prompt_alignment",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5,
+        "prompt_instructions": [
+          "Reply in English.",
+          "Respond in all upper case.",
+          "Use the word 'welcome'."
+        ]
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Say hello to the new team member.",
+    "actual_output": "Hello and welcome to the team!"
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.97
+        },
+        "q_1": {
+          "probability": 0.02
+        },
+        "q_2": {
+          "probability": 0.88
+        }
+      }
+    }
+  }
+}

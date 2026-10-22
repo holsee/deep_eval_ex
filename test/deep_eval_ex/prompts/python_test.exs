@@ -113,6 +113,24 @@ defmodule DeepEvalEx.Prompts.PythonTest do
     end
   end
 
+  # Expected strings are what Jinja 3's `{{ x | tojson }}` renders.
+  describe "tojson/1" do
+    test "writes JSON with <, >, & and ' escaped for HTML" do
+      assert Python.tojson("plain") == ~S("plain")
+
+      assert Python.tojson(~S(Wrap <code> & say "can't")) ==
+               ~S("Wrap \u003ccode\u003e \u0026 say \"can\u0027t\"")
+    end
+
+    test "escapes non-ASCII characters as json.dumps does, astral ones as surrogate pairs" do
+      assert Python.tojson("café — 😀") == ~S("caf\u00e9 \u2014 \ud83d\ude00")
+    end
+
+    test "escapes control characters and backslashes" do
+      assert Python.tojson("tab\tnew\nline\\\\back") == ~S("tab\tnew\nline\\\\back")
+    end
+  end
+
   describe "format_fixed/2" do
     test "formats like Python's format(x, \".2f\")" do
       assert Python.format_fixed(0.5, 2) == "0.50"

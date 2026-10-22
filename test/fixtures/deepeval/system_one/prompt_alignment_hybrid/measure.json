@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.6666666666666666,
+    "success": true,
+    "reason": "The score is 0.67 because the output is not in upper case.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Prompt Instructions:\n[\n    \"Reply in English.\",\n    \"Respond in all upper case.\",\n    \"Use the word 'welcome'.\"\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.97\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"P(yes)=0.49\"\n    },\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.50\"\n    }\n]",
+    "confidence": 0.0,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

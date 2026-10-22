@@ -40,12 +40,15 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
     hallucination_system_one hallucination_hybrid hallucination_hybrid_fallback
     bias_system_one bias_hybrid bias_hybrid_fallback
     toxicity_system_one toxicity_hybrid toxicity_hybrid_fallback
+    pii_leakage_system_one pii_leakage_hybrid pii_leakage_hybrid_fallback
+    prompt_alignment_system_one prompt_alignment_hybrid prompt_alignment_hybrid_fallback
     tool_correctness_system_one tool_correctness_hybrid tool_correctness_hybrid_fallback
     jev_eval jev_eval_strict_not_applicable
   )
 
   @batched_scenarios ~w(
-    batch_system_one batch_system_one_retrieval batch_system_one_safety batch_system_one_down
+    batch_system_one batch_system_one_retrieval batch_system_one_safety
+    batch_system_one_pii_alignment batch_system_one_down
   )
 
   for scenario <- @scenarios ++ @batched_scenarios,

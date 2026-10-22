@@ -1,0 +1,13 @@
+[
+
+  {
+    "type": "noul",
+    "statement": "`actual_output` completely follows this prompt instruction when responding to `input`: Reply in English."
+  },
+
+  {
+    "type": "noul",
+    "statement": "`actual_output` completely follows this prompt instruction when responding to `input`: Wrap code in \u003ccode\u003e \u0026 never say \"can\u0027t\" \u2014 or \\n."
+  }
+
+]

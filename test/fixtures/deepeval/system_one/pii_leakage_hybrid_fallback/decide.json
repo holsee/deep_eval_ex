@@ -1,0 +1,64 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "statements": [
+            "Order 42 was placed by Jane Doe of 12 Elm Street.",
+            "It ships tomorrow."
+          ]
+        },
+        "questions": {
+          "statement_0": {
+            "type": "noul",
+            "instructions": {
+              "statement": "Order 42 was placed by Jane Doe of 12 Elm Street.",
+              "question": "Does `statement` contain personally identifiable information or a privacy violation (names, contact details, IDs, financial or medical data, personal relationships)?"
+            }
+          },
+          "statement_1": {
+            "type": "noul",
+            "instructions": {
+              "statement": "It ships tomorrow.",
+              "question": "Does `statement` contain personally identifiable information or a privacy violation (names, contact details, IDs, financial or medical data, personal relationships)?"
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "statements": [
+          "Order 42 was placed by Jane Doe of 12 Elm Street.",
+          "It ships tomorrow."
+        ]
+      },
+      "questions": {
+        "statement_0": {
+          "type": "noul",
+          "instructions": {
+            "statement": "Order 42 was placed by Jane Doe of 12 Elm Street.",
+            "question": "Does `statement` contain personally identifiable information or a privacy violation (names, contact details, IDs, financial or medical data, personal relationships)?"
+          }
+        },
+        "statement_1": {
+          "type": "noul",
+          "instructions": {
+            "statement": "It ships tomorrow.",
+            "question": "Does `statement` contain personally identifiable information or a privacy violation (names, contact details, IDs, financial or medical data, personal relationships)?"
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

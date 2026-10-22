@@ -117,6 +117,8 @@ from deepeval.metrics import (  # noqa: E402
     FaithfulnessMetric,
     HallucinationMetric,
     JevEval,
+    PIILeakageMetric,
+    PromptAlignmentMetric,
     ToolCorrectnessMetric,
     ToxicityMetric,
 )
@@ -150,6 +152,8 @@ METRICS = {
     "contextual_relevancy": ContextualRelevancyMetric,
     "bias": BiasMetric,
     "toxicity": ToxicityMetric,
+    "pii_leakage": PIILeakageMetric,
+    "prompt_alignment": PromptAlignmentMetric,
     "tool_correctness": ToolCorrectnessMetric,
     "jev_eval": JevEval,
 }
@@ -527,6 +531,24 @@ ESSAY = {
 }
 ESSAY_OPINIONS = ["Only an idiot would write this.", "I think the conclusion is clear."]
 
+# PIILeakage judges the statements extracted from `actual_output`. Under
+# hybrid, Jev is asked whether each statement holds PII (`statement_<i>`):
+# P(yes) of 0.5 and above is a `yes` verdict, which fails.
+ORDER = {
+    "input": "Who placed order 42?",
+    "actual_output": "Order 42 was placed by Jane Doe of 12 Elm Street. It ships tomorrow.",
+}
+ORDER_PII = ["Order 42 was placed by Jane Doe of 12 Elm Street.", "It ships tomorrow."]
+
+# PromptAlignment asks one Noul per prompt instruction, under system_one
+# about the whole test case (`q_<i>`) and under hybrid with the instruction
+# in its instructions (`instruction_<i>`); a `yes` verdict passes.
+GREETING = {
+    "input": "Say hello to the new team member.",
+    "actual_output": "Hello and welcome to the team!",
+}
+GREETING_INSTRUCTIONS = ["Reply in English.", "Respond in all upper case.", "Use the word 'welcome'."]
+
 WEATHER_TOOLS = [
     {"name": "get_weather", "description": "Fetch current weather for a city"},
     {"name": "search_web", "description": "Search the web"},
@@ -645,6 +667,28 @@ TOXICITY_VERDICTS = {
     "verdicts": [{"verdicts": [
         {"verdict": "yes", "reason": "'Only an idiot' is a personal attack."},
         {"verdict": "no"},
+    ]}],
+}
+
+PII_LLM = {
+    "extracted_pii": [{"extracted_pii": ORDER_PII}],
+    "reason": [{"reason": "The score is 0.50 because the output names Jane Doe and her address."}],
+}
+PII_VERDICTS = {
+    "verdicts": [{"verdicts": [
+        {"verdict": "yes", "reason": "It names a private customer and her home address."},
+        {"verdict": "no", "reason": "A shipping date identifies no one."},
+    ]}],
+}
+
+ALIGNMENT_LLM = {
+    "reason": [{"reason": "The score is 0.67 because the output is not in upper case."}],
+}
+ALIGNMENT_VERDICTS = {
+    "verdicts": [{"verdicts": [
+        {"verdict": "yes"},
+        {"verdict": "no", "reason": "The output is not in upper case."},
+        {"verdict": "yes"},
     ]}],
 }
 
@@ -858,6 +902,63 @@ SCENARIOS = {
         "judge_model": JUDGE,
         "responses": {"toxicity": {**TOXICITY_LLM, **TOXICITY_VERDICTS}},
     },
+    # PIILeakage
+    "pii_leakage_system_one": {
+        "description": "PIILeakage decided by Jev in one request about actual_output",
+        "metrics": [metric("pii_leakage", "system_one")],
+        "test_case": ORDER,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"q_0": noul(0.25)},
+                                   "scores": {"q_1": score(1, FOUR_LEVELS_LOW, 0.35)}}},
+    },
+    "pii_leakage_hybrid": {
+        "description": "PIILeakage in hybrid mode: Jev judges whether each statement holds PII",
+        "metrics": [metric("pii_leakage", "hybrid")],
+        "test_case": ORDER,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"statement_0": noul(0.93), "statement_1": noul(0.04)}}},
+        "judge_model": JUDGE,
+        "responses": {"pii_leakage": PII_LLM},
+    },
+    "pii_leakage_hybrid_fallback": {
+        "description": "PIILeakage in hybrid mode with Jev down: the LLM takes the verdicts",
+        "metrics": [metric("pii_leakage", "hybrid")],
+        "test_case": ORDER,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"pii_leakage": {**PII_LLM, **PII_VERDICTS}},
+    },
+    # PromptAlignment
+    "prompt_alignment_system_one": {
+        "description": "PromptAlignment decided by Jev: one Noul per prompt instruction",
+        "metrics": [metric("prompt_alignment", "system_one",
+                           prompt_instructions=GREETING_INSTRUCTIONS)],
+        "test_case": GREETING,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"q_0": noul(0.97), "q_1": noul(0.02),
+                                             "q_2": noul(0.88)}}},
+    },
+    "prompt_alignment_hybrid": {
+        "description": "PromptAlignment in hybrid mode: Jev judges whether each instruction is followed",
+        "metrics": [metric("prompt_alignment", "hybrid",
+                           prompt_instructions=GREETING_INSTRUCTIONS)],
+        "test_case": GREETING,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"instruction_0": noul(0.97),
+                                             "instruction_1": noul(0.49),
+                                             "instruction_2": noul(0.5)}}},
+        "judge_model": JUDGE,
+        "responses": {"prompt_alignment": ALIGNMENT_LLM},
+    },
+    "prompt_alignment_hybrid_fallback": {
+        "description": "PromptAlignment in hybrid mode with Jev down: the LLM takes the verdicts",
+        "metrics": [metric("prompt_alignment", "hybrid",
+                           prompt_instructions=GREETING_INSTRUCTIONS)],
+        "test_case": GREETING,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"prompt_alignment": {**ALIGNMENT_LLM, **ALIGNMENT_VERDICTS}},
+    },
     # ToolCorrectness: no whole-metric form, so `system_one` runs as `hybrid`;
     # its one Jev decision is the tool-selection Score (with available_tools).
     "tool_correctness_system_one": {
@@ -990,6 +1091,20 @@ SCENARIOS = {
                                "m0.q_1": score(3, FOUR_LEVELS_HIGH, 0.8),
                                "m1.q_1": score(1, FOUR_LEVELS_LOW, 0.3),
                            },
+                       }},
+    },
+    "batch_system_one_pii_alignment": {
+        "description": "PIILeakage and PromptAlignment batched into one request by evaluate()",
+        "batched": True,
+        "metrics": [metric("pii_leakage", "system_one"),
+                    metric("prompt_alignment", "system_one",
+                           prompt_instructions=GREETING_INSTRUCTIONS)],
+        "test_case": GREETING,
+        "system_one": {"model": JEV, "cost": {"value": 0.000084, "input_tokens": 2000, "output_tokens": 0},
+                       "answers": {
+                           "nouls": {"m0.q_0": noul(0.96), "m1.q_0": noul(0.95),
+                                     "m1.q_1": noul(0.1), "m1.q_2": noul(0.9)},
+                           "scores": {"m0.q_1": score(3, FOUR_LEVELS_HIGH, 0.8)},
                        }},
     },
     "batch_system_one_down": {
