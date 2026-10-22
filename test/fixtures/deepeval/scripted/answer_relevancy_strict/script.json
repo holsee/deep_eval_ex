@@ -1,0 +1,44 @@
+{
+  "description": "AnswerRelevancy in strict mode: 0.5 clamps to 0",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "answer_relevancy",
+    "params": {
+      "strict_mode": true
+    }
+  },
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris. I like pizza."
+  },
+  "responses": {
+    "answer_relevancy": {
+      "statements": [
+        {
+          "statements": [
+            "Paris.",
+            "I like pizza."
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "no",
+              "reason": "Pizza is unrelated."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.00 because one statement is unrelated."
+        }
+      ]
+    }
+  }
+}

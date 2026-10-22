@@ -1,0 +1,12 @@
+{
+  "score": 0,
+  "success": false,
+  "reason": "[\n\t Tool Calling Reason: Incorrect tool usage: missing tools ['format_answer', 'get_weather'] and out-of-order tools ['format_answer', 'get_weather']; expected ['get_weather', 'format_answer'], called ['search_web']. See more details above.\n\t Tool Selection Reason: No available tools were provided to assess tool selection criteria\n]\n",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Expected Tools:\n[\n    ToolCall(\n        name=\"get_weather\",\n        type=\"FUNCTION\",\n        input_parameters={\n            \"city\": \"Paris\"\n        }\n    ),\n    ToolCall(\n        name=\"format_answer\",\n        type=\"FUNCTION\"\n    )\n] \n \nTools Called:\n[\n    ToolCall(\n        name=\"search_web\",\n        type=\"FUNCTION\",\n        input_parameters={\n            \"query\": \"Paris weather\"\n        }\n    )\n] \n \nAvailable Tools: [] \n \nTool Selection Score: 1.0 \n \nTool Selection Reason: No available tools were provided to assess tool selection criteria"
+}

@@ -1,0 +1,60 @@
+{
+  "description": "ToolCorrectness with available_tools: an LLM scores tool selection",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "tool_correctness",
+    "params": {
+      "threshold": 0.5,
+      "available_tools": [
+        {
+          "name": "get_weather",
+          "description": "Fetch current weather for a city"
+        },
+        {
+          "name": "search_web",
+          "description": "Search the web"
+        },
+        {
+          "name": "send_email",
+          "description": "Send an email"
+        }
+      ]
+    }
+  },
+  "test_case": {
+    "input": "What's the weather in Paris?",
+    "actual_output": "It is 18°C in Paris.",
+    "tools_called": [
+      {
+        "name": "get_weather",
+        "input_parameters": {
+          "city": "Paris"
+        },
+        "output": {
+          "temp_c": 18
+        }
+      }
+    ],
+    "expected_tools": [
+      {
+        "name": "get_weather",
+        "input_parameters": {
+          "city": "Paris"
+        },
+        "output": {
+          "temp_c": 18
+        }
+      }
+    ]
+  },
+  "responses": {
+    "tool_correctness": {
+      "reason,score": [
+        {
+          "reason": "get_weather was the best available tool for the question.",
+          "score": 0.9
+        }
+      ]
+    }
+  }
+}

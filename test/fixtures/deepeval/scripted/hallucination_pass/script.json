@@ -1,0 +1,41 @@
+{
+  "description": "Hallucination: the output agrees with every context",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "hallucination",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris is the capital of France.",
+    "context": [
+      "Paris is the capital of France.",
+      "France is in Europe."
+    ]
+  },
+  "responses": {
+    "hallucination": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes",
+              "reason": "The output agrees that Paris is the capital of France."
+            },
+            {
+              "verdict": "yes",
+              "reason": "The output does not contradict France being in Europe."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1.00 because the output agrees with every context."
+        }
+      ]
+    }
+  }
+}

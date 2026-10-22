@@ -1,0 +1,12 @@
+{
+  "score": 0,
+  "success": false,
+  "reason": "The score is 0.00 because the output contradicts the carry-over limit.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Truths (limit=None):\n[\n    \"Full-time employees receive 20 days of paid time off per year.\",\n    \"Up to 5 unused days can be carried over to the next year.\"\n] \n \nClaims:\n[\n    \"Employees get 20 days of PTO per year.\",\n    \"Employees can carry over 10 days.\"\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"The context allows carrying over 5 days, not 10.\"\n    }\n]"
+}

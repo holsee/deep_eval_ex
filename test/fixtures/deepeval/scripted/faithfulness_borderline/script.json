@@ -1,0 +1,56 @@
+{
+  "description": "Faithfulness: a borderline verdict counts as faithful",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "faithfulness",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "What is the vacation policy?",
+    "actual_output": "Employees get 20 days of PTO per year, which is generous.",
+    "retrieval_context": [
+      "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+      "Section 3.3: Up to 5 unused days can be carried over to the next year."
+    ]
+  },
+  "responses": {
+    "faithfulness": {
+      "truths": [
+        {
+          "truths": [
+            "Full-time employees receive 20 days of paid time off per year.",
+            "Up to 5 unused days can be carried over to the next year."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": [
+            "Employees get 20 days of PTO per year.",
+            "20 days of PTO is generous."
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "borderline",
+              "reason": "The context does not say whether it is generous."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1.00 because nothing in the output contradicts the context."
+        }
+      ]
+    }
+  }
+}

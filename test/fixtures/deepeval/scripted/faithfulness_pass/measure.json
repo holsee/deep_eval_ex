@@ -1,0 +1,12 @@
+{
+  "score": 1.0,
+  "success": true,
+  "reason": "The score is 1.00 because the output only states what the context supports.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Truths (limit=None):\n[\n    \"Full-time employees receive 20 days of paid time off per year.\",\n    \"Up to 5 unused days can be carried over to the next year.\"\n] \n \nClaims:\n[\n    \"Employees get 20 days of PTO per year.\"\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    }\n]"
+}

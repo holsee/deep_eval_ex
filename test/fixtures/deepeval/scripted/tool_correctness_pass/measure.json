@@ -1,0 +1,12 @@
+{
+  "score": 1.0,
+  "success": true,
+  "reason": "[\n\t Tool Calling Reason: All expected tools ['get_weather'] were called (order not considered).\n\t Tool Selection Reason: No available tools were provided to assess tool selection criteria\n]\n",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Expected Tools:\n[\n    ToolCall(\n        name=\"get_weather\",\n        type=\"FUNCTION\",\n        input_parameters={\n            \"city\": \"Paris\"\n        },\n        output={\n            \"temp_c\": 18\n        }\n    )\n] \n \nTools Called:\n[\n    ToolCall(\n        name=\"get_weather\",\n        type=\"FUNCTION\",\n        input_parameters={\n            \"city\": \"Paris\"\n        },\n        output={\n            \"temp_c\": 18\n        }\n    )\n] \n \nAvailable Tools: [] \n \nTool Selection Score: 1.0 \n \nTool Selection Reason: No available tools were provided to assess tool selection criteria"
+}

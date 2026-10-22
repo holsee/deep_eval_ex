@@ -1,0 +1,12 @@
+{
+  "score": 0.2,
+  "success": false,
+  "reason": "The output names Lyon instead of Paris.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Criteria:\nNone \n \nEvaluation Steps:\n[\n    \"Compare the actual output with the expected output.\",\n    \"Check that the key fact is stated correctly.\"\n] \n \nRubric:\nNone \n \nScore: 0.2"
+}

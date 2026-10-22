@@ -1,0 +1,254 @@
+defmodule DeepEvalEx.Test.ScriptedParity do
+  @moduledoc """
+  Runs the scripted-judge scenarios of `test/fixtures/deepeval/scripted/`
+  through DeepEvalEx and compares the outcome with what deepeval 4.3.1 did
+  for the same script.
+
+  Each scenario's `script.json` holds one metric (`kind` and constructor
+  `params`), one `test_case` and the judge's `responses`, keyed by metric
+  kind, step and call index. `scripts/parity/generate_fixtures.py` ran it
+  through deepeval with a scripted judge and recorded `prompts.json`,
+  `measure.json` and `test_run.json` next to it; here
+  `DeepEvalEx.LLM.Adapters.Mock` replays the same responses (see
+  `DeepEvalEx.LLM.Adapters.Mock.script/2`) and `assert_matches_fixture/2`
+  compares the results with those files.
+  """
+
+  import ExUnit.Assertions
+
+  alias DeepEvalEx.Evaluator
+  alias DeepEvalEx.LLM.Adapters.Mock
+
+  alias DeepEvalEx.Metrics.{
+    AnswerRelevancy,
+    ContextualPrecision,
+    ContextualRecall,
+    ExactMatch,
+    Faithfulness,
+    GEval,
+    Hallucination,
+    ToolCorrectness
+  }
+
+  alias DeepEvalEx.Schemas.ToolCall
+  alias DeepEvalEx.Test.JSONDiff
+  alias DeepEvalEx.TestCase
+  alias Jason.OrderedObject
+
+  @fixtures Path.expand("../fixtures/deepeval/scripted", __DIR__)
+
+  @modules %{
+    "exact_match" => ExactMatch,
+    "faithfulness" => Faithfulness,
+    "hallucination" => Hallucination,
+    "answer_relevancy" => AnswerRelevancy,
+    "contextual_precision" => ContextualPrecision,
+    "contextual_recall" => ContextualRecall,
+    "tool_correctness" => ToolCorrectness
+  }
+
+  @doc "The directory holding the scripted scenarios."
+  @spec fixtures_dir() :: Path.t()
+  def fixtures_dir, do: @fixtures
+
+  @doc "The names of the scripted scenarios, sorted."
+  @spec scenarios() :: [String.t()]
+  def scenarios do
+    @fixtures
+    |> File.ls!()
+    |> Enum.filter(&File.regular?(Path.join([@fixtures, &1, "script.json"])))
+    |> Enum.sort()
+  end
+
+  @doc "The path of a scenario's fixture file, e.g. `\"prompts.json\"`."
+  @spec fixture(String.t(), String.t()) :: Path.t()
+  def fixture(scenario, file), do: Path.join([@fixtures, scenario, file])
+
+  @doc """
+  Measures the scenario's test case with its metric, as deepeval's
+  `measure()` did, under the scenario's script.
+
+  Returns `{measured, prompts}`: the result as `measure.json`'s fields (see
+  `measured/1`) and the prompts the metric sent, as
+  `DeepEvalEx.LLM.Adapters.Mock.scripted_prompts/0` lists them.
+  """
+  @spec measure(String.t()) :: {map(), [map()]}
+  def measure(scenario) do
+    script = load(scenario)
+    {metric, opts} = metric(script)
+    load_script(script)
+
+    result = Evaluator.evaluate_metric(test_case(script), metric, opts)
+    {measured(result), Mock.scripted_prompts()}
+  end
+
+  @doc """
+  Evaluates the scenario with `DeepEvalEx.evaluate_run/3`, as deepeval's
+  `evaluate()` did, writing the test run to `results_folder`. Returns the
+  file's contents.
+  """
+  @spec test_run(String.t(), Path.t()) :: binary()
+  def test_run(scenario, results_folder) do
+    script = load(scenario)
+    {metric, opts} = metric(script)
+    load_script(script)
+
+    {_results, _test_run, path} =
+      ExUnit.CaptureLog.with_log(fn ->
+        DeepEvalEx.evaluate_run(
+          [test_case(script)],
+          [metric],
+          [results_folder: results_folder] ++ opts
+        )
+      end)
+      |> elem(0)
+
+    assert is_binary(path), "DeepEvalEx wrote no test run file"
+    File.read!(path)
+  end
+
+  @doc """
+  The fields of `measure.json` for a result: score, success, reason,
+  threshold, error, evaluation model, cost, tokens and `verbose_logs`
+  (`nil` while `DeepEvalEx.Result` has no such field).
+  """
+  @spec measured(DeepEvalEx.Result.t()) :: map()
+  def measured(result) do
+    %{
+      "score" => result.score,
+      "success" => result.success,
+      "reason" => result.reason,
+      "threshold" => result.threshold,
+      "error" => result.error,
+      "evaluation_model" => result.evaluation_model,
+      "evaluation_cost" => result.evaluation_cost,
+      "input_tokens" => result.input_tokens,
+      "output_tokens" => result.output_tokens,
+      "verbose_logs" => Map.get(result, :verbose_logs)
+    }
+  end
+
+  @doc """
+  Asserts that `actual` matches the deepeval fixture file at `path`, which
+  is named after what it holds:
+
+  - `prompts.json` - `actual` is a list of `%{step:, prompt:}`. Each step's
+    prompts must equal deepeval's byte for byte, in call order. Steps are
+    compared separately, as DeepEvalEx may run independent steps (such as
+    Faithfulness's truths and claims) concurrently.
+  - `measure.json` - `actual` is a map of some of its fields (see
+    `measured/1`); each must equal deepeval's, integer vs float included.
+  - `test_run.json` - `actual` is the test run file DeepEvalEx wrote. It must
+    have deepeval's keys, key order, value types and values, then be equal
+    byte for byte. Only the run-level `runDuration` is normalised.
+  """
+  @spec assert_matches_fixture(term(), Path.t()) :: true
+  def assert_matches_fixture(actual, path) do
+    expected = File.read!(path)
+
+    case Path.basename(path) do
+      "prompts.json" -> assert_prompts(actual, Jason.decode!(expected))
+      "measure.json" -> assert_measured(actual, Jason.decode!(expected))
+      "test_run.json" -> assert_test_run(actual, expected)
+    end
+
+    true
+  end
+
+  defp assert_prompts(actual, expected) do
+    ours = Enum.group_by(actual, & &1.step, & &1.prompt)
+    theirs = Enum.group_by(expected, & &1["step"], & &1["prompt"])
+
+    assert Map.new(ours, fn {step, prompts} -> {step, length(prompts)} end) ==
+             Map.new(theirs, fn {step, prompts} -> {step, length(prompts)} end),
+           "calls per step differ from deepeval's"
+
+    for {step, prompts} <- theirs,
+        {their_prompt, index} <- Enum.with_index(prompts) do
+      # Step and index in both sides, so the failure diff names the prompt.
+      assert {step, index, Enum.at(ours[step], index)} == {step, index, their_prompt}
+    end
+  end
+
+  defp assert_measured(actual, expected) do
+    unknown = Map.keys(actual) -- Map.keys(expected)
+    assert unknown == [], "measure.json has no #{inspect(unknown)}"
+
+    assert JSONDiff.diff(actual, Map.take(expected, Map.keys(actual))) == []
+  end
+
+  defp assert_test_run(actual, expected) do
+    ours = normalise(actual)
+    theirs = normalise(expected)
+
+    assert JSONDiff.diff(decode(ours), decode(theirs)) == []
+    assert ours == theirs
+  end
+
+  # The run-level runDuration is the only key following testFailed.
+  defp normalise(json) do
+    String.replace(json, ~r/("testFailed": \d+, "runDuration": )[^,}]+/, "\\1\"<normalised>\"")
+  end
+
+  defp decode(json), do: Jason.decode!(json, objects: :ordered_objects)
+
+  defp load(scenario) do
+    path = fixture(scenario, "script.json")
+    # The test case keeps its JSON objects' key order, as the export does.
+    script = path |> File.read!() |> Jason.decode!()
+    %OrderedObject{} = ordered = path |> File.read!() |> decode()
+    Map.put(script, "test_case", ordered["test_case"])
+  end
+
+  defp load_script(%{"metric" => %{"kind" => kind}} = script) do
+    Mock.script(Map.get(script["responses"], kind, %{}), model: script["judge_model"])
+  end
+
+  defp test_case(%{"test_case" => %OrderedObject{values: pairs}}) do
+    pairs
+    |> Map.new(fn
+      {key, tool_calls} when key in ["tools_called", "expected_tools"] ->
+        {key, Enum.map(tool_calls, &Map.new(&1.values))}
+
+      pair ->
+        pair
+    end)
+    |> TestCase.new!()
+  end
+
+  # The metric and the evaluation options deepeval's constructor params
+  # translate to.
+  defp metric(%{"metric" => %{"kind" => "g_eval", "params" => params}}) do
+    opts = params |> options(GEval) |> Keyword.update(:evaluation_params, [], &atoms/1)
+    {GEval.new(opts), [adapter: :mock]}
+  end
+
+  defp metric(%{"metric" => %{"kind" => kind, "params" => params}}) do
+    module = Map.fetch!(@modules, kind)
+
+    opts =
+      params
+      |> options(module)
+      |> update_present(:evaluation_params, &atoms/1)
+      |> update_present(:available_tools, &Enum.map(&1, fn tool -> tool_call(tool) end))
+
+    {module, [adapter: :mock] ++ opts}
+  end
+
+  # Option names are atoms the metric's module defines once loaded.
+  defp options(params, module) do
+    Code.ensure_loaded!(module)
+    Enum.map(params, fn {key, value} -> {String.to_existing_atom(key), value} end)
+  end
+
+  defp tool_call(attrs) do
+    {:ok, tool_call} = ToolCall.new(attrs)
+    tool_call
+  end
+
+  defp update_present(opts, key, fun) do
+    if Keyword.has_key?(opts, key), do: Keyword.update!(opts, key, fun), else: opts
+  end
+
+  defp atoms(names), do: Enum.map(names, &String.to_existing_atom/1)
+end

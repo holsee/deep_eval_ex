@@ -1,0 +1,43 @@
+{
+  "description": "ContextualRecall: one of two sentences unsupported",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "contextual_recall",
+    "params": {
+      "threshold": 0.7
+    }
+  },
+  "test_case": {
+    "input": "Tell me about Paris.",
+    "actual_output": "Paris is the capital of France. It has the Eiffel Tower. I love pizza.",
+    "expected_output": "Paris is the capital of France and is home to the Eiffel Tower.",
+    "retrieval_context": [
+      "Paris is the capital and largest city of France.",
+      "Rome is the capital of Italy.",
+      "The Eiffel Tower is a wrought-iron tower in Paris."
+    ]
+  },
+  "responses": {
+    "contextual_recall": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes",
+              "reason": "Node 1 states Paris is the capital of France."
+            },
+            {
+              "verdict": "no",
+              "reason": "No node mentions the Eiffel Tower being in Paris."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.50 because the Eiffel Tower sentence is not supported."
+        }
+      ]
+    }
+  }
+}

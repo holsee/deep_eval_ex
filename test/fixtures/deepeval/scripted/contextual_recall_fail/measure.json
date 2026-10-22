@@ -1,0 +1,12 @@
+{
+  "score": 0.5,
+  "success": false,
+  "reason": "The score is 0.50 because the Eiffel Tower sentence is not supported.",
+  "threshold": 0.7,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Verdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"Node 1 states Paris is the capital of France.\",\n        \"expected_output\": \"Paris is the capital of France and is home to the Eiffel Tower.\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"No node mentions the Eiffel Tower being in Paris.\",\n        \"expected_output\": \"Paris is the capital of France and is home to the Eiffel Tower.\"\n    }\n]"
+}

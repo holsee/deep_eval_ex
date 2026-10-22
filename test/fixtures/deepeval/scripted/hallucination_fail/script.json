@@ -1,0 +1,41 @@
+{
+  "description": "Hallucination: the output contradicts one of two contexts",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "hallucination",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Lyon is the capital of France, in Europe.",
+    "context": [
+      "Paris is the capital of France.",
+      "France is in Europe."
+    ]
+  },
+  "responses": {
+    "hallucination": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "no",
+              "reason": "The output says Lyon, the context says Paris."
+            },
+            {
+              "verdict": "yes",
+              "reason": "The output agrees that France is in Europe."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.50 because the output names the wrong capital."
+        }
+      ]
+    }
+  }
+}

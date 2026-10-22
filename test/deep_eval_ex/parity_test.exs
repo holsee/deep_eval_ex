@@ -29,6 +29,7 @@ defmodule DeepEvalEx.ParityTest do
   import ExUnit.CaptureLog
 
   alias DeepEvalEx.Metrics.ExactMatch
+  alias DeepEvalEx.Test.JSONDiff
   alias DeepEvalEx.Test.ParityMetrics.{Failing, Stub}
   alias DeepEvalEx.TestCase
   alias Jason.OrderedObject
@@ -37,8 +38,10 @@ defmodule DeepEvalEx.ParityTest do
   @moduletag :tmp_dir
 
   @fixtures Path.expand("../fixtures/deepeval", __DIR__)
+  # scripted/ holds the scripted-judge scenarios of ScriptedParityTest.
   @scenarios @fixtures
              |> File.ls!()
+             |> Enum.reject(&(&1 == "scripted"))
              |> Enum.filter(&File.dir?(Path.join(@fixtures, &1)))
              |> Enum.sort()
 
@@ -58,7 +61,7 @@ defmodule DeepEvalEx.ParityTest do
       test "has deepeval's keys, key order, value types and values", ctx do
         {ours, theirs} = exports(ctx)
 
-        assert diff(decode(ours), decode(theirs), "$") == []
+        assert JSONDiff.diff(decode(ours), decode(theirs)) == []
       end
 
       test "has deepeval's metricsScores, testPassed, testFailed and order", ctx do
@@ -164,56 +167,4 @@ defmodule DeepEvalEx.ParityTest do
   defp orders(export) do
     export |> get("testCases") |> Enum.map(&{get(&1, "name"), get(&1, "order")})
   end
-
-  # Every difference between two decoded documents, as "<path>: <what>".
-  defp diff(%OrderedObject{values: ours}, %OrderedObject{values: theirs}, path) do
-    our_keys = Enum.map(ours, &elem(&1, 0))
-    their_keys = Enum.map(theirs, &elem(&1, 0))
-
-    if our_keys == their_keys do
-      [ours, theirs]
-      |> Enum.zip()
-      |> Enum.flat_map(fn {{key, our_value}, {key, their_value}} ->
-        diff(our_value, their_value, "#{path}.#{key}")
-      end)
-    else
-      ["#{path}: keys #{inspect(our_keys)}, deepeval has #{inspect(their_keys)}"]
-    end
-  end
-
-  defp diff(ours, theirs, path) when is_list(ours) and is_list(theirs) do
-    if length(ours) == length(theirs) do
-      [ours, theirs]
-      |> Enum.zip()
-      |> Enum.with_index()
-      |> Enum.flat_map(fn {{our_item, their_item}, index} ->
-        diff(our_item, their_item, "#{path}[#{index}]")
-      end)
-    else
-      ["#{path}: #{length(ours)} items, deepeval has #{length(theirs)}"]
-    end
-  end
-
-  defp diff(ours, theirs, path) do
-    cond do
-      type(ours) != type(theirs) ->
-        ["#{path}: #{describe(ours)}, deepeval has #{describe(theirs)}"]
-
-      ours !== theirs ->
-        ["#{path}: #{inspect(ours)}, deepeval has #{inspect(theirs)}"]
-
-      true ->
-        []
-    end
-  end
-
-  defp describe(value), do: "#{type(value)} #{inspect(value)}"
-
-  defp type(value) when is_integer(value), do: :integer
-  defp type(value) when is_float(value), do: :float
-  defp type(value) when is_binary(value), do: :string
-  defp type(value) when is_boolean(value), do: :boolean
-  defp type(nil), do: :null
-  defp type(value) when is_list(value), do: :array
-  defp type(%OrderedObject{}), do: :object
 end

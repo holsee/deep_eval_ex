@@ -27,6 +27,22 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   deepeval 4.3.1 over five scenarios (exact match, LLM-style metrics, an
   erroring metric, RAG with tool calls, hyperparameters); the parity suite
   compares DeepEvalEx's export against them key for key and byte for byte.
+- **Scripted-judge parity fixtures for every metric.** The fixture generator
+  also runs deepeval 4.3.1's real ExactMatch, GEval, Faithfulness,
+  Hallucination, AnswerRelevancy, ContextualPrecision, ContextualRecall and
+  ToolCorrectness (including `available_tools`) against a judge that replays
+  committed scripts, over 27 scenarios (pass, fail, empty lists, strict mode).
+  It records the prompts deepeval sent, the metric's state after `measure()`
+  and the exported test run. A new parity suite replays the same scripts
+  through DeepEvalEx and compares prompts and exports byte for byte. Known
+  divergences from 4.3.1 are tagged `known_divergence` with the roadmap unit
+  that fixes them and excluded by default; run them with
+  `mix test --only known_divergence`.
+- **Scripted mode for the Mock adapter.** `Mock.script/2` replays judge
+  responses keyed by step (named by the requested schema's fields, see
+  `Mock.step_key/1`) and call index, reports the script's judge model and
+  records prompts (`Mock.scripted_prompts/0`). Scripts belong to the calling
+  process and the processes it starts, so async tests each replay their own.
 - **Anthropic adapter** (`DeepEvalEx.LLM.Adapters.Anthropic`), using the
   Messages API with a forced tool call for structured output. Defaults follow
   deepeval's `AnthropicModel`, including its price table.

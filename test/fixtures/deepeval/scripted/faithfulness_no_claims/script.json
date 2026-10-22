@@ -1,0 +1,40 @@
+{
+  "description": "Faithfulness: no claims extracted, so no verdicts",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "faithfulness",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "What is the vacation policy?",
+    "actual_output": "I am not sure.",
+    "retrieval_context": [
+      "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+      "Section 3.3: Up to 5 unused days can be carried over to the next year."
+    ]
+  },
+  "responses": {
+    "faithfulness": {
+      "truths": [
+        {
+          "truths": [
+            "Full-time employees receive 20 days of paid time off per year.",
+            "Up to 5 unused days can be carried over to the next year."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": []
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1.00 because the output makes no claims."
+        }
+      ]
+    }
+  }
+}
