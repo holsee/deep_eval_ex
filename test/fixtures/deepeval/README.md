@@ -274,6 +274,7 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.ContextualRecall.system_one_verdict/0` | `ContextualRecallMetric._experimental_system_one_verdict` (`contextual_recall/templates/_experimental_system_one_verdict.txt`) | none | `contextual_recall_experimental_system_one_verdict` |
 | `Prompts.Hallucination.system_one_questions/0` | `HallucinationMetric._experimental_system_one_questions` (`hallucination/templates/_experimental_system_one_questions.txt`) | none | `hallucination_experimental_system_one_questions` |
 | `Prompts.Hallucination.system_one_verdict/0` | `HallucinationMetric._experimental_system_one_verdict` (`hallucination/templates/_experimental_system_one_verdict.txt`) | none | `hallucination_experimental_system_one_verdict` |
+| `Prompts.ToolCorrectness.system_one_tool_selection_score/0` | `ToolCorrectnessMetric._experimental_system_one_tool_selection_score` (`tool_correctness/templates/_experimental_system_one_tool_selection_score.txt`) | none | `tool_correctness_experimental_system_one_tool_selection_score` |
 
 Templates of these metrics without a DeepEvalEx counterpart, so without a
 case:
@@ -281,10 +282,9 @@ case:
 - `GEval.generate_trace_evaluation_steps`, `generate_trace_evaluation_results`
   and `generate_strict_trace_evaluation_results`: GEval on a trace (no
   `evaluation_params`), which needs tracing (P9)
-- the `_experimental_system_one_*` templates (`_questions`, `_verdict`,
-  `_tool_selection_score`) of ToolCorrectness, whose System One eval modes
-  come in a later unit (P4). The generator cannot find these private
-  templates by itself, so a case must be added for each
+
+The generator cannot find the private `_experimental_system_one_*`
+templates by itself, so each has a case of its own above.
 
 `DeepEvalEx.Prompts.GEval.format_evaluation_steps/1`, `format_params/1`,
 `format_test_case_content/2` and `format_rubric/1` and
@@ -423,6 +423,6 @@ by `DeepEvalEx.SystemOne.Adapters.Mock.from_fixture/2` and the judge by the
 Mock adapter's script, and compares the `decide()` calls of `measure()` and
 `evaluate()`, the measured state, the judge's prompts and the test run with
 the fixture, byte for byte. It covers Faithfulness, AnswerRelevancy,
-ContextualPrecision, ContextualRecall and Hallucination: each one's
-`system_one`, `hybrid` and `hybrid_fallback` scenarios, and
+ContextualPrecision, ContextualRecall, Hallucination and ToolCorrectness:
+each one's `system_one`, `hybrid` and `hybrid_fallback` scenarios, and
 `faithfulness_system_one_strict`.

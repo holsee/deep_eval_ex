@@ -4,6 +4,8 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.ToolCorrectness
   alias DeepEvalEx.Schemas.ToolCall
+  alias DeepEvalEx.SystemOne.Adapters.Mock, as: SystemOneMock
+  alias DeepEvalEx.SystemOne.{Answers, Error, Question}
   alias DeepEvalEx.TestCase
 
   defp tool(name, params \\ nil, output \\ nil) do
@@ -605,6 +607,158 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
       assert {:ok, result} = ToolCorrectness.measure(tc)
       assert result.reason =~ "Tool Calling Reason:"
       assert result.reason =~ "Tool Selection Reason:"
+    end
+  end
+
+  describe "System One" do
+    setup do
+      Mock.clear_responses()
+
+      test_case = %TestCase{
+        input: "What's the weather in Paris?",
+        actual_output: "It is 18°C in Paris.",
+        tools_called: [tool("get_weather", %{"city" => "Paris"})],
+        expected_tools: [tool("get_weather", %{"city" => "Paris"})]
+      }
+
+      available = [
+        %ToolCall{name: "get_weather", description: "Fetch current weather for a city"},
+        %ToolCall{name: "search_web", description: "Search the web"}
+      ]
+
+      %{test_case: test_case, available: available}
+    end
+
+    defp score_answers(score, confidence) do
+      fn [{"verdict", %Question.Score{}}] ->
+        %Answers{
+          scores: %{
+            "verdict" => %Answers.Score{
+              score: score,
+              probabilities: for(i <- 0..4, do: {i, if(i == score, do: 1.0, else: 0.0)}),
+              confidence: confidence
+            }
+          }
+        }
+      end
+    end
+
+    test "system_one_eval_spec/2 is nil: the score is decided in code" do
+      assert ToolCorrectness.system_one_eval_spec(%TestCase{}, []) == nil
+    end
+
+    test "hybrid scores tool selection over deepeval's five levels",
+         %{test_case: test_case, available: available} do
+      system_one = SystemOneMock.new(answer_fn: score_answers(3, 0.25))
+
+      assert {:ok, result} =
+               ToolCorrectness.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one,
+                 available_tools: available
+               )
+
+      assert result.score == 0.75
+      assert result.confidence == 0.25
+
+      assert result.metadata.tool_selection_reason ==
+               "Decided by fake-jev: tool selection 0.75, confidence 0.25."
+
+      assert [%SystemOneMock.Call{state: state, questions: [{"verdict", question}]}] =
+               SystemOneMock.calls(system_one)
+
+      assert %Question.Score{
+               levels: [
+                 "Misaligned",
+                 "Poor selection",
+                 "Mixed selection",
+                 "Mostly appropriate",
+                 "Fully appropriate"
+               ],
+               instructions: "Judging only which tools were chosen" <> _
+             } = question
+
+      assert state |> Jason.encode!() |> Jason.decode!() == %{
+               "input" => "What's the weather in Paris?",
+               "tools_called" => [
+                 %{
+                   "name" => "get_weather",
+                   "type" => "FUNCTION",
+                   "input_parameters" => %{"city" => "Paris"}
+                 }
+               ],
+               "available_tools" => [
+                 %{
+                   "name" => "get_weather",
+                   "type" => "FUNCTION",
+                   "description" => "Fetch current weather for a city"
+                 },
+                 %{
+                   "name" => "search_web",
+                   "type" => "FUNCTION",
+                   "description" => "Search the web"
+                 }
+               ]
+             }
+    end
+
+    test "system_one keeps its deterministic score and asks only about tool selection",
+         %{test_case: test_case, available: available} do
+      system_one = SystemOneMock.new(answer_fn: score_answers(4, 0.75))
+
+      # No LLM response is scripted, so any judge call would fail the metric.
+      assert {:ok, result} =
+               ToolCorrectness.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :system_one,
+                 system_one_model: system_one,
+                 available_tools: available
+               )
+
+      assert result.score == 1.0
+      assert result.evaluation_model == "fake-jev"
+      assert result.metadata.tool_selection_score == 1.0
+      assert [%SystemOneMock.Call{}] = SystemOneMock.calls(system_one)
+    end
+
+    test "system_one without available_tools makes no request", %{test_case: test_case} do
+      system_one = SystemOneMock.new(answer_fn: score_answers(4, 0.75))
+
+      assert {:ok, result} =
+               ToolCorrectness.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :system_one,
+                 system_one_model: system_one
+               )
+
+      assert result.score == 1.0
+      assert SystemOneMock.calls(system_one) == []
+    end
+
+    test "a failed hybrid request falls back to the LLM",
+         %{test_case: test_case, available: available} do
+      Mock.set_schema_response(
+        ~r/Tool Selection/,
+        %{"score" => 0.9, "reason" => "get_weather was the best available tool."}
+      )
+
+      system_one =
+        SystemOneMock.new(
+          raises: %Error{reason: :connection, type: "ConnectionError", message: "Jev is down"}
+        )
+
+      assert {:ok, result} =
+               ToolCorrectness.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one,
+                 available_tools: available
+               )
+
+      assert result.score == 0.9
+      assert result.system_one_fallback_reason == "ConnectionError: Jev is down"
+      assert result.metadata.tool_selection_reason == "get_weather was the best available tool."
     end
   end
 end

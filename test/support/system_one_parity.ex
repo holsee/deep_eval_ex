@@ -23,9 +23,11 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     ContextualPrecision,
     ContextualRecall,
     Faithfulness,
-    Hallucination
+    Hallucination,
+    ToolCorrectness
   }
 
+  alias DeepEvalEx.Schemas.ToolCall
   alias DeepEvalEx.SystemOne.Adapters.Mock
   alias DeepEvalEx.Test.{JSONDiff, ScriptedParity}
   alias DeepEvalEx.TestRun.JSON
@@ -37,7 +39,8 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     "answer_relevancy" => AnswerRelevancy,
     "contextual_precision" => ContextualPrecision,
     "contextual_recall" => ContextualRecall,
-    "hallucination" => Hallucination
+    "hallucination" => Hallucination,
+    "tool_correctness" => ToolCorrectness
   }
 
   @eval_modes %{"llm" => :llm, "hybrid" => :hybrid, "system_one" => :system_one}
@@ -176,10 +179,16 @@ defmodule DeepEvalEx.Test.SystemOneParity do
         adapter: :mock,
         eval_mode: Map.fetch!(@eval_modes, eval_mode),
         system_one_model: mock
-      ] ++ Enum.map(params.values, fn {key, value} -> {String.to_existing_atom(key), value} end)
+      ] ++ Enum.map(params.values, fn {key, value} -> option(key, plain(value)) end)
 
     {module, opts, mock}
   end
+
+  # deepeval's fixture generator builds ToolCalls from available_tools.
+  defp option("available_tools", tools),
+    do: {:available_tools, Enum.map(tools, &(&1 |> ToolCall.new() |> elem(1)))}
+
+  defp option(key, value), do: {String.to_existing_atom(key), value}
 
   defp measured(result, raised) do
     result = result || %{}

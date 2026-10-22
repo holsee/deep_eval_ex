@@ -44,6 +44,8 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     (default: false)
   - `:adapter` - LLM adapter for tool selection scoring
   - `:model` - Model name for tool selection scoring
+  - `:eval_mode` and `:system_one_model` - who scores tool selection, see
+    "System One"
 
   ## Scoring Modes
 
@@ -55,6 +57,26 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     Score = weighted LCS score / |expected|. Preserves relative order.
   - When `:input_parameters` is in `evaluation_params`, parameter similarity is computed
     via recursive dictionary comparison returning a fractional score (0.0–1.0).
+
+  ## System One
+
+  Like deepeval 4.3.1's `ToolCorrectnessMetric`, the metric can route its
+  one judged decision, tool selection, to a System One model (see
+  `DeepEvalEx.SystemOne.Mode`). Under `:hybrid` and `:system_one`, when
+  `:available_tools` are given, one Score over five levels (`"Misaligned"`
+  to `"Fully appropriate"`,
+  `DeepEvalEx.Prompts.ToolCorrectness.system_one_tool_selection_score/0`)
+  about the `input`, the tools called and the available tools replaces the
+  LLM's tool selection score: the chosen level over the highest, `0.75` for
+  `"Mostly appropriate"`, with the reason `"Decided by <model>: tool
+  selection 0.75, confidence 0.25."`. If the model fails under `:hybrid`,
+  the LLM scores tool selection and the result's
+  `:system_one_fallback_reason` says why.
+
+  The tool calling score is decided in code in every mode, so there is no
+  whole-metric request: `system_one_eval_spec/2` returns `nil`, and under
+  `:system_one` no LLM is used, the tool selection Score is the only
+  request, and the result's `:evaluation_model` is the System One model's.
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
@@ -65,6 +87,16 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.Prompts.ToolCorrectness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.ToolCorrectness, as: Schema
+  alias DeepEvalEx.SystemOne.{Decision, Spec, State}
+
+  # deepeval's TOOL_SELECTION_LEVELS, lowest first.
+  @tool_selection_levels [
+    "Misaligned",
+    "Poor selection",
+    "Mixed selection",
+    "Mostly appropriate",
+    "Fully appropriate"
+  ]
 
   @impl true
   def metric_name, do: "Tool Correctness"
@@ -81,6 +113,17 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   """
   @impl true
   defdelegate evaluation_model(opts), to: Adapter, as: :model_name
+
+  @doc """
+  Always `nil`, deepeval's `_system_one_eval_spec`: the score is decided in
+  code by matching the tools called against the expected tools, so there is
+  no whole-metric System One request. Exporting it keeps the metric on
+  `:system_one` (see `DeepEvalEx.SystemOne.Mode.effective/2`), where tool
+  selection, when `:available_tools` are given, is its only System One
+  decision.
+  """
+  @impl true
+  def system_one_eval_spec(_test_case, _opts), do: nil
 
   def do_measure(test_case, opts) do
     config = parse_config(opts)
@@ -393,7 +436,31 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
 
   # --- Tool Selection Score (LLM-based, matches Python _get_tool_selection_score) ---
 
+  # Under :hybrid and :system_one the System One model scores tool
+  # selection; the LLM does when it is not asked or fails.
   defp get_tool_selection_score(user_input, tools_called, available_tools, opts) do
+    spec = %Spec.Score{
+      instructions: Template.system_one_tool_selection_score(),
+      levels: @tool_selection_levels,
+      state: [
+        input: user_input,
+        tools_called: State.dump(tools_called || []),
+        available_tools: State.dump(available_tools || [])
+      ]
+    }
+
+    decision_opts = Keyword.put_new(opts, :metric_name, metric_name())
+
+    case Decision.score(spec, decision_opts) do
+      {:ok, score} ->
+        {score, Decision.format_reason(decision_opts, "tool selection", score)}
+
+      :llm ->
+        llm_tool_selection_score(user_input, tools_called, available_tools, opts)
+    end
+  end
+
+  defp llm_tool_selection_score(user_input, tools_called, available_tools, opts) do
     tools_called_formatted = Template.format_tools(tools_called)
     available_tools_formatted = Template.format_tools(available_tools)
 

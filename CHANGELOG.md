@@ -436,6 +436,29 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   The System One parity test now also measures the `hallucination_*`
   fixtures (`system_one`, `hybrid` and `hybrid_fallback`), which match
   deepeval byte for byte.
+- **ToolCorrectness scores tool selection on System One** (ADR-0009), as
+  deepeval 4.3.1's `ToolCorrectnessMetric` does with `eval_mode`:
+  - `:hybrid` and `:system_one`: when `:available_tools` are given, one
+    Score over deepeval's five tool selection levels (`"Misaligned"`,
+    `"Poor selection"`, `"Mixed selection"`, `"Mostly appropriate"`,
+    `"Fully appropriate"`) about `input`, the tools called and the
+    available tools replaces the LLM's tool selection score. The score is
+    the chosen level over the highest (`0.75` for `"Mostly appropriate"`)
+    and the tool selection reason is `"Decided by fake-jev: tool selection
+    0.75, confidence 0.25."`. Without `:available_tools` nothing is asked.
+  - Under `:hybrid`, when the request fails, the LLM scores tool selection
+    and the result's `:system_one_fallback_reason` says why.
+  - The tool calling score is still decided in code, so the metric has no
+    whole-metric request: `system_one_eval_spec/2` returns `nil`, which
+    keeps it on `:system_one` with no LLM, its tool selection Score as its
+    only request and the System One model as its `evaluation_model`.
+  - `DeepEvalEx.Prompts.ToolCorrectness.system_one_tool_selection_score/0`
+    renders deepeval's `_experimental_system_one_tool_selection_score`
+    template. A new prompt golden checks it byte for byte.
+
+  The System One parity test now also measures the `tool_correctness_*`
+  fixtures (`system_one`, `hybrid` and `hybrid_fallback`), which match
+  deepeval byte for byte.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in

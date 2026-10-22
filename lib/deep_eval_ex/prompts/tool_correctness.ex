@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Prompt text copied verbatim from deepeval 4.3.1
-# (deepeval/metrics/tool_correctness/templates/get_tool_selection_score.txt),
+# (deepeval/metrics/tool_correctness/templates/get_tool_selection_score.txt
+# and _experimental_system_one_tool_selection_score.txt),
 # Copyright Confident AI, Apache-2.0.
 # Original: https://github.com/confident-ai/deepeval
 #
@@ -19,7 +20,9 @@ defmodule DeepEvalEx.Prompts.ToolCorrectness do
   `get_tool_selection_score/1` renders deepeval 4.3.1's
   `ToolCorrectnessMetric.get_tool_selection_score` template byte for byte,
   with tools formatted by `format_tools/1` as deepeval's
-  `print_tools_called` formats them.
+  `print_tools_called` formats them. `system_one_tool_selection_score/0`
+  is its System One template, `_experimental_system_one_tool_selection_score`,
+  which takes no arguments.
   """
 
   alias DeepEvalEx.TestRun.JSON
@@ -115,6 +118,23 @@ defmodule DeepEvalEx.Prompts.ToolCorrectness do
 
     JSON:\
     """
+  end
+
+  @doc """
+  The question a System One model is asked about tool selection under the
+  `:hybrid` and `:system_one` eval modes, deepeval's
+  `_experimental_system_one_tool_selection_score` template: the instructions
+  of a Score over the metric's five tool selection levels, about a state
+  holding `input`, `tools_called` and `available_tools` (see
+  `DeepEvalEx.SystemOne.Spec.Score`).
+  """
+  @spec system_one_tool_selection_score() :: String.t()
+  def system_one_tool_selection_score do
+    "Judging only which tools were chosen (not how well they were used or whether the " <>
+      "output was correct), how well do the tools in `tools_called` match what `input` " <>
+      "asks for, given the purpose of each tool in `available_tools`? Penalise " <>
+      "better-suited tools that were ignored, unnecessary extra tools, and tools poorly " <>
+      "matched to their purpose."
   end
 
   @doc """

@@ -786,6 +786,9 @@ PROMPT_RENDERERS = {
     "HallucinationMetric._experimental_system_one_verdict": lambda i: _prompt(
         HallucinationMetric, "_experimental_system_one_verdict",
     ),
+    "ToolCorrectnessMetric._experimental_system_one_tool_selection_score": lambda i: _prompt(
+        ToolCorrectnessMetric, "_experimental_system_one_tool_selection_score",
+    ),
     "ToolCorrectnessMetric.get_tool_selection_score": lambda i: _prompt(
         ToolCorrectnessMetric, "get_tool_selection_score",
         user_input=i["input"],
@@ -1033,6 +1036,10 @@ PROMPT_CASES = {
     },
     "hallucination_experimental_system_one_verdict": {
         "template": "HallucinationMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "tool_correctness_experimental_system_one_tool_selection_score": {
+        "template": "ToolCorrectnessMetric._experimental_system_one_tool_selection_score",
         "inputs": {},
     },
     "tool_correctness_get_tool_selection_score": {
