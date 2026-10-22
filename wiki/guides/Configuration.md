@@ -29,6 +29,7 @@ config :deep_eval_ex,
 | `OPENAI_BASE_URL` | OpenAI-compatible API base URL | `https://gateway.example.com/v1` |
 | `ANTHROPIC_API_KEY` | Anthropic API key | `sk-ant-...` |
 | `ANTHROPIC_BASE_URL` | Anthropic API base URL | `https://gateway.example.com/anthropic` |
+| `OLLAMA_HOST` | Ollama server address | `http://localhost:11434` |
 | `DEEP_EVAL_DEFAULT_MODEL` | Override default model | `gpt-4o` |
 
 ## LLM Providers
