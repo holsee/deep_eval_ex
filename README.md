@@ -200,9 +200,28 @@ and `OLLAMA_HOST`. Values may be 1Password secret references
 (`op://vault/item/field`); `.devcontainer/resolve-env.sh` resolves them with
 `op inject` on the host into the gitignored `.devcontainer/.env.resolved`,
 which is what the container loads. Recreate the container after editing it
-(`devcontainer up --workspace-folder . --remove-existing-container`). The test
-suite itself never calls a real LLM (it uses the Mock adapter and `Req.Test`
-stubs).
+(`devcontainer up --workspace-folder . --remove-existing-container`). The
+default test suite never calls a real LLM (it uses the Mock adapter and
+`Req.Test` stubs); only the opt-in live checks below do.
+
+### Live checks
+
+`test/deep_eval_ex/live_test.exs` runs structured output and a full
+deepeval-compatible export against the real OpenAI and Anthropic APIs. It is
+tagged `:live` and excluded by default; run it explicitly:
+
+```sh
+devcontainer exec --workspace-folder . mix test --only live
+```
+
+Credentials come from `.devcontainer/.env` as above, as literals or `op://`
+references. Each provider runs only when its API key is set; otherwise its
+tests are reported as skipped, so a run with one key checks one provider. The
+judge model defaults to each adapter's default model; set
+`DEEP_EVAL_LIVE_OPENAI_MODEL` and `DEEP_EVAL_LIVE_ANTHROPIC_MODEL` to pick
+another, for example the provider-prefixed model IDs a gateway publishes
+(`OPENAI_BASE_URL` / `ANTHROPIC_BASE_URL` pointing at the gateway). Live
+checks cost real tokens and are not part of the gate.
 
 ### Gate
 

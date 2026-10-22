@@ -32,6 +32,11 @@ config :deep_eval_ex,
 | `OLLAMA_HOST` | Ollama server address | `http://localhost:11434` |
 | `DEEP_EVAL_DEFAULT_MODEL` | Override default model | `gpt-4o` |
 
+A variable set to an empty or whitespace-only value is treated as unset, as is
+a blank application config value (such as
+`openai_api_key: System.get_env("OPENAI_API_KEY")` when the variable is empty),
+so resolution falls through to the next source.
+
 ## LLM Providers
 
 ### OpenAI (Default)
@@ -70,7 +75,9 @@ so judge calls are deterministic instead of running at OpenAI's default of
 `1.0`. Override it with the `temperature:` option or
 `config :deep_eval_ex, openai_temperature: 0.3` (the option wins). Reasoning
 models (`o1`, `o3`, `o4`, `gpt-5`, ...) reject the parameter, so it is never
-sent for them.
+sent for them. They are recognised by the model name after any gateway
+provider prefix and `@region` suffix: `aws-bedrock-runtime/openai/gpt-5@global`
+counts as `gpt-5`.
 
 ### Anthropic
 
@@ -96,6 +103,11 @@ The first one set wins (a trailing slash is stripped; requests go to
 2. `config :deep_eval_ex, anthropic_base_url: "..."`
 3. `ANTHROPIC_BASE_URL` environment variable
 4. `https://api.anthropic.com`
+
+A base URL ending in `/v1` (as some gateways publish it) also works; the
+adapter does not add a second `/v1`. Python deepeval and the Anthropic SDK
+expect the bare host, so use that form if both read the same
+`ANTHROPIC_BASE_URL`.
 
 #### Temperature and Token Limit
 

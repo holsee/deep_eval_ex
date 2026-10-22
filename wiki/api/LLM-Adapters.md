@@ -92,6 +92,9 @@ resolved in this order, with a trailing slash stripped:
 - `temperature` comes from `:temperature`, then the `:openai_temperature`
   config, then defaults to `0.0` as in deepeval's `GPTModel`; it is never sent
   for reasoning models (`o1`, `o3`, `o4`, `gpt-5`, ...), which reject it.
+  Reasoning models are recognised by the model name after any gateway provider
+  prefix and `@region` suffix, so `"aws-bedrock-runtime/openai/gpt-5@global"`
+  is treated as `gpt-5`.
 
 ### Testing
 
@@ -146,7 +149,8 @@ config :deep_eval_ex,
 ```
 
 The API key comes from `:api_key`, then `:anthropic_api_key`, then the
-`ANTHROPIC_API_KEY` environment variable.
+`ANTHROPIC_API_KEY` environment variable. Blank config values and environment
+variables are treated as unset, for every adapter.
 
 ### Base URL
 
@@ -157,6 +161,11 @@ order, with a trailing slash stripped:
 2. `:anthropic_base_url` application config
 3. `ANTHROPIC_BASE_URL` environment variable
 4. `"https://api.anthropic.com"`
+
+A base URL that already ends in `/v1`, as some gateways publish it, is
+accepted and not doubled. Python deepeval and the Anthropic SDK expect the
+bare host (no `/v1`), so prefer that form when sharing one
+`ANTHROPIC_BASE_URL` between the two.
 
 ### Request Parameters
 
