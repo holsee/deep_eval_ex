@@ -145,6 +145,9 @@ defmodule DeepEvalEx.TestRun do
     whether every metric passed (`:success`), its summed `:evaluation_cost`
     (`nil` when no metric reported one) and its `:run_duration` in seconds.
     `:name` defaults to `"test_case_<order>"` as in deepeval.
+
+    As in deepeval's async executor, a `:run_duration` under one second is
+    the integer `0` (exported as `0`, not `0.0`); longer ones are floats.
     """
 
     alias DeepEvalEx.Schemas.ToolCall
@@ -166,7 +169,7 @@ defmodule DeepEvalEx.TestRun do
             flaky: boolean(),
             success: boolean(),
             metrics_data: [MetricData.t()],
-            run_duration: float(),
+            run_duration: float() | 0,
             evaluation_cost: float() | nil,
             order: non_neg_integer(),
             metadata: map() | nil,
@@ -194,7 +197,7 @@ defmodule DeepEvalEx.TestRun do
       flaky: false,
       success: true,
       metrics_data: [],
-      run_duration: 0.0
+      run_duration: 0
     ]
   end
 
@@ -214,7 +217,7 @@ defmodule DeepEvalEx.TestRun do
     (default: `false`)
   - `:run_durations` - Seconds each test case took, in `test_cases` order.
     As in deepeval, a test case that took under one second is recorded as
-    `0.0` (default: all `0.0`)
+    the integer `0` (default: all `0`)
   - `:run_duration` - Seconds the whole run took (default: `0.0`)
   - `:identifier` - Name for the run
   - `:hyperparameters` - Keyword list or map of hyperparameters, see
@@ -225,7 +228,7 @@ defmodule DeepEvalEx.TestRun do
     strict_modes = strict_modes(opts)
 
     durations =
-      Keyword.get_lazy(opts, :run_durations, fn -> Enum.map(test_cases, fn _ -> 0.0 end) end)
+      Keyword.get_lazy(opts, :run_durations, fn -> Enum.map(test_cases, fn _ -> 0 end) end)
 
     api_test_cases =
       [test_cases, results, durations]
@@ -360,9 +363,10 @@ defmodule DeepEvalEx.TestRun do
   end
 
   # deepeval's async executor records a test case that finished in under a
-  # second as 0 ("all metrics were from cache").
+  # second as 0 ("all metrics were from cache"). It assigns the int without
+  # pydantic coercion, so the export has `"runDuration": 0`, not `0.0`.
   defp case_duration(duration) when is_number(duration) and duration >= 1, do: duration / 1
-  defp case_duration(_duration), do: 0.0
+  defp case_duration(_duration), do: 0
 
   defp strict_modes(opts) do
     default = Keyword.get(opts, :strict_mode, false)
@@ -441,7 +445,7 @@ defmodule DeepEvalEx.TestRun do
       flaky: test_case.flaky,
       success: test_case.success,
       metricsData: Enum.map(test_case.metrics_data, &metric_data_map/1),
-      runDuration: to_float(test_case.run_duration),
+      runDuration: test_case.run_duration,
       evaluationCost: to_float(test_case.evaluation_cost),
       order: test_case.order,
       metadata: test_case.metadata,

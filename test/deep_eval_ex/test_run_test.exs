@@ -16,9 +16,9 @@ defmodule DeepEvalEx.TestRunTest do
     # Produced by deepeval 4.3.1's `evaluate(..., hyperparameters=...,
     # identifier="my-run", display_config=DisplayConfig(results_folder=...))`
     # with three fixed-score metrics (the third raising "boom") and
-    # `ErrorConfig(ignore_errors=True)`. deepeval records per-test-case
-    # durations under one second as 0.0.
-    @deepeval_export ~S({"testCases": [{"name": "test_case_0", "input": "What is 1+1? caf\u00e9", "actualOutput": "2", "expectedOutput": "2", "context": ["c"], "retrievalContext": ["ctx a", "ctx b"], "toolsCalled": [{"name": "calc", "type": "FUNCTION", "output": 2, "inputParameters": {"a": 1, "b": 1.5}}], "expectedTools": [{"name": "calc", "type": "FUNCTION", "description": "d", "reasoning": "r"}], "tokenCost": 0.25, "inputTokenCount": 10, "outputTokenCount": 3, "completionTime": 1.0, "tags": ["t1"], "flaky": false, "success": false, "metricsData": [{"name": "M1", "threshold": 0.5, "success": true, "score": 1.0, "reason": "because \u00e9 \u2713", "strictMode": false, "flaky": false, "evaluationModel": "gpt-4o", "evaluationCost": 0.001}, {"name": "M2", "threshold": 0.5, "success": false, "score": 0.25, "reason": "because \u00e9 \u2713", "strictMode": false, "flaky": false, "evaluationCost": 0.002}, {"name": "M3", "threshold": 0.5, "success": false, "strictMode": false, "flaky": false, "error": "boom"}], "runDuration": 0.0, "evaluationCost": 0.003, "order": 0, "metadata": {"k": [1, 2.0, null, true]}, "comments": "cm"}, {"name": "named case", "input": "Q2", "actualOutput": "A2", "flaky": false, "success": false, "metricsData": [{"name": "M1", "threshold": 0.5, "success": true, "score": 1.0, "reason": "because \u00e9 \u2713", "strictMode": false, "flaky": false, "evaluationModel": "gpt-4o", "evaluationCost": 0.001}, {"name": "M2", "threshold": 0.5, "success": false, "score": 0.25, "reason": "because \u00e9 \u2713", "strictMode": false, "flaky": false, "evaluationCost": 0.002}, {"name": "M3", "threshold": 0.5, "success": false, "strictMode": false, "flaky": false, "error": "boom"}], "runDuration": 0.0, "evaluationCost": 0.003, "order": 1}], "conversationalTestCases": [], "metricsScores": [{"metric": "M1", "scores": [1.0, 1.0], "passes": 2, "fails": 0, "errors": 0}, {"metric": "M2", "scores": [0.25, 0.25], "passes": 0, "fails": 2, "errors": 0}, {"metric": "M3", "scores": [], "passes": 0, "fails": 0, "errors": 2}], "identifier": "my-run", "hyperparameters": {"model": "gpt-4o", "temperature": "0.7", "k": "5"}, "prompts": [], "testPassed": 0, "testFailed": 2, "runDuration": 0.009065957999609964, "evaluationCost": 0.006, "official": false})
+    # `ErrorConfig(ignore_errors=True)`. deepeval's async executor records
+    # per-test-case durations under one second as the integer 0.
+    @deepeval_export ~S({"testCases": [{"name": "test_case_0", "input": "What is 1+1? caf\u00e9", "actualOutput": "2", "expectedOutput": "2", "context": ["c"], "retrievalContext": ["ctx a", "ctx b"], "toolsCalled": [{"name": "calc", "type": "FUNCTION", "output": 2, "inputParameters": {"a": 1, "b": 1.5}}], "expectedTools": [{"name": "calc", "type": "FUNCTION", "description": "d", "reasoning": "r"}], "tokenCost": 0.25, "inputTokenCount": 10, "outputTokenCount": 3, "completionTime": 1.0, "tags": ["t1"], "flaky": false, "success": false, "metricsData": [{"name": "M1", "threshold": 0.5, "success": true, "score": 1.0, "reason": "because \u00e9 \u2713", "strictMode": false, "flaky": false, "evaluationModel": "gpt-4o", "evaluationCost": 0.001}, {"name": "M2", "threshold": 0.5, "success": false, "score": 0.25, "reason": "because \u00e9 \u2713", "strictMode": false, "flaky": false, "evaluationCost": 0.002}, {"name": "M3", "threshold": 0.5, "success": false, "strictMode": false, "flaky": false, "error": "boom"}], "runDuration": 0, "evaluationCost": 0.003, "order": 0, "metadata": {"k": [1, 2.0, null, true]}, "comments": "cm"}, {"name": "named case", "input": "Q2", "actualOutput": "A2", "flaky": false, "success": false, "metricsData": [{"name": "M1", "threshold": 0.5, "success": true, "score": 1.0, "reason": "because \u00e9 \u2713", "strictMode": false, "flaky": false, "evaluationModel": "gpt-4o", "evaluationCost": 0.001}, {"name": "M2", "threshold": 0.5, "success": false, "score": 0.25, "reason": "because \u00e9 \u2713", "strictMode": false, "flaky": false, "evaluationCost": 0.002}, {"name": "M3", "threshold": 0.5, "success": false, "strictMode": false, "flaky": false, "error": "boom"}], "runDuration": 0, "evaluationCost": 0.003, "order": 1}], "conversationalTestCases": [], "metricsScores": [{"metric": "M1", "scores": [1.0, 1.0], "passes": 2, "fails": 0, "errors": 0}, {"metric": "M2", "scores": [0.25, 0.25], "passes": 0, "fails": 2, "errors": 0}, {"metric": "M3", "scores": [], "passes": 0, "fails": 0, "errors": 2}], "identifier": "my-run", "hyperparameters": {"model": "gpt-4o", "temperature": "0.7", "k": "5"}, "prompts": [], "testPassed": 0, "testFailed": 2, "runDuration": 0.009065957999609964, "evaluationCost": 0.006, "official": false})
 
     test "encodes the same run byte for byte" do
       test_cases = [
@@ -141,15 +141,18 @@ defmodule DeepEvalEx.TestRunTest do
       assert [%TestRun.TestCase{name: "test_case_1", order: 1}] = test_run.test_cases
     end
 
-    test "records test case durations under one second as 0.0, like deepeval" do
+    test "records test case durations under one second as the integer 0, like deepeval" do
       test_cases = [%TestCase{input: "a"}, %TestCase{input: "b"}]
       results = [[ok("M", 1.0)], [ok("M", 1.0)]]
 
       test_run =
         TestRun.from_results(test_cases, results, run_durations: [0.999, 1.25], run_duration: 2)
 
-      assert Enum.map(test_run.test_cases, & &1.run_duration) == [0.0, 1.25]
+      assert [zero, 1.25] = Enum.map(test_run.test_cases, & &1.run_duration)
+      assert zero === 0
       assert test_run.run_duration == 2.0
+      assert encode(test_run) =~ ~s("runDuration": 0, "order": 0})
+      assert encode(test_run) =~ ~s("runDuration": 1.25, "order": 1})
     end
 
     test "takes strict mode from the metrics" do
@@ -180,7 +183,7 @@ defmodule DeepEvalEx.TestRunTest do
                ~s({"testCases": [{"name": "test_case_0", "input": "a", "flaky": false, ) <>
                  ~s("success": false, "metricsData": [{"name": "M", "threshold": 0.5, ) <>
                  ~s("success": false, "score": 0.0, "strictMode": false, "flaky": false}], ) <>
-                 ~s("runDuration": 0.0, "order": 0}], "conversationalTestCases": [], ) <>
+                 ~s("runDuration": 0, "order": 0}], "conversationalTestCases": [], ) <>
                  ~s("metricsScores": [{"metric": "M", "scores": [0.0], "passes": 0, ) <>
                  ~s("fails": 1, "errors": 0}], "prompts": [], "testPassed": 0, ) <>
                  ~s("testFailed": 1, "runDuration": 0.0, "official": false})
