@@ -6,6 +6,8 @@ defmodule DeepEvalEx.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      # Judge scripts of the Mock adapter's scripted mode, per process
+      {Registry, keys: :unique, name: DeepEvalEx.LLM.Adapters.Mock.Scripts}
       # Rate limiter for LLM API calls (future)
       # {DeepEvalEx.RateLimiter, []}
     ]

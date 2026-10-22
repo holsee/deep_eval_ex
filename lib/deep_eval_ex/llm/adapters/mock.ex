@@ -62,7 +62,8 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
 
   A script belongs to the process that loads it and serves every process it
   starts (found through `$callers`, as with `Task`), so async tests each
-  replay their own script. A step with no response left returns
+  replay their own script. Scripts are kept in a node-local `Registry`
+  started with the `:deep_eval_ex` application. A step with no response left returns
   `{:error, {:no_scripted_response, step, index}}`. While a script is
   loaded, `model_name/1` is the script's `:model` and the configured
   responses above are not used.
@@ -74,6 +75,10 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
 
   @default_response "This is a mock response."
   @ets_table :deep_eval_ex_mock_responses
+
+  # Registry of the processes that loaded a script, each with its script's
+  # agent as value; started by DeepEvalEx.Application.
+  @scripts __MODULE__.Scripts
 
   @impl true
   def generate(prompt, opts \\ []) do
@@ -218,7 +223,8 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
     }
 
     owner = self()
-    {:ok, agent} = Agent.start(fn -> state end, name: {:global, script_key(owner)})
+    {:ok, agent} = Agent.start(fn -> state end)
+    {:ok, _owner} = Registry.register(@scripts, owner, agent)
     spawn(fn -> drop_script_with(owner, agent) end)
     :ok
   end
@@ -246,9 +252,13 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   """
   @spec stop_script() :: :ok
   def stop_script do
-    case :global.whereis_name(script_key(self())) do
-      :undefined -> :ok
-      agent -> stop_agent(agent)
+    case Registry.lookup(@scripts, self()) do
+      [] ->
+        :ok
+
+      [{_owner, agent}] ->
+        Registry.unregister(@scripts, self())
+        stop_agent(agent)
     end
   end
 
@@ -325,15 +335,18 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   # The script of the calling process or of the nearest process that
   # started it.
   defp script_agent do
-    Enum.find_value([self() | Process.get(:"$callers", [])], fn pid ->
-      case :global.whereis_name(script_key(pid)) do
-        :undefined -> nil
-        agent -> agent
-      end
-    end)
+    Enum.find_value([self() | Process.get(:"$callers", [])], &live_script_agent/1)
   end
 
-  defp script_key(pid), do: {__MODULE__, :script, pid}
+  # An exited owner's entry outlives it briefly, its agent already stopped.
+  defp live_script_agent(owner) do
+    with [{_owner, agent}] <- Registry.lookup(@scripts, owner),
+         true <- Process.alive?(agent) do
+      agent
+    else
+      _ -> nil
+    end
+  end
 
   # Private helpers
 

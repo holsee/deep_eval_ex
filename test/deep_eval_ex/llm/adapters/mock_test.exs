@@ -129,13 +129,23 @@ defmodule DeepEvalEx.LLM.Adapters.MockTest do
       assert_receive {:unscripted, "mock-model", []}
     end
 
+    test "registers the script in a local registry, not :global" do
+      Mock.script(%{"text" => ["Scripted."]})
+
+      assert [{owner, agent}] = Registry.lookup(Mock.Scripts, self())
+      assert owner == self()
+      assert Process.alive?(agent)
+      assert :global.registered_names() |> Enum.filter(&match?({Mock, _, _}, &1)) == []
+    end
+
     test "is dropped when the scripting process exits" do
       parent = self()
 
       owner =
         spawn(fn ->
           Mock.script(%{"text" => ["Scripted."]})
-          send(parent, {:agent, :global.whereis_name({Mock, :script, self()})})
+          [{_owner, agent}] = Registry.lookup(Mock.Scripts, self())
+          send(parent, {:agent, agent})
         end)
 
       assert_receive {:agent, agent}
@@ -147,6 +157,7 @@ defmodule DeepEvalEx.LLM.Adapters.MockTest do
     test "stop_script/0 returns to the unscripted behaviour" do
       Mock.script(%{"text" => ["Scripted."]})
       assert :ok = Mock.stop_script()
+      assert Registry.lookup(Mock.Scripts, self()) == []
 
       assert {:ok, "This is a mock response."} =
                Mock.generate("unscripted prompt #{inspect(self())}")
