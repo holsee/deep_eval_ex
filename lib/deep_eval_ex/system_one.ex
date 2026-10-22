@@ -52,7 +52,9 @@ defmodule DeepEvalEx.SystemOne do
   with the metadata `:model` (the model name), `:mode`, `:metrics`,
   `:question_count` and `:batched?`, plus `:error` on a `:stop` for a
   handled error. `:stop` measures `:duration`, and `:input_tokens`,
-  `:output_tokens` and `:cost` when the request reported them.
+  `:output_tokens` and `:cost` when the request reported them. A `:hybrid`
+  decision that falls back to the LLM emits
+  `[:deep_eval_ex, :system_one, :fallback]` (see `DeepEvalEx.Telemetry`).
   """
 
   alias DeepEvalEx.{ContextWindowExceededError, DeepEvalError}

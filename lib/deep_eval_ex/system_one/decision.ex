@@ -53,8 +53,9 @@ defmodule DeepEvalEx.SystemOne.Decision do
 
   A failed request is handled by `handle_failure/2`: under `:hybrid` the
   decision falls back to the LLM (`:llm`) and the measure's
-  `system_one_fallback_reason` says why; a permanent failure also keeps the
-  rest of the measure on the LLM. A missing answer is a bug and raises
+  `system_one_fallback_reason` says why, as does a
+  `[:deep_eval_ex, :system_one, :fallback]` telemetry event; a permanent
+  failure also keeps the rest of the measure on the LLM. A missing answer is a bug and raises
   `KeyError`, never a fallback.
 
   ## Options
@@ -242,7 +243,8 @@ defmodule DeepEvalEx.SystemOne.Decision do
     decision falls back to the LLM: it returns `:llm`. A permanent failure
     (`permanent?: true`, or a `DeepEvalEx.DeepEvalError` about a missing API
     key or TypeSafe SDK) also disables System One for the rest of the
-    measure
+    measure. A `[:deep_eval_ex, :system_one, :fallback]` telemetry event
+    carries the metric (`opts[:metric_name]`) and the reason
   - in any other mode it raises: a context overflow
     (`reason: :context_limit`) as `context_limit_error/2`, anything else
     unchanged
@@ -257,7 +259,15 @@ defmodule DeepEvalEx.SystemOne.Decision do
 
     case mode(opts) do
       :hybrid ->
-        Ledger.note_fallback(Error.describe(error))
+        reason = Error.describe(error)
+        Ledger.note_fallback(reason)
+
+        :telemetry.execute(
+          [:deep_eval_ex, :system_one, :fallback],
+          %{system_time: System.system_time()},
+          %{metric: Keyword.get(opts, :metric_name), reason: reason}
+        )
+
         if permanent?(error), do: Ledger.disable()
         :llm
 

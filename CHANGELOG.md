@@ -877,6 +877,20 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   snapshot that cannot be written logs a warning and never fails the run.
   Also exposed as `DeepEvalEx.TestRun.LocalStore.write_rolling/2` and
   `write_latest/2`; `.deepeval/` is now git-ignored.
+- **System One request and fallback telemetry** (ADR-0009), standing in for
+  deepeval 4.3.1's Jev progress indicator.
+  - Every System One request, from a `:hybrid` decision, a whole-chain
+    measure, `JevEval` or a packed batch, is spanned as
+    `[:deep_eval_ex, :system_one, :request, :start | :stop | :exception]`
+    with the model, mode, the names of the metrics it decides for (several
+    for a batched request, `batched?: true`), the question count, and the
+    duration, tokens and cost on `:stop`.
+  - A `:hybrid` decision that falls back to the LLM after a System One
+    error emits `[:deep_eval_ex, :system_one, :fallback]` with the metric
+    and the reason added to its `system_one_fallback_reason`.
+  - `DeepEvalEx.Telemetry.attach_default_logger/0` now also logs each
+    request (debug), each failed or raising request (warning) and each
+    fallback (info).
 
 ### Changed
 
