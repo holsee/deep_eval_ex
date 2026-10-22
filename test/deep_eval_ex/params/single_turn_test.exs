@@ -72,9 +72,10 @@ defmodule DeepEvalEx.Params.SingleTurnTest do
   describe "GEval prompts" do
     test "name evaluation params with deepeval's display names" do
       assert Template.format_params([:tools_called, :expected_tools, :tags]) ==
-               "Tools Called, Expected Tools, Tags"
+               "Tools Called, Expected Tools, and Tags"
 
-      assert Template.format_test_case_content(%{tags: ["a", "b"]}, [:tags]) == "Tags:\na\n---\nb"
+      assert Template.format_test_case_content(%{tags: ["a", "b"]}, [:tags]) ==
+               "Tags:\n['a', 'b'] \n\n"
     end
   end
 end

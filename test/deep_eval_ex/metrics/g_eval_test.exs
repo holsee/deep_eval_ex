@@ -230,6 +230,24 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
       assert result.score == 0.5
     end
 
+    test "sends its rubric as deepeval's format_rubrics does, lowest score first" do
+      Mock.script(%{"reason,score" => [%{"score" => 7, "reason" => "Good."}]})
+
+      metric =
+        GEval.new(
+          name: "Test",
+          evaluation_params: [:input, :actual_output],
+          evaluation_steps: ["Check quality"],
+          rubric: [{10, "Perfect"}, {1, "Poor"}]
+        )
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A")
+
+      assert {:ok, _result} = GEval.evaluate(metric, test_case, adapter: :mock)
+      assert [%{prompt: prompt}] = Mock.scripted_prompts()
+      assert prompt =~ "\n\nRubric:\n1: Poor\n10: Perfect\n\nTest Case:\nInput:\nQ \n\n"
+    end
+
     test "a nil threshold measures score-only, through the evaluator too" do
       Mock.set_schema_response(~r/evaluator/i, %{"score" => 5, "reason" => "Average."})
 

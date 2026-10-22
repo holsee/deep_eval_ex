@@ -83,4 +83,45 @@ defmodule DeepEvalEx.TestRun.JSONTest do
       assert_raise ArgumentError, fn -> JSON.encode!(self()) end
     end
   end
+
+  # Expected strings are Python's json.dumps(value, indent=4) and
+  # json.dumps(value, indent=4, ensure_ascii=False) for the same value.
+  describe "encode!/2 options" do
+    setup do
+      value =
+        Jason.OrderedObject.new([
+          {"name", "get_weather"},
+          {"nested",
+           Jason.OrderedObject.new([{"a", [1, %{"b" => "café"}]}, {"e", []}, {"f", %{}}])},
+          {"x", 1.0}
+        ])
+
+      %{value: value}
+    end
+
+    test ":indent pretty-prints like json.dumps(indent=n)", %{value: value} do
+      assert JSON.encode!(value, indent: 4) ==
+               """
+               {
+                   "name": "get_weather",
+                   "nested": {
+                       "a": [
+                           1,
+                           {
+                               "b": "caf\\u00e9"
+                           }
+                       ],
+                       "e": [],
+                       "f": {}
+                   },
+                   "x": 1.0
+               }\
+               """
+    end
+
+    test "ensure_ascii: false keeps non-ASCII but escapes control characters", %{value: value} do
+      assert JSON.encode!(value, indent: 4, ensure_ascii: false) =~ ~s("b": "café")
+      assert JSON.encode!(["a\x01", "\x7F"], ensure_ascii: false) == ~s(["a\\u0001", "\x7F"])
+    end
+  end
 end

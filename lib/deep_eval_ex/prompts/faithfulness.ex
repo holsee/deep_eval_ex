@@ -1,8 +1,13 @@
 # Copyright 2025 Steven Holdsworth (@holsee)
 # SPDX-License-Identifier: Apache-2.0
 #
-# Ported from deepeval/metrics/faithfulness/template.py
-# Original: https://github.com/confident-ai/deepeval
+# Prompt text copied verbatim from deepeval 4.3.1
+# (deepeval/metrics/faithfulness/templates/*.txt and the shared
+# deepeval/templates/metrics/fragments), Copyright Confident AI,
+# Apache-2.0. Original: https://github.com/confident-ai/deepeval
+#
+# Keep the trailing whitespace inside the prompts: it is deepeval's, and
+# test/deep_eval_ex/prompt_golden_test.exs checks every byte.
 
 defmodule DeepEvalEx.Prompts.Faithfulness do
   @moduledoc """
@@ -10,31 +15,44 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
 
   Faithfulness measures whether claims in the LLM's output are
   supported by the retrieval context (for RAG applications).
+
+  Each function renders deepeval 4.3.1's `FaithfulnessMetric` template of
+  the same name byte for byte, as deepeval renders it for a text-only test
+  case (`multimodal=False`): the multimodal fragments and instructions are
+  left out, as DeepEvalEx has no multimodal test cases. Lists are printed
+  as Python lists and scores as `format(score, ".2f")` (see
+  `DeepEvalEx.Prompts.Python`).
   """
+
+  alias DeepEvalEx.Prompts.Python
 
   @doc """
   Generates a prompt to extract claims from the actual output.
 
   Claims are factual statements that can be verified against
   the retrieval context.
+
+  ## Options
+
+  - `:actual_output` - the text to extract claims from (required)
   """
   def generate_claims(opts) do
     actual_output = Keyword.fetch!(opts, :actual_output)
 
     """
-    Based on the given text, please extract a comprehensive list of FACTUAL, undisputed claims that can be inferred from the provided AI output.
-    These claims MUST BE COHERENT, and CANNOT be taken out of context.
+    Based on the given text, please extract a comprehensive list of FACTUAL, undisputed truths, that can inferred from the provided actual AI output. 
+    These truths, MUST BE COHERENT, and CANNOT be taken out of context.
 
     Example:
-    Example Text:
+    Example Text: 
     "Albert Einstein, the genius often associated with wild hair and mind-bending theories, famously won the Nobel Prize in Physics—though not for his groundbreaking work on relativity, as many assume. Instead, in 1968, he was honored for his discovery of the photoelectric effect, a phenomenon that laid the foundation for quantum mechanics."
 
-    Example JSON:
+    Example JSON: 
     {
-        "claims": [
-            "Einstein won the Nobel Prize for his discovery of the photoelectric effect in 1968.",
-            "The photoelectric effect is a phenomenon that laid the foundation for quantum mechanics."
-        ]
+      "claims": [
+        "Einstein won the noble prize for his discovery of the photoelectric effect in 1968.",
+        "The photoelectric effect is a phenomenon that laid the foundation for quantum mechanics."
+      ]  
     }
     ===== END OF EXAMPLE ======
 
@@ -42,12 +60,13 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
     IMPORTANT: Please make sure to only return in JSON format, with the "claims" key as a list of strings. No words or explanation is needed.
     Only include claims that are factual, BUT IT DOESN'T MATTER IF THEY ARE FACTUALLY CORRECT. The claims you extract should include the full context it was presented in, NOT cherry picked facts.
     You should NOT include any prior knowledge, and take the text at face value when extracting claims.
+    You should be aware that it is an AI that is outputting these claims.
     **
 
     AI Output:
     #{actual_output}
 
-    JSON:
+    JSON:\
     """
   end
 
@@ -56,35 +75,34 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
 
   Truths are factual statements from the context that claims
   can be verified against.
+
+  ## Options
+
+  - `:retrieval_context` - the retrieval context, its documents joined with
+    blank lines (required)
+  - `:extraction_limit` - how many truths to extract per document; `nil`
+    for no limit (default: `nil`)
   """
   def generate_truths(opts) do
     retrieval_context = Keyword.fetch!(opts, :retrieval_context)
-    extraction_limit = Keyword.get(opts, :extraction_limit)
-
-    limit_text =
-      case extraction_limit do
-        nil -> " FACTUAL, undisputed truths"
-        1 -> " the single most important FACTUAL, undisputed truth"
-        n -> " the #{n} most important FACTUAL, undisputed truths per document"
-      end
+    limit = opts |> Keyword.get(:extraction_limit) |> limit_phrase()
 
     """
-    Based on the given text, please generate a comprehensive list of#{limit_text} that can be inferred from the provided text.
-    These truths MUST BE COHERENT. They must NOT be taken out of context.
+    Based on the given text, please generate a comprehensive list of#{limit}, that can inferred from the provided text.
+    These truths, MUST BE COHERENT. They must NOT be taken out of context.
 
     Example:
-    Example Text:
+    Example Text: 
     "Albert Einstein, the genius often associated with wild hair and mind-bending theories, famously won the Nobel Prize in Physics—though not for his groundbreaking work on relativity, as many assume. Instead, in 1968, he was honored for his discovery of the photoelectric effect, a phenomenon that laid the foundation for quantum mechanics."
 
-    Example JSON:
+    Example JSON: 
     {
-        "truths": [
-            "Einstein won the Nobel Prize for his discovery of the photoelectric effect in 1968.",
-            "The photoelectric effect is a phenomenon that laid the foundation for quantum mechanics."
-        ]
+      "truths": [
+        "Einstein won the noble prize for his discovery of the photoelectric effect in 1968.",
+        "The photoelectric effect is a phenomenon that laid the foundation for quantum mechanics."
+      ]  
     }
     ===== END OF EXAMPLE ======
-
     **
     IMPORTANT: Please make sure to only return in JSON format, with the "truths" key as a list of strings. No words or explanation is needed.
     Only include truths that are factual, BUT IT DOESN'T MATTER IF THEY ARE FACTUALLY CORRECT.
@@ -93,7 +111,7 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
     Text:
     #{retrieval_context}
 
-    JSON:
+    JSON:\
     """
   end
 
@@ -104,103 +122,106 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
   - "yes" - Is supported by the retrieval context
   - "no" - Contradicts the retrieval context
   - "borderline" - Cannot be verified (not mentioned in context)
+
+  ## Options
+
+  - `:claims` - the claims, a list of strings (required)
+  - `:retrieval_context` - the truths, joined with blank lines (required)
   """
   def generate_verdicts(opts) do
-    claims = Keyword.fetch!(opts, :claims)
+    claims = opts |> Keyword.fetch!(:claims) |> Python.repr()
     retrieval_context = Keyword.fetch!(opts, :retrieval_context)
-
-    claims_formatted = format_claims(claims)
 
     """
     Based on the given claims, which is a list of strings, generate a list of JSON objects to indicate whether EACH claim contradicts any facts in the retrieval context. The JSON will have 2 fields: 'verdict' and 'reason'.
-    The 'verdict' key should STRICTLY be either 'yes', 'no', or 'borderline', which states whether the given claim agrees with the context.
-    Provide a 'reason' ONLY if the answer is 'no' or 'borderline'.
+    The 'verdict' key should STRICTLY be either 'yes', 'no', or 'borderline', which states whether the given claim agrees with the context. 
+    Provide a 'reason' ONLY if the answer is 'no' or 'borderline'. 
     The provided claim is drawn from the actual output. Try to provide a correction in the reason using the facts in the retrieval context.
+
 
     Expected JSON format:
     {
-        "verdicts": [
-            {
-                "verdict": "yes"
-            },
-            {
-                "reason": "<explanation_for_contradiction>",
-                "verdict": "no"
-            },
-            {
-                "reason": "<explanation_for_uncertainty>",
-                "verdict": "borderline"
-            }
-        ]
+    "verdicts": [
+    {
+    "verdict": "yes"
+    },
+    {
+    "reason": <explanation_for_contradiction>,
+    "verdict": "no"
+    },
+    {
+    "reason": <explanation_for_uncertainty>,
+    "verdict": "borderline"
     }
+    ]  
+    }
+
 
     **
     IMPORTANT: Please make sure to only return in JSON format, with the 'verdicts' key as a list of JSON objects.
+
     Generate ONE verdict per claim - length of 'verdicts' MUST equal number of claims.
     No 'reason' needed for 'yes' verdicts.
     Only use 'no' if retrieval context DIRECTLY CONTRADICTS the claim - never use prior knowledge.
-    Use 'borderline' for claims not backed up by context OR factually incorrect but non-contradictory.
+    Use 'borderline' for claims not backed up by context OR factually incorrect but non-contradictory - do not assume your knowledge.
     Vague/speculative language in claims (e.g. 'may have', 'possibility') does NOT count as contradiction.
+
     **
 
     Retrieval Contexts:
     #{retrieval_context}
 
     Claims:
-    #{claims_formatted}
+    #{claims}
 
-    JSON:
+    JSON:\
     """
   end
 
   @doc """
   Generates a prompt to summarize the evaluation with a reason.
+
+  ## Options
+
+  - `:score` - the faithfulness score (required)
+  - `:contradictions` - the reasons of the `"no"` verdicts, a list of
+    strings (required)
   """
   def generate_reason(opts) do
-    score = Keyword.fetch!(opts, :score)
-    contradictions = Keyword.fetch!(opts, :contradictions)
-
-    score_formatted = Float.round(score * 1.0, 2)
-    contradictions_formatted = format_contradictions(contradictions)
+    score = opts |> Keyword.fetch!(:score) |> Python.format_fixed(2)
+    contradictions = opts |> Keyword.fetch!(:contradictions) |> Python.repr()
 
     """
     Below is a list of Contradictions. It is a list of strings explaining why the 'actual output' does not align with the information presented in the 'retrieval context'. Contradictions happen in the 'actual output', NOT the 'retrieval context'.
-    Given the faithfulness score, which is a 0-1 score indicating how faithful the `actual output` is to the retrieval context (higher the better), CONCISELY summarize the contradictions to justify the score.
+    Given the faithfulness score, which is a 0-1 score indicating how faithful the `actual output` is to the retrieval context (higher the better), CONCISELY summarize the contradictions to justify the score. 
 
     Expected JSON format:
     {
-        "reason": "The score is <faithfulness_score> because <your_reason>."
+      "reason": "The score is <faithfulness_score> because <your_reason>."
     }
 
-    **
+    ** 
     IMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason.
 
     If there are no contradictions, just say something positive with an upbeat encouraging tone (but don't overdo it otherwise it gets annoying).
-    Your reason MUST use information in `contradictions` in your reason.
+    Your reason MUST use information in `contradiction` in your reason.
     Be sure in your reason, as if you know what the actual output is from the contradictions.
     **
 
     Faithfulness Score:
-    #{score_formatted}
+    #{score}
 
     Contradictions:
-    #{contradictions_formatted}
+    #{contradictions}
 
-    JSON:
+    JSON:\
     """
   end
 
-  defp format_claims(claims) when is_list(claims) do
-    claims
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn {claim, i} -> "#{i}. #{claim}" end)
-  end
+  # deepeval's _faithfulness_truths_limit_phrase.
+  defp limit_phrase(nil), do: " FACTUAL, undisputed truths"
+  defp limit_phrase(1), do: " the single most important FACTUAL, undisputed truth"
 
-  defp format_contradictions([]), do: "(none)"
-
-  defp format_contradictions(contradictions) when is_list(contradictions) do
-    contradictions
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn {c, i} -> "#{i}. #{c}" end)
-  end
+  defp limit_phrase(limit),
+    do: " the #{limit} most important FACTUAL, undisputed truths per document"
 end

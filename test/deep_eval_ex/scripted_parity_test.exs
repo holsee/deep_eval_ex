@@ -32,20 +32,12 @@ defmodule DeepEvalEx.ScriptedParityTest do
     @external_resource fixture(scenario, file)
   end
 
-  @llm_scenarios @scenarios --
-                   ~w(exact_match_fail exact_match_pass tool_correctness_fail
-                       tool_correctness_pass tool_correctness_strict)
-
   # Per facet, {the ROADMAP unit that removes the tag, scenarios}: when a
   # comparison diverges for several reasons, the last unit to land. The
   # fixtures' README lists every reason.
   @known_divergences %{
-    prompts: [{"P1.6", @llm_scenarios}],
-    measure: [
-      {"P1.6", ~w(tool_correctness_available_tools tool_correctness_fail tool_correctness_pass
-          tool_correctness_strict)},
-      {"P1.11", ~w(g_eval_strict)}
-    ],
+    prompts: [],
+    measure: [{"P1.11", ~w(g_eval_strict)}],
     verbose_logs: [{"P1.7", @scenarios -- ~w(exact_match_fail exact_match_pass)}],
     test_run: [
       {"P1.7", @scenarios -- ~w(exact_match_fail exact_match_pass g_eval_strict)},

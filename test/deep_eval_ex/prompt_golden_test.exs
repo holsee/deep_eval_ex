@@ -66,7 +66,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
 
   # {the ROADMAP unit that removes the tag, cases}. The fixtures' README
   # lists every reason.
-  @known_divergences [{"P1.6", @cases}]
+  @known_divergences []
 
   known_divergence = fn name ->
     Enum.find_value(@known_divergences, fn {unit, cases} -> if name in cases, do: unit end)
@@ -130,7 +130,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     rubric = rubric(inputs["rubric"])
 
     options("GEval.generate_strict_evaluation_results", inputs) ++
-      [rubric: format_rubric(rubric), score_range: score_range(rubric)]
+      [rubric: Prompts.GEval.format_rubric(rubric), score_range: score_range(rubric)]
   end
 
   defp options("GEval.generate_strict_evaluation_results", inputs) do
@@ -199,10 +199,13 @@ defmodule DeepEvalEx.PromptGoldenTest do
     ]
   end
 
+  # The generator renders verdicts as plain strings. The metric passes its
+  # verdict atoms, which print as deepeval's Verdict members, as the
+  # scripted-judge scenarios check.
   defp options("ContextualPrecisionMetric.generate_reason", inputs) do
     verdicts =
       Enum.map(inputs["verdicts"], fn %{"verdict" => verdict, "reason" => reason} ->
-        %{verdict: String.to_existing_atom(verdict), reason: reason}
+        %{verdict: verdict, reason: reason}
       end)
 
     [score: inputs["score"], input: inputs["input"], verdicts: verdicts]
@@ -249,15 +252,6 @@ defmodule DeepEvalEx.PromptGoldenTest do
     Enum.map(entries, fn %{"score_range" => [score, score], "expected_outcome" => outcome} ->
       {score, outcome}
     end)
-  end
-
-  # As DeepEvalEx.Metrics.GEval formats its rubric for the prompt.
-  defp format_rubric(nil), do: nil
-
-  defp format_rubric(rubric) do
-    rubric
-    |> Enum.sort_by(fn {score, _} -> -score end)
-    |> Enum.map_join("\n", fn {score, description} -> "- Score #{score}: #{description}" end)
   end
 
   # deepeval derives the score range from the rubric; 0-10 without one.

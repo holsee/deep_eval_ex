@@ -28,13 +28,33 @@ defmodule DeepEvalEx.TestRun.JSON do
   @doc """
   Encodes `term` as JSON text formatted like Python's `json.dumps(term)`.
 
+  ## Options
+
+  - `:indent` - pretty-print with this many spaces per level, like
+    `json.dumps(term, indent=n)`: one member per line, `","` between
+    members and `": "` between keys and values (default: `nil`, one line)
+  - `:ensure_ascii` - `false` keeps non-ASCII characters as they are, like
+    `json.dumps(term, ensure_ascii=False)`; control characters, `"` and
+    `\\` are still escaped (default: `true`)
+
   ## Examples
 
       iex> DeepEvalEx.TestRun.JSON.encode!(%{"score" => 1.0, "name" => "café"})
       ~S({"name": "caf\\u00e9", "score": 1.0})
+
+      iex> DeepEvalEx.TestRun.JSON.encode!(%{"name" => "café"}, indent: 2, ensure_ascii: false)
+      ~s({\\n  "name": "café"\\n})
   """
-  @spec encode!(term()) :: String.t()
-  def encode!(term), do: term |> value() |> IO.iodata_to_binary()
+  @spec encode!(term(), keyword()) :: String.t()
+  def encode!(term, opts \\ []) do
+    format = %{
+      indent: Keyword.get(opts, :indent),
+      ascii: Keyword.get(opts, :ensure_ascii, true),
+      level: 0
+    }
+
+    term |> value(format) |> IO.iodata_to_binary()
+  end
 
   @doc """
   Formats a float exactly like Python's `repr(float)`.
@@ -111,70 +131,97 @@ defmodule DeepEvalEx.TestRun.JSON do
     int <> "." <> frac
   end
 
-  defp value(nil), do: "null"
-  defp value(true), do: "true"
-  defp value(false), do: "false"
-  defp value(atom) when is_atom(atom), do: string(Atom.to_string(atom))
-  defp value(binary) when is_binary(binary), do: string(binary)
-  defp value(integer) when is_integer(integer), do: Integer.to_string(integer)
-  defp value(float) when is_float(float), do: float_repr(float)
-  defp value(list) when is_list(list), do: array(list)
-  defp value(tuple) when is_tuple(tuple), do: array(Tuple.to_list(tuple))
-  defp value(%Jason.OrderedObject{values: pairs}), do: object(pairs)
-  defp value(%_{} = struct), do: struct |> Map.from_struct() |> object()
-  defp value(map) when is_map(map), do: object(map)
+  defp value(nil, _format), do: "null"
+  defp value(true, _format), do: "true"
+  defp value(false, _format), do: "false"
+  defp value(atom, format) when is_atom(atom), do: string(Atom.to_string(atom), format)
+  defp value(binary, format) when is_binary(binary), do: string(binary, format)
+  defp value(integer, _format) when is_integer(integer), do: Integer.to_string(integer)
+  defp value(float, _format) when is_float(float), do: float_repr(float)
+  defp value(list, format) when is_list(list), do: array(list, format)
+  defp value(tuple, format) when is_tuple(tuple), do: array(Tuple.to_list(tuple), format)
+  defp value(%Jason.OrderedObject{values: pairs}, format), do: object(pairs, format)
+  defp value(%_{} = struct, format), do: struct |> Map.from_struct() |> object(format)
+  defp value(map, format) when is_map(map), do: object(map, format)
 
-  defp value(other) do
+  defp value(other, _format) do
     raise ArgumentError, "cannot encode #{inspect(other)} as JSON"
   end
 
-  defp array([]), do: "[]"
-  defp array(items), do: [?[, items |> Enum.map(&value/1) |> Enum.intersperse(", "), ?]]
+  defp array([], _format), do: "[]"
 
-  defp object(pairs) when pairs == %{} or pairs == [], do: "{}"
+  defp array(items, format) do
+    inner = nested(format)
+    container(?[, Enum.map(items, &value(&1, inner)), ?], format)
+  end
 
-  defp object(pairs) do
-    members =
-      pairs
-      |> Enum.map(fn {key, val} -> [key(key), ": ", value(val)] end)
-      |> Enum.intersperse(", ")
+  defp object(pairs, _format) when pairs == %{} or pairs == [], do: "{}"
 
-    [?{, members, ?}]
+  defp object(pairs, format) do
+    inner = nested(format)
+    members = Enum.map(pairs, fn {key, val} -> [key(key, format), ": ", value(val, inner)] end)
+    container(?{, members, ?}, format)
+  end
+
+  defp nested(%{indent: nil} = format), do: format
+  defp nested(format), do: %{format | level: format.level + 1}
+
+  # Python puts each member on its own line, indented one level deeper than
+  # its container, when indenting; otherwise all on one line.
+  defp container(open, members, close, %{indent: nil}) do
+    [open, Enum.intersperse(members, ", "), close]
+  end
+
+  defp container(open, members, close, %{indent: indent, level: level}) do
+    pad = "\n" <> String.duplicate(" ", indent * (level + 1))
+
+    [
+      open,
+      pad,
+      Enum.intersperse(members, [?, | pad]),
+      "\n",
+      String.duplicate(" ", indent * level),
+      close
+    ]
   end
 
   # Python's json converts these key types to strings; others are errors.
-  defp key(key) when is_binary(key), do: string(key)
-  defp key(key) when key in [nil, true, false], do: value(key)
-  defp key(key) when is_atom(key), do: string(Atom.to_string(key))
-  defp key(key) when is_integer(key), do: [?", Integer.to_string(key), ?"]
-  defp key(key) when is_float(key), do: [?", float_repr(key), ?"]
+  defp key(key, format) when is_binary(key), do: string(key, format)
+  defp key(key, format) when key in [nil, true, false], do: value(key, format)
+  defp key(key, format) when is_atom(key), do: string(Atom.to_string(key), format)
+  defp key(key, _format) when is_integer(key), do: [?", Integer.to_string(key), ?"]
+  defp key(key, _format) when is_float(key), do: [?", float_repr(key), ?"]
 
-  defp key(key) do
+  defp key(key, _format) do
     raise ArgumentError, "cannot encode #{inspect(key)} as a JSON object key"
   end
 
-  defp string(binary) do
+  defp string(binary, format) do
     unless String.valid?(binary) do
       raise ArgumentError, "cannot encode invalid UTF-8 #{inspect(binary)} as JSON"
     end
 
-    [?", escape(binary, []), ?"]
+    [?", escape(binary, format.ascii, []), ?"]
   end
 
-  defp escape(<<>>, acc), do: acc
-  defp escape(<<char::utf8, rest::binary>>, acc), do: escape(rest, [acc | escape_char(char)])
+  defp escape(<<>>, _ascii, acc), do: acc
 
-  defp escape_char(?"), do: "\\\""
-  defp escape_char(?\\), do: "\\\\"
-  defp escape_char(?\n), do: "\\n"
-  defp escape_char(?\r), do: "\\r"
-  defp escape_char(?\t), do: "\\t"
-  defp escape_char(?\b), do: "\\b"
-  defp escape_char(?\f), do: "\\f"
-  defp escape_char(char) when char in 0x20..0x7E, do: <<char>>
-  defp escape_char(char) when char < 0x10000, do: unicode_escape(char)
+  defp escape(<<char::utf8, rest::binary>>, ascii, acc),
+    do: escape(rest, ascii, [acc | escape_char(char, ascii)])
 
-  defp escape_char(char) do
+  defp escape_char(?", _ascii), do: "\\\""
+  defp escape_char(?\\, _ascii), do: "\\\\"
+  defp escape_char(?\n, _ascii), do: "\\n"
+  defp escape_char(?\r, _ascii), do: "\\r"
+  defp escape_char(?\t, _ascii), do: "\\t"
+  defp escape_char(?\b, _ascii), do: "\\b"
+  defp escape_char(?\f, _ascii), do: "\\f"
+  defp escape_char(char, _ascii) when char < 0x20, do: unicode_escape(char)
+  defp escape_char(char, _ascii) when char <= 0x7E, do: <<char>>
+  defp escape_char(char, false), do: <<char::utf8>>
+  defp escape_char(char, true) when char < 0x10000, do: unicode_escape(char)
+
+  defp escape_char(char, true) do
     code = char - 0x10000
 
     [

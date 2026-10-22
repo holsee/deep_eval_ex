@@ -169,12 +169,9 @@ rows here.
 
 | Facet | Scenarios | Fails because | Tag |
 | --- | --- | --- | --- |
-| prompts | every scenario that calls the judge (all but `exact_match_*` and `tool_correctness_pass`, `_fail`, `_strict`) | Prompt templates are paraphrased, not 4.3.1's Jinja templates (P1.6) | P1.6 |
-| measure | `tool_correctness_pass`, `_fail`, `_strict` | Reasons print tool names as JSON (`["get_weather"]`) rather than Python's repr (`['get_weather']`) (P1.6) | P1.6 |
-| measure | `tool_correctness_available_tools` | Reason prints tool names as JSON rather than Python's repr (P1.6) | P1.6 |
 | measure | `g_eval_strict` | Strict score normalised over the 0-10 range (0.1, then clamped to 0), where deepeval takes the judge's 1 as the score (P1.11) | P1.11 |
 | verbose_logs | every scenario but `exact_match_*` | No `verbose_logs` on results (P1.7) | P1.7 |
-| test_run | every scenario but `exact_match_*` and `g_eval_strict` | No `verboseLogs` in the export (P1.7). Also, as above: ToolCorrectness reasons (P1.6) | P1.7 |
+| test_run | every scenario but `exact_match_*` and `g_eval_strict` | No `verboseLogs` in the export (P1.7) | P1.7 |
 | test_run | `g_eval_strict` | No `verboseLogs` (P1.7) and strict scoring (P1.11) | P1.11 |
 
 ## Prompt goldens
@@ -208,8 +205,8 @@ aside).
 
 ### Template map
 
-Which 4.3.1 template each DeepEvalEx prompt function stands for. P1.6
-replaces each function's text with its template, verbatim. Templates live in
+Which 4.3.1 template each DeepEvalEx prompt function stands for and renders
+verbatim, as deepeval renders it for a text-only test case. Templates live in
 `deepeval/metrics/<metric>/templates/<method>.txt` and are rendered from the
 bundle `deepeval/templates/metrics/templates.json`.
 
@@ -242,24 +239,25 @@ case:
 - the `_experimental_system_one_*` templates (`_questions`, `_verdict`,
   `_tool_selection_score`): System One eval modes (P3)
 
-`DeepEvalEx.Prompts.GEval.format_evaluation_steps/1`, `format_params/1` and
-`format_test_case_content/2` and `Prompts.ToolCorrectness.format_tools/1`
-stand for deepeval's `number_evaluation_steps`,
-`construct_g_eval_params_string`, `construct_test_case_string` and
-`print_tools_called`.
+`DeepEvalEx.Prompts.GEval.format_evaluation_steps/1`, `format_params/1`,
+`format_test_case_content/2` and `format_rubric/1` and
+`Prompts.ToolCorrectness.format_tools/1` stand for deepeval's
+`number_evaluation_steps`, `construct_g_eval_params_string`,
+`construct_test_case_string`, `format_rubrics` and `print_tools_called`.
+`DeepEvalEx.Prompts.Python` prints template arguments as Jinja prints them:
+lists as Python lists (`repr`) and scores as `format(score, ".2f")`.
+
+The ContextualPrecision reason case renders its verdicts as plain strings
+(`'yes'`), as the generator passes them; the metric itself passes deepeval's
+`Verdict` members, which print as `<Verdict.YES: 'yes'>`, and DeepEvalEx's
+metric does the same with its verdict atoms (checked by the scripted-judge
+scenarios).
 
 ### Known divergences
 
-Every case is tagged `known_divergence: "P1.6"` in
-`@known_divergences` (`test/deep_eval_ex/prompt_golden_test.exs`): the
-prompts are paraphrased from older deepeval templates, not 4.3.1's. Besides
-the wording, they format the inputs differently: scores rounded with
-`Float.round/2` (`0.5`) rather than `.2f` (`0.50`), lists numbered or
-JSON-encoded rather than printed as Python lists, `(none)` for an empty
-list, GEval's rubric as `- Score n: ...` lines sorted high to low, tools as
-JSON in another key order and indentation, with a lower-case `type` and no
-`null` fields, and a trailing newline deepeval's prompts lack. P1.6 removes
-the tag.
+None: every case renders deepeval's prompt byte for byte. A divergence
+would be tagged in `@known_divergences`
+(`test/deep_eval_ex/prompt_golden_test.exs`).
 
 ## System One fixtures
 

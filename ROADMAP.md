@@ -68,9 +68,6 @@ checked byte for byte against golden fixtures from deepeval 4.3.1.
 
 These are fixed in [P1](#p1-correct-the-existing-metric-surface):
 
-- **Prompt templates are not verbatim.** The prompt modules follow earlier
-  deepeval templates; 4.3.1 renders `.txt` Jinja templates with shared
-  fragments, so rendered prompts differ.
 - **GEval strict scoring.** In strict mode GEval normalises the judge's 0/1
   over its score range before the shared clamp; 4.3.1 takes the 0/1 as the
   score.

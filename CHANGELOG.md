@@ -45,8 +45,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   limits, a GEval rubric and strict mode). A new test renders the same inputs
   with the matching `DeepEvalEx.Prompts` function and compares the strings
   exactly; the fixtures' README maps each prompt function to its 4.3.1
-  template. Every comparison diverges today, as the prompts are paraphrased,
-  and is tagged `known_divergence: "P1.6"`.
+  template. Every case matches byte for byte.
 - **System One (Jev) fixtures.** A second generator,
   `scripts/parity/generate_system_one_fixtures.py`, records what deepeval
   4.3.1 sends System One and does with its answers, using deepeval's own
@@ -173,6 +172,15 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   credentials come from a gitignored `.devcontainer/.env`, which may hold
   1Password `op://` references resolved on the host with `op inject`.
 - ADR 0008 (Peri replacing Ecto) and this changelog.
+- `DeepEvalEx.Prompts.Python`, which formats values as deepeval's Jinja
+  templates and f-strings print them: `repr/1` (Python lists, dicts,
+  strings with Python's quoting and escapes, `None`, `True`, deepeval
+  `ToolCall` reprs and enum members such as `<Verdict.YES: 'yes'>`) and
+  `format_fixed/2` (`format(x, ".2f")`, rounding exact ties to even).
+- `DeepEvalEx.TestRun.JSON.encode!/2` takes `:indent` and `:ensure_ascii`,
+  formatting like Python's `json.dumps(indent=n, ensure_ascii=...)`.
+- `DeepEvalEx.Prompts.GEval.format_rubric/1`, formatting a rubric as
+  deepeval's `format_rubrics`.
 
 ### Changed
 
@@ -261,6 +269,29 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   Each schema module exports `json_schema/0`.
 - `req` now requires `~> 0.7`.
 - CI runs Elixir 1.19.5 and OTP 28.4, matching `.tool-versions`.
+- **Judge prompts are deepeval 4.3.1's templates, verbatim.** The prompt
+  modules of GEval, Faithfulness, Hallucination, AnswerRelevancy,
+  ContextualPrecision, ContextualRecall and ToolCorrectness now render the
+  same bytes as 4.3.1's Jinja templates (and shared fragments) for a
+  text-only test case, instead of paraphrases of older templates, so a judge
+  sees exactly the prompt deepeval would send. Template arguments are
+  formatted as deepeval formats them: lists as Python lists
+  (`['a', "it's"]`) rather than numbered lines, `[]` rather than `(none)`,
+  scores as `0.50` rather than `0.5`, no trailing newline. GEval names three
+  or more params as `Input, Actual Output, and Expected Output`, prints each
+  test case field followed by a space and a blank line (lists as Python
+  lists, `nil` as `None`), and its rubric as `<score>: <description>` lines,
+  lowest score first. ToolCorrectness prints tools with every field
+  (`"type": "FUNCTION"`, `null` when unset) and an empty tool list as an
+  empty string. Hallucination's prompts include 4.3.1's multimodal input
+  rules, which its templates carry unconditionally. Mock responses keyed on
+  prompt text may need updating.
+- **ToolCorrectness reasons print tools as deepeval does.** Tool names print
+  as Python lists (`['get_weather']`) rather than JSON (`["get_weather"]`),
+  and the missing tool calls of the default mode as deepeval's `ToolCall`
+  reprs rather than names, matched by name, input parameters and output.
+  The missing and out-of-order name sets of the ordering mode are sorted,
+  where deepeval prints them in Python's hash order.
 - Module docs describe only what has shipped. The roadmap sets out the phased
   plan to deepeval 4.3.1 parity, including System One (Jev) support, and links
   to this changelog for shipped work.

@@ -430,6 +430,46 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
     end
   end
 
+  # deepeval interpolates Python lists, sets and ToolCalls into its reasons,
+  # so tool names print as Python's repr, not as JSON or Elixir terms.
+  describe "tool calling reason formats tools as deepeval does" do
+    defp calling_reason(tc, opts \\ []) do
+      {:ok, result} = ToolCorrectness.measure(tc, opts)
+      [_, reason] = Regex.run(~r/Tool Calling Reason: (.*)\n\t Tool Selection/s, result.reason)
+      reason
+    end
+
+    test "default mode prints names and missing tool calls in Python repr" do
+      tc = %{case_with(["search"], ["get_weather"]) | expected_tools: [tool("it's", %{"q" => 1})]}
+
+      assert calling_reason(tc) ==
+               ~s|Incomplete tool usage: missing tools [ToolCall(\n    name="it's",\n    type="FUNCTION",\n    input_parameters={\n        "q": 1\n    }\n)]; expected ["it's"], called ['search']. See more details above.|
+
+      assert calling_reason(case_with(["a"], ["a"])) ==
+               "All expected tools ['a'] were called (order not considered)."
+    end
+
+    test "exact match mode prints names in Python repr" do
+      assert calling_reason(case_with(["a", "b"], ["a", "b"]), should_exact_match: true) ==
+               "Exact match: expected ['a', 'b'], called ['a', 'b']. See details above."
+
+      assert calling_reason(case_with(["b"], ["a"]), should_exact_match: true) ==
+               "Not an exact match: expected ['a'], called ['b']. See details above."
+    end
+
+    # deepeval prints the missing and out-of-order sets in hash order, which
+    # depends on PYTHONHASHSEED; DeepEvalEx sorts them.
+    test "ordering mode prints names in Python repr and name sets sorted" do
+      assert calling_reason(case_with(["a", "b"], ["a", "b"]), should_consider_ordering: true) ==
+               "Correct ordering: all expected tools ['a', 'b'] were called in the correct order."
+
+      assert calling_reason(case_with(["d", "b"], ["c", "b", "a"]),
+               should_consider_ordering: true
+             ) ==
+               "Incorrect tool usage: missing tools ['a', 'c'] and out-of-order tools ['a', 'c']; expected ['c', 'b', 'a'], called ['d', 'b']. See more details above."
+    end
+  end
+
   describe "tool selection score (LLM-based)" do
     setup do
       Mock.clear_responses()

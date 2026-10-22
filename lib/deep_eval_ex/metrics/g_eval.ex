@@ -343,7 +343,7 @@ defmodule DeepEvalEx.Metrics.GEval do
           evaluation_steps: steps,
           test_case_content: test_case_content,
           parameters: params_string,
-          rubric: format_rubric(metric.rubric),
+          rubric: Template.format_rubric(metric.rubric),
           score_range: metric.score_range
         )
       end
@@ -352,13 +352,5 @@ defmodule DeepEvalEx.Metrics.GEval do
       {:ok, response} -> Schema.parse_reason_score(response)
       {:error, _} = error -> error
     end
-  end
-
-  defp format_rubric(nil), do: nil
-
-  defp format_rubric(rubric) when is_list(rubric) do
-    rubric
-    |> Enum.sort_by(fn {score, _} -> -score end)
-    |> Enum.map_join("\n", fn {score, description} -> "- Score #{score}: #{description}" end)
   end
 end

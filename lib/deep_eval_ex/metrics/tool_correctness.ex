@@ -59,6 +59,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
 
   alias DeepEvalEx.LLM.Adapter
   alias DeepEvalEx.Metrics.BaseMetric
+  alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.Prompts.ToolCorrectness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.ToolCorrectness, as: Schema
 
@@ -394,6 +395,11 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   end
 
   # --- Reason generation (matches Python _generate_reason) ---
+  #
+  # deepeval builds these with f-strings, so lists of names print as Python
+  # lists (`['get_weather']`) and missing tool calls as ToolCall reprs. It
+  # prints the missing and out-of-order name sets in set iteration order,
+  # which depends on PYTHONHASHSEED; DeepEvalEx sorts them.
 
   defp generate_reason(called, expected, exact_match?, consider_ordering?, eval_params) do
     called_names = Enum.map(called, & &1.name)
@@ -415,7 +421,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     score = calculate_exact_match_score(called, expected, eval_params)
     label = if score == 1.0, do: "Exact match", else: "Not an exact match"
 
-    "#{label}: expected #{inspect(expected_names)}, called #{inspect(called_names)}. See details above."
+    "#{label}: expected #{Python.repr(expected_names)}, called #{Python.repr(called_names)}. See details above."
   end
 
   defp generate_ordering_reason(called, expected, eval_params, called_names, expected_names) do
@@ -423,7 +429,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     score = calculate_ordering_score(called, expected, weighted_length)
 
     if score == 1.0 do
-      "Correct ordering: all expected tools #{inspect(expected_names)} were called in the correct order."
+      "Correct ordering: all expected tools #{Python.repr(expected_names)} were called in the correct order."
     else
       format_ordering_issues(lcs, called_names, expected_names)
     end
@@ -442,12 +448,12 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
       |> maybe_add_issue(missing, "missing tools")
       |> maybe_add_issue(out_of_order, "out-of-order tools")
 
-    "Incorrect tool usage: #{Enum.join(issues, " and ")}; expected #{inspect(expected_names)}, called #{inspect(called_names)}. See more details above."
+    "Incorrect tool usage: #{Enum.join(issues, " and ")}; expected #{Python.repr(expected_names)}, called #{Python.repr(called_names)}. See more details above."
   end
 
   defp maybe_add_issue(issues, set, label) do
     if MapSet.size(set) > 0,
-      do: issues ++ ["#{label} #{inspect(MapSet.to_list(set))}"],
+      do: issues ++ ["#{label} #{set |> Enum.sort() |> Python.repr()}"],
       else: issues
   end
 
@@ -455,17 +461,24 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     score = calculate_non_exact_match_score(called, expected, eval_params)
 
     if score == 1.0 do
-      "All expected tools #{inspect(expected_names)} were called (order not considered)."
+      "All expected tools #{Python.repr(expected_names)} were called (order not considered)."
     else
-      missing_list =
-        expected
-        |> MapSet.new()
-        |> MapSet.difference(MapSet.new(called))
-        |> Enum.map(& &1.name)
-
-      "Incomplete tool usage: missing tools #{inspect(missing_list)}; expected #{inspect(expected_names)}, called #{inspect(called_names)}. See more details above."
+      "Incomplete tool usage: missing tools #{called |> missing_tools(expected) |> Python.repr()}; expected #{Python.repr(expected_names)}, called #{Python.repr(called_names)}. See more details above."
     end
   end
+
+  # deepeval's set(expected_tools) - set(tools_called): ToolCall equality
+  # and hashing only look at the name, input parameters and output. Listed
+  # in expected order, without duplicates.
+  defp missing_tools(called, expected) do
+    called_keys = MapSet.new(called, &tool_key/1)
+
+    expected
+    |> Enum.uniq_by(&tool_key/1)
+    |> Enum.reject(&MapSet.member?(called_keys, tool_key(&1)))
+  end
+
+  defp tool_key(tool), do: {tool.name, tool.input_parameters, tool.output}
 
   # --- Final reason construction (matches Python _construct_final_reason) ---
 
