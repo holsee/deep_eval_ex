@@ -202,8 +202,11 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   `:system_one` as `:hybrid` (see `DeepEvalEx.SystemOne.Mode.effective/2`).
   It counts even when it returns `nil` for every test case, as for a metric
   that makes its own System One decisions without a whole-chain form.
+
+  A metric that returns a spec calls `DeepEvalEx.SystemOne.Runner.run/3`
+  from its `do_measure/2`, which decides the whole measure from it.
   """
-  @callback system_one_eval_spec(test_case(), opts()) :: struct() | nil
+  @callback system_one_eval_spec(test_case(), opts()) :: DeepEvalEx.SystemOne.EvalSpec.t() | nil
 
   @optional_callbacks [
     default_opts: 0,

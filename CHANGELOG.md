@@ -254,6 +254,45 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     `score_breakdown` of the System One fixtures dumps byte for byte, and
     the `jev_eval` fixtures' questions parse and go on the wire as deepeval
     sent them.
+- **`DeepEvalEx.SystemOne.Runner`, the whole-chain `:system_one` path**
+  (ADR-0009), a port of deepeval 4.3.1's `run_system_one_eval`
+  (`metrics/utils/system_one.py`) and `metrics/jev_eval/utils.py`. No
+  built-in metric calls it yet; they gain their specs in later units.
+  - `DeepEvalEx.SystemOne.EvalSpec`, deepeval's `SystemOneEvalSpec`: the
+    test case fields to send (`evaluation_params`), the `Scored` questions
+    and any `extra_state`. `c:BaseMetric.system_one_eval_spec/2` now returns
+    one (or `nil`).
+  - `Runner.run/3`, which a metric calls from its `do_measure/2`. It
+    returns `:continue` unless the metric's eval mode is `:system_one`, or
+    when the spec is `nil` and the metric has an LLM; a `nil` spec without
+    an LLM raises deepeval's "... which cannot judge this test case"
+    `DeepEvalError`. Otherwise one request asks every question, keyed
+    `q_<i>`, after the context-budget check. An overflow, from the check
+    or reported by the model, raises `ContextWindowExceededError` with
+    deepeval's switch-back-to-llm text, and any other error is raised
+    unchanged: nothing falls back. A batch prefetch's answers and usage
+    share (`opts[:system_one_prefetched]`) are used in place of the
+    request. The result has the weighted-mean score (`1.0` / `0.0` under
+    strict mode, kept as a float), deepeval's deterministic reason,
+    `score_breakdown`, the minimum confidence, the System One model as
+    `evaluation_model` and the `"Decided by System One (<model>); no LLM
+    call was made."` verbose logs.
+  - `DeepEvalEx.SystemOne.State`, deepeval's `construct_single_turn_state`:
+    `{"test_case": {...}}` with the populated params in the spec's order,
+    then the non-nil `extra_state`. Structs are sent through the new
+    `DeepEvalEx.SystemOne.Dumpable` protocol, pydantic's
+    `model_dump(mode="json", exclude_none=True)`, which `ToolCall`
+    implements (`"type": "FUNCTION"`); other structs are sent as text.
+  - `DeepEvalEx.SystemOne.Scoring`: answers to values (a Noul's P(true), a
+    Score's `score / (levels - 1)`, a Choice's credit-weighted mean, not
+    applicable from `0.5` not-applicable mass), `aggregate/1`,
+    `mark_strict/2`, `aggregate_strict/1`, `min_confidence/1`, the
+    verbalised bands with the `0.15` runner-up margin, `reason/3`,
+    `format_for_logs/1` and `classification_reason/2`.
+
+  The `<metric>_system_one`, `faithfulness_system_one_strict` and `jev_eval`
+  fixtures replayed through the runner send deepeval's requests and reach
+  its scores, reasons, confidences and score breakdowns byte for byte.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in
