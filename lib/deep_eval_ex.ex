@@ -100,10 +100,19 @@ defmodule DeepEvalEx do
 
   ## Options
 
-  - `:concurrency` - Max concurrent evaluations (default: schedulers * 2)
+  - `:concurrency` - Max test cases evaluated at once (default: schedulers * 2)
+  - `:metric_concurrency` - Max metrics run at once within a test case
+    (default: the number of metrics)
   - `:threshold` - Score threshold for pass/fail (default: 0.5)
   - `:model` - LLM model to use for evaluation
-  - `:timeout` - Timeout per evaluation in milliseconds (default: 60_000)
+  - `:timeout` - Timeout in milliseconds (default: 60_000); the default for
+    `:metric_timeout` and the minimum per-test-case timeout
+  - `:metric_timeout` - Timeout per metric in milliseconds (default: the
+    `:timeout` value). A slow metric yields an errored result while the
+    test case's other metrics still complete
+
+  The metrics of a test case run concurrently and results keep the order of
+  `metrics`. See `DeepEvalEx.Evaluator` for how the timeouts interact.
 
   ## Examples
 

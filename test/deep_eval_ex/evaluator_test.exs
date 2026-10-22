@@ -15,6 +15,27 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
   end
 
+  defmodule SleepMetric do
+    @moduledoc false
+
+    defstruct sleep: 0, label: nil
+
+    def metric_name, do: "SleepMetric"
+
+    def measure(_test_case, opts) do
+      Process.sleep(Keyword.fetch!(opts, :sleep))
+
+      {:ok,
+       %Result{
+         metric: metric_name(),
+         score: 1.0,
+         success: true,
+         threshold: 0.5,
+         reason: Keyword.get(opts, :label)
+       }}
+    end
+  end
+
   defmodule FailingMetric do
     @moduledoc false
 
@@ -50,6 +71,10 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
   end
 
+  def forward_metric_stop(_event, _measurements, metadata, {parent, name}) do
+    if metadata.test_case_id == name, do: send(parent, {:metric_stop, metadata.metric})
+  end
+
   defp test_case do
     TestCase.new!(input: "What is 2 + 2?", actual_output: "4", expected_output: "4")
   end
@@ -61,7 +86,12 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
 
     test "returns a flat list with one errored result per metric when a test case times out" do
-      assert [results] = Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch], timeout: 20)
+      # Without a per-metric bound only the per-test-case timeout applies.
+      assert [results] =
+               Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch],
+                 timeout: 20,
+                 metric_timeout: :infinity
+               )
 
       assert [%Result{metric: "SlowMetric"}, %Result{metric: "ExactMatch"}] = results
 
@@ -76,11 +106,104 @@ defmodule DeepEvalEx.EvaluatorTest do
 
     test "timed-out results carry each metric's real threshold" do
       assert [[slow, exact]] =
-               Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch], timeout: 20)
+               Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch],
+                 timeout: 20,
+                 metric_timeout: :infinity
+               )
 
       # SlowMetric exposes no default threshold, so none is known.
       assert slow.threshold == nil
       assert exact.threshold == ExactMatch.default_threshold()
+    end
+  end
+
+  describe "evaluate_single/3 concurrency" do
+    test "preserves metric order when metrics finish out of order" do
+      metrics = [
+        %SleepMetric{sleep: 150, label: "first"},
+        %SleepMetric{sleep: 10, label: "second"},
+        %SleepMetric{sleep: 80, label: "third"}
+      ]
+
+      results = Evaluator.evaluate_single(test_case(), metrics)
+
+      assert Enum.map(results, & &1.reason) == ["first", "second", "third"]
+    end
+
+    test "runs metrics concurrently, so wall time tracks the slowest metric" do
+      metrics = for i <- 1..5, do: %SleepMetric{sleep: 200, label: "m#{i}"}
+
+      {elapsed_us, results} =
+        :timer.tc(fn -> Evaluator.evaluate_single(test_case(), metrics) end)
+
+      assert length(results) == 5
+      assert Enum.all?(results, & &1.success)
+      # Sequential execution would take at least 1_000ms.
+      assert div(elapsed_us, 1_000) < 700
+    end
+
+    test ":metric_concurrency bounds how many metrics run at once" do
+      metrics = for i <- 1..3, do: %SleepMetric{sleep: 100, label: "m#{i}"}
+
+      {elapsed_us, results} =
+        :timer.tc(fn ->
+          Evaluator.evaluate_single(test_case(), metrics, metric_concurrency: 1)
+        end)
+
+      assert Enum.map(results, & &1.reason) == ["m1", "m2", "m3"]
+      assert div(elapsed_us, 1_000) >= 300
+    end
+
+    test "a slow metric errors alone while its siblings succeed" do
+      metrics = [%SleepMetric{sleep: 2_000, label: "slow"}, ExactMatch]
+
+      assert [slow, exact] =
+               Evaluator.evaluate_single(test_case(), metrics, metric_timeout: 50)
+
+      assert Result.errored?(slow)
+      assert slow.metric == "SleepMetric"
+      assert slow.error == "Metric timed out"
+      assert exact.success
+      refute Result.errored?(exact)
+    end
+
+    test "per-metric timeout defaults to :timeout and fires before the test case's" do
+      assert [[slow, exact]] =
+               Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch], timeout: 50)
+
+      assert slow.error == "Metric timed out"
+      assert exact.success
+    end
+
+    test "the test case timeout covers metrics queued behind :metric_concurrency" do
+      metrics = for i <- 1..3, do: %SleepMetric{sleep: 100, label: "m#{i}"}
+
+      # Each metric fits its 250ms budget; the case as a whole takes ~300ms.
+      assert [results] =
+               Evaluator.evaluate([test_case()], metrics, timeout: 250, metric_concurrency: 1)
+
+      assert Enum.all?(results, & &1.success)
+    end
+
+    test "metric telemetry events still fire for every metric" do
+      name = "telemetry-#{System.unique_integer([:positive])}"
+      parent = self()
+      handler_id = {__MODULE__, name}
+
+      :telemetry.attach(
+        handler_id,
+        [:deep_eval_ex, :metric, :stop],
+        &__MODULE__.forward_metric_stop/4,
+        {parent, name}
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      test_case = %{test_case() | name: name}
+      Evaluator.evaluate_single(test_case, [ExactMatch, ExactMatch])
+
+      assert_receive {:metric_stop, "ExactMatch"}
+      assert_receive {:metric_stop, "ExactMatch"}
     end
   end
 
