@@ -182,6 +182,42 @@ defmodule DeepEvalEx.TestRun.LoadTest do
       assert test_run.hyperparameters == nil
     end
 
+    test "reads explicit JSON nulls as missing keys" do
+      # deepeval saves with exclude_none=True, so it never writes null: a
+      # test case whose success is None has no "success" key at all.
+      # DeepEvalEx needs a boolean, so null is read like a missing key.
+      missing = %{"name" => "a", "metricsData" => [%{"name" => "M", "success" => true}]}
+
+      nulls =
+        Map.merge(missing, %{
+          "success" => nil,
+          "flaky" => nil,
+          "runDuration" => nil,
+          "order" => nil,
+          "evaluationCost" => nil,
+          "metricsData" => [
+            %{"name" => "M", "success" => true, "strictMode" => nil, "score" => nil}
+          ]
+        })
+
+      run_with_nulls = %{
+        "testCases" => [nulls],
+        "metricsScores" => nil,
+        "testPassed" => nil,
+        "testFailed" => nil,
+        "runDuration" => nil,
+        "identifier" => nil,
+        "hyperparameters" => nil
+      }
+
+      assert from_map!(run_with_nulls) == from_map!(%{"testCases" => [missing]})
+
+      assert [%TestRun.TestCase{success: true, flaky: false, run_duration: 0, order: 0}] =
+               from_map!(run_with_nulls).test_cases
+
+      refute encode(from_map!(run_with_nulls)) =~ "null"
+    end
+
     test "loads an empty object as an empty run" do
       assert from_map!(%{}) == %TestRun{}
     end

@@ -447,6 +447,12 @@ defmodule DeepEvalEx.TestRun do
   - `metricsScores`, `testPassed` and `testFailed` are computed from the
     test cases
 
+  An explicit JSON `null` is read like a missing key. deepeval saves with
+  `exclude_none=True`, so its files never contain `null` (a test case whose
+  `success` is `None` has no `success` key); DeepEvalEx does not keep a
+  `nil` `success` because it models success as a boolean, and like deepeval
+  it never writes `null` back.
+
   Returns `{:error, {:invalid_test_run, message}}` when a required key is
   missing or a value has the wrong shape; the message starts with the path
   of the value, e.g. `"testCases[1].name: expected a string, got nil"`.
