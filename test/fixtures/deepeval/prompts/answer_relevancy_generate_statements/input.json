@@ -1,0 +1,6 @@
+{
+  "template": "AnswerRelevancyMetric.generate_statements",
+  "inputs": {
+    "actual_output": "Paris is the capital of France. It's known for café culture."
+  }
+}

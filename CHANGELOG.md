@@ -38,6 +38,14 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   divergences from 4.3.1 are tagged `known_divergence` with the roadmap unit
   that fixes them and excluded by default; run them with
   `mix test --only known_divergence`.
+- **Prompt template goldens.** The fixture generator also renders every
+  prompt template deepeval 4.3.1's seven LLM-judged metrics use, the way each
+  metric renders it, for 23 fixed inputs (including Faithfulness extraction
+  limits, a GEval rubric and strict mode). A new test renders the same inputs
+  with the matching `DeepEvalEx.Prompts` function and compares the strings
+  exactly; the fixtures' README maps each prompt function to its 4.3.1
+  template. Every comparison diverges today, as the prompts are paraphrased,
+  and is tagged `known_divergence: "P1.6"`.
 - **Scripted mode for the Mock adapter.** `Mock.script/2` replays judge
   responses keyed by step (named by the requested schema's fields, see
   `Mock.step_key/1`) and call index, reports the script's judge model and

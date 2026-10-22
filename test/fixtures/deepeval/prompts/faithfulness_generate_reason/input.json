@@ -1,0 +1,9 @@
+{
+  "template": "FaithfulnessMetric.generate_reason",
+  "inputs": {
+    "score": 0.5,
+    "contradictions": [
+      "The actual output says the Louvre opened in 1893, but it opened in 1793."
+    ]
+  }
+}

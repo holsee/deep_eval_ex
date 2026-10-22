@@ -37,6 +37,20 @@ index. Next to each script this writes:
 test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
+Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
+uses for the seven LLM-judged metrics, the way the metric itself renders it
+(its `_get_prompt`, with the arguments its own helpers build), for fixed
+inputs. For every case this script writes, under
+test/fixtures/deepeval/prompts/<case>/:
+
+- input.json    - `template` (deepeval's template class key and method, e.g.
+                  "FaithfulnessMetric.generate_truths") and `inputs`, the
+                  metric-level values the prompt is built from
+- prompt.txt    - the rendered prompt, byte for byte
+
+test/deep_eval_ex/prompt_golden_test.exs renders the same inputs with the
+matching DeepEvalEx.Prompts function and compares the strings exactly.
+
 Run it inside the devcontainer, from the repository root:
 
     devcontainer exec --workspace-folder . \
@@ -55,6 +69,7 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FIXTURES = os.path.join(ROOT, "test", "fixtures", "deepeval")
 SCRIPTED = os.path.join(FIXTURES, "scripted")
+PROMPTS = os.path.join(FIXTURES, "prompts")
 
 # deepeval builds some reasons by iterating sets (ToolCorrectness's missing
 # tools), whose order follows string hashing. Fix the hash seed so every run
@@ -96,7 +111,21 @@ from deepeval.metrics import (  # noqa: E402
     HallucinationMetric,
     ToolCorrectnessMetric,
 )
+from deepeval.metrics.contextual_precision.contextual_precision import (  # noqa: E402
+    _contextual_precision_verdict_fields,
+)
+from deepeval.metrics.contextual_recall.contextual_recall import (  # noqa: E402
+    _contextual_recall_verdict_kwargs,
+)
+from deepeval.metrics.faithfulness.faithfulness import (  # noqa: E402
+    _faithfulness_claims_multimodal_instruction,
+    _faithfulness_truths_limit_phrase,
+    _faithfulness_truths_multimodal_instruction,
+)
+from deepeval.metrics.g_eval.utils import Rubric  # noqa: E402
+from deepeval.metrics.utils.verbose import print_tools_called  # noqa: E402
 from deepeval.models import DeepEvalBaseLLM  # noqa: E402
+from deepeval.templates import iter_base_template_methods  # noqa: E402
 from deepeval.test_case import (  # noqa: E402
     LLMTestCase,
     SingleTurnParams,
@@ -469,6 +498,378 @@ def run_scripted_scenario(name):
     write_json(os.path.join(out_dir, "measure.json"), measured_state(measured))
 
 
+# Prompt goldens. Each renderer builds a prompt the way deepeval's metric does
+# for a single-turn, text-only test case: the metric's own `_get_prompt` (so
+# a strict Jinja environment and `multimodal=False`), with the arguments its
+# helpers derive from the metric-level `inputs`. GEval's renderers call the
+# metric's `_steps_prompt` / `_results_prompt` directly.
+
+
+def _prompt_judge():
+    return ScriptedJudge("prompt-golden-judge", {})
+
+
+def _score(inputs):
+    # Every metric formats its score for the reason prompt this way.
+    return format(inputs["score"], ".2f")
+
+
+def _render_g_eval_results(inputs, strict_mode):
+    rubric = inputs.get("rubric")
+    metric = GEval(
+        name="Golden",
+        evaluation_params=[SingleTurnParams(p) for p in inputs["evaluation_params"]],
+        evaluation_steps=inputs["evaluation_steps"],
+        rubric=[Rubric(**r) for r in rubric] if rubric else None,
+        strict_mode=strict_mode,
+        model=_prompt_judge(),
+    )
+    return metric._results_prompt(build_test_case(inputs["test_case"]), False, None)
+
+
+def _render_g_eval_steps(inputs):
+    metric = GEval(
+        name="Golden",
+        evaluation_params=[SingleTurnParams(p) for p in inputs["evaluation_params"]],
+        criteria=inputs["criteria"],
+        model=_prompt_judge(),
+    )
+    return metric._steps_prompt(False)
+
+
+def _prompt(metric_cls, method, **kwargs):
+    return metric_cls(model=_prompt_judge())._get_prompt(method, multimodal=False, **kwargs)
+
+
+PROMPT_RENDERERS = {
+    "GEval.generate_evaluation_steps": _render_g_eval_steps,
+    "GEval.generate_evaluation_results": lambda i: _render_g_eval_results(i, False),
+    "GEval.generate_strict_evaluation_results": lambda i: _render_g_eval_results(i, True),
+    "FaithfulnessMetric.generate_claims": lambda i: _prompt(
+        FaithfulnessMetric, "generate_claims",
+        actual_output=i["actual_output"],
+        multimodal_instruction=_faithfulness_claims_multimodal_instruction(False),
+    ),
+    "FaithfulnessMetric.generate_truths": lambda i: _prompt(
+        FaithfulnessMetric, "generate_truths",
+        retrieval_context="\n\n".join(i["retrieval_context"]),
+        limit=_faithfulness_truths_limit_phrase(i["truths_extraction_limit"]),
+        multimodal_instruction=_faithfulness_truths_multimodal_instruction(False),
+    ),
+    "FaithfulnessMetric.generate_verdicts": lambda i: _prompt(
+        FaithfulnessMetric, "generate_verdicts",
+        claims=i["claims"],
+        retrieval_context="\n\n".join(i["truths"]),
+    ),
+    "FaithfulnessMetric.generate_reason": lambda i: _prompt(
+        FaithfulnessMetric, "generate_reason",
+        contradictions=i["contradictions"],
+        score=_score(i),
+    ),
+    "HallucinationMetric.generate_verdicts": lambda i: _prompt(
+        HallucinationMetric, "generate_verdicts",
+        actual_output=i["actual_output"],
+        contexts=i["contexts"],
+        contexts_count=len(i["contexts"]),
+    ),
+    "HallucinationMetric.generate_reason": lambda i: _prompt(
+        HallucinationMetric, "generate_reason",
+        factual_alignments=i["factual_alignments"],
+        contradictions=i["contradictions"],
+        score=_score(i),
+    ),
+    "AnswerRelevancyMetric.generate_statements": lambda i: _prompt(
+        AnswerRelevancyMetric, "generate_statements",
+        actual_output=i["actual_output"],
+    ),
+    "AnswerRelevancyMetric.generate_verdicts": lambda i: _prompt(
+        AnswerRelevancyMetric, "generate_verdicts",
+        input=i["input"],
+        statements=i["statements"],
+    ),
+    "AnswerRelevancyMetric.generate_reason": lambda i: _prompt(
+        AnswerRelevancyMetric, "generate_reason",
+        irrelevant_statements=i["irrelevant_statements"],
+        input=i["input"],
+        score=_score(i),
+    ),
+    "ContextualPrecisionMetric.generate_verdicts": lambda i: _prompt(
+        ContextualPrecisionMetric, "generate_verdicts",
+        input=i["input"],
+        expected_output=i["expected_output"],
+        **dict(zip(
+            ("document_count_str", "context_to_display", "multimodal_note"),
+            _contextual_precision_verdict_fields(i["retrieval_context"], False),
+        )),
+    ),
+    "ContextualPrecisionMetric.generate_reason": lambda i: _prompt(
+        ContextualPrecisionMetric, "generate_reason",
+        input=i["input"],
+        verdicts=[{"verdict": v["verdict"], "reason": v["reason"]} for v in i["verdicts"]],
+        score=_score(i),
+    ),
+    "ContextualRecallMetric.generate_verdicts": lambda i: _prompt(
+        ContextualRecallMetric, "generate_verdicts",
+        expected_output=i["expected_output"],
+        **_contextual_recall_verdict_kwargs(i["retrieval_context"], False),
+    ),
+    "ContextualRecallMetric.generate_reason": lambda i: _prompt(
+        ContextualRecallMetric, "generate_reason",
+        expected_output=i["expected_output"],
+        supportive_reasons=i["supportive_reasons"],
+        unsupportive_reasons=i["unsupportive_reasons"],
+        score=_score(i),
+        content_type="sentence",
+    ),
+    "ToolCorrectnessMetric.get_tool_selection_score": lambda i: _prompt(
+        ToolCorrectnessMetric, "get_tool_selection_score",
+        user_input=i["input"],
+        tools_called=print_tools_called([ToolCall(**t) for t in i["tools_called"]]),
+        available_tools=print_tools_called([ToolCall(**t) for t in i["available_tools"]]),
+    ),
+}
+
+# Bundled templates of these metrics that no prompt case renders: GEval's
+# trace variants (`requires_trace`, i.e. GEval without evaluation_params on a
+# traced component), which DeepEvalEx has no counterpart for yet. The System
+# One (`DEEPEVAL_EVAL_MODE`) `_experimental_*` templates are private methods,
+# which `iter_base_template_methods` leaves out.
+UNRENDERED_TEMPLATES = {
+    "GEval.generate_trace_evaluation_steps",
+    "GEval.generate_trace_evaluation_results",
+    "GEval.generate_strict_trace_evaluation_results",
+}
+
+PARIS_CONTEXT = [
+    "Paris is the capital and largest city of France.",
+    "The Louvre, the world's most-visited museum, opened in 1793.",
+    "France's café culture dates back to the 17th century.",
+]
+
+GOLDEN_TOOLS = [
+    {"name": "get_weather", "description": "Fetch current weather for a city"},
+    {"name": "search_web", "description": "Search the web"},
+]
+
+PROMPT_CASES = {
+    "g_eval_generate_evaluation_steps": {
+        "template": "GEval.generate_evaluation_steps",
+        "inputs": {
+            "criteria": "Determine whether the actual output answers the input's question correctly.",
+            "evaluation_params": ["input", "actual_output"],
+        },
+    },
+    "g_eval_generate_evaluation_steps_three_params": {
+        "template": "GEval.generate_evaluation_steps",
+        "inputs": {
+            "criteria": "Check the actual output against the expected output for the input.",
+            "evaluation_params": ["input", "actual_output", "expected_output"],
+        },
+    },
+    "g_eval_generate_evaluation_results": {
+        "template": "GEval.generate_evaluation_results",
+        "inputs": {
+            "evaluation_steps": [
+                "Read the input's question.",
+                "Check that the actual output answers it with the right fact.",
+            ],
+            "evaluation_params": ["input", "actual_output"],
+            "test_case": {
+                "input": "What is the capital of France?",
+                "actual_output": "Paris is the capital of France.",
+            },
+        },
+    },
+    "g_eval_generate_evaluation_results_rubric": {
+        "template": "GEval.generate_evaluation_results",
+        "inputs": {
+            "evaluation_steps": [
+                "Compare the actual output with the expected output.",
+                "Penalise missing or wrong facts.",
+            ],
+            "evaluation_params": ["actual_output", "expected_output"],
+            "rubric": [
+                {"score_range": [1, 1], "expected_outcome": "Wrong or missing answer."},
+                {"score_range": [3, 3], "expected_outcome": "Partly correct answer."},
+                {"score_range": [5, 5], "expected_outcome": "Fully correct answer."},
+            ],
+            "test_case": {
+                "input": "What is the capital of France?",
+                "actual_output": "It's Paris.",
+                "expected_output": "Paris",
+            },
+        },
+    },
+    "g_eval_generate_strict_evaluation_results": {
+        "template": "GEval.generate_strict_evaluation_results",
+        "inputs": {
+            "evaluation_steps": ["Check that the actual output names the capital of France."],
+            "evaluation_params": ["input", "actual_output"],
+            "test_case": {
+                "input": "What is the capital of France?",
+                "actual_output": "Paris is the capital of France.",
+            },
+        },
+    },
+    "faithfulness_generate_claims": {
+        "template": "FaithfulnessMetric.generate_claims",
+        "inputs": {
+            "actual_output": "Paris is the capital of France. The Louvre opened in 1893.",
+        },
+    },
+    "faithfulness_generate_truths": {
+        "template": "FaithfulnessMetric.generate_truths",
+        "inputs": {"retrieval_context": PARIS_CONTEXT, "truths_extraction_limit": None},
+    },
+    "faithfulness_generate_truths_limit_1": {
+        "template": "FaithfulnessMetric.generate_truths",
+        "inputs": {"retrieval_context": PARIS_CONTEXT, "truths_extraction_limit": 1},
+    },
+    "faithfulness_generate_truths_limit_3": {
+        "template": "FaithfulnessMetric.generate_truths",
+        "inputs": {"retrieval_context": PARIS_CONTEXT, "truths_extraction_limit": 3},
+    },
+    "faithfulness_generate_verdicts": {
+        "template": "FaithfulnessMetric.generate_verdicts",
+        "inputs": {
+            "claims": ["Paris is the capital of France.", "The Louvre opened in 1893."],
+            "truths": ["Paris is the capital of France.", "The Louvre opened in 1793."],
+        },
+    },
+    "faithfulness_generate_reason": {
+        "template": "FaithfulnessMetric.generate_reason",
+        "inputs": {
+            "score": 0.5,
+            "contradictions": [
+                "The actual output says the Louvre opened in 1893, but it opened in 1793.",
+            ],
+        },
+    },
+    "faithfulness_generate_reason_no_contradictions": {
+        "template": "FaithfulnessMetric.generate_reason",
+        "inputs": {"score": 1.0, "contradictions": []},
+    },
+    "hallucination_generate_verdicts": {
+        "template": "HallucinationMetric.generate_verdicts",
+        "inputs": {
+            "actual_output": "Paris is the capital of France. The Louvre opened in 1893.",
+            "contexts": PARIS_CONTEXT[:2],
+        },
+    },
+    "hallucination_generate_reason": {
+        "template": "HallucinationMetric.generate_reason",
+        "inputs": {
+            "score": 0.5,
+            "factual_alignments": ["The actual output agrees that Paris is France's capital."],
+            "contradictions": ["The actual output says 1893; the context says 1793."],
+        },
+    },
+    "answer_relevancy_generate_statements": {
+        "template": "AnswerRelevancyMetric.generate_statements",
+        "inputs": {
+            "actual_output": "Paris is the capital of France. It's known for café culture.",
+        },
+    },
+    "answer_relevancy_generate_verdicts": {
+        "template": "AnswerRelevancyMetric.generate_verdicts",
+        "inputs": {
+            "input": "What is the capital of France?",
+            "statements": ["Paris is the capital of France.", "It's known for café culture."],
+        },
+    },
+    "answer_relevancy_generate_reason": {
+        "template": "AnswerRelevancyMetric.generate_reason",
+        "inputs": {
+            "score": 0.6667,
+            "input": "What is the capital of France?",
+            "irrelevant_statements": ["Café culture does not answer the question."],
+        },
+    },
+    "contextual_precision_generate_verdicts": {
+        "template": "ContextualPrecisionMetric.generate_verdicts",
+        "inputs": {
+            "input": "What is the capital of France?",
+            "expected_output": "Paris",
+            "retrieval_context": PARIS_CONTEXT,
+        },
+    },
+    "contextual_precision_generate_verdicts_one_document": {
+        "template": "ContextualPrecisionMetric.generate_verdicts",
+        "inputs": {
+            "input": "What is the capital of France?",
+            "expected_output": "Paris",
+            "retrieval_context": PARIS_CONTEXT[:1],
+        },
+    },
+    "contextual_precision_generate_reason": {
+        "template": "ContextualPrecisionMetric.generate_reason",
+        "inputs": {
+            "score": 0.8333,
+            "input": "What is the capital of France?",
+            "verdicts": [
+                {"verdict": "yes", "reason": "It says 'Paris is the capital'."},
+                {"verdict": "no", "reason": "The Louvre is unrelated to the question."},
+                {"verdict": "yes", "reason": "It mentions France."},
+            ],
+        },
+    },
+    "contextual_recall_generate_verdicts": {
+        "template": "ContextualRecallMetric.generate_verdicts",
+        "inputs": {
+            "expected_output": "Paris is the capital of France. The Louvre opened in 1793.",
+            "retrieval_context": PARIS_CONTEXT,
+        },
+    },
+    "contextual_recall_generate_reason": {
+        "template": "ContextualRecallMetric.generate_reason",
+        "inputs": {
+            "score": 0.5,
+            "expected_output": "Paris is the capital of France. Its metro opened in 1900.",
+            "supportive_reasons": ["The 1st node says Paris is the capital."],
+            "unsupportive_reasons": ["No node mentions the metro."],
+        },
+    },
+    "tool_correctness_get_tool_selection_score": {
+        "template": "ToolCorrectnessMetric.get_tool_selection_score",
+        "inputs": {
+            "input": "What's the weather in Paris?",
+            "tools_called": [
+                {"name": "get_weather", "input_parameters": {"city": "Paris"},
+                 "output": {"temp_c": 18}},
+            ],
+            "available_tools": GOLDEN_TOOLS,
+        },
+    },
+}
+
+
+def check_prompt_coverage():
+    """Fails unless every bundled template of the seven metrics is rendered
+    by some case or listed in UNRENDERED_TEMPLATES."""
+    rendered = {case["template"] for case in PROMPT_CASES.values()}
+    unknown = rendered - PROMPT_RENDERERS.keys()
+    if unknown:
+        raise RuntimeError(f"no renderer for {sorted(unknown)}")
+    classes = {key.split(".")[0] for key in PROMPT_RENDERERS}
+    bundled = {
+        f"{cls}.{method}"
+        for cls in classes
+        for method, _ in iter_base_template_methods("metrics", cls)
+    }
+    missing = bundled - rendered - UNRENDERED_TEMPLATES
+    if missing:
+        raise RuntimeError(f"no prompt case renders {sorted(missing)}")
+
+
+def run_prompt_case(name, case):
+    out_dir = os.path.join(PROMPTS, name)
+    os.makedirs(out_dir, exist_ok=True)
+    prompt = PROMPT_RENDERERS[case["template"]](case["inputs"])
+    write_json(os.path.join(out_dir, "input.json"), case)
+    with open(os.path.join(out_dir, "prompt.txt"), "w", encoding="utf-8", newline="") as f:
+        f.write(prompt)
+
+
 def run_scenario(name, scenario):
     out_dir = os.path.join(FIXTURES, name)
     os.makedirs(out_dir, exist_ok=True)
@@ -512,6 +913,10 @@ def main():
             if os.path.isfile(os.path.join(SCRIPTED, name, "script.json")):
                 run_scripted_scenario(name)
                 print(f"wrote {os.path.relpath(os.path.join(SCRIPTED, name), ROOT)}")
+        check_prompt_coverage()
+        for name, case in PROMPT_CASES.items():
+            run_prompt_case(name, case)
+            print(f"wrote {os.path.relpath(os.path.join(PROMPTS, name), ROOT)}")
     finally:
         shutil.rmtree(WORK_DIR, ignore_errors=True)
 

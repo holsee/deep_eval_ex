@@ -1,0 +1,16 @@
+{
+  "template": "GEval.generate_strict_evaluation_results",
+  "inputs": {
+    "evaluation_steps": [
+      "Check that the actual output names the capital of France."
+    ],
+    "evaluation_params": [
+      "input",
+      "actual_output"
+    ],
+    "test_case": {
+      "input": "What is the capital of France?",
+      "actual_output": "Paris is the capital of France."
+    }
+  }
+}

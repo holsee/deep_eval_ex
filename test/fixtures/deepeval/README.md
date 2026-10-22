@@ -1,6 +1,6 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in two sets:
+Fixtures written by **deepeval 4.3.1**, in three sets:
 
 - export scenarios (the directories below, except `scripted/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
@@ -9,6 +9,10 @@ Fixtures written by **deepeval 4.3.1**, in two sets:
   `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's eight
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
+- [prompt goldens](#prompt-goldens) (`prompts/`), used by
+  `test/deep_eval_ex/prompt_golden_test.exs` to check that each
+  `DeepEvalEx.Prompts` function renders the same prompt as the deepeval
+  template it stands for, for the same inputs
 
 ## Export scenarios
 
@@ -52,12 +56,14 @@ repository. It rewrites every scenario directory; scenarios are defined in
 the parity test's "covers every scenario" assertion.
 
 It also rewrites the outputs of every scripted scenario that has a
-`script.json`. Runs are deterministic: no network, a fixed string hash seed
+`script.json`, and every [prompt golden](#prompt-goldens) (defined in
+`PROMPT_CASES`). Runs are deterministic: no network, a fixed string hash seed
 (deepeval orders some reasons by iterating sets), and only the `runDuration`
 values change between runs.
 
 Then run `mix test test/deep_eval_ex/parity_test.exs
-test/deep_eval_ex/scripted_parity_test.exs`. A difference is a bug to fix in
+test/deep_eval_ex/scripted_parity_test.exs
+test/deep_eval_ex/prompt_golden_test.exs`. A difference is a bug to fix in
 DeepEvalEx, not something to normalise away.
 
 ## What the parity test normalises
@@ -164,3 +170,87 @@ rows here.
 | verbose_logs | every scenario but `exact_match_*` | No `verbose_logs` on results (P1.7) | P1.7 |
 | test_run | every scenario but `exact_match_*` and `g_eval_strict` | No `verboseLogs` in the export (P1.7). Also, as above: strict scores (P1.3), Hallucination direction (P1.1) and its `context` exported as `retrievalContext` too (P1.4), ToolCorrectness `evaluationModel` (P1.3) and reasons (P1.6) | P1.7 |
 | test_run | `g_eval_strict` | No `verboseLogs` (P1.7) and strict scoring (P1.3, P1.11) | P1.11 |
+
+## Prompt goldens
+
+`prompts/<case>/` holds one prompt deepeval 4.3.1 renders for one of the
+seven LLM-judged metrics, for fixed inputs:
+
+- `input.json` - `template`, deepeval's template class key and method (e.g.
+  `FaithfulnessMetric.generate_truths`, from
+  `deepeval/metrics/faithfulness/templates/generate_truths.txt`), and
+  `inputs`, the metric-level values the prompt is built from (a retrieval
+  context list, an extraction limit, a score, verdicts, ...)
+- `prompt.txt` - the rendered prompt, byte for byte, with no trailing newline
+  added
+
+Cases are defined in `PROMPT_CASES` in the generator, which renders each the
+way the metric does: the metric's own `_get_prompt` (strict Jinja,
+`multimodal=False`) with the arguments its helpers derive from the inputs
+(`"\n\n".join` of truths, `format(score, ".2f")`,
+`_contextual_precision_verdict_fields`, `print_tools_called`, ...); GEval's
+cases call the metric's `_steps_prompt` and `_results_prompt`. The generator
+fails if a bundled template of these metrics is neither rendered by a case
+nor listed in `UNRENDERED_TEMPLATES`.
+
+The Elixir test turns the same inputs into the options the DeepEvalEx
+metric passes its prompt function (`options/2` in the test), calls the
+function and compares the strings exactly. It also checks that the cases
+render every template in the table below, and that the table names every
+public prompt function of `DeepEvalEx.Prompts` (the `format_*` helpers
+aside).
+
+### Template map
+
+Which 4.3.1 template each DeepEvalEx prompt function stands for. P1.6
+replaces each function's text with its template, verbatim. Templates live in
+`deepeval/metrics/<metric>/templates/<method>.txt` and are rendered from the
+bundle `deepeval/templates/metrics/templates.json`.
+
+| DeepEvalEx function | deepeval 4.3.1 template | Template arguments (from the metric) | Cases |
+| --- | --- | --- | --- |
+| `Prompts.GEval.generate_evaluation_steps/1` | `GEval.generate_evaluation_steps` (`g_eval/templates/generate_evaluation_steps.txt`) | `criteria`, `parameters` | `g_eval_generate_evaluation_steps`, `_three_params` |
+| `Prompts.GEval.generate_evaluation_results/1` | `GEval.generate_evaluation_results` (`g_eval/templates/generate_evaluation_results.txt`) | `evaluation_steps` (numbered), `test_case_content`, `parameters`, `rubric`, `score_range`, `_additional_context` | `g_eval_generate_evaluation_results`, `_rubric` |
+| `Prompts.GEval.generate_strict_evaluation_results/1` | `GEval.generate_strict_evaluation_results` (`g_eval/templates/generate_strict_evaluation_results.txt`) | `evaluation_steps`, `test_case_content`, `parameters`, `_additional_context` | `g_eval_generate_strict_evaluation_results` |
+| `Prompts.Faithfulness.generate_claims/1` | `FaithfulnessMetric.generate_claims` (`faithfulness/templates/generate_claims.txt`) | `actual_output`, `multimodal_instruction` | `faithfulness_generate_claims` |
+| `Prompts.Faithfulness.generate_truths/1` | `FaithfulnessMetric.generate_truths` (`faithfulness/templates/generate_truths.txt`) | `retrieval_context` (joined with blank lines), `limit` (phrase), `multimodal_instruction` | `faithfulness_generate_truths`, `_limit_1`, `_limit_3` |
+| `Prompts.Faithfulness.generate_verdicts/1` | `FaithfulnessMetric.generate_verdicts` (`faithfulness/templates/generate_verdicts.txt`) | `claims` (list), `retrieval_context` (truths joined with blank lines) | `faithfulness_generate_verdicts` |
+| `Prompts.Faithfulness.generate_reason/1` | `FaithfulnessMetric.generate_reason` (`faithfulness/templates/generate_reason.txt`) | `contradictions` (list), `score` (`.2f`) | `faithfulness_generate_reason`, `_no_contradictions` |
+| `Prompts.Hallucination.generate_verdicts/1` | `HallucinationMetric.generate_verdicts` (`hallucination/templates/generate_verdicts.txt`) | `actual_output`, `contexts` (list), `contexts_count` | `hallucination_generate_verdicts` |
+| `Prompts.Hallucination.generate_reason/1` | `HallucinationMetric.generate_reason` (`hallucination/templates/generate_reason.txt`) | `factual_alignments`, `contradictions` (lists), `score` (`.2f`) | `hallucination_generate_reason` |
+| `Prompts.AnswerRelevancy.generate_statements/1` | `AnswerRelevancyMetric.generate_statements` (`answer_relevancy/templates/generate_statements.txt`) | `actual_output` | `answer_relevancy_generate_statements` |
+| `Prompts.AnswerRelevancy.generate_verdicts/1` | `AnswerRelevancyMetric.generate_verdicts` (`answer_relevancy/templates/generate_verdicts.txt`) | `input`, `statements` (list) | `answer_relevancy_generate_verdicts` |
+| `Prompts.AnswerRelevancy.generate_reason/1` | `AnswerRelevancyMetric.generate_reason` (`answer_relevancy/templates/generate_reason.txt`) | `irrelevant_statements` (list), `input`, `score` (`.2f`) | `answer_relevancy_generate_reason` |
+| `Prompts.ContextualPrecision.generate_verdicts/1` | `ContextualPrecisionMetric.generate_verdicts` (`contextual_precision/templates/generate_verdicts.txt`) | `input`, `expected_output`, `document_count_str`, `context_to_display` (list), `multimodal_note` | `contextual_precision_generate_verdicts`, `_one_document` |
+| `Prompts.ContextualPrecision.generate_reason/1` | `ContextualPrecisionMetric.generate_reason` (`contextual_precision/templates/generate_reason.txt`) | `input`, `verdicts` (list of `verdict`/`reason` dicts), `score` (`.2f`) | `contextual_precision_generate_reason` |
+| `Prompts.ContextualRecall.generate_verdicts/1` | `ContextualRecallMetric.generate_verdicts` (`contextual_recall/templates/generate_verdicts.txt`) | `expected_output`, `content_type`, `content_type_plural`, `content_or`, `context_to_display` (list), `node_instruction` | `contextual_recall_generate_verdicts` |
+| `Prompts.ContextualRecall.generate_reason/1` | `ContextualRecallMetric.generate_reason` (`contextual_recall/templates/generate_reason.txt`) | `expected_output`, `supportive_reasons`, `unsupportive_reasons` (lists), `score` (`.2f`), `content_type` | `contextual_recall_generate_reason` |
+| `Prompts.ToolCorrectness.get_tool_selection_score/1` | `ToolCorrectnessMetric.get_tool_selection_score` (`tool_correctness/templates/get_tool_selection_score.txt`) | `user_input`, `tools_called`, `available_tools` (both `print_tools_called`) | `tool_correctness_get_tool_selection_score` |
+
+Templates of these metrics without a DeepEvalEx counterpart, so without a
+case:
+
+- `GEval.generate_trace_evaluation_steps`, `generate_trace_evaluation_results`
+  and `generate_strict_trace_evaluation_results`: GEval on a trace (no
+  `evaluation_params`), which needs tracing (P9)
+- the `_experimental_system_one_*` templates (`_questions`, `_verdict`,
+  `_tool_selection_score`): System One eval modes (P3)
+
+`DeepEvalEx.Prompts.GEval.format_evaluation_steps/1`, `format_params/1` and
+`format_test_case_content/2` and `Prompts.ToolCorrectness.format_tools/1`
+stand for deepeval's `number_evaluation_steps`,
+`construct_g_eval_params_string`, `construct_test_case_string` and
+`print_tools_called`.
+
+### Known divergences
+
+Every case is tagged `known_divergence: "P1.6"` in
+`@known_divergences` (`test/deep_eval_ex/prompt_golden_test.exs`): the
+prompts are paraphrased from older deepeval templates, not 4.3.1's. Besides
+the wording, they format the inputs differently: scores rounded with
+`Float.round/2` (`0.5`) rather than `.2f` (`0.50`), lists numbered or
+JSON-encoded rather than printed as Python lists, `(none)` for an empty
+list, GEval's rubric as `- Score n: ...` lines sorted high to low, tools as
+JSON in another key order and indentation, with a lower-case `type` and no
+`null` fields, and a trailing newline deepeval's prompts lack. P1.6 removes
+the tag.

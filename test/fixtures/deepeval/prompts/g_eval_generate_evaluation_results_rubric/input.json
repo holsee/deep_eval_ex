@@ -1,0 +1,41 @@
+{
+  "template": "GEval.generate_evaluation_results",
+  "inputs": {
+    "evaluation_steps": [
+      "Compare the actual output with the expected output.",
+      "Penalise missing or wrong facts."
+    ],
+    "evaluation_params": [
+      "actual_output",
+      "expected_output"
+    ],
+    "rubric": [
+      {
+        "score_range": [
+          1,
+          1
+        ],
+        "expected_outcome": "Wrong or missing answer."
+      },
+      {
+        "score_range": [
+          3,
+          3
+        ],
+        "expected_outcome": "Partly correct answer."
+      },
+      {
+        "score_range": [
+          5,
+          5
+        ],
+        "expected_outcome": "Fully correct answer."
+      }
+    ],
+    "test_case": {
+      "input": "What is the capital of France?",
+      "actual_output": "It's Paris.",
+      "expected_output": "Paris"
+    }
+  }
+}

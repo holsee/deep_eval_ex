@@ -1,0 +1,28 @@
+Based on the given text, please generate a comprehensive list of the 3 most important FACTUAL, undisputed truths per document, that can inferred from the provided text.
+These truths, MUST BE COHERENT. They must NOT be taken out of context.
+
+Example:
+Example Text: 
+"Albert Einstein, the genius often associated with wild hair and mind-bending theories, famously won the Nobel Prize in Physics—though not for his groundbreaking work on relativity, as many assume. Instead, in 1968, he was honored for his discovery of the photoelectric effect, a phenomenon that laid the foundation for quantum mechanics."
+
+Example JSON: 
+{
+  "truths": [
+    "Einstein won the noble prize for his discovery of the photoelectric effect in 1968.",
+    "The photoelectric effect is a phenomenon that laid the foundation for quantum mechanics."
+  ]  
+}
+===== END OF EXAMPLE ======
+**
+IMPORTANT: Please make sure to only return in JSON format, with the "truths" key as a list of strings. No words or explanation is needed.
+Only include truths that are factual, BUT IT DOESN'T MATTER IF THEY ARE FACTUALLY CORRECT.
+**
+
+Text:
+Paris is the capital and largest city of France.
+
+The Louvre, the world's most-visited museum, opened in 1793.
+
+France's café culture dates back to the 17th century.
+
+JSON:

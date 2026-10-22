@@ -1,0 +1,11 @@
+{
+  "template": "ContextualRecallMetric.generate_verdicts",
+  "inputs": {
+    "expected_output": "Paris is the capital of France. The Louvre opened in 1793.",
+    "retrieval_context": [
+      "Paris is the capital and largest city of France.",
+      "The Louvre, the world's most-visited museum, opened in 1793.",
+      "France's café culture dates back to the 17th century."
+    ]
+  }
+}

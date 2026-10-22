@@ -1,0 +1,44 @@
+Based on the given claims, which is a list of strings, generate a list of JSON objects to indicate whether EACH claim contradicts any facts in the retrieval context. The JSON will have 2 fields: 'verdict' and 'reason'.
+The 'verdict' key should STRICTLY be either 'yes', 'no', or 'borderline', which states whether the given claim agrees with the context. 
+Provide a 'reason' ONLY if the answer is 'no' or 'borderline'. 
+The provided claim is drawn from the actual output. Try to provide a correction in the reason using the facts in the retrieval context.
+
+
+Expected JSON format:
+{
+"verdicts": [
+{
+"verdict": "yes"
+},
+{
+"reason": <explanation_for_contradiction>,
+"verdict": "no"
+},
+{
+"reason": <explanation_for_uncertainty>,
+"verdict": "borderline"
+}
+]  
+}
+
+
+**
+IMPORTANT: Please make sure to only return in JSON format, with the 'verdicts' key as a list of JSON objects.
+
+Generate ONE verdict per claim - length of 'verdicts' MUST equal number of claims.
+No 'reason' needed for 'yes' verdicts.
+Only use 'no' if retrieval context DIRECTLY CONTRADICTS the claim - never use prior knowledge.
+Use 'borderline' for claims not backed up by context OR factually incorrect but non-contradictory - do not assume your knowledge.
+Vague/speculative language in claims (e.g. 'may have', 'possibility') does NOT count as contradiction.
+
+**
+
+Retrieval Contexts:
+Paris is the capital of France.
+
+The Louvre opened in 1793.
+
+Claims:
+['Paris is the capital of France.', 'The Louvre opened in 1893.']
+
+JSON:

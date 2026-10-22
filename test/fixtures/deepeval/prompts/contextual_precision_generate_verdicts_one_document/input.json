@@ -1,0 +1,10 @@
+{
+  "template": "ContextualPrecisionMetric.generate_verdicts",
+  "inputs": {
+    "input": "What is the capital of France?",
+    "expected_output": "Paris",
+    "retrieval_context": [
+      "Paris is the capital and largest city of France."
+    ]
+  }
+}

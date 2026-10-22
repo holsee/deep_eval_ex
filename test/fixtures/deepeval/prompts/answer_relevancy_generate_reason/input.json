@@ -1,0 +1,10 @@
+{
+  "template": "AnswerRelevancyMetric.generate_reason",
+  "inputs": {
+    "score": 0.6667,
+    "input": "What is the capital of France?",
+    "irrelevant_statements": [
+      "Café culture does not answer the question."
+    ]
+  }
+}

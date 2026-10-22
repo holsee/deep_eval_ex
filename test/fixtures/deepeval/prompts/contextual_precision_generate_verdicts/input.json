@@ -1,0 +1,12 @@
+{
+  "template": "ContextualPrecisionMetric.generate_verdicts",
+  "inputs": {
+    "input": "What is the capital of France?",
+    "expected_output": "Paris",
+    "retrieval_context": [
+      "Paris is the capital and largest city of France.",
+      "The Louvre, the world's most-visited museum, opened in 1793.",
+      "France's café culture dates back to the 17th century."
+    ]
+  }
+}
