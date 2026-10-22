@@ -17,6 +17,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   1. **Generate verdicts** - For each retrieval context node, determine if it's:
      - `yes` - Useful in arriving at the expected output
      - `no` - Not useful/irrelevant
+     Other verdicts are dropped.
   2. **Calculate score** - Weighted cumulative precision:
      - For each relevant node at position k: precision@k = relevant_so_far / k
      - Score = sum(precision@k for relevant nodes) / total_relevant_nodes

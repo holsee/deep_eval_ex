@@ -197,19 +197,13 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
     end
   end
 
-  describe "measure/2 with idk verdicts" do
-    test "treats idk verdicts as faithful (not contradicting)" do
-      # Mock truths extraction
+  describe "measure/2 with borderline verdicts" do
+    setup do
       Mock.set_schema_response(
         ~r/generate a comprehensive list of.*truths/i,
-        %{
-          "truths" => [
-            "The API supports JSON responses."
-          ]
-        }
+        %{"truths" => ["The API supports JSON responses."]}
       )
 
-      # Mock claims extraction
       Mock.set_schema_response(
         ~r/extract a comprehensive list of FACTUAL/i,
         %{
@@ -220,18 +214,6 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
         }
       )
 
-      # Mock verdicts - first yes, second idk (not mentioned)
-      Mock.set_schema_response(
-        ~r/indicate whether EACH claim contradicts/i,
-        %{
-          "verdicts" => [
-            %{"verdict" => "yes"},
-            %{"verdict" => "idk", "reason" => "XML support is not mentioned in the context."}
-          ]
-        }
-      )
-
-      # Mock reason generation
       Mock.set_schema_response(
         ~r/CONCISELY summarize the contradictions/i,
         %{
@@ -244,19 +226,68 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
         TestCase.new!(
           input: "What formats does the API support?",
           actual_output: "The API supports JSON and XML responses.",
-          retrieval_context: [
-            "The API supports JSON responses."
-          ]
+          retrieval_context: ["The API supports JSON responses."]
         )
 
+      %{test_case: test_case}
+    end
+
+    test "treats borderline verdicts as faithful (not contradicting)", %{test_case: test_case} do
+      Mock.set_schema_response(
+        ~r/indicate whether EACH claim contradicts/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{
+              "verdict" => "borderline",
+              "reason" => "XML support is not mentioned in the context."
+            }
+          ]
+        }
+      )
+
       assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
-      # idk counts as faithful (not a contradiction)
-      assert result.score == 1.0
+      assert result.score === 1.0
+      assert [%{verdict: :yes}, %{verdict: :borderline}] = result.metadata.verdicts
+    end
+
+    test "reads the legacy idk verdict as borderline", %{test_case: test_case} do
+      Mock.set_schema_response(
+        ~r/indicate whether EACH claim contradicts/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "no", "reason" => "Contradicts."},
+            %{"verdict" => "idk", "reason" => "XML support is not mentioned in the context."}
+          ]
+        }
+      )
+
+      assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
+      assert result.score === 0.5
+      assert [%{verdict: :no}, %{verdict: :borderline}] = result.metadata.verdicts
+    end
+
+    test "drops unknown verdicts instead of counting them as faithful", %{
+      test_case: test_case
+    } do
+      Mock.set_schema_response(
+        ~r/indicate whether EACH claim contradicts/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "No, the context says otherwise.", "reason" => "Contradicts."},
+            %{"verdict" => "unsure", "reason" => "?"}
+          ]
+        }
+      )
+
+      assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
+      assert result.score === 0.0
+      assert [%{verdict: :no}] = result.metadata.verdicts
     end
   end
 
   describe "measure/2 with no claims" do
-    test "returns score 1.0 when no claims extracted" do
+    test "returns score 1 when no claims extracted" do
       # Mock truths extraction
       Mock.set_schema_response(
         ~r/generate a comprehensive list of.*truths/i,
@@ -288,8 +319,8 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
         )
 
       assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
-      # No claims = perfectly faithful
-      assert result.score == 1.0
+      # No claims = perfectly faithful; deepeval's QAG scoring returns the integer 1
+      assert result.score === 1
     end
   end
 

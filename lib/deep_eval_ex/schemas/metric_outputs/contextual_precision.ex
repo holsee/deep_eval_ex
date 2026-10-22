@@ -6,6 +6,8 @@ defmodule DeepEvalEx.Schemas.MetricOutputs.ContextualPrecision do
   JSON schemas for ContextualPrecision metric LLM responses.
   """
 
+  alias DeepEvalEx.Metrics.QAG
+
   @doc """
   JSON schema for verdicts generation.
 
@@ -63,35 +65,15 @@ defmodule DeepEvalEx.Schemas.MetricOutputs.ContextualPrecision do
   @doc """
   Parses verdicts response from LLM.
 
-  Returns a list of verdict maps with :verdict and :reason keys.
+  Returns a list of verdict maps with :verdict and :reason keys, normalised
+  by `DeepEvalEx.Metrics.QAG.parse_verdicts/2`: verdicts other than yes and
+  no are dropped.
   """
-  def parse_verdicts(%{"verdicts" => verdicts}) when is_list(verdicts) do
-    parsed =
-      Enum.map(verdicts, fn verdict ->
-        %{
-          verdict: normalize_verdict(verdict["verdict"]),
-          reason: verdict["reason"]
-        }
-      end)
-
-    {:ok, parsed}
-  end
-
-  def parse_verdicts(other), do: {:error, {:invalid_verdicts_response, other}}
+  def parse_verdicts(response), do: QAG.parse_verdicts(response, QAG.yes_no())
 
   @doc """
   Parses reason response from LLM.
   """
   def parse_reason(%{"reason" => reason}) when is_binary(reason), do: {:ok, reason}
   def parse_reason(other), do: {:error, {:invalid_reason_response, other}}
-
-  defp normalize_verdict(v) when is_binary(v) do
-    case String.downcase(String.trim(v)) do
-      "yes" -> :yes
-      "no" -> :no
-      _ -> :no
-    end
-  end
-
-  defp normalize_verdict(_), do: :no
 end

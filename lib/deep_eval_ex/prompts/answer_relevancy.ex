@@ -56,7 +56,7 @@ defmodule DeepEvalEx.Prompts.AnswerRelevancy do
   Each verdict indicates whether the statement:
   - "yes" - Is relevant to addressing the input
   - "no" - Is irrelevant to the input
-  - "idk" - Is ambiguous (supporting information)
+  - "borderline" - Is ambiguous (supporting information)
   """
   def generate_verdicts(opts) do
     input = Keyword.fetch!(opts, :input)
@@ -67,8 +67,8 @@ defmodule DeepEvalEx.Prompts.AnswerRelevancy do
     """
     For the provided list of statements, determine whether each statement is relevant to address the input.
     Generate JSON objects with 'verdict' and 'reason' fields.
-    The 'verdict' should be 'yes' (relevant), 'no' (irrelevant), or 'idk' (ambiguous/supporting information).
-    Provide 'reason' ONLY for 'no' or 'idk' verdicts.
+    The 'verdict' should be 'yes' (relevant), 'no' (irrelevant), or 'borderline' (ambiguous/supporting information).
+    Provide 'reason' ONLY for 'no' or 'borderline' verdicts.
     The statements are from an AI's actual output.
 
     **
@@ -86,17 +86,17 @@ defmodule DeepEvalEx.Prompts.AnswerRelevancy do
             },
             {
                 "reason": "<explanation_for_ambiguity>",
-                "verdict": "idk"
+                "verdict": "borderline"
             }
         ]
     }
 
     Generate ONE verdict per statement - number of 'verdicts' MUST equal number of statements.
-    'verdict' must be STRICTLY 'yes', 'no', or 'idk':
+    'verdict' must be STRICTLY 'yes', 'no', or 'borderline':
     - 'yes': statement is relevant to addressing the input
     - 'no': statement is irrelevant to the input
-    - 'idk': statement is ambiguous (not directly relevant but could be supporting information)
-    Provide 'reason' ONLY for 'no' or 'idk' verdicts.
+    - 'borderline': statement is ambiguous (not directly relevant but could be supporting information)
+    Provide 'reason' ONLY for 'no' or 'borderline' verdicts.
     **
 
     Input:

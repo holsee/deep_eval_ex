@@ -297,6 +297,55 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
     end
   end
 
+  describe "measure/2 verdict normalisation" do
+    setup do
+      Mock.set_schema_response(
+        ~r/summarize a CONCISE reason for the score/i,
+        %{"reason" => "The score is 0.00."}
+      )
+
+      test_case =
+        TestCase.new!(
+          input: "Tell me about Paris",
+          expected_output: "Paris is the capital of France. It has a population of 2 million.",
+          retrieval_context: ["Paris is the capital city of France."]
+        )
+
+      %{test_case: test_case}
+    end
+
+    test "reads verbose verdicts by their leading word and drops unknown ones", %{
+      test_case: test_case
+    } do
+      Mock.set_schema_response(
+        ~r/determine whether the sentence can be attributed/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "YES - node 1", "reason" => "Attributed to 1st node."},
+            %{"verdict" => "partially", "reason" => "Unsure."}
+          ]
+        }
+      )
+
+      assert {:ok, result} = ContextualRecall.measure(test_case, adapter: :mock)
+      assert result.score === 1.0
+      assert [%{verdict: :yes}] = result.metadata.verdicts
+    end
+
+    test "scores the integer 0 when no verdicts remain, as deepeval does", %{
+      test_case: test_case
+    } do
+      Mock.set_schema_response(
+        ~r/determine whether the sentence can be attributed/i,
+        %{"verdicts" => [%{"verdict" => "unknown", "reason" => "?"}]}
+      )
+
+      assert {:ok, result} = ContextualRecall.measure(test_case, adapter: :mock)
+      assert result.score === 0
+      assert result.success == false
+    end
+  end
+
   describe "measure/2 validation" do
     test "returns error when expected_output is missing" do
       test_case = %DeepEvalEx.TestCase{

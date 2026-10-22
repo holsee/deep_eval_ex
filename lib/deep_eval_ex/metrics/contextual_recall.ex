@@ -17,7 +17,9 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
   1. **Generate verdicts** - For each sentence in expected output, determine if it's:
      - `yes` - Can be attributed to nodes in retrieval context
      - `no` - Cannot be attributed to any context
-  2. **Calculate score** - (attributed sentences) / (total sentences)
+     Other verdicts are dropped.
+  2. **Calculate score** - (attributed sentences) / (total verdicts), or `0`
+     when there are none
   3. **Higher score is better** - Success when score ≥ threshold
 
   ## Precision vs Recall
@@ -53,7 +55,7 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, Result}
+  alias DeepEvalEx.{LLM.Adapter, Metrics.QAG, Result}
   alias DeepEvalEx.Prompts.ContextualRecall, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.ContextualRecall, as: Schema
 
@@ -126,17 +128,9 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
     end
   end
 
-  defp calculate_score([]), do: 0.0
-
+  # As in deepeval 4.3.1, no verdicts scores the integer 0
   defp calculate_score(verdicts) do
-    total = length(verdicts)
-
-    attributed_count =
-      Enum.count(verdicts, fn %{verdict: v} ->
-        v == :yes
-      end)
-
-    attributed_count / total
+    QAG.score_qag_verdicts(verdicts, passing: [:yes], empty_score: 0)
   end
 
   defp maybe_generate_reason(_score, _expected_output, _verdicts, false, _opts), do: {:ok, nil}

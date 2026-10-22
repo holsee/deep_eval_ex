@@ -58,6 +58,15 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   shape, the answers, the measured state (including `confidence` and
   `system_one_fallback_reason`) and the exported test run. A new test checks
   their structure; DeepEvalEx does not implement eval modes yet.
+- **Shared QAG verdict handling.** `DeepEvalEx.Metrics.QAG` ports deepeval
+  4.3.1's `normalize_qag_verdict` and `score_qag_verdicts`:
+  `normalize_qag_verdict/2` coerces a judge's reply into `:yes`, `:no` or
+  `:borderline` within a vocabulary (`yes_no/0`, `yes_no_borderline/0`) or
+  `nil`, `parse_verdicts/2` parses a verdicts response and drops unknown
+  verdicts, and `score_qag_verdicts/2` scores the fraction in a `:passing`
+  set with deepeval's `:empty_score` and `strict_mode` clamp. The five
+  verdict metrics parse their verdicts through it, and Faithfulness,
+  AnswerRelevancy, Hallucination and ContextualRecall score through it.
 - **Scripted mode for the Mock adapter.** `Mock.script/2` replays judge
   responses keyed by step (named by the requested schema's fields, see
   `Mock.step_key/1`) and call index, reports the script's judge model and
@@ -131,6 +140,23 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   0.2 that meant "at most 20% contradicted" is now 0.8. The first Hallucination
   measurement on a node logs a warning saying so, as deepeval warns once per
   process, and the reason prompt tells the judge that higher is better.
+- **BREAKING: QAG verdicts are normalised as in deepeval 4.3.1.**
+  Faithfulness and AnswerRelevancy ask the judge for `yes`/`no`/`borderline`
+  (prompt and JSON schema enum) instead of `yes`/`no`/`idk`, and their
+  `result.metadata.verdicts` carry `:borderline` instead of `:idk`; a judge
+  that still replies `idk` is read as `borderline`. In all five verdict
+  metrics (also Hallucination, ContextualRecall and ContextualPrecision) a
+  reply is lower-cased and read by its first word (`"No, it's off-topic"` is
+  `no`), and a verdict outside the metric's vocabulary is now dropped from
+  scoring. It used to be counted: as irrelevant in AnswerRelevancy, as
+  faithful in Faithfulness, and as `no` in the others, so such responses now
+  score differently.
+- **Empty verdict lists score deepeval's integers.** With no verdicts,
+  Faithfulness, AnswerRelevancy and Hallucination score the integer `1` and
+  ContextualRecall the integer `0`, where they returned `1.0` and `0.0`, as
+  deepeval's `measure()` does (the test run export still writes `1.0`, as
+  deepeval's does). `DeepEvalEx.Result`'s `:score` is typed `number()`, and
+  `Result.summary/1` accepts an integer score.
 - **Metric names now match deepeval**, because they key the exported
   `metricsData` and `metricsScores`: `ExactMatch` is reported as
   `"Exact Match"`, and GEval as `"<name> [GEval]"`.

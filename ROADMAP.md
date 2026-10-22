@@ -68,9 +68,6 @@ checked byte for byte against golden fixtures from deepeval 4.3.1.
 
 These are fixed in [P1](#p1-correct-the-existing-metric-surface):
 
-- **`idk` instead of `borderline` verdicts.** Faithfulness and AnswerRelevancy
-  ask for `yes`/`no`/`idk`; 4.3.1 uses `yes`/`no`/`borderline` with shared
-  verdict normalisation that drops unknown verdicts.
 - **Prompt templates are not verbatim.** The prompt modules follow earlier
   deepeval templates; 4.3.1 renders `.txt` Jinja templates with shared
   fragments, so rendered prompts differ.

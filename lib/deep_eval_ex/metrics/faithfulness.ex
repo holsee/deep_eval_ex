@@ -19,8 +19,10 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
   3. **Generate verdicts** - For each claim, determine if it's:
      - `yes` - Supported by the context
      - `no` - Contradicts the context
-     - `idk` - Cannot be verified (not mentioned)
-  4. **Calculate score** - (supported claims) / (total claims)
+     - `borderline` - Cannot be verified (not mentioned); a judge's legacy
+       `idk` reads as `borderline`, and other verdicts are dropped
+  4. **Calculate score** - (supported + borderline claims) / total verdicts,
+     or `1` when there are none
 
   ## Usage
 
@@ -51,7 +53,7 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, LLM.Usage, Result}
+  alias DeepEvalEx.{LLM.Adapter, LLM.Usage, Metrics.QAG, Result}
   alias DeepEvalEx.Prompts.Faithfulness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.Faithfulness, as: Schema
 
@@ -167,17 +169,10 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
     end
   end
 
-  defp calculate_score([]), do: 1.0
-
+  # Borderline claims count as faithful, as in deepeval 4.3.1 without
+  # `penalize_ambiguous_claims`
   defp calculate_score(verdicts) do
-    total = length(verdicts)
-
-    faithful_count =
-      Enum.count(verdicts, fn %{verdict: v} ->
-        v != :no
-      end)
-
-    faithful_count / total
+    QAG.score_qag_verdicts(verdicts, passing: [:yes, :borderline])
   end
 
   defp maybe_generate_reason(_score, _verdicts, false, _opts), do: {:ok, nil}

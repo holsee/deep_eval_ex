@@ -14,7 +14,7 @@ Hallucination measures how well an LLM's output aligns with the provided context
 1. **Generate verdicts** - For each context, determine if the output:
    - `yes` - Agrees with the context (factual alignment)
    - `no` - Contradicts the context (hallucination)
-2. **Calculate score** - `(aligned contexts) / (total contexts)`, or `1.0` when the judge returns no verdicts
+2. **Calculate score** - `(aligned contexts) / (total verdicts)`, or `1` when the judge returns no verdicts. Verdicts other than `yes` and `no` are dropped
 3. **Higher score is better** - Success when score ≥ threshold
 
 > **Score direction changed.** Like deepeval 4.3.1 ([PR #3102](https://github.com/confident-ai/deepeval/pull/3102)), the score is the fraction of contexts the output agrees with. Earlier DeepEvalEx releases scored the fraction it contradicted and passed when `score <= threshold`. Review any `:threshold` you pass and any code reading `result.score`: a threshold of 0.2 that meant "at most 20% contradicted" should now be 0.8. The first measurement on a node logs a warning saying so, as deepeval does.
@@ -220,7 +220,7 @@ alias DeepEvalEx.Metrics.{Faithfulness, Hallucination}
 | Focus | Detects contradictions | Verifies claim support |
 | Score interpretation | Higher is better | Higher is better |
 | LLM calls | Fewer (verdicts + reason) | More (truths, claims, verdicts, reason) |
-| Verdicts | yes/no only | yes/no/idk |
+| Verdicts | yes/no only | yes/no/borderline |
 | Best for | Quick contradiction check | Detailed claim analysis |
 
 ### When to Choose Each

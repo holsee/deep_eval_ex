@@ -370,6 +370,38 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
     end
   end
 
+  describe "measure/2 verdict normalisation" do
+    test "reads verbose verdicts by their leading word and drops unknown ones" do
+      Mock.set_schema_response(
+        ~r/determine whether each node in the retrieval context/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "No.", "reason" => "Irrelevant."},
+            %{"verdict" => "perhaps", "reason" => "Unsure."},
+            %{"verdict" => "yes", "reason" => "Relevant."}
+          ]
+        }
+      )
+
+      Mock.set_schema_response(
+        ~r/concise summary for the score/i,
+        %{"reason" => "The score is 0.50."}
+      )
+
+      test_case =
+        TestCase.new!(
+          input: "Q",
+          expected_output: "A",
+          retrieval_context: ["C1", "C2", "C3"]
+        )
+
+      assert {:ok, result} = ContextualPrecision.measure(test_case, adapter: :mock)
+      # [no, yes] once the unknown verdict is dropped: precision@2 = 1/2
+      assert result.score === 0.5
+      assert [%{verdict: :no}, %{verdict: :yes}] = result.metadata.verdicts
+    end
+  end
+
   describe "measure/2 validation" do
     test "returns error when expected_output is missing" do
       test_case = %DeepEvalEx.TestCase{

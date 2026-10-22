@@ -15,7 +15,7 @@ Contextual Recall measures whether sentences in the expected output can be attri
 1. **Generate verdicts** - For each sentence in expected output, determine if it's:
    - `yes` - Can be attributed to nodes in retrieval context
    - `no` - Cannot be attributed to any context
-2. **Calculate score** - (attributed sentences) / (total sentences)
+2. **Calculate score** - (attributed sentences) / (total verdicts), or `0` when there are none. Verdicts other than `yes` and `no` are dropped
 3. **Higher score is better** - Success when score ≥ threshold
 
 ## Precision vs Recall

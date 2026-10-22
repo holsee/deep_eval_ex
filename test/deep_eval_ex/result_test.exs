@@ -89,6 +89,12 @@ defmodule DeepEvalEx.ResultTest do
       assert Result.summary(result) == "GEval: FAIL (25.0%) - Weak."
     end
 
+    test "accepts an integer score, as deepeval's QAG scoring returns for no verdicts" do
+      result = Result.new(metric: "Faithfulness", score: 1, threshold: 0.5)
+
+      assert Result.summary(result) == "Faithfulness: PASS (100.0%)"
+    end
+
     test "reports ERROR with the message for errored results" do
       result = Result.error("GEval", "Evaluation timed out", threshold: 0.5)
 

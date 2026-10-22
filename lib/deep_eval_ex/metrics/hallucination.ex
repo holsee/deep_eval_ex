@@ -17,7 +17,8 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   1. **Generate verdicts** - For each context, determine if the output:
      - `yes` - Agrees with the context (factual alignment)
      - `no` - Contradicts the context (hallucination)
-  2. **Calculate score** - (aligned contexts) / (total contexts), or `1.0`
+     Other verdicts are dropped.
+  2. **Calculate score** - (aligned contexts) / (total verdicts), or `1`
      when the judge returns no verdicts
   3. **Higher score is better** - Success when score ≥ threshold
 
@@ -57,7 +58,7 @@ defmodule DeepEvalEx.Metrics.Hallucination do
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, Metrics.Utils.ScoreDirection, Result}
+  alias DeepEvalEx.{LLM.Adapter, Metrics.QAG, Metrics.Utils.ScoreDirection, Result}
   alias DeepEvalEx.Prompts.Hallucination, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.Hallucination, as: Schema
 
@@ -133,12 +134,9 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   end
 
   # deepeval 4.3.1 scores the verdicts that pass (`yes`, the output agrees
-  # with the context) over all verdicts, and an empty list as a pass
-  defp calculate_score([]), do: 1.0
-
+  # with the context) over all verdicts, and an empty list as the integer 1
   defp calculate_score(verdicts) do
-    aligned = Enum.count(verdicts, fn %{verdict: v} -> v == :yes end)
-    aligned / length(verdicts)
+    QAG.score_qag_verdicts(verdicts, passing: [:yes])
   end
 
   defp maybe_generate_reason(_score, _verdicts, false, _opts), do: {:ok, nil}

@@ -16,10 +16,12 @@ Faithfulness measures whether claims in an LLM's output are supported by the ret
 3. **Generate verdicts** - For each claim, determine if it's:
    - `yes` - Supported by the context
    - `no` - Contradicts the context
-   - `idk` - Cannot be verified (not mentioned in context)
-4. **Calculate score** - `(supported claims + idk claims) / total claims`
+   - `borderline` - Cannot be verified (not mentioned in context)
+4. **Calculate score** - `(supported claims + borderline claims) / total verdicts`, or `1` when there are no claims
 
-Note: `idk` verdicts are counted as faithful since they don't contradict the context.
+Note: `borderline` verdicts are counted as faithful since they don't contradict the context.
+
+As in deepeval 4.3.1, verdicts are normalised before scoring (`DeepEvalEx.Metrics.QAG`): a judge's reply is read by its first word, so `"No, the context says otherwise"` counts as `no`; the legacy `idk` reads as `borderline`; anything else is dropped rather than counted.
 
 ## Required Parameters
 
@@ -90,14 +92,14 @@ Claim directly contradicts information in the context.
 # Verdict: no (score impact: decreases faithfulness)
 ```
 
-### Idk - Unverifiable
+### Borderline - Unverifiable
 
 Claim cannot be verified from context (not mentioned).
 
 ```elixir
 # Context: "The API supports JSON responses"
 # Output: "The API also supports XML"
-# Verdict: idk (not contradicting, so counted as faithful)
+# Verdict: borderline (not contradicting, so counted as faithful)
 ```
 
 ## Using Context Alias

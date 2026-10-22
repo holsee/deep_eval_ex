@@ -168,7 +168,7 @@ result.metadata
 #   verdicts: [
 #     %{verdict: :yes, reason: "Supported by truth 1"},
 #     %{verdict: :no, reason: "Not found in context"},
-#     %{verdict: :idk, reason: "Partially supported"}
+#     %{verdict: :borderline, reason: "Partially supported"}
 #   ]
 # }
 

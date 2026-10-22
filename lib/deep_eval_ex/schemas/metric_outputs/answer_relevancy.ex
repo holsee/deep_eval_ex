@@ -6,6 +6,8 @@ defmodule DeepEvalEx.Schemas.MetricOutputs.AnswerRelevancy do
   JSON schemas for AnswerRelevancy metric LLM responses.
   """
 
+  alias DeepEvalEx.Metrics.QAG
+
   @doc """
   JSON schema for statements extraction.
   """
@@ -32,7 +34,7 @@ defmodule DeepEvalEx.Schemas.MetricOutputs.AnswerRelevancy do
   Each verdict indicates whether a statement is relevant to the input:
   - "yes" - Relevant to addressing the input
   - "no" - Irrelevant to the input
-  - "idk" - Ambiguous/supporting information
+  - "borderline" - Ambiguous/supporting information
   """
   def verdicts_schema do
     %{
@@ -45,12 +47,12 @@ defmodule DeepEvalEx.Schemas.MetricOutputs.AnswerRelevancy do
             "properties" => %{
               "verdict" => %{
                 "type" => "string",
-                "enum" => ["yes", "no", "idk"],
+                "enum" => ["yes", "no", "borderline"],
                 "description" => "Whether the statement is relevant to the input"
               },
               "reason" => %{
                 "type" => "string",
-                "description" => "Explanation for the verdict (only for 'no' or 'idk')"
+                "description" => "Explanation for the verdict (only for 'no' or 'borderline')"
               }
             },
             "required" => ["verdict"]
@@ -94,36 +96,15 @@ defmodule DeepEvalEx.Schemas.MetricOutputs.AnswerRelevancy do
   @doc """
   Parses verdicts response from LLM.
 
-  Returns a list of verdict maps with :verdict and optional :reason keys.
+  Returns a list of verdict maps with :verdict and optional :reason keys,
+  normalised by `DeepEvalEx.Metrics.QAG.parse_verdicts/2`: `idk` is read as
+  `borderline` and verdicts outside yes/no/borderline are dropped.
   """
-  def parse_verdicts(%{"verdicts" => verdicts}) when is_list(verdicts) do
-    parsed =
-      Enum.map(verdicts, fn verdict ->
-        %{
-          verdict: normalize_verdict(verdict["verdict"]),
-          reason: verdict["reason"]
-        }
-      end)
-
-    {:ok, parsed}
-  end
-
-  def parse_verdicts(other), do: {:error, {:invalid_verdicts_response, other}}
+  def parse_verdicts(response), do: QAG.parse_verdicts(response, QAG.yes_no_borderline())
 
   @doc """
   Parses reason response from LLM.
   """
   def parse_reason(%{"reason" => reason}) when is_binary(reason), do: {:ok, reason}
   def parse_reason(other), do: {:error, {:invalid_reason_response, other}}
-
-  defp normalize_verdict(v) when is_binary(v) do
-    case String.downcase(String.trim(v)) do
-      "yes" -> :yes
-      "no" -> :no
-      "idk" -> :idk
-      _ -> :no
-    end
-  end
-
-  defp normalize_verdict(_), do: :no
 end

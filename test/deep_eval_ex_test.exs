@@ -173,7 +173,12 @@ defmodule DeepEvalExTest do
       metrics =
         for module <- modules,
             match?(["DeepEvalEx", "Metrics", _], Module.split(module)),
-            module != DeepEvalEx.Metrics.BaseMetric,
+            # Shared helpers such as DeepEvalEx.Metrics.QAG are not metrics
+            DeepEvalEx.Metrics.BaseMetric in Keyword.get(
+              module.module_info(:attributes),
+              :behaviour,
+              []
+            ),
             do: module
 
       assert DeepEvalEx.Metrics.ToolCorrectness in metrics

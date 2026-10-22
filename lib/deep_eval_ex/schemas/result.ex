@@ -61,7 +61,7 @@ defmodule DeepEvalEx.Result do
 
   @type t :: %__MODULE__{
           metric: String.t(),
-          score: float() | nil,
+          score: number() | nil,
           success: boolean(),
           reason: String.t() | nil,
           threshold: float() | nil,
@@ -202,7 +202,7 @@ defmodule DeepEvalEx.Result do
 
   def summary(%__MODULE__{} = result) do
     status = if result.success, do: "PASS", else: "FAIL"
-    score_pct = Float.round(result.score * 100, 1)
+    score_pct = Float.round(result.score * 100 / 1, 1)
 
     base = "#{result.metric}: #{status} (#{score_pct}%)"
 

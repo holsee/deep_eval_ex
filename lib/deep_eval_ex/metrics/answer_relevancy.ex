@@ -18,8 +18,10 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   2. **Generate verdicts** - For each statement, determine if it's:
      - `yes` - Relevant to addressing the input
      - `no` - Irrelevant to the input
-     - `idk` - Ambiguous (supporting information)
-  3. **Calculate score** - (relevant + ambiguous) / total statements
+     - `borderline` - Ambiguous (supporting information); a judge's legacy
+       `idk` reads as `borderline`, and other verdicts are dropped
+  3. **Calculate score** - (relevant + borderline) / total verdicts, or `1`
+     when there are none
   4. **Higher score is better** - Success when score ≥ threshold
 
   ## Usage
@@ -46,7 +48,7 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, Result}
+  alias DeepEvalEx.{LLM.Adapter, Metrics.QAG, Result}
   alias DeepEvalEx.Prompts.AnswerRelevancy, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.AnswerRelevancy, as: Schema
 
@@ -125,18 +127,9 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
     end
   end
 
-  defp calculate_score([]), do: 1.0
-
+  # Borderline statements count as relevant, as in deepeval 4.3.1
   defp calculate_score(verdicts) do
-    total = length(verdicts)
-
-    # Count relevant statements (yes and idk count as relevant)
-    relevant_count =
-      Enum.count(verdicts, fn %{verdict: v} ->
-        v != :no
-      end)
-
-    relevant_count / total
+    QAG.score_qag_verdicts(verdicts, passing: [:yes, :borderline])
   end
 
   defp maybe_generate_reason(_score, _input, _verdicts, false, _opts), do: {:ok, nil}

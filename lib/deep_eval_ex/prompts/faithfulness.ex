@@ -103,7 +103,7 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
   Each verdict indicates whether the claim:
   - "yes" - Is supported by the retrieval context
   - "no" - Contradicts the retrieval context
-  - "idk" - Cannot be verified (not mentioned in context)
+  - "borderline" - Cannot be verified (not mentioned in context)
   """
   def generate_verdicts(opts) do
     claims = Keyword.fetch!(opts, :claims)
@@ -113,8 +113,8 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
 
     """
     Based on the given claims, which is a list of strings, generate a list of JSON objects to indicate whether EACH claim contradicts any facts in the retrieval context. The JSON will have 2 fields: 'verdict' and 'reason'.
-    The 'verdict' key should STRICTLY be either 'yes', 'no', or 'idk', which states whether the given claim agrees with the context.
-    Provide a 'reason' ONLY if the answer is 'no' or 'idk'.
+    The 'verdict' key should STRICTLY be either 'yes', 'no', or 'borderline', which states whether the given claim agrees with the context.
+    Provide a 'reason' ONLY if the answer is 'no' or 'borderline'.
     The provided claim is drawn from the actual output. Try to provide a correction in the reason using the facts in the retrieval context.
 
     Expected JSON format:
@@ -129,7 +129,7 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
             },
             {
                 "reason": "<explanation_for_uncertainty>",
-                "verdict": "idk"
+                "verdict": "borderline"
             }
         ]
     }
@@ -139,7 +139,7 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
     Generate ONE verdict per claim - length of 'verdicts' MUST equal number of claims.
     No 'reason' needed for 'yes' verdicts.
     Only use 'no' if retrieval context DIRECTLY CONTRADICTS the claim - never use prior knowledge.
-    Use 'idk' for claims not backed up by context OR factually incorrect but non-contradictory.
+    Use 'borderline' for claims not backed up by context OR factually incorrect but non-contradictory.
     Vague/speculative language in claims (e.g. 'may have', 'possibility') does NOT count as contradiction.
     **
 

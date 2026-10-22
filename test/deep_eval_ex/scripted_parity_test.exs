@@ -42,8 +42,6 @@ defmodule DeepEvalEx.ScriptedParityTest do
   @known_divergences %{
     prompts: [{"P1.6", @llm_scenarios}],
     measure: [
-      {"P1.2",
-       ~w(answer_relevancy_no_statements faithfulness_no_claims hallucination_no_verdicts)},
       {"P1.3", ~w(answer_relevancy_strict contextual_precision_strict contextual_recall_strict
           exact_match_fail exact_match_pass faithfulness_strict hallucination_strict)},
       {"P1.6", ~w(tool_correctness_available_tools tool_correctness_fail tool_correctness_pass

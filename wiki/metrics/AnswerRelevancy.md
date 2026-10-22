@@ -16,11 +16,13 @@ Answer Relevancy measures whether the statements in an LLM's output are relevant
 2. **Generate verdicts** - For each statement, determine if it's:
    - `yes` - Relevant to addressing the input
    - `no` - Irrelevant to the input
-   - `idk` - Ambiguous (supporting information)
-3. **Calculate score** - `(yes + idk) / total statements`
+   - `borderline` - Ambiguous (supporting information)
+3. **Calculate score** - `(yes + borderline) / total verdicts`, or `1` when there are no statements
 4. **Higher score is better** - Success when score ≥ threshold
 
-Note: `idk` verdicts are counted as relevant since they represent supporting information that doesn't detract from the answer.
+Note: `borderline` verdicts are counted as relevant since they represent supporting information that doesn't detract from the answer.
+
+As in deepeval 4.3.1, verdicts are normalised before scoring (`DeepEvalEx.Metrics.QAG`): a judge's reply is read by its first word, so `"Yes, it is relevant"` counts as `yes`; the legacy `idk` reads as `borderline`; anything else is dropped rather than counted.
 
 ## Required Parameters
 
@@ -85,14 +87,14 @@ Statement does not address the input question.
 # Verdict: no (completely off-topic)
 ```
 
-### Idk - Ambiguous/Supporting
+### Borderline - Ambiguous/Supporting
 
 Statement provides context but doesn't directly answer.
 
 ```elixir
 # Input: "What are the features of the new laptop?"
 # Statement: "Our company was founded in 2010."
-# Verdict: idk (tangentially related background info)
+# Verdict: borderline (tangentially related background info)
 ```
 
 ## Skipping Reason Generation

@@ -300,7 +300,7 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
   end
 
   describe "measure/2 with no verdicts" do
-    test "scores 1.0 and passes, as deepeval scores an empty verdict list" do
+    test "scores 1 and passes, as deepeval scores an empty verdict list" do
       Mock.set_schema_response(
         ~r/indicate whether the given 'actual output' agrees/i,
         %{"verdicts" => []}
@@ -314,8 +314,37 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
       test_case = TestCase.new!(input: "Q", actual_output: "A", context: ["Context"])
 
       assert {:ok, result} = Hallucination.measure(test_case, adapter: :mock)
-      assert result.score == 1.0
+      # deepeval's shared QAG scoring returns the integer 1
+      assert result.score === 1
       assert result.success == true
+    end
+  end
+
+  describe "measure/2 verdict normalisation" do
+    test "reads verbose verdicts by their leading word and drops unknown ones" do
+      Mock.set_schema_response(
+        ~r/indicate whether the given 'actual output' agrees/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "Yes.", "reason" => "Agrees."},
+            %{"verdict" => "unclear", "reason" => "Cannot tell."},
+            %{"verdict" => "borderline", "reason" => "Not in Hallucination's vocabulary."}
+          ]
+        }
+      )
+
+      Mock.set_schema_response(
+        ~r/provide a reason for the hallucination score/i,
+        %{"reason" => "The score is 1.00."}
+      )
+
+      test_case =
+        TestCase.new!(input: "Q", actual_output: "A", context: ["C1", "C2", "C3"])
+
+      assert {:ok, result} = Hallucination.measure(test_case, adapter: :mock)
+      # Unknown verdicts used to count as contradictions (1 / 3)
+      assert result.score === 1.0
+      assert [%{verdict: :yes, reason: "Agrees."}] = result.metadata.verdicts
     end
   end
 
