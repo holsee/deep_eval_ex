@@ -47,7 +47,7 @@ results = Evaluator.evaluate(test_cases, metrics)
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `:concurrency` | integer | schedulers * 2 | Maximum concurrent evaluations |
-| `:timeout` | integer | 60_000 | Timeout per test case (ms) |
+| `:timeout` | integer | `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE`, else 180_000 | Timeout per test case (ms), deepeval's per-task timeout |
 | `:threshold` | float | 0.5 | Default threshold for all metrics; `nil` makes them score-only |
 | `:strict_mode` | boolean | false | Default strict mode: threshold forced to `1`, lower scores clamped to `0` |
 | `:flaky` | boolean | false | Default flakiness: results never decide a test case's success |
@@ -147,8 +147,9 @@ end)
 ### Timeout Handling
 
 ```elixir
-# If evaluation times out, every metric for that test case is errored:
-result.error     # => "Evaluation timed out"
+# A metric still running when its test case times out is errored with
+# deepeval's message (finished metrics keep their results):
+result.error     # => "Timed out/cancelled while evaluating metric. Increase DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE or set DEEPEVAL_LOG_STACK_TRACES=1 for full traceback."
 result.score     # => nil
 result.success   # => false
 result.threshold # => the metric's threshold (e.g. 0.5)

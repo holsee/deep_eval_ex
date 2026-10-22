@@ -177,6 +177,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   (error handling, timeouts, retries, eval modes). `Adapter.env/1` and
   `config/1` now delegate to `DeepEvalEx.Config.env/1` and `config/1`.
   Documented in the Configuration guide.
+- `DeepEvalEx.Config.per_task_timeout_seconds/0`, deepeval's computed
+  `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS`: the
+  `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE` setting when set and not `0`,
+  else 180 seconds. It is the evaluator's default `:timeout`.
 - **Scripted mode for the Mock adapter.** `Mock.script/2` replays judge
   responses keyed by step (named by the requested schema's fields, see
   `Mock.step_key/1`) and call index, reports the script's judge model and
@@ -313,6 +317,23 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Changed
 
+- **BREAKING: timeouts follow deepeval's per-task timeout and messages.** The
+  default `:timeout` is now deepeval's per-task timeout,
+  `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE` (or
+  `config :deep_eval_ex, per_task_timeout_seconds_override:`) when set and
+  not `0`, else 180 seconds, instead of 60 seconds. A metric that times out
+  now errors with deepeval 4.3.1's message instead of `"Metric timed out"` or
+  `"Evaluation timed out"`: `"Timed out/cancelled while evaluating metric.
+  Increase DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE or set
+  DEEPEVAL_LOG_STACK_TRACES=1 for full traceback."`, as deepeval's
+  asynchronous executor records it. With `run_async: false`, as deepeval's
+  synchronous executor, `:timeout` now bounds the whole test case rather
+  than each metric: the metric running when it elapses errors with
+  `"Timed out after <seconds>s while evaluating metric. Increase
+  DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE or set DEEPEVAL_LOG_STACK_TRACES=1
+  for full traceback."` (seconds to two decimals) and the metrics after it
+  with `"Skipped due to case timeout."`. Without `ignore_errors: true` the
+  first of them raises a `DeepEvalEx.MetricError` with that message.
 - **The default number of test cases evaluated at once is now 20**, deepeval's
   `AsyncConfig.max_concurrent` default, instead of twice the number of
   schedulers. Pass `max_concurrent:` (or `concurrency:`) to choose another.
@@ -523,6 +544,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   Hallucination) sent schemas that OpenAI's strict mode rejects with a 400.
 - A test case that timed out returned a nested list of results instead of a
   flat one.
+- A test case that times out keeps the results of the metrics that finished
+  before its deadline, as deepeval does, instead of erroring every metric.
 - `nil` fields on a metric struct no longer hide the defaults they should fall
   back to.
 - A metric that raises an exception becomes an errored result with the

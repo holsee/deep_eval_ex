@@ -128,8 +128,9 @@ defmodule DeepEvalEx do
     time (default: `true`); see "Concurrency" in `DeepEvalEx.Evaluator`
   - `:metric_concurrency` - Max metrics run at once within a test case
     (default: the number of metrics)
-  - `:timeout` - Timeout in milliseconds (default: 60_000); the default for
-    `:metric_timeout` and the minimum per-test-case timeout
+  - `:timeout` - Timeout in milliseconds (default: deepeval's per-task
+    timeout, `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE` or 180 seconds);
+    the default for `:metric_timeout` and the minimum per-test-case timeout
   - `:metric_timeout` - Timeout per metric in milliseconds (default: the
     `:timeout` value). A slow metric errors while the test case's other
     metrics still complete

@@ -6,6 +6,20 @@ defmodule DeepEvalEx.EvaluatorTest do
   alias DeepEvalEx.Metrics.{ExactMatch, Faithfulness, GEval, ToolCorrectness}
   alias DeepEvalEx.Schemas.ToolCall
 
+  # deepeval 4.3.1's errors for a metric its per-task timeout cancelled
+  # (asynchronous executor), timed out (synchronous executor) or never
+  # started (synchronous executor) before its test case's deadline.
+  @cancelled "Timed out/cancelled while evaluating metric. " <>
+               "Increase DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE or set " <>
+               "DEEPEVAL_LOG_STACK_TRACES=1 for full traceback."
+  @skipped "Skipped due to case timeout."
+
+  defp timed_out(seconds) do
+    "Timed out after #{seconds}s while evaluating metric. " <>
+      "Increase DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE or set " <>
+      "DEEPEVAL_LOG_STACK_TRACES=1 for full traceback."
+  end
+
   defmodule SlowMetric do
     @moduledoc false
 
@@ -224,13 +238,15 @@ defmodule DeepEvalEx.EvaluatorTest do
       end
     end
 
-    test "reports a timed-out test case as having taken its timeout" do
-      assert {[[%Result{error: "Evaluation timed out"}]], [0.02]} =
+    test "reports a timed-out test case as having run until its deadline" do
+      assert {[[%Result{error: @cancelled}]], [duration]} =
                Evaluator.evaluate_with_durations([test_case()], [SlowMetric],
                  timeout: 20,
                  metric_timeout: :infinity,
                  ignore_errors: true
                )
+
+      assert duration >= 0.02 and duration < 0.5
     end
   end
 
@@ -240,33 +256,38 @@ defmodule DeepEvalEx.EvaluatorTest do
                Evaluator.evaluate([test_case()], [ExactMatch])
     end
 
-    test "returns a flat list with one errored result per metric when a test case times out" do
+    test "a test case timing out errors its unfinished metrics and keeps the finished ones" do
       # Without a per-metric bound only the per-test-case timeout applies.
-      assert [results] =
-               Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch],
-                 timeout: 20,
-                 metric_timeout: :infinity,
-                 ignore_errors: true
-               )
-
-      assert [%Result{metric: "SlowMetric"}, %Result{metric: "Exact Match"}] = results
-
-      for result <- results do
-        assert Result.errored?(result)
-        assert result.success == false
-        assert result.score == nil
-        assert result.reason == nil
-        assert result.error == "Evaluation timed out"
-      end
-    end
-
-    test "timed-out results carry each metric's real threshold" do
       assert [[slow, exact]] =
                Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch],
                  timeout: 20,
                  metric_timeout: :infinity,
                  ignore_errors: true
                )
+
+      # As deepeval's asynchronous executor: the metric still running when
+      # the task is cancelled gets its timeout error, a finished one is left.
+      assert %Result{metric: "SlowMetric", success: false, score: nil, reason: nil} = slow
+      assert Result.errored?(slow)
+      assert slow.error == @cancelled
+
+      assert %Result{metric: "Exact Match", success: true} = exact
+      refute Result.errored?(exact)
+    end
+
+    test "timed-out results carry each metric's real threshold, started or not" do
+      # With one metric at a time ExactMatch never starts before the deadline.
+      assert [[slow, exact]] =
+               Evaluator.evaluate([test_case()], [SlowMetric, ExactMatch],
+                 timeout: 20,
+                 metric_timeout: :infinity,
+                 metric_concurrency: 1,
+                 ignore_errors: true
+               )
+
+      assert slow.error == @cancelled
+      assert exact.error == @cancelled
+      assert exact.success == false
 
       # SlowMetric exposes no default threshold, so none is known.
       assert slow.threshold == nil
@@ -322,7 +343,7 @@ defmodule DeepEvalEx.EvaluatorTest do
 
       assert Result.errored?(slow)
       assert slow.metric == "SleepMetric"
-      assert slow.error == "Metric timed out"
+      assert slow.error == @cancelled
       assert exact.success
       refute Result.errored?(exact)
     end
@@ -334,7 +355,7 @@ defmodule DeepEvalEx.EvaluatorTest do
                  ignore_errors: true
                )
 
-      assert slow.error == "Metric timed out"
+      assert slow.error == @cancelled
       assert exact.success
     end
 
@@ -571,7 +592,7 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
 
     test "a timed-out LLM metric still reports its configured judge model" do
-      assert [%Result{error: "Metric timed out", evaluation_model: "mock-model"}] =
+      assert [%Result{error: @cancelled, evaluation_model: "mock-model"}] =
                Evaluator.evaluate_single(test_case(), [SlowJudge],
                  adapter: :mock,
                  metric_timeout: 50,
@@ -667,7 +688,7 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
 
     test "raises for a metric that timed out" do
-      assert_raise MetricError, "Metric timed out", fn ->
+      assert_raise MetricError, @cancelled, fn ->
         Evaluator.evaluate_single(test_case(), [SlowJudge], adapter: :mock, metric_timeout: 50)
       end
     end
@@ -730,6 +751,71 @@ defmodule DeepEvalEx.EvaluatorTest do
       assert %Result{metric: "Scored", score: 1.0} = measured
       assert [%{metrics_data: [%{name: "Scored"}]}] = test_run.test_cases
       assert [%{metric: "Scored"}] = test_run.metrics_scores
+    end
+  end
+
+  describe "timeouts with run_async: false (deepeval's synchronous executor)" do
+    test "the metric running at the deadline times out and the later ones are skipped" do
+      metrics = [
+        %SleepMetric{sleep: 0, label: "fast"},
+        %SleepMetric{sleep: 1_000, label: "slow"},
+        ExactMatch
+      ]
+
+      assert [[fast, slow, exact]] =
+               Evaluator.evaluate([test_case()], metrics,
+                 run_async: false,
+                 timeout: 100,
+                 ignore_errors: true
+               )
+
+      assert %Result{reason: "fast", success: true, error: nil} = fast
+
+      assert %Result{metric: "SleepMetric", success: false, score: nil} = slow
+      assert slow.error == timed_out("0.10")
+
+      assert %Result{metric: "Exact Match", success: false, score: nil} = exact
+      assert exact.error == @skipped
+      assert exact.threshold == ExactMatch.default_threshold()
+    end
+
+    test ":timeout bounds the whole test case, not each metric" do
+      metrics = for label <- ~w(a b c), do: %SleepMetric{sleep: 60, label: label}
+
+      assert [[a, b, c]] =
+               Evaluator.evaluate([test_case()], metrics,
+                 run_async: false,
+                 timeout: 100,
+                 ignore_errors: true
+               )
+
+      assert a.success
+      assert b.error == timed_out("0.10")
+      assert c.error == @skipped
+    end
+
+    test "a metric exceeding :metric_timeout times out alone" do
+      metrics = [%SleepMetric{sleep: 1_000, label: "slow"}, ExactMatch]
+
+      assert [[slow, exact]] =
+               Evaluator.evaluate([test_case()], metrics,
+                 run_async: false,
+                 timeout: 5_000,
+                 metric_timeout: 50,
+                 ignore_errors: true
+               )
+
+      assert slow.error == timed_out("0.05")
+      assert exact.success
+    end
+
+    test "raises the timed-out metric's error without ignore_errors" do
+      assert_raise MetricError, timed_out("0.10"), fn ->
+        Evaluator.evaluate([test_case()], [ExactMatch, SlowMetric, ExactMatch],
+          run_async: false,
+          timeout: 100
+        )
+      end
     end
   end
 

@@ -25,11 +25,14 @@ defmodule DeepEvalEx.Evaluator do
     evaluates test cases and their metrics one at a time, see "Concurrency"
   - `:metric_concurrency` - Maximum metrics run at once within a single test
     case (default: the number of metrics, i.e. all of them)
-  - `:timeout` - Timeout in milliseconds (default: 60_000). Bounds each
-    metric unless `:metric_timeout` is given, and bounds each test case
+  - `:timeout` - Timeout in milliseconds (default: deepeval's per-task
+    timeout, `DeepEvalEx.Config.per_task_timeout_seconds/0`: the
+    `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE` setting, else 180 seconds).
+    Bounds each metric unless `:metric_timeout` is given, and bounds each
+    test case, see "Timeouts"
   - `:metric_timeout` - Timeout per metric in milliseconds (default: the
     `:timeout` value). A metric that exceeds it is killed and reported as an
-    errored result (`"Metric timed out"`) while its siblings keep running
+    errored result while its siblings keep running, see "Timeouts"
   - `:threshold` - Default threshold for all metrics; `nil` makes them
     score-only
   - `:strict_mode` - Default strict mode for all metrics (threshold forced
@@ -72,12 +75,18 @@ defmodule DeepEvalEx.Evaluator do
   metrics are evaluated one at a time, whatever `:max_concurrent` and
   `:metric_concurrency` say, and `:throttle_value` is not applied (deepeval's
   synchronous executor does not throttle). Each metric still runs in its own
-  process, so `:metric_timeout` applies. An error recorded with
+  process, so `:metric_timeout` applies, and `:timeout` bounds the whole
+  test case (see "Timeouts"). An error recorded with
   `ignore_errors: true` still keeps the message alone, as deepeval's
   asynchronous executor records it, not the synchronous executor's
   `DeepEvalEx.Result.format_error_text/2`.
 
   ## Timeouts
+
+  `:timeout` defaults to deepeval's per-task timeout, so
+  `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE` (or
+  `config :deep_eval_ex, per_task_timeout_seconds_override:`) sets it as it
+  sets deepeval's; without it, it is deepeval's 180 seconds.
 
   A test case's metrics run concurrently, each in its own process, and the
   results keep the order of the `metrics` list. The per-test-case timeout is
@@ -85,9 +94,29 @@ defmodule DeepEvalEx.Evaluator do
   (`:metric_timeout` for each round of `:metric_concurrency` metrics, plus a
   short grace period), so a slow metric errors on its own instead of taking
   down the whole test case. If the test case still exceeds its timeout (for
-  example with `metric_timeout: :infinity`), every metric of that test case
-  errors with `"Evaluation timed out"`. Timed-out metrics error like any
-  other (see "Errors").
+  example with `metric_timeout: :infinity`), the metrics that finished keep
+  their results and the others error. Either way a timed-out metric errors
+  with deepeval's asynchronous executor's message:
+
+      Timed out/cancelled while evaluating metric. Increase
+      DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE or set
+      DEEPEVAL_LOG_STACK_TRACES=1 for full traceback.
+
+  (on one line). With `run_async: false`, as deepeval's synchronous
+  executor, `:timeout` bounds the whole test case: the metric running when
+  it elapses errors with `"Timed out after <seconds>s while evaluating
+  metric. Increase DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE or set
+  DEEPEVAL_LOG_STACK_TRACES=1 for full traceback."`, the seconds being the
+  timeout to two decimals (`"0.10"`), and every metric after it with
+  `"Skipped due to case timeout."`. A metric exceeding a shorter
+  `:metric_timeout` gets the same message with that timeout's seconds,
+  and the metrics after it still run.
+
+  Timed-out and skipped metrics error like any other (see "Errors"): with
+  `ignore_errors: true` they are errored results with `success: false`
+  (`nil` for a score-only metric), as deepeval's `is_successful()` reports
+  them, otherwise the first of them raises a `DeepEvalEx.MetricError` with
+  the message.
 
   ## Errors
 
@@ -127,13 +156,22 @@ defmodule DeepEvalEx.Evaluator do
       ]
   """
 
-  alias DeepEvalEx.{MetricError, MissingTestCaseParamsError, Result, TestCase}
+  alias DeepEvalEx.{Config, MetricError, MissingTestCaseParamsError, Result, TestCase}
   alias DeepEvalEx.Metrics.BaseMetric
+  alias DeepEvalEx.Prompts.Python
 
   # deepeval's AsyncConfig defaults.
   @default_max_concurrent 20
   @default_throttle_value 0
-  @default_timeout 60_000
+
+  # deepeval 4.3.1's errors for a metric its per-task timeout stopped: the
+  # asynchronous executor's for a cancelled metric (safe_a_measure), and the
+  # synchronous executor's for metrics left after the one that timed out
+  # (execute_test_cases; that one gets timed_out_message/1).
+  @cancelled_message "Timed out/cancelled while evaluating metric. " <>
+                       "Increase DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE or set " <>
+                       "DEEPEVAL_LOG_STACK_TRACES=1 for full traceback."
+  @skipped_message "Skipped due to case timeout."
 
   # Headroom the per-test-case timeout keeps over its metrics' own timeouts,
   # so that a metric timeout is always reported before the test case's.
@@ -164,7 +202,8 @@ defmodule DeepEvalEx.Evaluator do
 
   Returns `{results, durations}` where `durations` holds the seconds spent
   on each test case, in the same order. A test case that timed out is
-  reported as having taken its timeout; one whose process crashed as `0.0`.
+  reported as having run until its deadline; one whose process crashed as
+  `0.0`.
   """
   @spec evaluate_with_durations([TestCase.t()], [module() | struct()], keyword()) ::
           {[[Result.t()]], [float()]}
@@ -194,7 +233,7 @@ defmodule DeepEvalEx.Evaluator do
           {outcome, seconds_since(started)}
         end,
         max_concurrency: concurrency,
-        timeout: timeout,
+        timeout: with_grace(timeout),
         on_timeout: :kill_task
       )
       |> Enum.reduce_while([], fn
@@ -202,7 +241,7 @@ defmodule DeepEvalEx.Evaluator do
           collect(timed(outcome, seconds), acc)
 
         {:exit, :timeout}, acc ->
-          "Evaluation timed out"
+          @cancelled_message
           |> error_outcomes(metrics, opts)
           |> timed(timeout / 1000)
           |> collect(acc)
@@ -233,9 +272,9 @@ defmodule DeepEvalEx.Evaluator do
   Metrics run concurrently (bounded by `:metric_concurrency`) and the
   results are returned in the same order as `metrics`. A metric that runs
   longer than `:metric_timeout` (default: `:timeout`) is killed and errors
-  with `"Metric timed out"` without affecting the other metrics: with
+  with deepeval's timeout message without affecting the other metrics: with
   `ignore_errors: true` it yields an errored `DeepEvalEx.Result`, otherwise
-  it raises (see "Errors" in the module documentation).
+  it raises (see "Timeouts" and "Errors" in the module documentation).
   """
   @spec evaluate_single(TestCase.t(), [module() | struct()], keyword()) :: [Result.t()]
   def evaluate_single(test_case, metrics, opts \\ []) do
@@ -244,16 +283,19 @@ defmodule DeepEvalEx.Evaluator do
   end
 
   # {:ok, results}, or the first metric error to raise in metrics order;
-  # halting the stream stops the metrics still running.
+  # halting the stream stops the metrics still running. The test case's
+  # deadline starts now: each metric runs until its own :metric_timeout or
+  # the deadline, whichever comes first.
   defp run_single(test_case, metrics, opts) do
+    deadline = deadline(case_timeout(metrics, opts))
+
     outcomes =
       Task.async_stream(
         metrics,
-        &measure_metric(test_case, &1, opts),
+        &measure_until(test_case, &1, deadline, opts),
         ordered: true,
         max_concurrency: metric_concurrency(metrics, opts),
-        timeout: metric_timeout(opts),
-        on_timeout: :kill_task
+        timeout: :infinity
       )
 
     metrics
@@ -262,13 +304,80 @@ defmodule DeepEvalEx.Evaluator do
       {_metric, {:ok, outcome}}, acc ->
         collect(outcome, acc)
 
-      {metric, {:exit, :timeout}}, acc ->
-        collect(error_outcome("Metric timed out", metric, opts), acc)
-
       {metric, {:exit, reason}}, acc ->
         collect(error_outcome("Metric failed: #{inspect(reason)}", metric, opts), acc)
     end)
     |> collected()
+  end
+
+  # Measures `metric` in its own process, killed when it outlives its
+  # :metric_timeout or the test case's deadline. A metric whose turn comes
+  # after the deadline is not started.
+  defp measure_until(test_case, metric, deadline, opts) do
+    case remaining(deadline) do
+      0 -> error_outcome(unstarted_message(opts), metric, opts)
+      remaining -> measure_within(test_case, metric, remaining, opts)
+    end
+  end
+
+  defp measure_within(test_case, metric, remaining, opts) do
+    metric_timeout = metric_timeout(opts)
+    task = Task.async(fn -> measure_metric(test_case, metric, opts) end)
+
+    case Task.yield(task, min_timeout(metric_timeout, remaining)) ||
+           Task.shutdown(task, :brutal_kill) do
+      {:ok, outcome} ->
+        outcome
+
+      {:exit, reason} ->
+        error_outcome("Metric failed: #{inspect(reason)}", metric, opts)
+
+      nil ->
+        bound = if shorter?(metric_timeout, remaining), do: metric_timeout, else: :case
+        error_outcome(timeout_message(bound, opts), metric, opts)
+    end
+  end
+
+  defp deadline(:infinity), do: :infinity
+  defp deadline(timeout), do: System.monotonic_time(:millisecond) + timeout
+
+  defp remaining(:infinity), do: :infinity
+  defp remaining(deadline), do: max(deadline - System.monotonic_time(:millisecond), 0)
+
+  defp shorter?(:infinity, _other), do: false
+  defp shorter?(_timeout, :infinity), do: true
+  defp shorter?(timeout, other), do: timeout < other
+
+  defp min_timeout(a, b), do: if(shorter?(a, b), do: a, else: b)
+
+  defp with_grace(:infinity), do: :infinity
+  defp with_grace(timeout), do: timeout + @timeout_grace
+
+  # The error of a metric that timed out, `bound` being its :metric_timeout
+  # or `:case` for the test case's deadline. deepeval's asynchronous executor
+  # cancels it; its synchronous executor names the timeout that elapsed
+  # (`_timeout_msg("evaluating metric", seconds)`).
+  defp timeout_message(bound, opts) do
+    cond do
+      Keyword.get(opts, :run_async, true) -> @cancelled_message
+      bound == :case -> timed_out_message(timeout(opts))
+      true -> timed_out_message(bound)
+    end
+  end
+
+  # The error of a metric not started before the test case's deadline:
+  # cancelled with the others by deepeval's asynchronous executor, skipped
+  # by its synchronous executor.
+  defp unstarted_message(opts) do
+    if Keyword.get(opts, :run_async, true), do: @cancelled_message, else: @skipped_message
+  end
+
+  defp timed_out_message(timeout) do
+    seconds = Python.format_fixed(timeout / 1000, 2)
+
+    "Timed out after #{seconds}s while evaluating metric. " <>
+      "Increase DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE or set " <>
+      "DEEPEVAL_LOG_STACK_TRACES=1 for full traceback."
   end
 
   @doc """
@@ -489,27 +598,37 @@ defmodule DeepEvalEx.Evaluator do
     Keyword.get_lazy(opts, :metric_concurrency, fn -> max(length(metrics), 1) end)
   end
 
-  defp metric_timeout(opts) do
-    Keyword.get_lazy(opts, :metric_timeout, fn ->
-      Keyword.get(opts, :timeout, @default_timeout)
-    end)
+  # deepeval's per-task timeout (DEEPEVAL_PER_TASK_TIMEOUT_SECONDS), in
+  # milliseconds, unless given.
+  defp timeout(opts) do
+    Keyword.get_lazy(opts, :timeout, fn -> round(Config.per_task_timeout_seconds() * 1_000) end)
   end
 
-  # The per-test-case timeout: `:timeout`, raised when needed so it outlasts
-  # every round of `:metric_concurrency` metrics running to their own
-  # `:metric_timeout`. Metric timeouts therefore fire first and error only
-  # the slow metric. With no metric bound only `:timeout` applies.
-  defp case_timeout(metrics, opts) do
-    timeout = Keyword.get(opts, :timeout, @default_timeout)
+  defp metric_timeout(opts) do
+    Keyword.get_lazy(opts, :metric_timeout, fn -> timeout(opts) end)
+  end
 
-    case metric_timeout(opts) do
-      :infinity ->
+  # The per-test-case timeout. With run_async: false it is `:timeout`, as
+  # deepeval's synchronous executor bounds the whole test case with its
+  # per-task timeout. Otherwise it is `:timeout`, raised when needed so it
+  # outlasts every round of `:metric_concurrency` metrics running to their
+  # own `:metric_timeout`: metric timeouts therefore fire first and error
+  # only the slow metric. With no metric bound only `:timeout` applies.
+  defp case_timeout(metrics, opts) do
+    timeout = timeout(opts)
+    metric_timeout = metric_timeout(opts)
+
+    cond do
+      not Keyword.get(opts, :run_async, true) ->
         timeout
 
-      _metric_timeout when timeout == :infinity ->
+      metric_timeout == :infinity ->
+        timeout
+
+      timeout == :infinity ->
         :infinity
 
-      metric_timeout ->
+      true ->
         rounds = ceil(length(metrics) / metric_concurrency(metrics, opts))
         max(timeout, rounds * metric_timeout + @timeout_grace)
     end

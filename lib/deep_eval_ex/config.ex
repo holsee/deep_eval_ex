@@ -64,6 +64,10 @@ defmodule DeepEvalEx.Config do
 
   @eval_modes ~w(llm hybrid system_one)a
 
+  # deepeval's outer per-task budget when neither its per-task nor its
+  # per-attempt timeout override is set (`_calc_auto_outer_timeout`).
+  @default_per_task_timeout_seconds 180.0
+
   @settings [
     results_folder: {"DEEPEVAL_RESULTS_FOLDER", :string, nil},
     identifier: {"DEEPEVAL_IDENTIFIER", :string, nil},
@@ -145,6 +149,28 @@ defmodule DeepEvalEx.Config do
     with nil <- parse(config(key), type, "config :deep_eval_ex, #{inspect(key)}"),
          nil <- parse(env(var), type, var) do
       default
+    end
+  end
+
+  @doc """
+  The time budget in seconds for evaluating one test case, deepeval's
+  computed `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS`: the
+  `:per_task_timeout_seconds_override` setting
+  (`DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE`) when set and not `0`, else
+  deepeval's default outer budget of `180.0`.
+
+  `DeepEvalEx.Evaluator` uses it as the default `:timeout`.
+
+  ## Examples
+
+      iex> DeepEvalEx.Config.per_task_timeout_seconds()
+      180.0
+  """
+  @spec per_task_timeout_seconds() :: float()
+  def per_task_timeout_seconds do
+    case get(:per_task_timeout_seconds_override) do
+      override when is_float(override) and override > 0 -> override
+      _unset -> @default_per_task_timeout_seconds
     end
   end
 

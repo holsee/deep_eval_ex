@@ -215,6 +215,51 @@ defmodule DeepEvalEx.ConfigTest do
     end
   end
 
+  describe "per_task_timeout_seconds/0" do
+    defmodule NapMetric do
+      @moduledoc false
+
+      def metric_name, do: "NapMetric"
+
+      def measure(_test_case, _opts) do
+        Process.sleep(1_000)
+        {:ok, %DeepEvalEx.Result{metric: metric_name(), score: 1.0, success: true}}
+      end
+    end
+
+    test "is deepeval's default outer budget of 180 seconds without an override" do
+      assert Config.per_task_timeout_seconds() === 180.0
+
+      # deepeval treats an override of 0 as unset.
+      System.put_env("DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE", "0")
+      assert Config.per_task_timeout_seconds() === 180.0
+    end
+
+    test "is DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE when set, config first" do
+      System.put_env("DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE", "2.5")
+      assert Config.per_task_timeout_seconds() === 2.5
+
+      Application.put_env(:deep_eval_ex, :per_task_timeout_seconds_override, 30)
+      assert Config.per_task_timeout_seconds() === 30.0
+    end
+
+    test "is the evaluator's default per-test-case timeout" do
+      System.put_env("DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE", "0.1")
+      test_case = DeepEvalEx.TestCase.new!(input: "a", actual_output: "b")
+
+      assert [[result]] =
+               DeepEvalEx.Evaluator.evaluate([test_case], [NapMetric],
+                 run_async: false,
+                 ignore_errors: true
+               )
+
+      assert result.error ==
+               "Timed out after 0.10s while evaluating metric. " <>
+                 "Increase DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE or set " <>
+                 "DEEPEVAL_LOG_STACK_TRACES=1 for full traceback."
+    end
+  end
+
   describe "eval_mode" do
     test "is nil when unset" do
       assert Config.get(:eval_mode) == nil

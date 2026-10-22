@@ -60,7 +60,7 @@ config :deep_eval_ex,
 | `:ignore_errors` | `IGNORE_DEEPEVAL_ERRORS` | boolean | `false` | not yet read |
 | `:skip_on_missing_params` | `SKIP_DEEPEVAL_MISSING_PARAMS` | boolean | `false` | not yet read |
 | `:use_cache` | `ENABLE_DEEPEVAL_CACHE` | boolean | `false` | not yet read |
-| `:per_task_timeout_seconds_override` | `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE` | number >= 0 | unset | not yet read |
+| `:per_task_timeout_seconds_override` | `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE` | number >= 0 | unset | `DeepEvalEx.Evaluator`: the default per-test-case `:timeout` (`DeepEvalEx.Config.per_task_timeout_seconds/0`; 180 seconds when unset or `0`) |
 | `:retry_max_attempts` | `DEEPEVAL_RETRY_MAX_ATTEMPTS` | integer >= 1 | `2` | not yet read |
 | `:retry_initial_seconds` | `DEEPEVAL_RETRY_INITIAL_SECONDS` | number >= 0 | `1.0` | not yet read |
 | `:retry_exp_base` | `DEEPEVAL_RETRY_EXP_BASE` | number >= 1 | `2.0` | not yet read |
