@@ -6,6 +6,8 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
 
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.AnswerRelevancy
+  alias DeepEvalEx.SystemOne.Adapters.Mock, as: SystemOneMock
+  alias DeepEvalEx.SystemOne.{EvalSpec, Scored}
   alias DeepEvalEx.TestCase
 
   setup do
@@ -444,6 +446,46 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
 
       assert {:error, {:empty_param, :actual_output}} =
                AnswerRelevancy.measure(test_case, adapter: :mock)
+    end
+  end
+
+  describe "System One" do
+    test "system_one_eval_spec/2 asks deepeval's questions about the input and output" do
+      assert %EvalSpec{
+               evaluation_params: [:input, :actual_output],
+               questions: [
+                 %Scored.Noul{statement: "Every statement in" <> _, weight: 2.0},
+                 %Scored.Noul{statement: "`actual_output` directly addresses" <> _, weight: 1.0},
+                 %Scored.Score{
+                   levels: ["None of it", "Less than half", "Most of it", "All of it"]
+                 }
+               ]
+             } = AnswerRelevancy.system_one_eval_spec(%TestCase{}, [])
+    end
+
+    test "hybrid asks System One nothing when there are no statements" do
+      Mock.set_schema_response(
+        ~r/breakdown and generate a list of statements/i,
+        %{"statements" => []}
+      )
+
+      Mock.set_schema_response(
+        ~r/provide a CONCISE reason for the score/i,
+        %{"reason" => "The score is 1.00 because there are no statements to evaluate."}
+      )
+
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.9))
+      test_case = TestCase.new!(input: "What are the features?", actual_output: "I don't know.")
+
+      assert {:ok, result} =
+               AnswerRelevancy.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one
+               )
+
+      assert result.score === 1
+      assert SystemOneMock.calls(system_one) == []
     end
   end
 end

@@ -62,7 +62,15 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "ContextualRecallMetric.generate_verdicts" => {Prompts.ContextualRecall, :generate_verdicts},
     "ContextualRecallMetric.generate_reason" => {Prompts.ContextualRecall, :generate_reason},
     "ToolCorrectnessMetric.get_tool_selection_score" =>
-      {Prompts.ToolCorrectness, :get_tool_selection_score}
+      {Prompts.ToolCorrectness, :get_tool_selection_score},
+    "FaithfulnessMetric._experimental_system_one_questions" =>
+      {Prompts.Faithfulness, :system_one_questions},
+    "FaithfulnessMetric._experimental_system_one_verdict" =>
+      {Prompts.Faithfulness, :system_one_verdict},
+    "AnswerRelevancyMetric._experimental_system_one_questions" =>
+      {Prompts.AnswerRelevancy, :system_one_questions},
+    "AnswerRelevancyMetric._experimental_system_one_verdict" =>
+      {Prompts.AnswerRelevancy, :system_one_verdict}
   }
 
   # {the ROADMAP unit that removes the tag, cases}. The fixtures' README
@@ -96,7 +104,8 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.Hallucination,
             Prompts.ToolCorrectness
           ],
-          {fun, 1} <- module.__info__(:functions),
+          {fun, arity} <- module.__info__(:functions),
+          arity in [0, 1],
           not String.starts_with?(Atom.to_string(fun), "format_"),
           do: {module, fun}
 
@@ -110,7 +119,10 @@ defmodule DeepEvalEx.PromptGoldenTest do
       %{"template" => template, "inputs" => inputs} = input(unquote(name))
       {module, fun} = Map.fetch!(@templates, template)
 
-      assert apply(module, fun, [options(template, inputs)]) ==
+      Code.ensure_loaded!(module)
+      args = if function_exported?(module, fun, 0), do: [], else: [options(template, inputs)]
+
+      assert apply(module, fun, args) ==
                File.read!(Path.join([@fixtures, unquote(name), "prompt.txt"]))
     end
   end

@@ -6,6 +6,8 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
 
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.Faithfulness
+  alias DeepEvalEx.SystemOne.Adapters.Mock, as: SystemOneMock
+  alias DeepEvalEx.SystemOne.{EvalSpec, Scored}
   alias DeepEvalEx.TestCase
 
   setup do
@@ -681,6 +683,95 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       assert result.input_tokens == nil
       assert result.output_tokens == nil
       assert result.evaluation_cost == nil
+    end
+  end
+
+  describe "System One" do
+    test "system_one_eval_spec/2 asks deepeval's questions about the output and its context" do
+      assert %EvalSpec{
+               evaluation_params: [:actual_output, :retrieval_context],
+               questions: [
+                 %Scored.Noul{statement: "Every factual claim" <> _, weight: 2.0},
+                 %Scored.Noul{statement: "No claim in" <> _, weight: 1.0},
+                 %Scored.Score{
+                   levels: [
+                     "Fabricated",
+                     "Mostly fabricated",
+                     "Mostly grounded",
+                     "Fully grounded"
+                   ]
+                 }
+               ]
+             } = Faithfulness.system_one_eval_spec(%TestCase{}, [])
+    end
+
+    test "hybrid asks System One nothing when there are no claims" do
+      Mock.set_schema_response(~r/generate a comprehensive list of.*truths/i, %{
+        "truths" => ["Some fact from context."]
+      })
+
+      Mock.set_schema_response(~r/extract a comprehensive list of FACTUAL/i, %{"claims" => []})
+
+      Mock.set_schema_response(~r/CONCISELY summarize the contradictions/i, %{
+        "reason" => "The score is 1.00 because there are no claims to verify."
+      })
+
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.9))
+
+      test_case =
+        TestCase.new!(
+          input: "Hello",
+          actual_output: "Hi there!",
+          retrieval_context: ["Some fact from context."]
+        )
+
+      assert {:ok, result} =
+               Faithfulness.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one
+               )
+
+      assert result.score === 1
+      assert result.confidence == nil
+      assert SystemOneMock.calls(system_one) == []
+    end
+
+    test "llm mode never asks System One" do
+      Mock.set_schema_response(~r/generate a comprehensive list of.*truths/i, %{
+        "truths" => ["Employees receive 20 days paid time off annually."]
+      })
+
+      Mock.set_schema_response(~r/extract a comprehensive list of FACTUAL/i, %{
+        "claims" => ["Employees get 20 days of PTO per year."]
+      })
+
+      Mock.set_schema_response(~r/indicate whether EACH claim contradicts/i, %{
+        "verdicts" => [%{"verdict" => "no", "reason" => "Judged by the LLM."}]
+      })
+
+      Mock.set_schema_response(~r/CONCISELY summarize the contradictions/i, %{
+        "reason" => "The score is 0.00 because the LLM disagreed."
+      })
+
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.9))
+
+      test_case =
+        TestCase.new!(
+          input: "What is the vacation policy?",
+          actual_output: "Employees get 20 days of PTO per year.",
+          retrieval_context: ["Employees receive 20 days paid time off annually."]
+        )
+
+      assert {:ok, result} =
+               Faithfulness.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :llm,
+                 system_one_model: system_one
+               )
+
+      assert result.score == 0
+      assert SystemOneMock.calls(system_one) == []
     end
   end
 end

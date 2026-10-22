@@ -170,7 +170,13 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     true
   end
 
-  defp assert_prompts(actual, expected) do
+  @doc """
+  Asserts that `actual`, a list of `%{step:, prompt:}`, are the prompts of
+  `expected`, deepeval's decoded `prompts.json` entries: see
+  `assert_matches_fixture/2`.
+  """
+  @spec assert_prompts([map()], [map()]) :: :ok
+  def assert_prompts(actual, expected) do
     ours = Enum.group_by(actual, & &1.step, & &1.prompt)
     theirs = Enum.group_by(expected, & &1["step"], & &1["prompt"])
 
@@ -185,6 +191,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     end
 
     assert_step_order(Enum.map(actual, & &1.step), Enum.map(expected, & &1["step"]))
+    :ok
   end
 
   # Every pair of steps deepeval sent one after the other must keep that

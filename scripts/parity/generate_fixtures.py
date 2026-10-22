@@ -753,6 +753,21 @@ PROMPT_RENDERERS = {
         score=_score(i),
         content_type="sentence",
     ),
+    # System One (`eval_mode`) templates: the questions of the whole metric
+    # under `system_one`, and the question asked about each item under
+    # `hybrid`. They take no arguments.
+    "FaithfulnessMetric._experimental_system_one_questions": lambda i: _prompt(
+        FaithfulnessMetric, "_experimental_system_one_questions",
+    ),
+    "FaithfulnessMetric._experimental_system_one_verdict": lambda i: _prompt(
+        FaithfulnessMetric, "_experimental_system_one_verdict",
+    ),
+    "AnswerRelevancyMetric._experimental_system_one_questions": lambda i: _prompt(
+        AnswerRelevancyMetric, "_experimental_system_one_questions",
+    ),
+    "AnswerRelevancyMetric._experimental_system_one_verdict": lambda i: _prompt(
+        AnswerRelevancyMetric, "_experimental_system_one_verdict",
+    ),
     "ToolCorrectnessMetric.get_tool_selection_score": lambda i: _prompt(
         ToolCorrectnessMetric, "get_tool_selection_score",
         user_input=i["input"],
@@ -765,7 +780,8 @@ PROMPT_RENDERERS = {
 # trace variants (`requires_trace`, i.e. GEval without evaluation_params on a
 # traced component), which DeepEvalEx has no counterpart for yet. The System
 # One (`DEEPEVAL_EVAL_MODE`) `_experimental_*` templates are private methods,
-# which `iter_base_template_methods` leaves out.
+# which `iter_base_template_methods` leaves out; the cases below render those
+# of the metrics DeepEvalEx runs on System One.
 UNRENDERED_TEMPLATES = {
     "GEval.generate_trace_evaluation_steps",
     "GEval.generate_trace_evaluation_results",
@@ -960,6 +976,22 @@ PROMPT_CASES = {
             "supportive_reasons": ["The 1st node says Paris is the capital."],
             "unsupportive_reasons": ["No node mentions the metro."],
         },
+    },
+    "faithfulness_experimental_system_one_questions": {
+        "template": "FaithfulnessMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "faithfulness_experimental_system_one_verdict": {
+        "template": "FaithfulnessMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "answer_relevancy_experimental_system_one_questions": {
+        "template": "AnswerRelevancyMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "answer_relevancy_experimental_system_one_verdict": {
+        "template": "AnswerRelevancyMetric._experimental_system_one_verdict",
+        "inputs": {},
     },
     "tool_correctness_get_tool_selection_score": {
         "template": "ToolCorrectnessMetric.get_tool_selection_score",

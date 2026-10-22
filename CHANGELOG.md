@@ -357,6 +357,35 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   stand-in metric until the built-in metrics gain their hybrid paths),
   export deepeval's `test_run.json` byte for byte. Confidence, the
   fallback reason and the score breakdown are not exported.
+- **Faithfulness and AnswerRelevancy run on System One** (ADR-0009), as
+  deepeval 4.3.1's `FaithfulnessMetric` and `AnswerRelevancyMetric` do with
+  `eval_mode`:
+  - `:hybrid`: the LLM still extracts (truths and claims, or statements)
+    and writes the reason, but the System One model judges each claim
+    against the truths, or each statement against the input, one Noul per
+    item in one request (`claim_<i>`, `statement_<i>`). Each P(yes) becomes
+    a `yes` / `borderline` / `no` verdict with the reason `"P(yes)=0.91"`.
+    When the request fails, the LLM judges instead and the result's
+    `:system_one_fallback_reason` says why (`"ConnectionError: Jev is
+    down"`). No items means no request.
+  - `:system_one`: each metric implements
+    `c:BaseMetric.system_one_eval_spec/2` and calls
+    `DeepEvalEx.SystemOne.Runner.run/3`, so one request about
+    `actual_output` and `retrieval_context` (Faithfulness) or `input` and
+    `actual_output` (AnswerRelevancy) answers the whole metric, with no LLM
+    call.
+  - `system_one_verdict/0` and `system_one_questions/0` on
+    `DeepEvalEx.Prompts.Faithfulness` and `DeepEvalEx.Prompts.AnswerRelevancy`
+    render deepeval's `_experimental_system_one_verdict` and
+    `_experimental_system_one_questions` templates. Four new prompt goldens
+    check them byte for byte.
+
+  A new parity test measures the `faithfulness_*` and `answer_relevancy_*`
+  System One fixtures (`system_one`, `system_one_strict`, `hybrid` and
+  `hybrid_fallback`) with the real metrics. The System One requests, the
+  measured state (including confidence, fallback reason and score
+  breakdown), the judge's prompts and the exported test run all match
+  deepeval byte for byte.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in

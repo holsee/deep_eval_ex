@@ -21,7 +21,10 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
   case (`multimodal=False`): the multimodal fragments and instructions are
   left out, as DeepEvalEx has no multimodal test cases. Lists are printed
   as Python lists and scores as `format(score, ".2f")` (see
-  `DeepEvalEx.Prompts.Python`).
+  `DeepEvalEx.Prompts.Python`). `system_one_verdict/0` and
+  `system_one_questions/0` are its System One templates,
+  `_experimental_system_one_verdict` and `_experimental_system_one_questions`,
+  which take no arguments.
   """
 
   alias DeepEvalEx.Prompts.Python
@@ -215,6 +218,47 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
     #{contradictions}
 
     JSON:\
+    """
+  end
+
+  @doc """
+  The question a System One model is asked about each claim under the
+  `:hybrid` eval mode, deepeval's `_experimental_system_one_verdict`
+  template: a Noul whose instructions pair it with the claim, about a state
+  holding the truths as `retrieval_context` (see
+  `DeepEvalEx.SystemOne.Spec.Verdicts`).
+  """
+  @spec system_one_verdict() :: String.t()
+  def system_one_verdict do
+    "Is `claim` supported by the facts in `retrieval_context`? Answer no if it contradicts them."
+  end
+
+  @doc """
+  The questions a System One model answers about the whole test case under
+  the `:system_one` eval mode, deepeval's `_experimental_system_one_questions`
+  template: a JSON array of two Nouls and a four-level Score about
+  `actual_output` and `retrieval_context`, which
+  `DeepEvalEx.SystemOne.Scored.parse!/1` reads.
+  """
+  @spec system_one_questions() :: String.t()
+  def system_one_questions do
+    """
+    [
+      {
+        "type": "noul",
+        "statement": "Every factual claim in `actual_output` is supported by the facts in `retrieval_context`.",
+        "weight": 2
+      },
+      {
+        "type": "noul",
+        "statement": "No claim in `actual_output` contradicts the facts in `retrieval_context`."
+      },
+      {
+        "type": "score",
+        "question": "How much of `actual_output` is grounded in the facts in `retrieval_context`?",
+        "levels": ["Fabricated", "Mostly fabricated", "Mostly grounded", "Fully grounded"]
+      }
+    ]\
     """
   end
 

@@ -1,0 +1,65 @@
+defmodule DeepEvalEx.Metrics.SystemOneParityTest do
+  @moduledoc """
+  Measures the System One scenarios of `test/fixtures/deepeval/system_one/`
+  with the real DeepEvalEx metrics and compares each with what deepeval
+  4.3.1 did (see `DeepEvalEx.Test.SystemOneParity` and the fixtures'
+  README), in five facets:
+
+  - `decide` - every System One request (state and questions) and what it
+    answered, byte for byte
+  - `measure` - score, success, reason, threshold, error, evaluation model,
+    cost, tokens, verbose logs, confidence, fallback reason and score
+    breakdown after measuring
+  - `prompts` - every prompt the LLM judge got, byte for byte
+  - `test_run` - the exported test run, byte for byte
+  - `evaluate decide` - the System One requests of the `evaluate()` run
+
+  Batched scenarios (`batch_*`) are `DeepEvalEx.SystemOne.Batch`'s.
+  """
+
+  use ExUnit.Case, async: true
+
+  import DeepEvalEx.Test.SystemOneParity
+
+  @moduletag :parity
+  @moduletag :tmp_dir
+  # evaluate_run/3 logs where it saved the test run.
+  @moduletag :capture_log
+
+  @scenarios ~w(
+    faithfulness_system_one faithfulness_system_one_strict faithfulness_hybrid
+    faithfulness_hybrid_fallback
+    answer_relevancy_system_one answer_relevancy_hybrid answer_relevancy_hybrid_fallback
+  )
+
+  for scenario <- @scenarios,
+      file <- ~w(input.json decide.json measure.json prompts.json test_run.json),
+      File.regular?(fixture(scenario, file)) do
+    @external_resource fixture(scenario, file)
+  end
+
+  for scenario <- @scenarios do
+    describe scenario do
+      test "asks System One what deepeval asked" do
+        {_measured, calls, _prompts} = measure(unquote(scenario))
+        assert_calls(calls, unquote(scenario))
+      end
+
+      test "measures what deepeval measured" do
+        {measured, _calls, _prompts} = measure(unquote(scenario))
+        assert_measured(measured, unquote(scenario))
+      end
+
+      test "prompts the LLM judge as deepeval did" do
+        {_measured, _calls, prompts} = measure(unquote(scenario))
+        assert_prompts(prompts, unquote(scenario))
+      end
+
+      test "exports deepeval's test run", %{tmp_dir: tmp_dir} do
+        {test_run, calls} = test_run(unquote(scenario), tmp_dir)
+        assert_test_run(test_run, unquote(scenario))
+        assert_calls(calls, unquote(scenario), :evaluate)
+      end
+    end
+  end
+end

@@ -48,6 +48,25 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   - `:model` - LLM model for evaluation
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
+  - `:eval_mode` and `:system_one_model` - who decides, see "System One"
+
+  ## System One
+
+  Like deepeval 4.3.1's `AnswerRelevancyMetric`, the metric can route its
+  decisions to a System One model (see `DeepEvalEx.SystemOne.Mode`):
+
+  - `:hybrid` - the LLM extracts the statements and writes the reason; the
+    System One model judges each statement against the input, one Noul per
+    statement (`DeepEvalEx.Prompts.AnswerRelevancy.system_one_verdict/0`),
+    whose P(yes) is a verdict: above `0.65` `yes`, below `0.35` `no`, else
+    `borderline`, with the reason `"P(yes)=0.91"`. If the model fails, the
+    LLM judges the statements and the result's
+    `:system_one_fallback_reason` says why
+  - `:system_one` - one request about `input` and `actual_output` answers
+    the whole metric
+    (`DeepEvalEx.Prompts.AnswerRelevancy.system_one_questions/0`, see
+    `DeepEvalEx.SystemOne.Runner`): no LLM call is made, and the score and
+    reason are built from the answers
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
@@ -56,6 +75,7 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.AnswerRelevancy, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.AnswerRelevancy, as: Schema
+  alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
 
   @impl true
   def metric_name, do: "Answer Relevancy"
@@ -70,6 +90,19 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   defdelegate evaluation_model(opts), to: Adapter, as: :model_name
 
   @doc """
+  The whole metric as one System One request under the `:system_one` eval
+  mode, deepeval's `_system_one_eval_spec`: its questions about the test
+  case's `input` and `actual_output` (the metric's required params).
+  """
+  @impl true
+  def system_one_eval_spec(_test_case, _opts) do
+    %EvalSpec{
+      evaluation_params: required_params(),
+      questions: Scored.parse!(Template.system_one_questions())
+    }
+  end
+
+  @doc """
   Measures answer relevancy of the actual output to the input.
 
   ## Options
@@ -80,6 +113,13 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   - `:model` - Model name
   """
   def do_measure(test_case, opts) do
+    case Runner.run(__MODULE__, test_case, opts) do
+      {:ok, result} -> {:ok, result}
+      :continue -> measure_with_llm(test_case, opts)
+    end
+  end
+
+  defp measure_with_llm(test_case, opts) do
     threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
@@ -131,7 +171,25 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
     {:ok, []}
   end
 
+  # Under :hybrid the System One model judges the statements; the LLM does
+  # when it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_verdicts(input, statements, opts) do
+    spec = %Spec.Verdicts{
+      instructions: Template.system_one_verdict(),
+      items: statements,
+      item_key: "statement",
+      state: [input: input]
+    }
+
+    decision_opts = Keyword.put_new(opts, :metric_name, metric_name())
+
+    case Decision.verdicts(spec, QAG.yes_no_borderline(), decision_opts) do
+      {:ok, verdicts} -> {:ok, verdicts}
+      :llm -> llm_verdicts(input, statements, opts)
+    end
+  end
+
+  defp llm_verdicts(input, statements, opts) do
     prompt =
       Template.generate_verdicts(
         input: input,
