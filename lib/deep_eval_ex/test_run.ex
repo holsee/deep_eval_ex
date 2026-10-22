@@ -53,7 +53,7 @@ defmodule DeepEvalEx.TestRun do
   `Jason.OrderedObject`s).
 
   Keys DeepEvalEx does not model (`testFile`, `datasetAlias`, `trace`,
-  `verboseLogs`, ...) are ignored, as deepeval's models ignore extra keys,
+  `expectationsData`, ...) are ignored, as deepeval's models ignore extra keys,
   and are not written back. Conversational test cases and prompts are
   ignored too, and `official` is read as `false`. Keeping them would need
   a field holding raw JSON that every other DeepEvalEx function would
@@ -101,7 +101,8 @@ defmodule DeepEvalEx.TestRun do
     Built from a `DeepEvalEx.Result` by `from_result/1`, and turned back
     into one by `to_result/1`. An errored result keeps its threshold, error
     and cost but has no score or reason, as in deepeval. `:strict_mode` and
-    `:flaky` are the result's. A score-only metric has neither `:threshold`
+    `:flaky` are the result's, and so are `:verbose_logs`, exported last as
+    deepeval's `verboseLogs`. A score-only metric has neither `:threshold`
     nor `:success` (`nil`), and the export leaves both out, as deepeval's
     `exclude_none` does.
     """
@@ -118,7 +119,8 @@ defmodule DeepEvalEx.TestRun do
             error: String.t() | nil,
             evaluation_cost: float() | nil,
             input_tokens: non_neg_integer() | nil,
-            output_tokens: non_neg_integer() | nil
+            output_tokens: non_neg_integer() | nil,
+            verbose_logs: String.t() | nil
           }
 
     defstruct [
@@ -132,6 +134,7 @@ defmodule DeepEvalEx.TestRun do
       :evaluation_cost,
       :input_tokens,
       :output_tokens,
+      :verbose_logs,
       strict_mode: false,
       flaky: false
     ]
@@ -156,7 +159,8 @@ defmodule DeepEvalEx.TestRun do
         error: result.error,
         evaluation_cost: result.evaluation_cost,
         input_tokens: result.input_tokens,
-        output_tokens: result.output_tokens
+        output_tokens: result.output_tokens,
+        verbose_logs: result.verbose_logs
       }
     end
 
@@ -178,7 +182,8 @@ defmodule DeepEvalEx.TestRun do
         evaluation_model: data.evaluation_model,
         evaluation_cost: data.evaluation_cost,
         input_tokens: data.input_tokens,
-        output_tokens: data.output_tokens
+        output_tokens: data.output_tokens,
+        verbose_logs: data.verbose_logs
       }
     end
   end
@@ -625,7 +630,8 @@ defmodule DeepEvalEx.TestRun do
       error: data.error,
       evaluationCost: to_float(data.evaluation_cost),
       inputTokenCount: data.input_tokens,
-      outputTokenCount: data.output_tokens
+      outputTokenCount: data.output_tokens,
+      verboseLogs: data.verbose_logs
     )
   end
 
@@ -746,7 +752,8 @@ defmodule DeepEvalEx.TestRun do
       error: map["error"],
       evaluation_cost: map["evaluationCost"],
       input_tokens: map["inputTokenCount"],
-      output_tokens: map["outputTokenCount"]
+      output_tokens: map["outputTokenCount"],
+      verbose_logs: map["verboseLogs"]
     }
   end
 

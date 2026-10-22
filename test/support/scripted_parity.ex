@@ -113,8 +113,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
 
   @doc """
   The fields of `measure.json` for a result: score, success, reason,
-  threshold, error, evaluation model, cost, tokens and `verbose_logs`
-  (`nil` while `DeepEvalEx.Result` has no such field).
+  threshold, error, evaluation model, cost, tokens and `verbose_logs`.
   """
   @spec measured(DeepEvalEx.Result.t()) :: map()
   def measured(result) do
@@ -128,7 +127,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
       "evaluation_cost" => result.evaluation_cost,
       "input_tokens" => result.input_tokens,
       "output_tokens" => result.output_tokens,
-      "verbose_logs" => Map.get(result, :verbose_logs)
+      "verbose_logs" => result.verbose_logs
     }
   end
 

@@ -21,6 +21,10 @@ defmodule DeepEvalEx.Result do
   - `:skipped` - Whether the metric was skipped instead of measured
     (default: `false`); skipped results are left out of the test run export
   - `:metadata` - Additional metric-specific data
+  - `:verbose_logs` - The metric's intermediate steps (claims, verdicts,
+    evaluation steps, ...) as deepeval's `verbose_logs` text, exported as
+    `verboseLogs` (see `DeepEvalEx.Metrics.Utils.Verbose`); `nil` when the
+    metric logs none
   - `:evaluation_model` - The judge model, for metrics that call an LLM
   - `:evaluation_cost` - USD cost of the LLM calls for this evaluation; `nil`
     when no LLM was called or a call's model is not priced
@@ -91,6 +95,7 @@ defmodule DeepEvalEx.Result do
           score_breakdown: map() | nil,
           skipped: boolean(),
           metadata: map() | nil,
+          verbose_logs: String.t() | nil,
           evaluation_model: String.t() | nil,
           evaluation_cost: float() | nil,
           input_tokens: non_neg_integer() | nil,
@@ -107,6 +112,7 @@ defmodule DeepEvalEx.Result do
     :threshold,
     :error,
     :metadata,
+    :verbose_logs,
     :evaluation_model,
     :evaluation_cost,
     :input_tokens,
@@ -133,6 +139,7 @@ defmodule DeepEvalEx.Result do
     (default: `false`)
   - `:score_breakdown` - Per-component scores
   - `:metadata` - Additional data
+  - `:verbose_logs` - The metric's verbose logs
   - `:evaluation_model` - The judge model
   - `:evaluation_cost` - LLM API cost
   - `:input_tokens` / `:output_tokens` - LLM token counts
@@ -166,6 +173,7 @@ defmodule DeepEvalEx.Result do
       flaky: Keyword.get(opts, :flaky, false),
       score_breakdown: Keyword.get(opts, :score_breakdown),
       metadata: Keyword.get(opts, :metadata),
+      verbose_logs: Keyword.get(opts, :verbose_logs),
       evaluation_model: Keyword.get(opts, :evaluation_model),
       evaluation_cost: Keyword.get(opts, :evaluation_cost),
       input_tokens: Keyword.get(opts, :input_tokens),

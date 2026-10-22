@@ -84,6 +84,8 @@ defmodule DeepEvalEx.Metrics.GEval do
   - `:flaky` - Report the result without letting it decide its test case's
     success (default: false)
   - `:model` - LLM model to use for evaluation
+  - `:verbose_mode` - Print the result's `:verbose_logs` (criteria,
+    evaluation steps, rubric and score) after measuring (default: false)
   - `:include_g_eval_suffix` - Name results `"<name> [GEval]"` rather than
     just `"<name>"` (default: true, as in deepeval)
   """
@@ -91,6 +93,7 @@ defmodule DeepEvalEx.Metrics.GEval do
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
   alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Result, TestCase}
+  alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.GEval, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.GEval, as: Schema
 
@@ -105,6 +108,7 @@ defmodule DeepEvalEx.Metrics.GEval do
     :score_range,
     :strict_mode,
     :model,
+    :verbose_mode,
     flaky: false,
     include_g_eval_suffix: true
   ]
@@ -120,6 +124,7 @@ defmodule DeepEvalEx.Metrics.GEval do
           threshold: number() | nil,
           score_range: {integer(), integer()},
           strict_mode: boolean(),
+          verbose_mode: boolean() | nil,
           flaky: boolean(),
           model: tuple() | nil,
           include_g_eval_suffix: boolean()
@@ -141,6 +146,7 @@ defmodule DeepEvalEx.Metrics.GEval do
     as deepeval's constructor forces it (default: false)
   - `:flaky` - Never decide a test case's success (default: false)
   - `:model` - LLM model (optional, uses default)
+  - `:verbose_mode` - Print the verbose logs (default: false)
   - `:include_g_eval_suffix` - Append `" [GEval]"` to the name (default: true)
   """
   @spec new(keyword()) :: t()
@@ -167,6 +173,7 @@ defmodule DeepEvalEx.Metrics.GEval do
       strict_mode: Keyword.get(opts, :strict_mode, false),
       flaky: Keyword.get(opts, :flaky, false),
       model: Keyword.get(opts, :model),
+      verbose_mode: Keyword.get(opts, :verbose_mode),
       include_g_eval_suffix: Keyword.get(opts, :include_g_eval_suffix, true)
     }
   end
@@ -268,18 +275,34 @@ defmodule DeepEvalEx.Metrics.GEval do
           strict_opts = Keyword.put_new(opts, :strict_mode, metric.strict_mode || false)
           threshold = BaseMetric.threshold(strict_opts, metric.threshold)
 
+          final_score =
+            BaseMetric.strict_score(normalized_score,
+              strict_mode: strict_opts[:strict_mode],
+              threshold: threshold
+            )
+
+          verbose_logs =
+            Verbose.construct_verbose_logs(
+              metric_name(metric),
+              [
+                "Criteria:\n#{Verbose.to_str(metric.criteria)}",
+                "Evaluation Steps:\n#{Verbose.prettify_list(steps)}",
+                "Rubric:\n#{metric.rubric |> Template.format_rubric() |> Verbose.to_str()}",
+                "Score: #{Verbose.to_str(final_score)}",
+                "Reason: #{Verbose.to_str(reason)}"
+              ],
+              verbose_mode: Keyword.get(opts, :verbose_mode, metric.verbose_mode)
+            )
+
           latency = System.monotonic_time(:millisecond) - start_time
 
           {:ok,
            Result.new(
              metric: metric_name(metric),
-             score:
-               BaseMetric.strict_score(normalized_score,
-                 strict_mode: strict_opts[:strict_mode],
-                 threshold: threshold
-               ),
+             score: final_score,
              threshold: threshold,
              reason: reason,
+             verbose_logs: verbose_logs,
              strict_mode: strict_opts[:strict_mode],
              flaky: Keyword.get(opts, :flaky, metric.flaky),
              latency_ms: latency,

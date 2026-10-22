@@ -111,6 +111,20 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - **`DeepEvalEx.Schemas.ToolCall.equal?/2`**, deepeval's `ToolCall.__eq__`:
   equal when `name`, `input_parameters` and `output` are, whatever the
   `type`, `description` and `reasoning`.
+- **Verbose logs on every result, exported as `verboseLogs`.**
+  `DeepEvalEx.Result` and `DeepEvalEx.TestRun.MetricData` gain `:verbose_logs`,
+  the metric's intermediate steps as deepeval 4.3.1 writes them (truths,
+  claims, statements, verdicts, GEval's criteria, evaluation steps, rubric and
+  score, ToolCorrectness's tools and tool selection score), byte for byte. The
+  test run export writes them as each metric's `verboseLogs`, and
+  `TestRun.load/1` reads them back, so a deepeval file round-trips with them.
+  As in deepeval, the logs are computed whether or not the metric is in
+  verbose mode, except by ExactMatch, which only builds them in verbose mode.
+  Every metric takes `:verbose_mode` (`GEval.new/1` too), which prints the
+  logs with the score and reason after measuring, as deepeval's
+  `print_verbose_logs`; ExUnit assertions default it from the
+  `DEEPEVAL_VERBOSE_MODE` environment variable, as deepeval's `assert_test`
+  does. The helpers live in `DeepEvalEx.Metrics.Utils.Verbose`.
 - **Scripted mode for the Mock adapter.** `Mock.script/2` replays judge
   responses keyed by step (named by the requested schema's fields, see
   `Mock.step_key/1`) and call index, reports the script's judge model and
@@ -304,6 +318,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Fixed
 
+- A tool call whose `output` is a `Jason.OrderedObject` (as loaded from JSON
+  with ordered objects) printed it as a Python dict in reasons and verbose
+  logs; it now prints as indented JSON, like any other map, as deepeval's
+  `ToolCall.__repr__` does.
 - Every LLM metric now works against the real OpenAI API. Five of the seven
   (Answer Relevancy, Contextual Precision, Contextual Recall, Faithfulness,
   Hallucination) sent schemas that OpenAI's strict mode rejects with a 400.

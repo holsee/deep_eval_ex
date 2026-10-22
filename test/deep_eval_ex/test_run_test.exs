@@ -175,6 +175,25 @@ defmodule DeepEvalEx.TestRunTest do
       assert encode(test_run) =~ ~s("strictMode": true, "flaky": false)
     end
 
+    test "exports each result's verbose logs as verboseLogs and reads them back" do
+      results = [
+        Result.new(metric: "Faithfulness", score: 1.0, verbose_logs: "Claims:\n[]"),
+        Result.error("Hallucination", "boom", threshold: 0.5)
+      ]
+
+      test_run = TestRun.from_results([%TestCase{input: "a"}], [results])
+
+      assert [%{metrics_data: [%{verbose_logs: "Claims:\n[]"}, %{verbose_logs: nil}]}] =
+               test_run.test_cases
+
+      json = encode(test_run)
+      assert json =~ ~s("flaky": false, "verboseLogs": "Claims:\\n[]"})
+      assert length(String.split(json, "verboseLogs")) == 2
+
+      assert {_test_cases, [[%Result{verbose_logs: "Claims:\n[]"}, %Result{verbose_logs: nil}]]} =
+               TestRun.to_results(test_run)
+    end
+
     test "flaky metrics never decide a test case's success, as deepeval's update_status" do
       test_cases = [%TestCase{input: "a"}, %TestCase{input: "b"}]
 

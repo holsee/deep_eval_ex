@@ -21,6 +21,7 @@ Every metric evaluation returns a `Result` struct containing the score, success 
 | `score_breakdown` | `map() \| nil` | Per-component scores of a composite metric (not exported) |
 | `skipped` | `boolean()` | Whether the metric was skipped instead of measured |
 | `metadata` | `map()` | Additional metric-specific data |
+| `verbose_logs` | `String.t() \| nil` | The metric's intermediate steps as deepeval's verbose logs (see below) |
 | `evaluation_model` | `String.t() \| nil` | Judge model used by LLM-based metrics |
 | `evaluation_cost` | `float() \| nil` | USD cost of the LLM calls; `nil` when no LLM was called or a model is not priced |
 | `input_tokens` | `integer() \| nil` | Prompt tokens used by the LLM calls |
@@ -213,6 +214,42 @@ result.metadata
 #   relevant_count: 1
 # }
 ```
+
+## Verbose Logs
+
+Like deepeval's `verbose_logs`, every built-in metric records its
+intermediate steps (truths, claims, statements, verdicts, evaluation steps,
+tools, ...) as text, exported as `verboseLogs` in the test run:
+
+```elixir
+{:ok, result} = Faithfulness.measure(test_case)
+
+IO.puts(result.verbose_logs)
+# Truths (limit=None):
+# [
+#     "Paris is the capital of France."
+# ]
+#
+# Claims:
+# [
+#     "Paris is in France."
+# ]
+#
+# Verdicts:
+# [
+#     {
+#         "verdict": "yes",
+#         "reason": null
+#     }
+# ]
+```
+
+The logs are computed whatever the metric's `:verbose_mode`, which only
+controls printing them, with the score and reason, after measuring.
+`ExactMatch` is the exception: like deepeval's, it only builds its logs in
+verbose mode. ExUnit assertions turn verbose mode on when the
+`DEEPEVAL_VERBOSE_MODE` environment variable is truthy, as deepeval's
+`assert_test` does.
 
 ## Model, Tokens and Cost
 

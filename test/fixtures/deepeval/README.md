@@ -170,9 +170,8 @@ rows here.
 | Facet | Scenarios | Fails because | Tag |
 | --- | --- | --- | --- |
 | measure | `g_eval_strict` | Strict score normalised over the 0-10 range (0.1, then clamped to 0), where deepeval takes the judge's 1 as the score (P1.11) | P1.11 |
-| verbose_logs | every scenario but `exact_match_*` | No `verbose_logs` on results (P1.7) | P1.7 |
-| test_run | every scenario but `exact_match_*` and `g_eval_strict` | No `verboseLogs` in the export (P1.7) | P1.7 |
-| test_run | `g_eval_strict` | No `verboseLogs` (P1.7) and strict scoring (P1.11) | P1.11 |
+| verbose_logs | `g_eval_strict` | The logged score is the strict score above (P1.11) | P1.11 |
+| test_run | `g_eval_strict` | Strict scoring (P1.11) | P1.11 |
 
 ## Prompt goldens
 

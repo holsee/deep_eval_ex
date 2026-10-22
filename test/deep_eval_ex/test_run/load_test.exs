@@ -236,7 +236,7 @@ defmodule DeepEvalEx.TestRun.LoadTest do
             %{
               "name" => "a",
               "trace" => %{"uuid" => "1"},
-              "metricsData" => [%{"name" => "M", "verboseLogs" => "...", "success" => true}]
+              "metricsData" => [%{"name" => "M", "success" => true}]
             }
           ]
         })
@@ -244,10 +244,26 @@ defmodule DeepEvalEx.TestRun.LoadTest do
       json = encode(test_run)
 
       refute json =~ "testFile"
-      refute json =~ "verboseLogs"
       refute json =~ "trace"
       assert json =~ ~s("conversationalTestCases": [])
       assert json =~ ~s("official": false)
+    end
+
+    test "keeps a metric's verboseLogs, written last as deepeval's MetricData" do
+      test_run =
+        from_map!(%{
+          "testCases" => [
+            %{
+              "name" => "a",
+              "metricsData" => [
+                %{"name" => "M", "success" => true, "verboseLogs" => "Verdicts:\n[]"}
+              ]
+            }
+          ]
+        })
+
+      assert [%{metrics_data: [%{verbose_logs: "Verdicts:\n[]"}]}] = test_run.test_cases
+      assert encode(test_run) =~ ~s("flaky": false, "verboseLogs": "Verdicts:\\n[]"})
     end
 
     test "rejects test cases and metric data without a name" do

@@ -133,4 +133,29 @@ defmodule DeepEvalEx.Metrics.ExactMatchTest do
       assert result.evaluation_cost == nil
     end
   end
+
+  describe "verbose logs" do
+    setup do
+      %{test_case: %TestCase{input: "Q", actual_output: "4", expected_output: "4"}}
+    end
+
+    test "are only computed in verbose mode, as deepeval's", %{test_case: test_case} do
+      assert {:ok, %{verbose_logs: nil}} = ExactMatch.measure(test_case)
+
+      ExUnit.CaptureIO.capture_io(fn ->
+        assert {:ok, %{verbose_logs: "Score: 1.00"}} =
+                 ExactMatch.measure(test_case, verbose_mode: true)
+      end)
+    end
+
+    test "print the score and reason in verbose mode", %{test_case: test_case} do
+      output =
+        ExUnit.CaptureIO.capture_io(fn -> ExactMatch.measure(test_case, verbose_mode: true) end)
+
+      assert output =~ "Exact Match Verbose Logs"
+
+      assert output =~
+               "Score: 1.00\n \nReason: The actual and expected outputs are exact matches."
+    end
+  end
 end

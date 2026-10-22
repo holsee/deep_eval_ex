@@ -553,6 +553,46 @@ defmodule DeepEvalEx.ExUnitTest do
     end
   end
 
+  describe "DEEPEVAL_VERBOSE_MODE" do
+    setup do
+      previous = System.get_env("DEEPEVAL_VERBOSE_MODE")
+
+      on_exit(fn ->
+        if previous,
+          do: System.put_env("DEEPEVAL_VERBOSE_MODE", previous),
+          else: System.delete_env("DEEPEVAL_VERBOSE_MODE")
+      end)
+
+      %{test_case: TestCase.new!(input: "Q", actual_output: "4", expected_output: "4")}
+    end
+
+    test "puts every metric in verbose mode, as deepeval's assert_test", %{test_case: test_case} do
+      System.put_env("DEEPEVAL_VERBOSE_MODE", "true")
+
+      output =
+        ExUnit.CaptureIO.capture_io(fn ->
+          assert %Result{verbose_logs: "Score: 1.00"} = assert_passes(test_case, ExactMatch)
+        end)
+
+      assert output =~ "Exact Match Verbose Logs"
+    end
+
+    test "leaves verbose mode off when unset or false", %{test_case: test_case} do
+      System.delete_env("DEEPEVAL_VERBOSE_MODE")
+      assert %Result{verbose_logs: nil} = assert_passes(test_case, ExactMatch)
+
+      System.put_env("DEEPEVAL_VERBOSE_MODE", "0")
+      assert %Result{verbose_logs: nil} = assert_passes(test_case, ExactMatch)
+    end
+
+    test "is overridden by an explicit :verbose_mode", %{test_case: test_case} do
+      System.put_env("DEEPEVAL_VERBOSE_MODE", "true")
+
+      assert %Result{verbose_logs: nil} =
+               assert_passes(test_case, ExactMatch, verbose_mode: false)
+    end
+  end
+
   describe "use DeepEvalEx.ExUnit" do
     test "imports all assertion macros" do
       # This test verifies that using the module makes all macros available

@@ -235,6 +235,8 @@ defmodule DeepEvalEx.Prompts.Python do
 
   defp output_field(nil), do: nil
 
+  defp output_field(%Jason.OrderedObject{} = output), do: json_field("output", output)
+
   defp output_field(output) when is_map(output) and not is_struct(output),
     do: json_field("output", output)
 

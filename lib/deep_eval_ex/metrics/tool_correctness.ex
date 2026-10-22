@@ -40,6 +40,8 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   - `:strict_mode` - When true, threshold is forced to the integer `1` and any score below
     it becomes the integer `0`, as in deepeval (default: false)
   - `:include_reason` - Whether to include reason in results (default: true)
+  - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
+    (default: false)
   - `:adapter` - LLM adapter for tool selection scoring
   - `:model` - Model name for tool selection scoring
 
@@ -59,6 +61,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
 
   alias DeepEvalEx.LLM.Adapter
   alias DeepEvalEx.Metrics.BaseMetric
+  alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.Prompts.ToolCorrectness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.ToolCorrectness, as: Schema
@@ -109,12 +112,28 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
         tool_selection_reason
       )
 
+    verbose_logs =
+      Verbose.construct_verbose_logs(
+        metric_name(),
+        [
+          Verbose.format_tools("Expected Tools", expected),
+          Verbose.format_tools("Tools Called", called),
+          format_available_tools(config.available_tools),
+          # deepeval's ToolSelectionScore.score is a float field.
+          "Tool Selection Score: #{Verbose.to_str(tool_selection_score / 1)}",
+          "Tool Selection Reason: #{Verbose.to_str(tool_selection_reason)}",
+          "Final Score: #{Verbose.to_str(score)}\nFinal Reason: #{Verbose.to_str(reason)}"
+        ],
+        opts
+      )
+
     {:ok,
      Result.new(
        metric: metric_name(),
        score: score,
        threshold: config.threshold,
        reason: reason,
+       verbose_logs: verbose_logs,
        metadata: %{
          tool_calling_score: tool_calling_score,
          tool_selection_score: tool_selection_score,
@@ -126,6 +145,9 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
        }
      )}
   end
+
+  defp format_available_tools(tools) when tools in [nil, []], do: "Available Tools: []"
+  defp format_available_tools(tools), do: Verbose.format_tools("Available Tools", tools)
 
   defp parse_config(opts) do
     %{

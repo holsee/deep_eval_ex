@@ -56,6 +56,8 @@ defmodule DeepEvalEx.Metrics.Hallucination do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
+    (default: false)
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
@@ -65,6 +67,7 @@ defmodule DeepEvalEx.Metrics.Hallucination do
     Metrics.BaseMetric,
     Metrics.QAG,
     Metrics.Utils.ScoreDirection,
+    Metrics.Utils.Verbose,
     Result
   }
 
@@ -105,12 +108,23 @@ defmodule DeepEvalEx.Metrics.Hallucination do
     with {:ok, verdicts} <- generate_verdicts(actual_output, contexts, opts),
          score = calculate_score(verdicts, threshold, opts),
          {:ok, reason} <- maybe_generate_reason(score, verdicts, include_reason, opts) do
+      verbose_logs =
+        Verbose.construct_verbose_logs(
+          metric_name(),
+          [
+            "Verdicts:\n#{verdicts |> Verbose.verdict_models() |> Verbose.prettify_list()}",
+            "Score: #{Verbose.to_str(score)}\nReason: #{Verbose.to_str(reason)}"
+          ],
+          opts
+        )
+
       {:ok,
        Result.new(
          metric: metric_name(),
          score: score,
          threshold: threshold,
          reason: reason,
+         verbose_logs: verbose_logs,
          metadata: %{
            verdicts: verdicts,
            context_count: length(contexts)

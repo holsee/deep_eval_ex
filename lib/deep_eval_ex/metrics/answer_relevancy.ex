@@ -46,11 +46,14 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
+    (default: false)
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
   alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Metrics.QAG, Result}
+  alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.AnswerRelevancy, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.AnswerRelevancy, as: Schema
 
@@ -87,12 +90,24 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
          {:ok, verdicts} <- generate_verdicts(input, statements, opts),
          score = calculate_score(verdicts, threshold, opts),
          {:ok, reason} <- maybe_generate_reason(score, input, verdicts, include_reason, opts) do
+      verbose_logs =
+        Verbose.construct_verbose_logs(
+          metric_name(),
+          [
+            "Statements:\n#{Verbose.prettify_list(statements)}",
+            "Verdicts:\n#{verdicts |> Verbose.verdict_models() |> Verbose.prettify_list()}",
+            "Score: #{Verbose.to_str(score)}\nReason: #{Verbose.to_str(reason)}"
+          ],
+          opts
+        )
+
       {:ok,
        Result.new(
          metric: metric_name(),
          score: score,
          threshold: threshold,
          reason: reason,
+         verbose_logs: verbose_logs,
          metadata: %{
            statements: statements,
            verdicts: verdicts,

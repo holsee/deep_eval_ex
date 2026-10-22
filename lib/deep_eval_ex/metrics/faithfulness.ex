@@ -51,11 +51,14 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
   - `:include_reason` - Generate explanation (default: true)
   - `:truths_extraction_limit` - Max truths to extract per doc (default: nil = all)
   - `:model` - LLM model for evaluation
+  - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
+    (default: false)
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
   alias DeepEvalEx.{LLM.Adapter, LLM.Usage, Metrics.BaseMetric, Metrics.QAG, Result}
+  alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.Faithfulness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.Faithfulness, as: Schema
 
@@ -107,12 +110,25 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
          {:ok, verdicts} <- generate_verdicts(claims, truths, opts),
          score = calculate_score(verdicts, threshold, opts),
          {:ok, reason} <- maybe_generate_reason(score, verdicts, include_reason, opts) do
+      verbose_logs =
+        Verbose.construct_verbose_logs(
+          metric_name(),
+          [
+            "Truths (limit=#{Verbose.to_str(truths_limit)}):\n#{Verbose.prettify_list(truths)}",
+            "Claims:\n#{Verbose.prettify_list(claims)}",
+            "Verdicts:\n#{verdicts |> Verbose.verdict_models() |> Verbose.prettify_list()}",
+            "Score: #{Verbose.to_str(score)}\nReason: #{Verbose.to_str(reason)}"
+          ],
+          opts
+        )
+
       {:ok,
        Result.new(
          metric: metric_name(),
          score: score,
          threshold: threshold,
          reason: reason,
+         verbose_logs: verbose_logs,
          metadata: %{
            truths: truths,
            claims: claims,

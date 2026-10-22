@@ -53,11 +53,14 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
     (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
+    (default: false)
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
   alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Metrics.QAG, Result}
+  alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.ContextualRecall, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.ContextualRecall, as: Schema
 
@@ -94,12 +97,27 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
          score = calculate_score(verdicts, threshold, opts),
          {:ok, reason} <-
            maybe_generate_reason(score, expected_output, verdicts, include_reason, opts) do
+      # deepeval's verdicts carry the expected output they were judged
+      # against (VerdictWithExpectedOutput).
+      verdict_models = Verbose.verdict_models(verdicts, expected_output: expected_output)
+
+      verbose_logs =
+        Verbose.construct_verbose_logs(
+          metric_name(),
+          [
+            "Verdicts:\n#{Verbose.prettify_list(verdict_models)}",
+            "Score: #{Verbose.to_str(score)}\nReason: #{Verbose.to_str(reason)}"
+          ],
+          opts
+        )
+
       {:ok,
        Result.new(
          metric: metric_name(),
          score: score,
          threshold: threshold,
          reason: reason,
+         verbose_logs: verbose_logs,
          metadata: %{
            verdicts: verdicts,
            sentence_count: length(verdicts),

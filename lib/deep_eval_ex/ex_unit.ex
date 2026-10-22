@@ -41,9 +41,17 @@ defmodule DeepEvalEx.ExUnit do
   errored metric, including `assert_fails/2,3`, with a message of the form
   `"<Metric> metric errored: <message>"` so errors are never mistaken for a
   low score.
+
+  ## Verbose mode
+
+  As deepeval's `assert_test`, the assertions put every metric in verbose
+  mode when the `DEEPEVAL_VERBOSE_MODE` environment variable is set to a
+  truthy value (`1`, `true`, `yes`, ...), printing each metric's verbose
+  logs (see `DeepEvalEx.Metrics.Utils.Verbose`). An explicit
+  `verbose_mode:` option wins over the environment variable.
   """
 
-  alias DeepEvalEx.{Evaluator, Metrics.BaseMetric, Result}
+  alias DeepEvalEx.{Evaluator, Metrics.BaseMetric, Metrics.Utils.Verbose, Result}
 
   @doc """
   Imports DeepEvalEx.ExUnit macros into your test module.
@@ -183,6 +191,8 @@ defmodule DeepEvalEx.ExUnit do
   end
 
   defp run_metric(test_case, metric, opts) do
+    opts = Keyword.put_new_lazy(opts, :verbose_mode, &Verbose.env_verbose_mode?/0)
+
     case metric.measure(test_case, opts) do
       {:ok, result} ->
         result

@@ -38,11 +38,8 @@ defmodule DeepEvalEx.ScriptedParityTest do
   @known_divergences %{
     prompts: [],
     measure: [{"P1.11", ~w(g_eval_strict)}],
-    verbose_logs: [{"P1.7", @scenarios -- ~w(exact_match_fail exact_match_pass)}],
-    test_run: [
-      {"P1.7", @scenarios -- ~w(exact_match_fail exact_match_pass g_eval_strict)},
-      {"P1.11", ~w(g_eval_strict)}
-    ]
+    verbose_logs: [{"P1.11", ~w(g_eval_strict)}],
+    test_run: [{"P1.11", ~w(g_eval_strict)}]
   }
 
   known_divergence = fn scenario, facet ->

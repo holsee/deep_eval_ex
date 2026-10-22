@@ -80,6 +80,22 @@ defmodule DeepEvalEx.Prompts.PythonTest do
                )]\
                """
     end
+
+    test "prints an ordered object output as JSON, like a dict" do
+      output = Jason.OrderedObject.new([{"temp_c", 18}, {"sky", "clear"}])
+
+      assert Python.repr(%ToolCall{name: "get_weather", output: output}) ==
+               """
+               ToolCall(
+                   name="get_weather",
+                   type="FUNCTION",
+                   output={
+                       "temp_c": 18,
+                       "sky": "clear"
+                   }
+               )\
+               """
+    end
   end
 
   describe "format_fixed/2" do

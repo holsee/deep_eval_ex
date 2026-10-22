@@ -106,7 +106,7 @@ survives.
   A test case's `success` is computed from its metric data and its `order`
   from its position; `metricsScores`, `testPassed` and `testFailed` are
   computed from the test cases; a metric's missing `success` is `false`.
-- **Unknown keys** (`testFile`, `datasetAlias`, `trace`, `verboseLogs`, ...)
+- **Unknown keys** (`testFile`, `datasetAlias`, `trace`, `expectationsData`, ...)
   are ignored, as deepeval's pydantic models ignore extra keys, and are not
   written back. Conversational test cases and prompts are ignored too.
 
