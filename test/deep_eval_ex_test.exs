@@ -102,15 +102,38 @@ defmodule DeepEvalExTest do
         test_pid: self(),
         results_folder: dir,
         identifier: "x",
-        hyperparameters: [k: 1]
+        hyperparameters: [k: 1],
+        dataset_alias: "qa",
+        dataset_id: "ds-1",
+        dataset_version: "v2"
       )
 
       assert_received {:opts, opts}
       assert opts[:test_pid] == self()
 
-      for key <- [:results_folder, :results_subfolder, :identifier, :hyperparameters] do
+      for key <- [
+            :results_folder,
+            :results_subfolder,
+            :identifier,
+            :hyperparameters,
+            :dataset_alias,
+            :dataset_id,
+            :dataset_version
+          ] do
         refute Keyword.has_key?(opts, key)
       end
+    end
+
+    test "records the dataset the test cases came from" do
+      {_results, test_run, nil} =
+        DeepEvalEx.evaluate_run(test_cases(), [ExactMatch],
+          dataset_alias: "qa",
+          dataset_id: "ds-1",
+          dataset_version: "v2"
+        )
+
+      assert {test_run.dataset_alias, test_run.dataset_id, test_run.dataset_version} ==
+               {"qa", "ds-1", "v2"}
     end
 
     test "sums evaluation costs from the metrics" do

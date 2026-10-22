@@ -1374,6 +1374,28 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - Difference: map keys (metadata, custom columns, tool call parameters)
     are written in Elixir map order, sorted for up to 32 keys, rather than
     insertion order; the files decode and load the same.
+- **`EvaluationDataset.evaluate/4` and `evaluate_run/4`: evaluate a task
+  over a dataset's goldens**, the Elixir equivalent of deepeval 4.3.1's
+  `evals_iterator`, without its tracing (which comes later). The task is
+  called with each golden through `Task.async_stream`, up to
+  `:max_concurrent` at once (one at a time with `run_async: false`), and
+  returns the actual output, a map or keyword list of test case fields, or a
+  `DeepEvalEx.TestCase`. Each golden's test case is ranked by the golden's
+  position (`test_case_<position>` unless named) and evaluated as
+  `DeepEvalEx.evaluate_run/3` evaluates it, taking its options; the run
+  records the dataset's alias, id and version as `datasetAlias`,
+  `datasetId` and `datasetVersion`. `evaluate/4` returns
+  `{:ok, %DeepEvalEx.EvaluationResult{}}`, `evaluate_run/4` the test cases,
+  results, test run and path.
+  - A dataset without goldens raises `ArgumentError` with deepeval's
+    message; concurrency options, thresholds and hyperparameters are
+    validated before the task runs.
+  - When the task raises for a golden, the first such golden's error is
+    raised again and nothing is evaluated.
+- **`DeepEvalEx.evaluate_run/3` takes `:dataset_alias`, `:dataset_id` and
+  `:dataset_version`**, written to the test run as `datasetAlias`,
+  `datasetId` and `datasetVersion` (deepeval takes them from its test
+  cases); like the other export options, they are not passed to metrics.
 
 ### Changed
 

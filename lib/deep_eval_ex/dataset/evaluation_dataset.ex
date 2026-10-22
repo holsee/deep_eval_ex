@@ -101,6 +101,24 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
   deepeval keeps the order they were inserted in. The file decodes and loads
   the same.
 
+  ## Evaluating
+
+  `evaluate/4` and `evaluate_run/4` are the Elixir equivalent of deepeval's
+  `evals_iterator`, without its tracing: where deepeval yields each golden
+  to a loop body that calls the application, here a task function is
+  called with each golden, concurrently, and returns the application's
+  output. Each golden becomes a test case (`DeepEvalEx.Dataset.Golden.to_test_case/1`)
+  with that output and its position among the goldens as its
+  `:dataset_rank`, so it is named `"test_case_<position>"` unless the
+  golden is named. The test cases are then evaluated as
+  `DeepEvalEx.evaluate_run/3` evaluates them, and the run records the
+  dataset's alias, id and version as `datasetAlias`, `datasetId` and
+  `datasetVersion`.
+
+      EvaluationDataset.evaluate(dataset, fn golden -> MyApp.answer(golden.input) end, [
+        AnswerRelevancy
+      ])
+
   ## Enumerable
 
   A dataset enumerates its goldens, in order, so `Enum` and `Stream`
@@ -121,7 +139,7 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
   """
 
   alias DeepEvalEx.Dataset.{Golden, Loader, Writer}
-  alias DeepEvalEx.TestCase
+  alias DeepEvalEx.{EvaluationResult, Evaluator, Result, TestCase, TestRun}
 
   require Logger
 
@@ -134,6 +152,9 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
         }
 
   defstruct goldens: [], test_cases: [], alias: nil, id: nil, version: nil
+
+  @typedoc "What an `evaluate/4` task returns for a golden."
+  @type task_output :: String.t() | nil | map() | keyword() | TestCase.t()
 
   @doc """
   Creates a dataset of `goldens`, as deepeval's `EvaluationDataset(goldens=...)`.
@@ -569,6 +590,138 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
     Writer.write!(goldens, file_type, path)
     Logger.info("Evaluation dataset saved at #{path}!")
     path
+  end
+
+  ## Evaluating
+
+  @doc """
+  Runs `task` over the dataset's goldens and evaluates the test cases it
+  builds against `metrics`, as deepeval's `evals_iterator`. See
+  "Evaluating" in the module doc.
+
+  Returns `{:ok, %DeepEvalEx.EvaluationResult{}}`, as `DeepEvalEx.evaluate/3`,
+  with one `DeepEvalEx.TestResult` per golden, in order.
+  `evaluate_run/4` also returns the test cases and the
+  `DeepEvalEx.TestRun`.
+
+  `task` is called with each `DeepEvalEx.Dataset.Golden` and returns the
+  application's output for it:
+
+  - a string, or `nil`, is the test case's `:actual_output`
+  - a map or keyword list of `DeepEvalEx.TestCase` fields
+    (`%{actual_output: ..., retrieval_context: [...]}`) is set on the
+    golden's test case; an unknown field raises `KeyError`
+  - a `DeepEvalEx.TestCase` is the test case itself
+
+  The golden's test case keeps its other fields, and every test case takes
+  the golden's position as its `:dataset_rank`. Any other result raises
+  `ArgumentError`.
+
+  The task runs in up to `:max_concurrent` processes at once (one at a time
+  with `run_async: false`), and is not timed out. When it raises, exits or
+  throws for a golden, the first such golden's error, in golden order, is
+  raised again in the caller, the task's other calls are stopped and
+  nothing is evaluated.
+
+  Raises `ArgumentError` with deepeval's message for a dataset without
+  goldens (`"Unable to evaluate dataset with no goldens."`). Invalid
+  concurrency options, metrics without a threshold and invalid
+  hyperparameters raise as `DeepEvalEx.evaluate_run/3` raises for them,
+  before the task runs.
+
+  ## Options
+
+  All `DeepEvalEx.evaluate_run/3` options, including `:results_folder`,
+  `:identifier` and `:hyperparameters`. `:dataset_alias`, `:dataset_id`
+  and `:dataset_version` are the dataset's, whatever the options say.
+  """
+  @spec evaluate(t(), (Golden.t() -> task_output()), [module() | struct()], keyword()) ::
+          {:ok, EvaluationResult.t()}
+  def evaluate(%__MODULE__{} = dataset, task, metrics, opts \\ []) do
+    {test_cases, results, _test_run, _path} = evaluate_run(dataset, task, metrics, opts)
+    {:ok, EvaluationResult.from_results(test_cases, results)}
+  end
+
+  @doc """
+  Runs `task` over the dataset's goldens and evaluates the test cases it
+  builds, as `evaluate/4`, returning `{test_cases, results, test_run, path}`.
+
+  `test_cases` are the test cases built, one per golden in order, and
+  `results`, `test_run` and `path` are what `DeepEvalEx.evaluate_run/3`
+  returns for them: one list of `DeepEvalEx.Result`s per test case, the
+  `DeepEvalEx.TestRun` with the dataset's alias, id and version, and the
+  path of the run file written, or `nil`.
+  """
+  @spec evaluate_run(t(), (Golden.t() -> task_output()), [module() | struct()], keyword()) ::
+          {[TestCase.t()], [[Result.t()]], TestRun.t(), Path.t() | nil}
+  def evaluate_run(%__MODULE__{goldens: goldens} = dataset, task, metrics, opts \\ [])
+      when is_function(task, 1) and is_list(metrics) do
+    if goldens == [], do: raise(ArgumentError, "Unable to evaluate dataset with no goldens.")
+
+    concurrency = Evaluator.max_concurrency!(opts)
+    if metrics != [], do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, opts)
+    TestRun.process_hyperparameters(opts[:hyperparameters])
+
+    test_cases = run_task(goldens, task, concurrency)
+
+    opts =
+      Keyword.merge(opts,
+        dataset_alias: dataset.alias,
+        dataset_id: dataset.id,
+        dataset_version: dataset.version
+      )
+
+    {results, test_run, path} = DeepEvalEx.evaluate_run(test_cases, metrics, opts)
+    {test_cases, results, test_run, path}
+  end
+
+  # Calls the task on every golden, in order, catching what it raises so
+  # that the first failing golden's error is raised again here (a linked
+  # task that raised would take the caller down with its own exit).
+  defp run_task(goldens, task, concurrency) do
+    goldens
+    |> Enum.with_index()
+    |> Task.async_stream(
+      fn {golden, rank} ->
+        try do
+          {:ok, test_case!(golden, task.(golden), rank)}
+        catch
+          kind, reason -> {:raised, kind, reason, __STACKTRACE__}
+        end
+      end,
+      max_concurrency: concurrency,
+      timeout: :infinity
+    )
+    |> Enum.reduce_while([], fn
+      {:ok, {:ok, test_case}}, acc -> {:cont, [test_case | acc]}
+      {:ok, raised}, _acc -> {:halt, raised}
+    end)
+    |> case do
+      {:raised, kind, reason, stacktrace} -> :erlang.raise(kind, reason, stacktrace)
+      test_cases -> Enum.reverse(test_cases)
+    end
+  end
+
+  defp test_case!(_golden, %TestCase{} = test_case, rank), do: %{test_case | dataset_rank: rank}
+
+  defp test_case!(golden, output, rank) when is_binary(output) or is_nil(output),
+    do: test_case!(golden, %{actual_output: output}, rank)
+
+  defp test_case!(golden, fields, rank) when is_map(fields) and not is_struct(fields),
+    do: %{struct!(Golden.to_test_case(golden), fields) | dataset_rank: rank}
+
+  defp test_case!(golden, fields, rank) when is_list(fields) do
+    if Keyword.keyword?(fields),
+      do: test_case!(golden, Map.new(fields), rank),
+      else: raise_task_output(fields)
+  end
+
+  defp test_case!(_golden, other, _rank), do: raise_task_output(other)
+
+  defp raise_task_output(other) do
+    raise ArgumentError,
+          "The task must return a string, nil, a map or keyword list of test case fields, " <>
+            "or a DeepEvalEx.TestCase, got: #{inspect(other)}"
   end
 
   defp file_type!(file_type) do

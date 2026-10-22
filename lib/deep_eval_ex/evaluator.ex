@@ -315,6 +315,18 @@ defmodule DeepEvalEx.Evaluator do
     test_case |> run_single(metrics, preflight(metrics, opts)) |> unwrap!()
   end
 
+  @doc false
+  # The number of test cases evaluate_with_durations/3 evaluates at once
+  # under `opts` (1 with `run_async: false`), raising as it raises for an
+  # invalid :max_concurrent, :concurrency or :throttle_value.
+  # DeepEvalEx.Dataset.EvaluationDataset.evaluate_run/4 runs its task as
+  # concurrently, and validates the options before running it.
+  @spec max_concurrency!(keyword()) :: pos_integer()
+  def max_concurrency!(opts) do
+    {opts, _throttle_value} = async_config!(opts)
+    Keyword.fetch!(opts, :concurrency)
+  end
+
   # {:ok, results}, or the first metric error to raise in metrics order;
   # halting the stream stops the metrics still running. The test case's
   # deadline starts now: each metric runs until its own :metric_timeout or

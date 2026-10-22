@@ -61,6 +61,31 @@ dataset = EvaluationDataset.put_test_cases(dataset, test_cases)
 
 `add_test_case/2` appends one test case.
 
+## Evaluating a task over the goldens
+
+`EvaluationDataset.evaluate/4` does all of that in one call, as deepeval's
+`evals_iterator` (without its tracing): it calls your task with each golden,
+concurrently, builds a test case from the golden and the task's output, and
+evaluates the test cases:
+
+```elixir
+{:ok, result} =
+  EvaluationDataset.evaluate(
+    dataset,
+    fn golden -> MyApp.answer(golden.input) end,
+    [DeepEvalEx.Metrics.AnswerRelevancy],
+    max_concurrent: 5,
+    results_folder: "eval_results"
+  )
+```
+
+The task returns the actual output, or a map or keyword list of test case
+fields (`%{actual_output: answer, retrieval_context: chunks}`), or a whole
+`DeepEvalEx.TestCase`. Each test case is ranked by its golden's position, and
+the run records the dataset's alias, id and version, as deepeval's does. If
+the task raises for a golden, the error is raised again and nothing is
+evaluated. `evaluate_run/4` also returns the test cases and the test run.
+
 ## Dataset rank
 
 Every test case in a dataset carries its position as `:dataset_rank`, as

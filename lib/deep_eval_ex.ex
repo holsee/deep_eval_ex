@@ -106,7 +106,15 @@ defmodule DeepEvalEx do
   alias DeepEvalEx.{Config, EvaluationResult, Evaluator, Result, TestCase, TestRun}
   alias DeepEvalEx.TestRun.LocalStore
 
-  @export_opts [:results_folder, :results_subfolder, :identifier, :hyperparameters]
+  @export_opts [
+    :results_folder,
+    :results_subfolder,
+    :identifier,
+    :hyperparameters,
+    :dataset_alias,
+    :dataset_id,
+    :dataset_version
+  ]
 
   @doc """
   Evaluates test cases against one or more metrics, as deepeval's
@@ -265,6 +273,10 @@ defmodule DeepEvalEx do
   - `:hyperparameters` - Keyword list or map of the settings that produced
     the outputs (model, prompt version, temperature, ...), recorded with
     stringified values; see `DeepEvalEx.TestRun.process_hyperparameters/1`
+  - `:dataset_alias`, `:dataset_id`, `:dataset_version` - The dataset the
+    test cases came from, written as `datasetAlias`, `datasetId` and
+    `datasetVersion`, as deepeval takes them from its test cases (default:
+    `nil`); `DeepEvalEx.Dataset.EvaluationDataset.evaluate_run/4` sets them
 
   These options are not passed on to the metrics.
 
@@ -311,7 +323,10 @@ defmodule DeepEvalEx do
         run_durations: durations,
         run_duration: run_duration,
         identifier: export_opts[:identifier],
-        hyperparameters: hyperparameters
+        hyperparameters: hyperparameters,
+        dataset_alias: export_opts[:dataset_alias],
+        dataset_id: export_opts[:dataset_id],
+        dataset_version: export_opts[:dataset_version]
       )
 
     {results, test_run, save_test_run(test_run, export_opts)}
