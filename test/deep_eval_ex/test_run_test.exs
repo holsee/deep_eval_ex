@@ -306,6 +306,34 @@ defmodule DeepEvalEx.TestRunTest do
                  ~s("testFailed": 1, "runDuration": 0.0, "official": false})
     end
 
+    test "writes testFile first and the dataset keys before official, like deepeval's TestRun" do
+      test_run =
+        TestRun.from_results([%TestCase{input: "a"}], [[ok("M", 1.0)]],
+          test_file: "test_chatbot.py",
+          dataset_alias: "golden",
+          dataset_id: "ds_1",
+          dataset_version: "2",
+          official: true
+        )
+
+      assert test_run.prompts == []
+
+      keys = test_run |> TestRun.to_map() |> Map.fetch!(:values) |> Enum.map(&elem(&1, 0))
+
+      assert keys ==
+               ~w(testFile testCases conversationalTestCases metricsScores prompts testPassed
+                  testFailed runDuration datasetAlias datasetId datasetVersion official)
+
+      assert encode(test_run) =~
+               ~s("runDuration": 0.0, "datasetAlias": "golden", "datasetId": "ds_1", ) <>
+                 ~s("datasetVersion": "2", "official": true})
+    end
+
+    test "leaves out prompts a hand-built run does not set, as deepeval's exclude_none" do
+      refute encode(%TestRun{}) =~ "prompts"
+      assert encode(%TestRun{prompts: []}) =~ ~s("prompts": [])
+    end
+
     test "omits empty tool call and retrieval context lists but keeps an empty context" do
       test_case = %TestCase{input: "a", context: [], retrieval_context: [], tools_called: []}
       map = [test_case] |> TestRun.from_results([[ok("M", 1.0)]]) |> TestRun.to_map()

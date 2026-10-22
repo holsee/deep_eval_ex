@@ -1,9 +1,9 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in four sets:
+Fixtures written by **deepeval 4.3.1**, in five sets:
 
-- export scenarios (the directories below, except `scripted/`, `prompts/`
-  and `system_one/`), used by
+- export scenarios (the directories below, except `scripted/`, `prompts/`,
+  `round_trip/` and `system_one/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
@@ -14,6 +14,10 @@ Fixtures written by **deepeval 4.3.1**, in four sets:
   `test/deep_eval_ex/prompt_golden_test.exs` to check that each
   `DeepEvalEx.Prompts` function renders the same prompt as the deepeval
   template it stands for, for the same inputs
+- [round-trip test runs](#round-trip-test-runs) (`round_trip/`), richer
+  files than `evaluate()` writes (traces, prompts, a dataset), used by
+  `test/deep_eval_ex/test_run/load_test.exs` to check that
+  `DeepEvalEx.TestRun.load/1` and `to_map/1` write them back byte for byte
 - [System One fixtures](#system-one-fixtures) (`system_one/`), recording what
   deepeval asks System One (TypeSafe AI's Jev) and does with its answers under
   the `system_one` and `hybrid` eval modes, for the eval-mode units (P3, P4).
@@ -78,11 +82,12 @@ repository. It rewrites every scenario directory; scenarios are defined in
 `SCENARIOS` at the top of the script. A new scenario also needs its name in
 the parity test's "covers every scenario" assertion.
 
-It also rewrites the outputs of every scripted scenario that has a
+It also rewrites the [round-trip test runs](#round-trip-test-runs) and the
+outputs of every scripted scenario that has a
 `script.json`, and every [prompt golden](#prompt-goldens) (defined in
 `PROMPT_CASES`). Runs are deterministic: no network, a fixed string hash seed
 (deepeval orders some reasons by iterating sets), and only the `runDuration`
-values change between runs.
+values change between runs (and the round-trip runs' uuids and timestamps).
 
 Then run `mix test test/deep_eval_ex/parity_test.exs
 test/deep_eval_ex/scripted_parity_test.exs
@@ -98,6 +103,21 @@ Only values that differ between two identical runs:
 Test-case `runDuration` is compared as is: deepeval's async executor records
 any test case that took under a second as the integer `0`, which these
 metrics always do.
+
+## Round-trip test runs
+
+`round_trip/<name>/test_run.json` is a file deepeval wrote, unchanged, with
+keys the export scenarios never produce and DeepEvalEx does not model.
+DeepEvalEx only loads it and re-encodes it; nothing compares it with a run of
+its own. Its uuids and timestamps change with every regeneration.
+
+| Run | What it covers |
+| --- | --- |
+| `traced_dataset` | `EvaluationDataset.evals_iterator()` over two goldens of a dataset with an alias, id and version (set as `pull()` sets them, without Confident AI), running an `@observe`d agent, retriever and LLM span: each test case's `trace` (with span `metricsData`), the run's `traceMetricsScores`, `prompts` from a text and a messages `Prompt` hyperparameter, `identifier`, `hyperparameters`, `datasetAlias`, `datasetId` and `datasetVersion` |
+
+deepeval 4.3.1 never sets `testFile`, and no local run writes
+`conversationalTestCases`, `expectationsData` or `imagesMapping`; those are
+covered by hand-written JSON in the load test.
 
 ## Scripted-judge scenarios
 

@@ -77,6 +77,7 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FIXTURES = os.path.join(ROOT, "test", "fixtures", "deepeval")
 SCRIPTED = os.path.join(FIXTURES, "scripted")
+ROUND_TRIP = os.path.join(FIXTURES, "round_trip")
 PROMPTS = os.path.join(FIXTURES, "prompts")
 
 # deepeval builds some reasons by iterating sets (ToolCorrectness's missing
@@ -102,6 +103,7 @@ os.chdir(WORK_DIR)
 
 import deepeval  # noqa: E402
 from deepeval import evaluate  # noqa: E402
+from deepeval.dataset import EvaluationDataset, Golden  # noqa: E402
 from deepeval.evaluate.configs import (  # noqa: E402
     AsyncConfig,
     CacheConfig,
@@ -133,6 +135,7 @@ from deepeval.metrics.faithfulness.faithfulness import (  # noqa: E402
 from deepeval.metrics.g_eval.utils import Rubric  # noqa: E402
 from deepeval.metrics.utils.verbose import print_tools_called  # noqa: E402
 from deepeval.models import DeepEvalBaseLLM  # noqa: E402
+from deepeval.prompt import Prompt, PromptMessage  # noqa: E402
 from deepeval.templates import iter_base_template_methods  # noqa: E402
 from deepeval.test_case import (  # noqa: E402
     LLMTestCase,
@@ -140,6 +143,7 @@ from deepeval.test_case import (  # noqa: E402
     ToolCall,
     ToolCallParams,
 )
+from deepeval.tracing import observe, update_current_span, update_current_trace  # noqa: E402
 from openai.types.chat import ChatCompletion  # noqa: E402
 
 DEEPEVAL_VERSION = "4.3.1"
@@ -1044,6 +1048,80 @@ def run_scenario(name, scenario):
     write_json(os.path.join(out_dir, "input.json"), scenario)
 
 
+SPAN_JUDGE = {**STUB_JUDGE, "name": "Span Judge"}
+
+
+def run_round_trip_traced_dataset():
+    """A richer test run than evaluate() writes: deepeval's evals_iterator
+    over a dataset, with an @observe'd app, so the file has the keys the
+    export scenarios never produce and DeepEvalEx does not model: each test
+    case's `trace`, the run's `traceMetricsScores`, `prompts` (from Prompt
+    hyperparameters) and the dataset's `datasetAlias`, `datasetId` and
+    `datasetVersion`. DeepEvalEx only loads and re-encodes it, so its uuids
+    and timestamps change between runs."""
+    out_dir = os.path.join(ROUND_TRIP, "traced_dataset")
+    os.makedirs(out_dir, exist_ok=True)
+    results_folder = tempfile.mkdtemp(prefix="traced_dataset_", dir=WORK_DIR)
+
+    # A pulled dataset carries its alias, id and version, and hands them to
+    # its goldens when they are set; set them as pull() does, without
+    # Confident AI.
+    dataset = EvaluationDataset()
+    dataset._alias = "support-goldens"
+    dataset._id = "ds_parity_0001"
+    dataset._version = "3"
+    dataset.goldens = [
+        Golden(input="How do I reset my password?",
+               expected_output="Use the 'Forgot password' link.",
+               name="password-reset", additional_metadata={"locale": "en-GB"}),
+        Golden(input="Wo ist meine Rechnung?", expected_output="Unter Konto › Rechnungen."),
+    ]
+
+    @observe(type="retriever", embedder="text-embedding-3-small",
+             metrics=[build_metric(SPAN_JUDGE)])
+    def retrieve(query):
+        documents = [f"FAQ: {query}", "Policy: answers cite the help centre."]
+        update_current_span(
+            test_case=LLMTestCase(input=query, actual_output=documents[0],
+                                  retrieval_context=documents))
+        return documents
+
+    @observe(type="llm", model="gpt-4o-mini")
+    def generate(query, documents):
+        return f"Answer to {query!r} from {len(documents)} documents."
+
+    @observe(type="agent", available_tools=["retrieve"])
+    def app(query):
+        answer = generate(query, retrieve(query))
+        update_current_trace(input=query, output=answer, tags=["round-trip"])
+        return answer
+
+    hyperparameters = {
+        "model": "gpt-4o-mini",
+        "temperature": 0.2,
+        "system_prompt": Prompt(alias="support-system",
+                                text_template="You are a support agent for {product}."),
+        "chat_prompt": Prompt(alias="support-chat", messages_template=[
+            PromptMessage(role="system", content="Answer in {language}."),
+        ]),
+    }
+    for golden in dataset.evals_iterator(
+        metrics=[build_metric(STUB_JUDGE), build_metric(STRICT_JUDGE)],
+        hyperparameters=hyperparameters,
+        identifier="traced-dataset",
+        async_config=AsyncConfig(run_async=False),
+        display_config=DisplayConfig(show_indicator=False, print_results=False,
+                                     inspect_after_run=False,
+                                     results_folder=results_folder),
+        cache_config=CacheConfig(write_cache=False, use_cache=False),
+        error_config=ErrorConfig(ignore_errors=True),
+    ):
+        app(golden.input)
+
+    [path] = glob.glob(os.path.join(results_folder, "test_run_*.json"))
+    shutil.copyfile(path, os.path.join(out_dir, "test_run.json"))
+
+
 def main():
     if deepeval.__version__ != DEEPEVAL_VERSION:
         sys.exit(f"expected deepeval {DEEPEVAL_VERSION}, found {deepeval.__version__}")
@@ -1051,6 +1129,8 @@ def main():
         for name, scenario in SCENARIOS.items():
             run_scenario(name, scenario)
             print(f"wrote {os.path.relpath(os.path.join(FIXTURES, name), ROOT)}")
+        run_round_trip_traced_dataset()
+        print(f"wrote {os.path.relpath(os.path.join(ROUND_TRIP, 'traced_dataset'), ROOT)}")
         for name in sorted(os.listdir(SCRIPTED)):
             if os.path.isfile(os.path.join(SCRIPTED, name, "script.json")):
                 run_scripted_scenario(name)

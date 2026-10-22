@@ -20,21 +20,31 @@ defmodule DeepEvalEx.TestRun do
   ## Fields
 
   Fields mirror deepeval's `TestRun` (snake_case here, camelCase in the
-  export):
+  export, in this order):
 
+  - `:test_file` - The test file the run came from, or `nil` (`testFile`)
   - `:test_cases` - One `DeepEvalEx.TestRun.TestCase` per evaluated test case
+  - `:conversational_test_cases` - deepeval's conversational test cases, as
+    raw JSON (see "Raw JSON" below); DeepEvalEx's own runs have none
   - `:metrics_scores` - Per metric: every score, plus pass, fail and error
     counts, in the order metrics first appear
+  - `:trace_metrics_scores` - deepeval's per-span metric scores, as raw
+    JSON, or `nil`
   - `:identifier` - Optional name for the run
   - `:hyperparameters` - `{name, value}` pairs with values stringified as
     deepeval does (see `process_hyperparameters/1`), or `nil`
-  - `:test_passed` / `:test_failed` - Number of passing and failing test cases
+  - `:prompts` - deepeval's prompt data, as raw JSON: `[]` for a run built
+    by `from_results/3`, as deepeval's `evaluate()` writes without `Prompt`
+    hyperparameters, and `nil` (left out of the export) when not set
+  - `:test_passed` / `:test_failed` - Number of passing and failing test
+    cases; a test case whose `success` is `nil` counts as neither
   - `:run_duration` - Wall-clock time of the whole run, in seconds
   - `:evaluation_cost` - Sum of the test cases' costs; `nil` when no metric
     reported a cost
-
-  deepeval's conversational test cases and prompts are always empty, and
-  `official` is always `false`.
+  - `:dataset_alias`, `:dataset_id`, `:dataset_version` - The dataset the
+    test cases came from, or `nil`
+  - `:official` - Whether the run is marked official (default: `false`)
+  - `:extra` - Keys deepeval does not model either, see "Raw JSON"
 
   ## Loading deepeval's files
 
@@ -46,18 +56,28 @@ defmodule DeepEvalEx.TestRun do
       {:ok, test_run} = DeepEvalEx.TestRun.load("eval_results/test_run_20261022_101500.json")
       {test_cases, results} = DeepEvalEx.TestRun.to_results(test_run)
 
-  Loading is lossless for every field DeepEvalEx models: `load/1`, then
-  `to_map/1` and `DeepEvalEx.TestRun.JSON.encode!/1` give back deepeval's
-  file byte for byte. Values are kept as they are in the file (an integer
-  test case `runDuration` stays an integer, JSON objects stay
-  `Jason.OrderedObject`s).
+  Loading is lossless: `load/1`, then `to_map/1` and
+  `DeepEvalEx.TestRun.JSON.encode!/1` give back deepeval's file byte for
+  byte, traces, prompts and dataset keys included. Values are kept as they
+  are in the file (an integer test case `runDuration` stays an integer,
+  JSON objects stay `Jason.OrderedObject`s).
 
-  Keys DeepEvalEx does not model (`testFile`, `datasetAlias`, `trace`,
-  `expectationsData`, ...) are ignored, as deepeval's models ignore extra keys,
-  and are not written back. Conversational test cases and prompts are
-  ignored too, and `official` is read as `false`. Keeping them would need
-  a field holding raw JSON that every other DeepEvalEx function would
-  have to ignore; none of DeepEvalEx's own exports contain them.
+  ## Raw JSON
+
+  Parts of deepeval's format DeepEvalEx does not interpret are kept as the
+  decoded JSON they were loaded from, and written back unchanged in the
+  position deepeval's models declare them:
+
+  - on the run: `:conversational_test_cases`, `:trace_metrics_scores` and
+    `:prompts`
+  - on each `DeepEvalEx.TestRun.TestCase`: `:expectations_data`,
+    `:images_mapping` and `:trace`
+  - on each `DeepEvalEx.TestRun.MetricData`: `:expectations_data`
+
+  Keys deepeval itself does not model (deepeval ignores them on load) are
+  kept too, as `{key, value}` pairs in each struct's `:extra`, in the
+  file's order, and written back after the modelled keys. deepeval never
+  writes such keys, so its own files round-trip byte for byte.
   """
 
   alias DeepEvalEx.{Result, TestRun}
@@ -74,25 +94,49 @@ defmodule DeepEvalEx.TestRun do
           errors: non_neg_integer()
         }
 
+  @typedoc "Decoded JSON DeepEvalEx keeps as it is (see \"Raw JSON\")."
+  @type raw :: term()
+
+  @typedoc "Keys deepeval does not model, in the order they were read."
+  @type extra :: [{String.t(), raw()}]
+
   @type t :: %__MODULE__{
+          test_file: String.t() | nil,
           test_cases: [TestRun.TestCase.t()],
+          conversational_test_cases: [raw()],
           metrics_scores: [metric_scores()],
+          trace_metrics_scores: raw() | nil,
           identifier: String.t() | nil,
           hyperparameters: [{String.t(), String.t()}] | nil,
+          prompts: [raw()] | nil,
           test_passed: non_neg_integer(),
           test_failed: non_neg_integer(),
           run_duration: float(),
-          evaluation_cost: float() | nil
+          evaluation_cost: float() | nil,
+          dataset_alias: String.t() | nil,
+          dataset_id: String.t() | nil,
+          dataset_version: String.t() | nil,
+          official: boolean(),
+          extra: extra()
         }
 
-  defstruct test_cases: [],
+  defstruct test_file: nil,
+            test_cases: [],
+            conversational_test_cases: [],
             metrics_scores: [],
+            trace_metrics_scores: nil,
             identifier: nil,
             hyperparameters: nil,
+            prompts: nil,
             test_passed: 0,
             test_failed: 0,
             run_duration: 0.0,
-            evaluation_cost: nil
+            evaluation_cost: nil,
+            dataset_alias: nil,
+            dataset_id: nil,
+            dataset_version: nil,
+            official: false,
+            extra: []
 
   defmodule MetricData do
     @moduledoc """
@@ -105,6 +149,9 @@ defmodule DeepEvalEx.TestRun do
     deepeval's `verboseLogs`. A score-only metric has neither `:threshold`
     nor `:success` (`nil`), and the export leaves both out, as deepeval's
     `exclude_none` does.
+
+    `:expectations_data` and `:extra` hold loaded JSON DeepEvalEx does not
+    interpret (see "Raw JSON" in `DeepEvalEx.TestRun`).
     """
 
     @type t :: %__MODULE__{
@@ -120,7 +167,9 @@ defmodule DeepEvalEx.TestRun do
             evaluation_cost: float() | nil,
             input_tokens: non_neg_integer() | nil,
             output_tokens: non_neg_integer() | nil,
-            verbose_logs: String.t() | nil
+            verbose_logs: String.t() | nil,
+            expectations_data: DeepEvalEx.TestRun.raw() | nil,
+            extra: DeepEvalEx.TestRun.extra()
           }
 
     defstruct [
@@ -135,8 +184,10 @@ defmodule DeepEvalEx.TestRun do
       :input_tokens,
       :output_tokens,
       :verbose_logs,
+      :expectations_data,
       strict_mode: false,
-      flaky: false
+      flaky: false,
+      extra: []
     ]
 
     @doc """
@@ -200,6 +251,14 @@ defmodule DeepEvalEx.TestRun do
 
     As in deepeval's async executor, a `:run_duration` under one second is
     the integer `0` (exported as `0`, not `0.0`); longer ones are floats.
+
+    `:success` is `nil` for a test case loaded without one: deepeval leaves
+    it unset (`None`) until a metric decides it, and such a test case
+    neither passes nor fails.
+
+    `:expectations_data`, `:images_mapping`, `:trace` and `:extra` hold
+    loaded JSON DeepEvalEx does not interpret (see "Raw JSON" in
+    `DeepEvalEx.TestRun`).
     """
 
     alias DeepEvalEx.Schemas.ToolCall
@@ -219,13 +278,17 @@ defmodule DeepEvalEx.TestRun do
             completion_time: float() | nil,
             tags: [String.t()] | nil,
             flaky: boolean(),
-            success: boolean(),
+            success: boolean() | nil,
             metrics_data: [MetricData.t()],
             run_duration: float() | 0,
             evaluation_cost: float() | nil,
             order: non_neg_integer(),
             metadata: map() | nil,
-            comments: String.t() | nil
+            comments: String.t() | nil,
+            expectations_data: DeepEvalEx.TestRun.raw() | nil,
+            images_mapping: DeepEvalEx.TestRun.raw() | nil,
+            trace: DeepEvalEx.TestRun.raw() | nil,
+            extra: DeepEvalEx.TestRun.extra()
           }
 
     defstruct [
@@ -246,10 +309,14 @@ defmodule DeepEvalEx.TestRun do
       :order,
       :metadata,
       :comments,
+      :expectations_data,
+      :images_mapping,
+      :trace,
       flaky: false,
       success: true,
       metrics_data: [],
-      run_duration: 0
+      run_duration: 0,
+      extra: []
     ]
 
     @doc """
@@ -307,6 +374,13 @@ defmodule DeepEvalEx.TestRun do
   - `:identifier` - Name for the run
   - `:hyperparameters` - Keyword list or map of hyperparameters, see
     `process_hyperparameters/1`
+  - `:test_file` - The test file the run came from
+  - `:dataset_alias`, `:dataset_id`, `:dataset_version` - The dataset the
+    test cases came from
+  - `:official` - Marks the run official (default: `false`)
+
+  `prompts` is `[]`, as deepeval's `evaluate()` writes it when no
+  hyperparameter is a `Prompt`.
   """
   @spec from_results([EvalTestCase.t()], [[Result.t()]], keyword()) :: t()
   def from_results(test_cases, results, opts \\ []) do
@@ -325,15 +399,23 @@ defmodule DeepEvalEx.TestRun do
         api_test_case(test_case, case_results, duration, order)
       end)
 
+    {test_passed, test_failed} = count_successes(api_test_cases)
+
     %__MODULE__{
+      test_file: Keyword.get(opts, :test_file),
       test_cases: api_test_cases,
       metrics_scores: metrics_scores(api_test_cases),
       identifier: Keyword.get(opts, :identifier),
       hyperparameters: process_hyperparameters(Keyword.get(opts, :hyperparameters)),
-      test_passed: Enum.count(api_test_cases, & &1.success),
-      test_failed: Enum.count(api_test_cases, &(not &1.success)),
+      prompts: [],
+      test_passed: test_passed,
+      test_failed: test_failed,
       run_duration: to_float(Keyword.get(opts, :run_duration, 0.0)),
-      evaluation_cost: sum_costs(api_test_cases)
+      evaluation_cost: sum_costs(api_test_cases),
+      dataset_alias: Keyword.get(opts, :dataset_alias),
+      dataset_id: Keyword.get(opts, :dataset_id),
+      dataset_version: Keyword.get(opts, :dataset_version),
+      official: Keyword.get(opts, :official, false)
     }
   end
 
@@ -396,22 +478,32 @@ defmodule DeepEvalEx.TestRun do
   `Jason` for ordinary JSON.
 
   Empty `tools_called`, `expected_tools` and `retrieval_context` lists are
-  left out, as deepeval does for test cases that do not set them.
+  left out, as deepeval does for test cases that do not set them. Raw JSON
+  fields are written as they are, and `:extra` keys after the others (see
+  "Raw JSON" in the module documentation).
   """
   @spec to_map(t()) :: OrderedObject.t()
   def to_map(%__MODULE__{} = test_run) do
     ordered(
-      testCases: Enum.map(test_run.test_cases, &test_case_map/1),
-      conversationalTestCases: [],
-      metricsScores: Enum.map(test_run.metrics_scores, &metric_scores_map/1),
-      identifier: test_run.identifier,
-      hyperparameters: test_run.hyperparameters && OrderedObject.new(test_run.hyperparameters),
-      prompts: [],
-      testPassed: test_run.test_passed,
-      testFailed: test_run.test_failed,
-      runDuration: to_float(test_run.run_duration),
-      evaluationCost: to_float(test_run.evaluation_cost),
-      official: false
+      [
+        testFile: test_run.test_file,
+        testCases: Enum.map(test_run.test_cases, &test_case_map/1),
+        conversationalTestCases: test_run.conversational_test_cases,
+        metricsScores: Enum.map(test_run.metrics_scores, &metric_scores_map/1),
+        traceMetricsScores: test_run.trace_metrics_scores,
+        identifier: test_run.identifier,
+        hyperparameters: test_run.hyperparameters && OrderedObject.new(test_run.hyperparameters),
+        prompts: test_run.prompts,
+        testPassed: test_run.test_passed,
+        testFailed: test_run.test_failed,
+        runDuration: to_float(test_run.run_duration),
+        evaluationCost: to_float(test_run.evaluation_cost),
+        datasetAlias: test_run.dataset_alias,
+        datasetId: test_run.dataset_id,
+        datasetVersion: test_run.dataset_version,
+        official: test_run.official
+      ],
+      test_run.extra
     )
   end
 
@@ -443,25 +535,27 @@ defmodule DeepEvalEx.TestRun do
 
   Takes deepeval's camelCase keys, in maps or `Jason.OrderedObject`s (use
   `Jason.decode(json, objects: :ordered_objects)` to keep the key order of
-  metadata, tool call parameters and hyperparameters for re-encoding).
-  Unknown keys are ignored (see the module documentation).
+  metadata, tool call parameters, hyperparameters and raw JSON for
+  re-encoding). Keys DeepEvalEx does not model are kept as raw JSON (see
+  "Raw JSON" in the module documentation).
 
   Only test case and metric data `name`s and each `metricsScores` entry's
   `metric` are required. Missing optional keys get deepeval's defaults,
   with these exceptions where DeepEvalEx needs a value:
 
-  - a test case's `success` is computed from its metric data, as
-    `from_results/3` does, and its `order` is its position in `testCases`
+  - a test case's `order` is its position in `testCases`
   - a test case's `runDuration` is `0`
-  - `metricsScores`, `testPassed` and `testFailed` are computed from the
-    test cases
+  - `metricsScores` is computed from the test cases, and `testPassed` and
+    `testFailed` from the test cases' and conversational test cases'
+    `success`, as deepeval's `calculate_test_passes_and_fails` does: one
+    without `success` counts as neither
 
   An explicit JSON `null` is read like a missing key. deepeval saves with
   `exclude_none=True`, so its files never contain `null` (a test case whose
-  `success` is `None` has no `success` key). A metric without `success` is
-  read as `nil`, as deepeval's `MetricData` defaults it to `None` for a
-  score-only metric; a test case's `success` stays a boolean. Like deepeval,
-  DeepEvalEx never writes `null` back.
+  `success` is `None` has no `success` key). A test case or metric without
+  `success` is read as `nil`, as deepeval's `LLMApiTestCase` and
+  `MetricData` default it to `None`, and stays out of the export. Like
+  deepeval, DeepEvalEx never writes `null` back for a key it models.
 
   Returns `{:error, {:invalid_test_run, message}}` when a required key is
   missing or a value has the wrong shape; the message starts with the path
@@ -471,11 +565,14 @@ defmodule DeepEvalEx.TestRun do
 
       iex> {:ok, test_run} =
       ...>   DeepEvalEx.TestRun.from_map(%{
-      ...>     "testCases" => [%{"name" => "greeting", "input" => "Hi", "metricsData" => []}]
+      ...>     "testCases" => [
+      ...>       %{"name" => "greeting", "input" => "Hi", "success" => true, "metricsData" => []}
+      ...>     ],
+      ...>     "datasetAlias" => "smoke"
       ...>   })
       iex> [%DeepEvalEx.TestRun.TestCase{name: "greeting", success: true}] = test_run.test_cases
-      iex> test_run.test_passed
-      1
+      iex> {test_run.test_passed, test_run.dataset_alias}
+      {1, "smoke"}
   """
   @spec from_map(map()) :: {:ok, t()} | {:error, {:invalid_test_run, String.t()}}
   def from_map(map) do
@@ -543,6 +640,16 @@ defmodule DeepEvalEx.TestRun do
     not Enum.any?(metrics_data, &(not &1.flaky and &1.success == false))
   end
 
+  # deepeval's calculate_test_passes_and_fails: a test case without a
+  # verdict (success None) neither passes nor fails.
+  defp count_successes(successes) do
+    Enum.reduce(successes, {0, 0}, fn
+      %{success: true}, {passed, failed} -> {passed + 1, failed}
+      %{success: false}, {passed, failed} -> {passed, failed + 1}
+      _no_verdict, counts -> counts
+    end)
+  end
+
   defp metrics_scores(test_cases) do
     {order, scores} =
       for %TestCase{metrics_data: metrics_data} <- test_cases,
@@ -593,45 +700,55 @@ defmodule DeepEvalEx.TestRun do
 
   defp test_case_map(%TestCase{} = test_case) do
     ordered(
-      name: test_case.name,
-      input: test_case.input,
-      actualOutput: test_case.actual_output,
-      expectedOutput: test_case.expected_output,
-      context: test_case.context,
-      retrievalContext: test_case.retrieval_context,
-      toolsCalled: tool_calls_map(test_case.tools_called),
-      expectedTools: tool_calls_map(test_case.expected_tools),
-      tokenCost: to_float(test_case.token_cost),
-      inputTokenCount: test_case.input_token_count,
-      outputTokenCount: test_case.output_token_count,
-      completionTime: to_float(test_case.completion_time),
-      tags: test_case.tags,
-      flaky: test_case.flaky,
-      success: test_case.success,
-      metricsData: Enum.map(test_case.metrics_data, &metric_data_map/1),
-      runDuration: test_case.run_duration,
-      evaluationCost: to_float(test_case.evaluation_cost),
-      order: test_case.order,
-      metadata: test_case.metadata,
-      comments: test_case.comments
+      [
+        expectationsData: test_case.expectations_data,
+        name: test_case.name,
+        input: test_case.input,
+        actualOutput: test_case.actual_output,
+        expectedOutput: test_case.expected_output,
+        context: test_case.context,
+        retrievalContext: test_case.retrieval_context,
+        toolsCalled: tool_calls_map(test_case.tools_called),
+        expectedTools: tool_calls_map(test_case.expected_tools),
+        tokenCost: to_float(test_case.token_cost),
+        inputTokenCount: test_case.input_token_count,
+        outputTokenCount: test_case.output_token_count,
+        completionTime: to_float(test_case.completion_time),
+        tags: test_case.tags,
+        flaky: test_case.flaky,
+        imagesMapping: test_case.images_mapping,
+        success: test_case.success,
+        metricsData: Enum.map(test_case.metrics_data, &metric_data_map/1),
+        runDuration: test_case.run_duration,
+        evaluationCost: to_float(test_case.evaluation_cost),
+        order: test_case.order,
+        metadata: test_case.metadata,
+        comments: test_case.comments,
+        trace: test_case.trace
+      ],
+      test_case.extra
     )
   end
 
   defp metric_data_map(%MetricData{} = data) do
     ordered(
-      name: data.name,
-      threshold: to_float(data.threshold),
-      success: data.success,
-      score: to_float(data.score),
-      reason: data.reason,
-      strictMode: data.strict_mode,
-      flaky: data.flaky,
-      evaluationModel: data.evaluation_model,
-      error: data.error,
-      evaluationCost: to_float(data.evaluation_cost),
-      inputTokenCount: data.input_tokens,
-      outputTokenCount: data.output_tokens,
-      verboseLogs: data.verbose_logs
+      [
+        name: data.name,
+        threshold: to_float(data.threshold),
+        success: data.success,
+        score: to_float(data.score),
+        reason: data.reason,
+        strictMode: data.strict_mode,
+        flaky: data.flaky,
+        evaluationModel: data.evaluation_model,
+        error: data.error,
+        evaluationCost: to_float(data.evaluation_cost),
+        inputTokenCount: data.input_tokens,
+        outputTokenCount: data.output_tokens,
+        verboseLogs: data.verbose_logs,
+        expectationsData: data.expectations_data
+      ],
+      data.extra
     )
   end
 
@@ -660,16 +777,35 @@ defmodule DeepEvalEx.TestRun do
     end)
   end
 
-  # An ordered object of the non-nil pairs, with string keys.
-  defp ordered(pairs) do
+  # An ordered object of the non-nil pairs, with string keys, followed by
+  # the extra (unmodelled) pairs as they were read, nil values included.
+  defp ordered(pairs, extra \\ []) do
     pairs
     |> Enum.reject(fn {_key, value} -> is_nil(value) end)
     |> Enum.map(fn {key, value} -> {Atom.to_string(key), value} end)
+    |> Kernel.++(extra)
     |> OrderedObject.new()
   end
 
   # Parsing deepeval JSON. Errors are thrown as {:invalid_test_run, message}
   # and caught by from_map/1.
+
+  # The keys of deepeval's TestRun, LLMApiTestCase and MetricData; any other
+  # key is kept in :extra.
+  @test_run_keys ~w(testFile testCases conversationalTestCases metricsScores
+                    traceMetricsScores identifier hyperparameters prompts testPassed
+                    testFailed runDuration evaluationCost datasetAlias datasetId
+                    datasetVersion official)
+  @test_case_keys ~w(expectationsData name input actualOutput expectedOutput context
+                     retrievalContext toolsCalled expectedTools tokenCost inputTokenCount
+                     outputTokenCount completionTime tags flaky imagesMapping success
+                     metricsData runDuration evaluationCost order metadata comments trace)
+  @metric_data_keys ~w(name threshold success score reason strictMode flaky evaluationModel
+                       error evaluationCost inputTokenCount outputTokenCount verboseLogs
+                       expectationsData)
+
+  # The pairs of the keys not in known, in the map's order.
+  defp extra(map, known), do: Enum.reject(map, fn {key, _value} -> key in known end)
 
   defp parse_test_run(map) do
     object!(map, "test run")
@@ -690,17 +826,34 @@ defmodule DeepEvalEx.TestRun do
           scores |> list_value!("metricsScores") |> indexed("metricsScores", &parse_scores/3)
       end
 
+    conversational_test_cases = list!(map, "conversationalTestCases", "")
+
+    {test_passed, test_failed} =
+      count_successes(test_cases ++ Enum.map(conversational_test_cases, &raw_success/1))
+
     %__MODULE__{
+      test_file: map["testFile"],
       test_cases: test_cases,
+      conversational_test_cases: conversational_test_cases,
       metrics_scores: metrics_scores,
+      trace_metrics_scores: map["traceMetricsScores"],
       identifier: map["identifier"],
       hyperparameters: parse_hyperparameters(map["hyperparameters"]),
-      test_passed: value(map, "testPassed", Enum.count(test_cases, & &1.success)),
-      test_failed: value(map, "testFailed", Enum.count(test_cases, &(not &1.success))),
+      prompts: map["prompts"],
+      test_passed: value(map, "testPassed", test_passed),
+      test_failed: value(map, "testFailed", test_failed),
       run_duration: value(map, "runDuration", 0.0),
-      evaluation_cost: map["evaluationCost"]
+      evaluation_cost: map["evaluationCost"],
+      dataset_alias: map["datasetAlias"],
+      dataset_id: map["datasetId"],
+      dataset_version: map["datasetVersion"],
+      official: value(map, "official", false),
+      extra: extra(map, @test_run_keys)
     }
   end
+
+  defp raw_success(test_case) when is_map(test_case), do: %{success: test_case["success"]}
+  defp raw_success(_test_case), do: %{success: nil}
 
   defp parse_test_case(map, path, index) do
     object!(map, path)
@@ -713,6 +866,7 @@ defmodule DeepEvalEx.TestRun do
       end)
 
     %TestCase{
+      expectations_data: map["expectationsData"],
       name: string!(map, "name", path),
       input: map["input"],
       actual_output: map["actualOutput"],
@@ -727,13 +881,16 @@ defmodule DeepEvalEx.TestRun do
       completion_time: map["completionTime"],
       tags: map["tags"],
       flaky: value(map, "flaky", false),
-      success: value(map, "success", case_success(metrics_data)),
+      images_mapping: map["imagesMapping"],
+      success: map["success"],
       metrics_data: metrics_data,
       run_duration: value(map, "runDuration", 0),
       evaluation_cost: map["evaluationCost"],
       order: value(map, "order", index),
       metadata: map["metadata"],
-      comments: map["comments"]
+      comments: map["comments"],
+      trace: map["trace"],
+      extra: extra(map, @test_case_keys)
     }
   end
 
@@ -753,7 +910,9 @@ defmodule DeepEvalEx.TestRun do
       evaluation_cost: map["evaluationCost"],
       input_tokens: map["inputTokenCount"],
       output_tokens: map["outputTokenCount"],
-      verbose_logs: map["verboseLogs"]
+      verbose_logs: map["verboseLogs"],
+      expectations_data: map["expectationsData"],
+      extra: extra(map, @metric_data_keys)
     }
   end
 

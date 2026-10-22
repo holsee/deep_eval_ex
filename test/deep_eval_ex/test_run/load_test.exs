@@ -9,13 +9,19 @@ defmodule DeepEvalEx.TestRun.LoadTest do
   doctest TestRun, only: [from_map: 1]
 
   @fixtures Path.expand("../../fixtures/deepeval", __DIR__)
-  @files @fixtures |> Path.join("*/test_run.json") |> Path.wildcard() |> Enum.sort()
+  # Export scenarios, plus round_trip/: richer runs (traces, prompts, a
+  # dataset) DeepEvalEx cannot produce but must load and write back as is.
+  @files ["*/test_run.json", "round_trip/*/test_run.json"]
+         |> Enum.flat_map(&Path.wildcard(Path.join(@fixtures, &1)))
+         |> Enum.sort()
 
   for file <- @files do
     @external_resource file
   end
 
   defp fixture(scenario), do: Path.join([@fixtures, scenario, "test_run.json"])
+
+  defp ordered(pairs), do: Jason.OrderedObject.new(pairs)
 
   defp load!(path) do
     assert {:ok, %TestRun{} = test_run} = TestRun.load(path)
@@ -35,7 +41,7 @@ defmodule DeepEvalEx.TestRun.LoadTest do
 
   describe "load/1 round trip" do
     for file <- @files do
-      scenario = file |> Path.dirname() |> Path.basename()
+      scenario = file |> Path.dirname() |> Path.relative_to(@fixtures)
 
       test "re-encodes deepeval's #{scenario} test run byte for byte" do
         path = unquote(file)
@@ -85,6 +91,30 @@ defmodule DeepEvalEx.TestRun.LoadTest do
 
       assert [%{metric: "Exact Match", scores: [1.0, 1.0], passes: 2, fails: 0, errors: 0} | _] =
                test_run.metrics_scores
+    end
+
+    test "reads the dataset keys and keeps prompts, trace metric scores and traces" do
+      test_run = load!(fixture("round_trip/traced_dataset"))
+
+      assert test_run.dataset_alias == "support-goldens"
+      assert test_run.dataset_id == "ds_parity_0001"
+      assert test_run.dataset_version == "3"
+      assert test_run.test_file == nil
+      assert test_run.official == false
+      assert test_run.identifier == "traced-dataset"
+      assert test_run.conversational_test_cases == []
+
+      assert [%Jason.OrderedObject{} = system, %Jason.OrderedObject{} = chat] = test_run.prompts
+      assert system["alias"] == "support-system"
+      assert chat["alias"] == "support-chat"
+
+      assert %Jason.OrderedObject{} = test_run.trace_metrics_scores
+      assert test_run.trace_metrics_scores["retriever"]["retrieve"]["Span Judge"]["passes"] == 2
+
+      assert [%TestRun.TestCase{trace: %Jason.OrderedObject{} = trace} | _] = test_run.test_cases
+      assert [span] = trace["retrieverSpans"]
+      assert span["name"] == "retrieve"
+      assert test_run.test_passed + test_run.test_failed == length(test_run.test_cases)
     end
 
     test "keeps errors, evaluation model, tokens, cost, strict mode and flakiness" do
@@ -159,7 +189,7 @@ defmodule DeepEvalEx.TestRun.LoadTest do
                  name: "a",
                  input: "q",
                  flaky: false,
-                 success: true,
+                 success: nil,
                  run_duration: 0,
                  order: 0,
                  evaluation_cost: nil,
@@ -167,7 +197,7 @@ defmodule DeepEvalEx.TestRun.LoadTest do
                    %MetricData{name: "M", score: 1.0, success: nil, strict_mode: false}
                  ]
                },
-               %TestRun.TestCase{name: "b", success: true, metrics_data: [], order: 1}
+               %TestRun.TestCase{name: "b", success: nil, metrics_data: [], order: 1}
              ] = test_run.test_cases
 
       # A metric without `success` has no verdict, as deepeval's MetricData
@@ -176,18 +206,22 @@ defmodule DeepEvalEx.TestRun.LoadTest do
                %{metric: "M", scores: [], passes: 0, fails: 0, errors: 1}
              ]
 
-      assert test_run.test_passed == 2
+      # Without "success", deepeval's LLMApiTestCase.success is None: the
+      # test case neither passed nor failed.
+      assert test_run.test_passed == 0
       assert test_run.test_failed == 0
       assert test_run.run_duration == 0.0
       assert test_run.evaluation_cost == nil
       assert test_run.identifier == nil
       assert test_run.hyperparameters == nil
+      assert test_run.prompts == nil
+      assert test_run.conversational_test_cases == []
+      assert test_run.official == false
     end
 
     test "reads explicit JSON nulls as missing keys" do
       # deepeval saves with exclude_none=True, so it never writes null: a
       # test case whose success is None has no "success" key at all.
-      # DeepEvalEx needs a boolean, so null is read like a missing key.
       missing = %{"name" => "a", "metricsData" => [%{"name" => "M", "success" => true}]}
 
       nulls =
@@ -209,12 +243,18 @@ defmodule DeepEvalEx.TestRun.LoadTest do
         "testFailed" => nil,
         "runDuration" => nil,
         "identifier" => nil,
-        "hyperparameters" => nil
+        "hyperparameters" => nil,
+        "testFile" => nil,
+        "prompts" => nil,
+        "traceMetricsScores" => nil,
+        "conversationalTestCases" => nil,
+        "datasetAlias" => nil,
+        "official" => nil
       }
 
       assert from_map!(run_with_nulls) == from_map!(%{"testCases" => [missing]})
 
-      assert [%TestRun.TestCase{success: true, flaky: false, run_duration: 0, order: 0}] =
+      assert [%TestRun.TestCase{success: nil, flaky: false, run_duration: 0, order: 0}] =
                from_map!(run_with_nulls).test_cases
 
       refute encode(from_map!(run_with_nulls)) =~ "null"
@@ -224,29 +264,115 @@ defmodule DeepEvalEx.TestRun.LoadTest do
       assert from_map!(%{}) == %TestRun{}
     end
 
-    test "ignores unknown keys, like deepeval's extra=\"ignore\"" do
+    test "keeps the keys DeepEvalEx does not model and writes them back in place" do
+      # deepeval's own keys go back where its models declare them; keys
+      # deepeval does not know either follow them, in the file's order.
+      metric_data =
+        ordered([
+          {"name", "M"},
+          {"threshold", 0.5},
+          {"success", true},
+          {"score", 1.0},
+          {"strictMode", false},
+          {"flaky", false},
+          {"expectationsData", ordered([{"expectations", ["x"]}])},
+          {"futureMetricKey", [1, 2.5]}
+        ])
+
+      test_case =
+        ordered([
+          {"expectationsData", ordered([{"evaluationCost", 0.25}])},
+          {"name", "a"},
+          {"input", "q"},
+          {"flaky", false},
+          {"imagesMapping", ordered([{"img_0", ordered([{"url", "https://x/0.png"}])}])},
+          {"success", true},
+          {"metricsData", [metric_data]},
+          {"runDuration", 0},
+          {"order", 0},
+          {"trace", ordered([{"uuid", "1"}, {"baseSpans", []}])},
+          {"futureTestCaseKey", nil}
+        ])
+
+      file =
+        ordered([
+          {"testFile", "test_chatbot.py"},
+          {"testCases", [test_case]},
+          {"conversationalTestCases", [ordered([{"name", "conv"}, {"success", false}])]},
+          {"metricsScores",
+           [
+             ordered([
+               {"metric", "M"},
+               {"scores", [1.0]},
+               {"passes", 1},
+               {"fails", 0},
+               {"errors", 0}
+             ])
+           ]},
+          {"traceMetricsScores", ordered([{"agent", ordered([])}, {"tool", ordered([])}])},
+          {"identifier", "run"},
+          {"hyperparameters", ordered([{"model", "gpt-4o"}])},
+          {"prompts", [ordered([{"alias", "p"}, {"interpolation_type", "FSTRING"}])]},
+          {"testPassed", 1},
+          {"testFailed", 1},
+          {"runDuration", 1.5},
+          {"evaluationCost", 0.25},
+          {"datasetAlias", "golden"},
+          {"datasetId", "ds_1"},
+          {"datasetVersion", "2"},
+          {"official", true},
+          {"futureRunKey", ordered([{"a", 1}])}
+        ])
+
+      test_run = from_map!(file)
+
+      assert test_run.test_file == "test_chatbot.py"
+
+      assert {test_run.dataset_alias, test_run.dataset_id, test_run.dataset_version} ==
+               {"golden", "ds_1", "2"}
+
+      assert test_run.official == true
+      assert [%Jason.OrderedObject{}] = test_run.conversational_test_cases
+      assert test_run.extra == [{"futureRunKey", ordered([{"a", 1}])}]
+
+      assert [
+               %TestRun.TestCase{
+                 trace: %Jason.OrderedObject{},
+                 extra: [{"futureTestCaseKey", nil}]
+               }
+             ] =
+               test_run.test_cases
+
+      assert encode(test_run) == JSON.encode!(file)
+    end
+
+    test "keeps a test case without success as neither passed nor failed" do
+      # deepeval's LLMApiTestCase.success is None until a metric sets it and
+      # is then left out of the file; calculate_test_passes_and_fails skips it.
       test_run =
         from_map!(%{
-          "testFile" => "test_x.py",
-          "datasetAlias" => "golden",
-          "conversationalTestCases" => [%{"name" => "conv"}],
-          "prompts" => [%{"alias" => "p"}],
-          "official" => true,
           "testCases" => [
-            %{
-              "name" => "a",
-              "trace" => %{"uuid" => "1"},
-              "metricsData" => [%{"name" => "M", "success" => true}]
-            }
+            %{"name" => "none", "metricsData" => [%{"name" => "M", "score" => 0.5}]},
+            %{"name" => "passed", "success" => true},
+            %{"name" => "failed", "success" => false}
           ]
         })
 
-      json = encode(test_run)
+      assert [%{success: nil}, %{success: true}, %{success: false}] = test_run.test_cases
+      assert {test_run.test_passed, test_run.test_failed} == {1, 1}
 
-      refute json =~ "testFile"
-      refute json =~ "trace"
-      assert json =~ ~s("conversationalTestCases": [])
-      assert json =~ ~s("official": false)
+      [none | _] = test_run |> encode() |> Jason.decode!() |> Map.fetch!("testCases")
+      refute Map.has_key?(none, "success")
+    end
+
+    test "counts conversational test cases' success when the totals are missing" do
+      test_run =
+        from_map!(%{
+          "testCases" => [%{"name" => "a", "success" => true}],
+          "conversationalTestCases" => [%{"name" => "c", "success" => false}, %{"name" => "d"}]
+        })
+
+      assert {test_run.test_passed, test_run.test_failed} == {1, 1}
     end
 
     test "keeps a metric's verboseLogs, written last as deepeval's MetricData" do

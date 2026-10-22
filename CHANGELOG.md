@@ -314,9 +314,37 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `"'throttle_value' must be at least 0"`). `:concurrency` stays as an alias
   of `:max_concurrent`, and `:metric_concurrency` still bounds the metrics
   of a test case.
+- **Every key of deepeval's `TestRun` export, and lossless loading of
+  richer files.** `DeepEvalEx.TestRun` gains `:test_file`, `:dataset_alias`,
+  `:dataset_id`, `:dataset_version` and `:official`, exported as `testFile`,
+  `datasetAlias`, `datasetId`, `datasetVersion` and `official` in the field
+  order of deepeval 4.3.1's `TestRun` and left out when `nil`, as
+  `exclude_none` does; `from_results/3` takes options of the same names.
+  `TestRun.load/1` and `from_map/1` now keep what DeepEvalEx does not
+  interpret as raw decoded JSON and write it back where deepeval declares it:
+  `conversationalTestCases`, `traceMetricsScores` and `prompts` on the run
+  (`:conversational_test_cases`, `:trace_metrics_scores`, `:prompts`),
+  `expectationsData`, `imagesMapping` and `trace` on each test case, and
+  `expectationsData` on each metric; keys deepeval does not model either are
+  kept in each struct's `:extra` and written after the others. A deepeval file
+  with traces, prompts and a dataset now round-trips byte for byte, checked
+  against a new `round_trip/traced_dataset` fixture generated with
+  `evals_iterator()` over an `@observe`d app.
 
 ### Changed
 
+- **BREAKING:** a test case loaded without `success` keeps `success: nil`,
+  as deepeval's `LLMApiTestCase` leaves it `None`, instead of having it
+  computed from its metric data; it is not written back, and when the file
+  has no `testPassed` / `testFailed` it counts as neither, as deepeval's
+  `calculate_test_passes_and_fails` does (conversational test cases'
+  `success` is counted too). `DeepEvalEx.TestRun.TestCase`'s `:success` is
+  now `boolean() | nil`.
+- `DeepEvalEx.TestRun`'s `:prompts` defaults to `nil`, so a hand-built
+  `%TestRun{}` exports no `prompts` key, as deepeval's `TestRun()` does;
+  `from_results/3` (and so `evaluate_run/3`) still writes `"prompts": []`.
+  `conversationalTestCases` and `official` are written from the struct
+  instead of always as `[]` and `false`.
 - **The OpenAI, Anthropic and Ollama adapters retry as deepeval's
   `retry_policy`.** A shared `DeepEvalEx.LLM.Retry`, a port of deepeval
   4.3.1's `models/retry_policy.py`, now supplies every adapter's `Req` retry
