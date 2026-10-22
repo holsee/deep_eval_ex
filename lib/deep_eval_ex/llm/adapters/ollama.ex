@@ -141,7 +141,7 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
 
   defp base_url(opts) do
     (Keyword.get(opts, :base_url) ||
-       Application.get_env(:deep_eval_ex, :ollama_base_url) ||
+       Adapter.config(:ollama_base_url) ||
        Adapter.env("OLLAMA_HOST") ||
        @default_base_url)
     |> String.trim_trailing("/")

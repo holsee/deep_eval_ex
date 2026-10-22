@@ -10,7 +10,9 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
 
   setup do
     saved_env = Map.new(~w(OPENAI_BASE_URL OPENAI_API_KEY), &{&1, System.get_env(&1)})
-    saved_config = Map.new(~w(openai_base_url openai_temperature)a, &{&1, app_env(&1)})
+
+    saved_config =
+      Map.new(~w(openai_base_url openai_api_key openai_temperature)a, &{&1, app_env(&1)})
 
     System.delete_env("OPENAI_BASE_URL")
     Enum.each(saved_config, fn {key, _} -> Application.delete_env(:deep_eval_ex, key) end)
@@ -96,6 +98,16 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
       assert {:ok, "hi"} = OpenAI.generate("hello", @base_opts)
       assert_received {:request, conn, _body}
       assert request_url(conn) == "https://api.openai.com/v1/chat/completions"
+    end
+
+    test "treats a blank :openai_base_url config as unset" do
+      stub_completion("hi")
+      Application.put_env(:deep_eval_ex, :openai_base_url, "  ")
+      System.put_env("OPENAI_BASE_URL", "https://env.example.com/v1")
+
+      assert {:ok, "hi"} = OpenAI.generate("hello", @base_opts)
+      assert_received {:request, conn, _body}
+      assert request_url(conn) == "https://env.example.com/v1/chat/completions"
     end
 
     test ":base_url opt wins over config and env" do
@@ -286,6 +298,17 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
       opts = Keyword.delete(@base_opts, :api_key)
 
       assert_raise RuntimeError, ~r/OPENAI_API_KEY/, fn -> OpenAI.generate("hello", opts) end
+    end
+
+    test "treats a blank :openai_api_key config as unset" do
+      stub_completion("hi")
+      Application.put_env(:deep_eval_ex, :openai_api_key, "")
+      System.put_env("OPENAI_API_KEY", " sk-env \n")
+      opts = Keyword.delete(@base_opts, :api_key)
+
+      assert {:ok, "hi"} = OpenAI.generate("hello", opts)
+      assert_received {:request, conn, _body}
+      assert Plug.Conn.get_req_header(conn, "authorization") == ["Bearer sk-env"]
     end
 
     test "maps non-200 responses to api_error" do

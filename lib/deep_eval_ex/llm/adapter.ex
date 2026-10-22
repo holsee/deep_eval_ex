@@ -136,7 +136,7 @@ defmodule DeepEvalEx.LLM.Adapter do
 
   @doc """
   Reads an environment variable for adapter configuration, treating a blank
-  value as unset.
+  value as unset and trimming surrounding whitespace from a set one.
 
   Tooling such as dev containers often forwards unset host variables as empty
   strings; an empty `OPENAI_BASE_URL` must fall back to the default rather
@@ -144,17 +144,47 @@ defmodule DeepEvalEx.LLM.Adapter do
 
   ## Examples
 
-      System.put_env("DEEP_EVAL_EX_DOC_EXAMPLE", "")
-      DeepEvalEx.LLM.Adapter.env("DEEP_EVAL_EX_DOC_EXAMPLE")
-      #=> nil
+      iex> System.put_env("DEEP_EVAL_EX_DOC_EXAMPLE", "")
+      iex> DeepEvalEx.LLM.Adapter.env("DEEP_EVAL_EX_DOC_EXAMPLE")
+      nil
+
+      iex> System.put_env("DEEP_EVAL_EX_DOC_EXAMPLE", "  sk-test  ")
+      iex> DeepEvalEx.LLM.Adapter.env("DEEP_EVAL_EX_DOC_EXAMPLE")
+      "sk-test"
   """
   @spec env(String.t()) :: String.t() | nil
-  def env(name) do
-    case System.get_env(name) do
-      nil -> nil
-      value -> if String.trim(value) == "", do: nil, else: value
+  def env(name), do: name |> System.get_env() |> present()
+
+  @doc """
+  Reads a `:deep_eval_ex` application config value for adapter configuration,
+  treating a blank string as unset and trimming surrounding whitespace from a
+  set one. Non-string values are returned unchanged.
+
+  Config such as `openai_api_key: System.get_env("OPENAI_API_KEY")` stores an
+  empty string when the variable is set but empty; that must fall through to
+  the next source rather than be sent as the key.
+
+  ## Examples
+
+      iex> Application.put_env(:deep_eval_ex, :doc_example, "  ")
+      iex> DeepEvalEx.LLM.Adapter.config(:doc_example)
+      nil
+
+      iex> Application.put_env(:deep_eval_ex, :doc_example, " https://example.com/v1 ")
+      iex> DeepEvalEx.LLM.Adapter.config(:doc_example)
+      "https://example.com/v1"
+  """
+  @spec config(atom()) :: term()
+  def config(key), do: :deep_eval_ex |> Application.get_env(key) |> present()
+
+  defp present(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
     end
   end
+
+  defp present(value), do: value
 
   @doc """
   Gets the configured adapter module for a provider.

@@ -175,7 +175,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   defp base_url(opts) do
     url =
       Keyword.get(opts, :base_url) ||
-        Application.get_env(:deep_eval_ex, :openai_base_url) ||
+        Adapter.config(:openai_base_url) ||
         Adapter.env("OPENAI_BASE_URL") ||
         @default_base_url
 
@@ -235,7 +235,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
 
   defp get_api_key(opts) do
     Keyword.get(opts, :api_key) ||
-      Application.get_env(:deep_eval_ex, :openai_api_key) ||
+      Adapter.config(:openai_api_key) ||
       Adapter.env("OPENAI_API_KEY") ||
       raise "OpenAI API key not configured. Set OPENAI_API_KEY env var or :openai_api_key config."
   end
