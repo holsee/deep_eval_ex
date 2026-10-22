@@ -1425,6 +1425,22 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   lists its sixteen members in deepeval's order, `member?/1` checks one,
   and `display_name/1` gives deepeval's conversational G-Eval name for it
   (`CONVERSATIONAL_G_EVAL_PARAMS`).
+- **`DeepEvalEx.Metrics.Utils.Turns`**, deepeval 4.3.1's
+  `metrics/utils/turns.py`, the turn helpers the conversational metrics
+  share:
+  - `convert_turn_to_dict/2` returns a turn's given multi-turn params
+    (by default `[:content, :role]`) as a `Jason.OrderedObject` in the
+    params' order, skipping the case-level params and `nil` fields;
+  - `format_turns/2` returns each `DeepEvalEx.TestCase`'s given
+    single-turn params, keeping only Python-truthy values;
+  - `get_turns_in_sliding_window/2` returns the window of at most
+    `window_size` turns ending at each turn (a list, where deepeval yields
+    them);
+  - `get_unit_interactions/1` splits a conversation into user/assistant
+    exchanges, dropping a trailing run without a user turn or an assistant
+    reply, as deepeval.
+
+  Both dict helpers raise `ArgumentError` for a param of the wrong kind.
 - **`DeepEvalEx.Evaluator.check_valid_test_cases_type!/1`**, deepeval's
   `check_valid_test_cases_type`: raises `ArgumentError` with deepeval's
   message when a list mixes `DeepEvalEx.TestCase`s and conversational test
