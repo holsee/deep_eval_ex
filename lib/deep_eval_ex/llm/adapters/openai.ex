@@ -60,7 +60,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
 
   use DeepEvalEx.LLM.Adapter
 
-  alias DeepEvalEx.LLM.Usage
+  alias DeepEvalEx.LLM.{Adapter, Usage}
 
   @default_base_url "https://api.openai.com/v1"
   @default_model "gpt-4o-mini"
@@ -165,7 +165,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
     url =
       Keyword.get(opts, :base_url) ||
         Application.get_env(:deep_eval_ex, :openai_base_url) ||
-        System.get_env("OPENAI_BASE_URL") ||
+        Adapter.env("OPENAI_BASE_URL") ||
         @default_base_url
 
     String.trim_trailing(url, "/")
@@ -225,7 +225,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   defp get_api_key(opts) do
     Keyword.get(opts, :api_key) ||
       Application.get_env(:deep_eval_ex, :openai_api_key) ||
-      System.get_env("OPENAI_API_KEY") ||
+      Adapter.env("OPENAI_API_KEY") ||
       raise "OpenAI API key not configured. Set OPENAI_API_KEY env var or :openai_api_key config."
   end
 

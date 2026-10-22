@@ -69,7 +69,7 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
 
   use DeepEvalEx.LLM.Adapter
 
-  alias DeepEvalEx.LLM.Usage
+  alias DeepEvalEx.LLM.{Adapter, Usage}
 
   @default_base_url "https://api.anthropic.com"
   @api_version "2023-06-01"
@@ -207,7 +207,7 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
     url =
       Keyword.get(opts, :base_url) ||
         Application.get_env(:deep_eval_ex, :anthropic_base_url) ||
-        System.get_env("ANTHROPIC_BASE_URL") ||
+        Adapter.env("ANTHROPIC_BASE_URL") ||
         @default_base_url
 
     String.trim_trailing(url, "/")
@@ -267,7 +267,7 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
   defp get_api_key(opts) do
     Keyword.get(opts, :api_key) ||
       Application.get_env(:deep_eval_ex, :anthropic_api_key) ||
-      System.get_env("ANTHROPIC_API_KEY") ||
+      Adapter.env("ANTHROPIC_API_KEY") ||
       raise "Anthropic API key not configured. " <>
               "Set ANTHROPIC_API_KEY env var or :anthropic_api_key config."
   end

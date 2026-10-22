@@ -108,6 +108,15 @@ defmodule DeepEvalEx.LLM.Adapters.AnthropicTest do
       assert request_url(conn) == "https://env.example.com/v1/messages"
     end
 
+    test "treats a blank ANTHROPIC_BASE_URL as unset" do
+      stub_text("hi")
+      System.put_env("ANTHROPIC_BASE_URL", "")
+
+      assert {:ok, "hi"} = Anthropic.generate("hello", @base_opts)
+      assert_received {:request, conn, _body}
+      assert request_url(conn) == "https://api.anthropic.com/v1/messages"
+    end
+
     test ":base_url opt wins over config and env" do
       stub_text("hi")
       Application.put_env(:deep_eval_ex, :anthropic_base_url, "https://config.example.com")
@@ -143,6 +152,14 @@ defmodule DeepEvalEx.LLM.Adapters.AnthropicTest do
 
       Application.put_env(:deep_eval_ex, :anthropic_api_key, "sk-ant-config")
       assert sent_api_key(@no_key_opts) == ["sk-ant-config"]
+    end
+
+    test "treats a blank ANTHROPIC_API_KEY as unset" do
+      System.put_env("ANTHROPIC_API_KEY", "")
+
+      assert_raise RuntimeError, ~r/ANTHROPIC_API_KEY/, fn ->
+        Anthropic.generate("hello", @no_key_opts)
+      end
     end
 
     test "raises when no key is configured" do

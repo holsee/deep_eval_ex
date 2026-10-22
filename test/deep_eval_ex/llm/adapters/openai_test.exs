@@ -89,6 +89,15 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
       assert request_url(conn) == "https://env.example.com/v1/chat/completions"
     end
 
+    test "treats a blank OPENAI_BASE_URL as unset" do
+      stub_completion("hi")
+      System.put_env("OPENAI_BASE_URL", "")
+
+      assert {:ok, "hi"} = OpenAI.generate("hello", @base_opts)
+      assert_received {:request, conn, _body}
+      assert request_url(conn) == "https://api.openai.com/v1/chat/completions"
+    end
+
     test ":base_url opt wins over config and env" do
       stub_completion("hi")
       Application.put_env(:deep_eval_ex, :openai_base_url, "https://config.example.com/v1")
@@ -224,6 +233,13 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
   end
 
   describe "errors" do
+    test "treats a blank OPENAI_API_KEY as unset" do
+      System.put_env("OPENAI_API_KEY", "")
+      opts = Keyword.delete(@base_opts, :api_key)
+
+      assert_raise RuntimeError, ~r/OPENAI_API_KEY/, fn -> OpenAI.generate("hello", opts) end
+    end
+
     test "maps non-200 responses to api_error" do
       error = %{"error" => %{"message" => "Incorrect API key provided"}}
 

@@ -110,6 +110,15 @@ defmodule DeepEvalEx.LLM.Adapters.OllamaTest do
       assert request_url(conn) == "http://env.example.com:11600/api/chat"
     end
 
+    test "treats a blank OLLAMA_HOST as unset" do
+      stub_chat("hi")
+      System.put_env("OLLAMA_HOST", "")
+
+      assert {:ok, "hi"} = Ollama.generate("hello", @base_opts)
+      assert_received {:request, conn, _body}
+      assert request_url(conn) == "http://localhost:11434/api/chat"
+    end
+
     test "reads a bare OLLAMA_HOST as http, on Ollama's port when none is given" do
       stub_chat("hi")
 

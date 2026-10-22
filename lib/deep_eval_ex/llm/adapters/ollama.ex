@@ -67,7 +67,7 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
 
   use DeepEvalEx.LLM.Adapter
 
-  alias DeepEvalEx.LLM.Usage
+  alias DeepEvalEx.LLM.{Adapter, Usage}
 
   @default_base_url "http://localhost:11434"
   @default_port 11_434
@@ -142,7 +142,7 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
   defp base_url(opts) do
     (Keyword.get(opts, :base_url) ||
        Application.get_env(:deep_eval_ex, :ollama_base_url) ||
-       System.get_env("OLLAMA_HOST") ||
+       Adapter.env("OLLAMA_HOST") ||
        @default_base_url)
     |> String.trim_trailing("/")
     |> normalize_host()

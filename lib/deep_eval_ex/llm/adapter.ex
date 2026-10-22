@@ -135,6 +135,28 @@ defmodule DeepEvalEx.LLM.Adapter do
   end
 
   @doc """
+  Reads an environment variable for adapter configuration, treating a blank
+  value as unset.
+
+  Tooling such as dev containers often forwards unset host variables as empty
+  strings; an empty `OPENAI_BASE_URL` must fall back to the default rather
+  than produce an empty URL.
+
+  ## Examples
+
+      System.put_env("DEEP_EVAL_EX_DOC_EXAMPLE", "")
+      DeepEvalEx.LLM.Adapter.env("DEEP_EVAL_EX_DOC_EXAMPLE")
+      #=> nil
+  """
+  @spec env(String.t()) :: String.t() | nil
+  def env(name) do
+    case System.get_env(name) do
+      nil -> nil
+      value -> if String.trim(value) == "", do: nil, else: value
+    end
+  end
+
+  @doc """
   Gets the configured adapter module for a provider.
 
   ## Examples
