@@ -97,6 +97,44 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     estimates a `DeepEvalEx.SystemOne.Question` as its pydantic
     `model_dump()`, and any other question (such as the SDK's wire shape)
     as it is. Boundary tests use values from CPython.
+- **`DeepEvalEx.SystemOne.Adapters.Mock`, a System One model for tests**
+  (ADR-0009), a port of deepeval 4.3.1's `FakeSystemOneModel` and
+  `ExplodingSystemOneModel` (`tests/test_metrics/system_one_fakes.py`). It
+  ships in `lib`, like `DeepEvalEx.LLM.Adapters.Mock`, and is the `:mock`
+  System One model.
+  - `Mock.new/1` returns a `{Mock, opts}` handle answering with canned
+    `:answers` (returned on every call, or a list consumed one per call), or
+    an `:answer_fn` of the questions. `:raises` fails every call with an
+    exception, returned as `{:error, exception}` or raised with
+    `raise?: true`. `:cost` is `nil`, a number, a `DeepEvalEx.LLM.Usage` or
+    `{value, input_tokens, output_tokens}` (default `0.0`, as deepeval's
+    fake), and `:model` names it (`"fake-jev"`, or `"exploding-jev"` with
+    `:raises`).
+  - Each handle has its own `Agent`-backed call log, read with
+    `Mock.calls/1` as `Mock.Call` structs (state, questions, then answers and
+    usage or the error), so concurrently measured metrics and async tests
+    never see each other's calls.
+  - `Mock.from_fixture/2` builds a handle from a System One fixture's
+    `input.json["system_one"]`, answering each question from the canned
+    answers of its type and key (with an optional batch `:prefix`) or
+    raising its `ConnectionError` or `TimeoutError`. `Mock.dump_calls/1`
+    writes the log in `decide.json`'s shape: replaying every recorded call of
+    the 24 System One fixtures gives their `decide.json` byte for byte.
+  - `Mock.noul_answers/1` and `Mock.answer_everything/2`, ports of the fakes'
+    `answer_fn` helpers.
+- **`DeepEvalEx.SystemOne.AdapterCase`, a conformance case template for
+  System One providers** (ADR-0009). `use DeepEvalEx.SystemOne.AdapterCase,
+  model: spec` starts an `ExUnit.Case` that checks a provider's
+  `model_name/1`, `init/1`, `context_budget/1` and `decide/3`: every
+  question answered under its own type and key and nothing else,
+  probabilities and confidences in `0..1`, Score levels integers within
+  range, and a `Usage` or `nil` as usage. With `:failing_model` it checks a
+  failure is a well-formed System One error, and with `:init_failure` that
+  `init/1` rejects options with a well-formed `DeepEvalEx.SystemOne.Error`.
+  The model may also come from the test context's `:system_one_model`. The
+  checks are public (`assert_answers/2`, `assert_reply/2`, `assert_error/1`,
+  `assert_budget/1`). It runs against the Mock and a toy third-party
+  provider.
 - **`DeepEvalEx.Prompts.Python.format_g/1` and `round/2`**, Python's
   `format(x, "g")` and `round(x, ndigits)` (ADR-0009), which deepeval 4.3.1's
   System One reasons and verbose logs use (`f"weight={weight:g}"`,
