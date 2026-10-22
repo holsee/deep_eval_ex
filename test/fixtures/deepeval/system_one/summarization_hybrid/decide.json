@@ -1,0 +1,122 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "original_text": [
+            "The city council approved a new riverside park on Monday.",
+            "The park opens in May.",
+            "The park will have a lake, a playground and 200 new trees."
+          ],
+          "summary_claims": [
+            "The council approved a riverside park.",
+            "The park has a lake.",
+            "The park opens in June."
+          ]
+        },
+        "questions": {
+          "summary_claim_0": {
+            "type": "noul",
+            "instructions": {
+              "summary_claim": "The council approved a riverside park.",
+              "question": "Does `summary_claim` agree with the facts in `original_text`? Answer no if it contradicts them."
+            }
+          },
+          "summary_claim_1": {
+            "type": "noul",
+            "instructions": {
+              "summary_claim": "The park has a lake.",
+              "question": "Does `summary_claim` agree with the facts in `original_text`? Answer no if it contradicts them."
+            }
+          },
+          "summary_claim_2": {
+            "type": "noul",
+            "instructions": {
+              "summary_claim": "The park opens in June.",
+              "question": "Does `summary_claim` agree with the facts in `original_text`? Answer no if it contradicts them."
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "summary_claim_0": {
+              "probability": 0.96
+            },
+            "summary_claim_1": {
+              "probability": 0.5
+            },
+            "summary_claim_2": {
+              "probability": 0.08
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "original_text": [
+          "The city council approved a new riverside park on Monday.",
+          "The park opens in May.",
+          "The park will have a lake, a playground and 200 new trees."
+        ],
+        "summary_claims": [
+          "The council approved a riverside park.",
+          "The park has a lake.",
+          "The park opens in June."
+        ]
+      },
+      "questions": {
+        "summary_claim_0": {
+          "type": "noul",
+          "instructions": {
+            "summary_claim": "The council approved a riverside park.",
+            "question": "Does `summary_claim` agree with the facts in `original_text`? Answer no if it contradicts them."
+          }
+        },
+        "summary_claim_1": {
+          "type": "noul",
+          "instructions": {
+            "summary_claim": "The park has a lake.",
+            "question": "Does `summary_claim` agree with the facts in `original_text`? Answer no if it contradicts them."
+          }
+        },
+        "summary_claim_2": {
+          "type": "noul",
+          "instructions": {
+            "summary_claim": "The park opens in June.",
+            "question": "Does `summary_claim` agree with the facts in `original_text`? Answer no if it contradicts them."
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "summary_claim_0": {
+            "probability": 0.96
+          },
+          "summary_claim_1": {
+            "probability": 0.5
+          },
+          "summary_claim_2": {
+            "probability": 0.08
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

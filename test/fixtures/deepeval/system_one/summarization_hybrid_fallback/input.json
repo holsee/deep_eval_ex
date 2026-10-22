@@ -1,0 +1,92 @@
+{
+  "description": "Summarization in hybrid mode with Jev down: the LLM takes the verdicts",
+  "metrics": [
+    {
+      "kind": "summarization",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+    "actual_output": "The council approved a riverside park with a lake. It opens in June."
+  },
+  "system_one": {
+    "model": "exploding-jev",
+    "raises": {
+      "type": "ConnectionError",
+      "message": "Jev is down"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "summarization": {
+      "truths": [
+        {
+          "truths": [
+            "The city council approved a new riverside park on Monday.",
+            "The park opens in May.",
+            "The park will have a lake, a playground and 200 new trees."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": [
+            "The council approved a riverside park.",
+            "The park has a lake.",
+            "The park opens in June."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "questions": [
+            "Did the council approve a riverside park?",
+            "Does the park open in May?",
+            "Will the park have a playground?"
+          ]
+        }
+      ],
+      "answers": [
+        {
+          "answers": [
+            "yes",
+            "yes",
+            "yes"
+          ]
+        },
+        {
+          "answers": [
+            "yes",
+            "no",
+            "no"
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.33 because the summary gets the opening month wrong and leaves out the playground."
+        }
+      ],
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "no",
+              "reason": "The original text says the park opens in May, not June."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

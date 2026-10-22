@@ -1,0 +1,86 @@
+[
+  {
+    "score": 0.41944444444444445,
+    "success": false,
+    "reason": "Decided by fake-jev, minimum confidence 0.20.\n1. Every claim in the summary `actual_output` agrees with the facts in the original text `input`; none contradicts it or adds information the original does not contain. -> likely fails (P(yes)=0.20, confidence=0.60, weight=2)\n2. The summary `actual_output` covers the main points of the original text `input`. -> likely holds (P(yes)=0.70, confidence=0.40)\n3. How much of the important information in the original text `input` does the summary `actual_output` preserve? -> \"Most of it\" (expected level=0.67 of 1.00, confidence=0.25)\n4. Reading only the summary `actual_output`, this question can be answered the same way as from the original text `input`: Does the park open in May? -> likely fails (P(yes)=0.15, confidence=0.70)\n5. Reading only the summary `actual_output`, this question can be answered the same way as from the original text `input`: Will the park have a café? -> unclear (P(yes)=0.60, confidence=0.20)\nScore: 0.42 (weighted mean of 5 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every claim in the summary `actual_output` agrees with the facts in the original text `input`; none contradicts it or adds information the original does not contain.\n   value=0.200 applicable=True probabilities={'true': 0.2, 'false': 0.8} confidence=0.600\n2. [noul, weight=1] The summary `actual_output` covers the main points of the original text `input`.\n   value=0.700 applicable=True probabilities={'true': 0.7, 'false': 0.3} confidence=0.400\n3. [score, weight=1] How much of the important information in the original text `input` does the summary `actual_output` preserve?\n   value=0.667 applicable=True probabilities={'Almost none': 0.05, 'Less than half': 0.3, 'Most of it': 0.55, 'All of it': 0.1} confidence=0.250\n4. [noul, weight=1] Reading only the summary `actual_output`, this question can be answered the same way as from the original text `input`: Does the park open in May?\n   value=0.150 applicable=True probabilities={'true': 0.15, 'false': 0.85} confidence=0.700\n5. [noul, weight=1] Reading only the summary `actual_output`, this question can be answered the same way as from the original text `input`: Will the park have a café?\n   value=0.600 applicable=True probabilities={'true': 0.6, 'false': 0.4} confidence=0.200",
+    "confidence": 0.19999999999999996,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every claim in the summary `actual_output` agrees with the facts in the original text `input`; none contradicts it or adds information the original does not contain.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.2,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.2,
+          "false": 0.8
+        },
+        "confidence": 0.6,
+        "passed": null
+      },
+      {
+        "question": "The summary `actual_output` covers the main points of the original text `input`.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.7,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.7,
+          "false": 0.30000000000000004
+        },
+        "confidence": 0.3999999999999999,
+        "passed": null
+      },
+      {
+        "question": "How much of the important information in the original text `input` does the summary `actual_output` preserve?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.6666666666666666,
+        "applicable": true,
+        "probabilities": {
+          "Almost none": 0.05,
+          "Less than half": 0.3,
+          "Most of it": 0.55,
+          "All of it": 0.1
+        },
+        "confidence": 0.25,
+        "passed": null
+      },
+      {
+        "question": "Reading only the summary `actual_output`, this question can be answered the same way as from the original text `input`: Does the park open in May?",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.15,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.15,
+          "false": 0.85
+        },
+        "confidence": 0.7,
+        "passed": null
+      },
+      {
+        "question": "Reading only the summary `actual_output`, this question can be answered the same way as from the original text `input`: Will the park have a café?",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.6,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.6,
+          "false": 0.4
+        },
+        "confidence": 0.19999999999999996,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

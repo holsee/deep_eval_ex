@@ -1,0 +1,33 @@
+Based on the list of close-ended 'yes' or 'no' questions, generate a JSON with key 'answers', which is a list of strings that determines whether the provided text contains sufficient information to answer EACH question.
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+
+
+Answers should STRICTLY be either 'yes' or 'no'.
+Answer 'no' if the provided text does not contain enough information to answer the question.
+**
+IMPORTANT: Please make sure to only return in JSON format, with the 'answers' key as a list of strings.
+
+Example:
+Example Text: Mario and Luigi were best buds but since Luigi had a crush on Peach Mario ended up killing him.
+Example Questions: ["Are there enough information about Luigi and Mario?"]
+Example Answers:
+{
+  "answers": ["yes"]
+}
+
+The length of 'answers' SHOULD BE STRICTLY EQUAL to that of questions.
+===== END OF EXAMPLE ======
+
+Text:
+The council approved a riverside park with a lake. It opens in May.
+
+Questions:
+['Was a riverside park approved?', "Does the park's café open in May?"]
+
+JSON:

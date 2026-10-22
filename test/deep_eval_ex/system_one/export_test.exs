@@ -121,7 +121,7 @@ defmodule DeepEvalEx.SystemOne.ExportTest do
   end
 
   test "covers every hybrid scenario" do
-    assert length(@scenarios) == 25
+    assert length(@scenarios) == 27
   end
 
   for scenario <- @scenarios do

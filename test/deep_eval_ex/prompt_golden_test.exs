@@ -76,6 +76,11 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "PIILeakageMetric.generate_reason" => {Prompts.PIILeakage, :generate_reason},
     "PromptAlignmentMetric.generate_verdicts" => {Prompts.PromptAlignment, :generate_verdicts},
     "PromptAlignmentMetric.generate_reason" => {Prompts.PromptAlignment, :generate_reason},
+    "SummarizationMetric.generate_questions" => {Prompts.Summarization, :generate_questions},
+    "SummarizationMetric.generate_answers" => {Prompts.Summarization, :generate_answers},
+    "SummarizationMetric.generate_alignment_verdicts" =>
+      {Prompts.Summarization, :generate_alignment_verdicts},
+    "SummarizationMetric.generate_reason" => {Prompts.Summarization, :generate_reason},
     "ArgumentCorrectnessMetric.generate_verdicts" =>
       {Prompts.ArgumentCorrectness, :generate_verdicts},
     "ArgumentCorrectnessMetric.generate_reason" =>
@@ -116,6 +121,10 @@ defmodule DeepEvalEx.PromptGoldenTest do
       {Prompts.PromptAlignment, :system_one_questions},
     "PromptAlignmentMetric._experimental_system_one_verdict" =>
       {Prompts.PromptAlignment, :system_one_verdict},
+    "SummarizationMetric._experimental_system_one_questions" =>
+      {Prompts.Summarization, :system_one_questions},
+    "SummarizationMetric._experimental_system_one_verdict" =>
+      {Prompts.Summarization, :system_one_verdict},
     "ArgumentCorrectnessMetric._experimental_system_one_questions" =>
       {Prompts.ArgumentCorrectness, :system_one_questions},
     "ArgumentCorrectnessMetric._experimental_system_one_verdict" =>
@@ -142,7 +151,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the fourteen LLM metrics" do
+  test "covers every template of the fifteen LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -163,6 +172,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.JsonCorrectness,
             Prompts.PIILeakage,
             Prompts.PromptAlignment,
+            Prompts.Summarization,
             Prompts.ToolCorrectness,
             Prompts.Toxicity
           ],
@@ -380,6 +390,32 @@ defmodule DeepEvalEx.PromptGoldenTest do
 
   defp options("PromptAlignmentMetric._experimental_system_one_questions", inputs),
     do: [prompt_instructions: inputs["prompt_instructions"]]
+
+  defp options("SummarizationMetric.generate_questions", inputs),
+    do: [text: inputs["text"], n: inputs["n"]]
+
+  defp options("SummarizationMetric.generate_answers", inputs),
+    do: [questions: inputs["questions"], text: inputs["text"]]
+
+  # The metric joins the truths with blank lines.
+  defp options("SummarizationMetric.generate_alignment_verdicts", inputs) do
+    [
+      summary_claims: inputs["summary_claims"],
+      original_text: Enum.join(inputs["truths"], "\n\n")
+    ]
+  end
+
+  defp options("SummarizationMetric.generate_reason", inputs) do
+    [
+      score: inputs["score"],
+      contradictions: inputs["contradictions"],
+      redundancies: inputs["redundancies"],
+      questions: inputs["questions"]
+    ]
+  end
+
+  defp options("SummarizationMetric._experimental_system_one_questions", inputs),
+    do: [assessment_questions: inputs["assessment_questions"]]
 
   defp options("ArgumentCorrectnessMetric.generate_verdicts", inputs),
     do: [input: inputs["input"], tools_called: tool_calls(inputs["tools_called"])]

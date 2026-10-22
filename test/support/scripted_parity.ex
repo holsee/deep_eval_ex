@@ -34,6 +34,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     PatternMatch,
     PIILeakage,
     PromptAlignment,
+    Summarization,
     ToolCorrectness,
     ToolPermission,
     Toxicity
@@ -58,6 +59,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "toxicity" => Toxicity,
     "pii_leakage" => PIILeakage,
     "prompt_alignment" => PromptAlignment,
+    "summarization" => Summarization,
     "argument_correctness" => ArgumentCorrectness,
     "json_correctness" => JsonCorrectness,
     "tool_correctness" => ToolCorrectness,

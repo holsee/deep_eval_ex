@@ -1,0 +1,16 @@
+{
+  "template": "SummarizationMetric.generate_reason",
+  "inputs": {
+    "score": 0.3333333333333333,
+    "contradictions": [
+      "The park opens in May, not June.",
+      null
+    ],
+    "redundancies": [
+      null
+    ],
+    "questions": [
+      "Will the park have a playground?"
+    ]
+  }
+}

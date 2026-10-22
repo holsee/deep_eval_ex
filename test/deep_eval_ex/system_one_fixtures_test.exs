@@ -35,6 +35,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     argument_correctness_system_one
     batch_system_one batch_system_one_agent batch_system_one_down batch_system_one_json
     batch_system_one_pii_alignment batch_system_one_retrieval batch_system_one_safety
+    batch_system_one_summarization
     bias_hybrid bias_hybrid_fallback bias_system_one
     contextual_precision_hybrid contextual_precision_hybrid_fallback
     contextual_precision_system_one
@@ -49,6 +50,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     pii_leakage_hybrid pii_leakage_hybrid_fallback pii_leakage_system_one
     prompt_alignment_hybrid prompt_alignment_hybrid_fallback prompt_alignment_system_one
     refusal_classifier_system_one
+    summarization_hybrid summarization_hybrid_fallback summarization_system_one
     tool_correctness_hybrid tool_correctness_hybrid_fallback tool_correctness_system_one
     toxicity_hybrid toxicity_hybrid_fallback toxicity_system_one
   )
@@ -72,8 +74,8 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
   test "covers every eval-mode metric in system_one, hybrid and, when it asks, hybrid fallback" do
     for kind <-
           ~w(faithfulness hallucination answer_relevancy contextual_precision contextual_recall
-             contextual_relevancy bias toxicity pii_leakage prompt_alignment argument_correctness
-             tool_correctness),
+             contextual_relevancy bias toxicity pii_leakage prompt_alignment summarization
+             argument_correctness tool_correctness),
         suffix <- ~w(system_one hybrid hybrid_fallback) do
       assert "#{kind}_#{suffix}" in @scenarios
     end

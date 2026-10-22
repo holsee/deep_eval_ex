@@ -1,0 +1,212 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+            "actual_output": "The council approved a riverside park with a lake. It opens in June."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every claim in the summary `actual_output` agrees with the facts in the original text `input`; none contradicts it or adds information the original does not contain."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "The summary `actual_output` covers the main points of the original text `input`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of the important information in the original text `input` does the summary `actual_output` preserve?",
+            "criteria": [
+              "Almost none",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.3
+            },
+            "q_1": {
+              "probability": 0.8
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 1.0,
+              "probabilities": {
+                "0": 0.1,
+                "1": 0.6,
+                "2": 0.2,
+                "3": 0.1
+              },
+              "confidence": 0.35
+            }
+          }
+        },
+        "cost": {
+          "value": 8.4e-05,
+          "input_tokens": 2000,
+          "output_tokens": 0
+        }
+      }
+    ],
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+            "actual_output": "The council approved a riverside park with a lake. It opens in June."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every statement in `actual_output` is relevant to addressing `input`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "`actual_output` directly addresses what `input` asks for, rather than a different or broader topic."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `actual_output` is relevant to addressing `input`?",
+            "criteria": [
+              "None of it",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.9
+            },
+            "q_1": {
+              "probability": 0.85
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 3.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.05,
+                "2": 0.15,
+                "3": 0.8
+              },
+              "confidence": 0.8
+            }
+          }
+        },
+        "cost": {
+          "value": 8.4e-05,
+          "input_tokens": 2000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "input": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+          "actual_output": "The council approved a riverside park with a lake. It opens in June."
+        }
+      },
+      "questions": {
+        "m0.q_0": {
+          "type": "noul",
+          "instructions": "Every claim in the summary `actual_output` agrees with the facts in the original text `input`; none contradicts it or adds information the original does not contain."
+        },
+        "m0.q_1": {
+          "type": "noul",
+          "instructions": "The summary `actual_output` covers the main points of the original text `input`."
+        },
+        "m0.q_2": {
+          "type": "score",
+          "instructions": "How much of the important information in the original text `input` does the summary `actual_output` preserve?",
+          "criteria": [
+            "Almost none",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        },
+        "m1.q_0": {
+          "type": "noul",
+          "instructions": "Every statement in `actual_output` is relevant to addressing `input`."
+        },
+        "m1.q_1": {
+          "type": "noul",
+          "instructions": "`actual_output` directly addresses what `input` asks for, rather than a different or broader topic."
+        },
+        "m1.q_2": {
+          "type": "score",
+          "instructions": "How much of `actual_output` is relevant to addressing `input`?",
+          "criteria": [
+            "None of it",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "m0.q_0": {
+            "probability": 0.3
+          },
+          "m0.q_1": {
+            "probability": 0.8
+          },
+          "m1.q_0": {
+            "probability": 0.9
+          },
+          "m1.q_1": {
+            "probability": 0.85
+          }
+        },
+        "choices": {},
+        "scores": {
+          "m0.q_2": {
+            "score": 1.0,
+            "probabilities": {
+              "0": 0.1,
+              "1": 0.6,
+              "2": 0.2,
+              "3": 0.1
+            },
+            "confidence": 0.35
+          },
+          "m1.q_2": {
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.05,
+              "2": 0.15,
+              "3": 0.8
+            },
+            "confidence": 0.8
+          }
+        }
+      },
+      "cost": {
+        "value": 8.4e-05,
+        "input_tokens": 2000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

@@ -121,6 +121,7 @@ from deepeval.metrics import (  # noqa: E402
     JsonCorrectnessMetric,
     PIILeakageMetric,
     PromptAlignmentMetric,
+    SummarizationMetric,
     ToolCorrectnessMetric,
     ToxicityMetric,
 )
@@ -156,6 +157,7 @@ METRICS = {
     "toxicity": ToxicityMetric,
     "pii_leakage": PIILeakageMetric,
     "prompt_alignment": PromptAlignmentMetric,
+    "summarization": SummarizationMetric,
     "argument_correctness": ArgumentCorrectnessMetric,
     "tool_correctness": ToolCorrectnessMetric,
     "json_correctness": JsonCorrectnessMetric,
@@ -576,6 +578,19 @@ BOOKING = {
     ],
 }
 
+# Summarization judges a summary (`actual_output`) against its original text
+# (`input`). Under system_one its request ends with one Noul per assessment
+# question; under hybrid, Jev judges each claim of the summary against the
+# truths of the original text (`summary_claim_<i>`), with the LLM extracting
+# them and scoring coverage.
+PARK = {
+    "input": "The city council approved a new riverside park on Monday. Construction starts "
+             "in March and the park opens in May. It will have a lake, a playground and 200 "
+             "new trees.",
+    "actual_output": "The council approved a riverside park with a lake. It opens in June.",
+}
+PARK_QUESTIONS = ["Does the park open in May?", "Will the park have a caf\u00e9?"]
+
 WEATHER_TOOLS = [
     {"name": "get_weather", "description": "Fetch current weather for a city"},
     {"name": "search_web", "description": "Search the web"},
@@ -752,6 +767,34 @@ ARGUMENTS_VERDICTS = {
     "verdicts": [{"verdicts": [
         {"verdict": "yes"},
         {"verdict": "no", "reason": "It books Saturday, not Friday."},
+    ]}],
+}
+
+SUMMARIZATION_LLM = {
+    "truths": [{"truths": [
+        "The city council approved a new riverside park on Monday.",
+        "The park opens in May.",
+        "The park will have a lake, a playground and 200 new trees.",
+    ]}],
+    "claims": [{"claims": [
+        "The council approved a riverside park.",
+        "The park has a lake.",
+        "The park opens in June.",
+    ]}],
+    "questions": [{"questions": [
+        "Did the council approve a riverside park?",
+        "Does the park open in May?",
+        "Will the park have a playground?",
+    ]}],
+    "answers": [{"answers": ["yes", "yes", "yes"]}, {"answers": ["yes", "no", "no"]}],
+    "reason": [{"reason": "The score is 0.33 because the summary gets the opening month wrong "
+                          "and leaves out the playground."}],
+}
+SUMMARIZATION_VERDICTS = {
+    "verdicts": [{"verdicts": [
+        {"verdict": "yes"},
+        {"verdict": "yes"},
+        {"verdict": "no", "reason": "The original text says the park opens in May, not June."},
     ]}],
 }
 
@@ -1047,6 +1090,39 @@ SCENARIOS = {
         "judge_model": JUDGE,
         "responses": {"argument_correctness": {**ARGUMENTS_LLM, **ARGUMENTS_VERDICTS}},
     },
+    # Summarization
+    "summarization_system_one": {
+        "description": "Summarization decided by Jev in one request: two Nouls, a Score and "
+                       "one Noul per assessment question",
+        "metrics": [metric("summarization", "system_one", assessment_questions=PARK_QUESTIONS)],
+        "test_case": PARK,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {
+                           "nouls": {"q_0": noul(0.2), "q_1": noul(0.7), "q_3": noul(0.15),
+                                     "q_4": noul(0.6)},
+                           "scores": {"q_2": score(2, {"0": 0.05, "1": 0.3, "2": 0.55, "3": 0.1}, 0.25)},
+                       }},
+    },
+    "summarization_hybrid": {
+        "description": "Summarization in hybrid mode: the LLM extracts, asks and answers the "
+                       "coverage questions and explains, Jev judges each claim",
+        "metrics": [metric("summarization", "hybrid")],
+        "test_case": PARK,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"summary_claim_0": noul(0.96),
+                                             "summary_claim_1": noul(0.5),
+                                             "summary_claim_2": noul(0.08)}}},
+        "judge_model": JUDGE,
+        "responses": {"summarization": SUMMARIZATION_LLM},
+    },
+    "summarization_hybrid_fallback": {
+        "description": "Summarization in hybrid mode with Jev down: the LLM takes the verdicts",
+        "metrics": [metric("summarization", "hybrid")],
+        "test_case": PARK,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"summarization": {**SUMMARIZATION_LLM, **SUMMARIZATION_VERDICTS}},
+    },
     # ToolCorrectness: no whole-metric form, so `system_one` runs as `hybrid`;
     # its one Jev decision is the tool-selection Score (with available_tools).
     "tool_correctness_system_one": {
@@ -1179,6 +1255,20 @@ SCENARIOS = {
                                "m0.q_1": score(3, FOUR_LEVELS_HIGH, 0.8),
                                "m1.q_1": score(1, FOUR_LEVELS_LOW, 0.3),
                            },
+                       }},
+    },
+    "batch_system_one_summarization": {
+        "description": "Summarization and AnswerRelevancy batched into one request about input "
+                       "and actual_output by evaluate()",
+        "batched": True,
+        "metrics": [metric("summarization", "system_one"), metric("answer_relevancy", "system_one")],
+        "test_case": PARK,
+        "system_one": {"model": JEV, "cost": {"value": 0.000084, "input_tokens": 2000, "output_tokens": 0},
+                       "answers": {
+                           "nouls": {"m0.q_0": noul(0.3), "m0.q_1": noul(0.8),
+                                     "m1.q_0": noul(0.9), "m1.q_1": noul(0.85)},
+                           "scores": {"m0.q_2": score(1, FOUR_LEVELS_LOW, 0.35),
+                                      "m1.q_2": score(3, FOUR_LEVELS_HIGH, 0.8)},
                        }},
     },
     "batch_system_one_pii_alignment": {

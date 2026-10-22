@@ -49,6 +49,13 @@ Check an output against the prompt it was generated with:
 |--------|---------|-----------------|
 | [PromptAlignment](PromptAlignment.md) | Whether each prompt instruction is followed | `input`, `actual_output` (and `prompt_instructions`) |
 
+### Summarization Metrics
+Judge a summary (`actual_output`) against its original text (`input`):
+
+| Metric | Purpose | Required Params |
+|--------|---------|-----------------|
+| [Summarization](Summarization.md) | Claims that agree with the original, and the original's key points covered | `input`, `actual_output` |
+
 ### Agent Metrics
 Evaluate tool-using agents:
 
@@ -118,6 +125,9 @@ Every metric also takes deepeval's `BaseMetric` options:
 
 ### For Prompt Engineering
 - **PromptAlignment** - Check outputs follow the prompt's instructions
+
+### For Summaries
+- **Summarization** - Check a summary neither contradicts nor pads its original text, and keeps its key points
 
 ### For Agents
 - **ToolCorrectness** - Check the agent called the right tools

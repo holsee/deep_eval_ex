@@ -25,6 +25,7 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 - [Toxicity](metrics/Toxicity.md) - Toxicity in the output's opinions
 - [PIILeakage](metrics/PIILeakage.md) - Personal data in the output
 - [PromptAlignment](metrics/PromptAlignment.md) - Following the prompt's instructions
+- [Summarization](metrics/Summarization.md) - Summary alignment and coverage
 - [ToolCorrectness](metrics/ToolCorrectness.md) - Agent tool call evaluation
 - [ArgumentCorrectness](metrics/ArgumentCorrectness.md) - Agent tool call arguments
 - [ToolPermission](metrics/ToolPermission.md) - Agent tool calls against a permission policy

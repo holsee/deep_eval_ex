@@ -1,0 +1,148 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+            "actual_output": "The council approved a riverside park with a lake. It opens in June."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every claim in the summary `actual_output` agrees with the facts in the original text `input`; none contradicts it or adds information the original does not contain."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "The summary `actual_output` covers the main points of the original text `input`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of the important information in the original text `input` does the summary `actual_output` preserve?",
+            "criteria": [
+              "Almost none",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          },
+          "q_3": {
+            "type": "noul",
+            "instructions": "Reading only the summary `actual_output`, this question can be answered the same way as from the original text `input`: Does the park open in May?"
+          },
+          "q_4": {
+            "type": "noul",
+            "instructions": "Reading only the summary `actual_output`, this question can be answered the same way as from the original text `input`: Will the park have a café?"
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.2
+            },
+            "q_1": {
+              "probability": 0.7
+            },
+            "q_3": {
+              "probability": 0.15
+            },
+            "q_4": {
+              "probability": 0.6
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 2.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.3,
+                "2": 0.55,
+                "3": 0.1
+              },
+              "confidence": 0.25
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "input": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+          "actual_output": "The council approved a riverside park with a lake. It opens in June."
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "Every claim in the summary `actual_output` agrees with the facts in the original text `input`; none contradicts it or adds information the original does not contain."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "The summary `actual_output` covers the main points of the original text `input`."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "How much of the important information in the original text `input` does the summary `actual_output` preserve?",
+          "criteria": [
+            "Almost none",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        },
+        "q_3": {
+          "type": "noul",
+          "instructions": "Reading only the summary `actual_output`, this question can be answered the same way as from the original text `input`: Does the park open in May?"
+        },
+        "q_4": {
+          "type": "noul",
+          "instructions": "Reading only the summary `actual_output`, this question can be answered the same way as from the original text `input`: Will the park have a café?"
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.2
+          },
+          "q_1": {
+            "probability": 0.7
+          },
+          "q_3": {
+            "probability": 0.15
+          },
+          "q_4": {
+            "probability": 0.6
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 2.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.3,
+              "2": 0.55,
+              "3": 0.1
+            },
+            "confidence": 0.25
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

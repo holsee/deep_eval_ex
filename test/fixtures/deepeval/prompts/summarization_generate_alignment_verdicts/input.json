@@ -1,0 +1,13 @@
+{
+  "template": "SummarizationMetric.generate_alignment_verdicts",
+  "inputs": {
+    "truths": [
+      "The city council approved a new riverside park.",
+      "The park opens in May."
+    ],
+    "summary_claims": [
+      "The council approved a riverside park.",
+      "The park's café opens in June."
+    ]
+  }
+}

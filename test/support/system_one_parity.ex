@@ -34,6 +34,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     JsonCorrectness,
     PIILeakage,
     PromptAlignment,
+    Summarization,
     ToolCorrectness,
     Toxicity
   }
@@ -57,6 +58,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     "toxicity" => Toxicity,
     "pii_leakage" => PIILeakage,
     "prompt_alignment" => PromptAlignment,
+    "summarization" => Summarization,
     "argument_correctness" => ArgumentCorrectness,
     "tool_correctness" => ToolCorrectness,
     "json_correctness" => JsonCorrectness

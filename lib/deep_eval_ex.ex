@@ -61,6 +61,8 @@ defmodule DeepEvalEx do
     and privacy-sensitive data in the output
   - `DeepEvalEx.Metrics.PromptAlignment` - Whether the output follows the
     prompt template's instructions
+  - `DeepEvalEx.Metrics.Summarization` - Whether a summary is faithful to,
+    and covers, its original text
   - `DeepEvalEx.Metrics.ToolCorrectness` - Agent tool calls against the
     expected tools
   - `DeepEvalEx.Metrics.ArgumentCorrectness` - Whether each agent tool

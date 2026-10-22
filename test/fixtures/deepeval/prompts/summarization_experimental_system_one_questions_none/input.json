@@ -1,0 +1,6 @@
+{
+  "template": "SummarizationMetric._experimental_system_one_questions",
+  "inputs": {
+    "assessment_questions": []
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "description": "Summarization passing: every claim agrees, two of three questions covered (the score is the lower, coverage); the uncovered question is listed in the reason prompt",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "summarization",
+    "params": {
+      "n": 3
+    }
+  },
+  "test_case": {
+    "input": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+    "actual_output": "The council approved a riverside park with a lake. It opens in May."
+  },
+  "responses": {
+    "summarization": {
+      "truths": [
+        {
+          "truths": [
+            "The city council approved a new riverside park on Monday.",
+            "Construction starts in March.",
+            "The park opens in May.",
+            "The park will have a lake, a playground and 200 new trees."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": [
+            "The council approved a riverside park.",
+            "The park has a lake.",
+            "The park opens in May."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "questions": [
+            "Did the council approve a riverside park?",
+            "Does the park open in May?",
+            "Will the park have a playground?"
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "yes"
+            }
+          ]
+        }
+      ],
+      "answers": [
+        {
+          "answers": [
+            "yes",
+            "yes",
+            "yes"
+          ]
+        },
+        {
+          "answers": [
+            "yes",
+            "yes",
+            "no"
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.67 because the summary leaves out the playground."
+        }
+      ]
+    }
+  }
+}

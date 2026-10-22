@@ -1,0 +1,12 @@
+{
+  "score": 0,
+  "success": false,
+  "reason": "The score is 0.00 because the summary leaves out the playground.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Truths (limit=2):\n[\n    \"The city council approved a new riverside park on Monday.\",\n    \"Construction starts in March.\"\n] \n \nClaims:\n[\n    \"The council approved a riverside park.\"\n] \n \nAssessment Questions:\n[\n    \"Did the council approve a riverside park?\",\n    \"Does the park open in May?\",\n    \"Will the park have a playground?\"\n] \n \nCoverage Verdicts:\n[\n    {\n        \"summary_verdict\": \"yes\",\n        \"original_verdict\": \"yes\",\n        \"question\": \"Did the council approve a riverside park?\"\n    },\n    {\n        \"summary_verdict\": \"yes\",\n        \"original_verdict\": \"yes\",\n        \"question\": \"Does the park open in May?\"\n    },\n    {\n        \"summary_verdict\": \"no\",\n        \"original_verdict\": \"yes\",\n        \"question\": \"Will the park have a playground?\"\n    }\n] \n \nAlignment Verdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    }\n]"
+}

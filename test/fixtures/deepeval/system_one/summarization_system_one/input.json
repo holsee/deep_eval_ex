@@ -1,0 +1,56 @@
+{
+  "description": "Summarization decided by Jev in one request: two Nouls, a Score and one Noul per assessment question",
+  "metrics": [
+    {
+      "kind": "summarization",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5,
+        "assessment_questions": [
+          "Does the park open in May?",
+          "Will the park have a café?"
+        ]
+      }
+    }
+  ],
+  "test_case": {
+    "input": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+    "actual_output": "The council approved a riverside park with a lake. It opens in June."
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.2
+        },
+        "q_1": {
+          "probability": 0.7
+        },
+        "q_3": {
+          "probability": 0.15
+        },
+        "q_4": {
+          "probability": 0.6
+        }
+      },
+      "scores": {
+        "q_2": {
+          "score": 2,
+          "probabilities": {
+            "0": 0.05,
+            "1": 0.3,
+            "2": 0.55,
+            "3": 0.1
+          },
+          "confidence": 0.25
+        }
+      }
+    }
+  }
+}

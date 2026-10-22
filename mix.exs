@@ -128,6 +128,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/Toxicity.md",
         "wiki/metrics/PIILeakage.md",
         "wiki/metrics/PromptAlignment.md",
+        "wiki/metrics/Summarization.md",
         "wiki/metrics/ToolCorrectness.md",
         "wiki/metrics/ArgumentCorrectness.md",
         "wiki/metrics/ToolPermission.md",

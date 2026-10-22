@@ -15,11 +15,12 @@ defmodule DeepEvalEx.Schemas.VerdictSchemasTest do
     Hallucination,
     PIILeakage,
     PromptAlignment,
+    Summarization,
     Toxicity
   }
 
-  # deepeval 4.3.1's verdict schemas: `YesNoBorderline` for Faithfulness and
-  # AnswerRelevancy, `YesNo` for the others
+  # deepeval 4.3.1's verdict schemas: `YesNoBorderline` for Faithfulness,
+  # AnswerRelevancy and Summarization, `YesNo` for the others
   @vocabularies [
     {AnswerRelevancy, ["yes", "no", "borderline"]},
     {Faithfulness, ["yes", "no", "borderline"]},
@@ -31,6 +32,7 @@ defmodule DeepEvalEx.Schemas.VerdictSchemasTest do
     {Toxicity, ["yes", "no"]},
     {PIILeakage, ["yes", "no"]},
     {PromptAlignment, ["yes", "no"]},
+    {Summarization, ["yes", "no", "borderline"]},
     {ArgumentCorrectness, ["yes", "no"]}
   ]
 

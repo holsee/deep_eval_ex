@@ -46,7 +46,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the fourteen LLM-judged metrics, the way the metric itself renders it
+uses for the fifteen LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -126,6 +126,7 @@ from deepeval.metrics import (  # noqa: E402
     PatternMatchMetric,
     PIILeakageMetric,
     PromptAlignmentMetric,
+    SummarizationMetric,
     ToolCorrectnessMetric,
     ToolPermissionMetric,
     ToxicityMetric,
@@ -609,6 +610,7 @@ SCRIPTED_METRICS = {
     "toxicity": ToxicityMetric,
     "pii_leakage": PIILeakageMetric,
     "prompt_alignment": PromptAlignmentMetric,
+    "summarization": SummarizationMetric,
     "argument_correctness": ArgumentCorrectnessMetric,
     "json_correctness": JsonCorrectnessMetric,
     "tool_correctness": ToolCorrectnessMetric,
@@ -755,6 +757,28 @@ def _prompt_alignment(method, inputs, **kwargs):
         prompt_instructions=inputs["prompt_instructions"], model=_prompt_judge()
     )
     return metric._get_prompt(method, multimodal=False, **kwargs)
+
+
+def _summarization_reason(inputs):
+    # SummarizationMetric._generate_reason appends to its rendered template
+    # the questions the summary cannot answer, when there are any, and
+    # "JSON:\n".
+    questions = inputs["questions"]
+    prompt = _prompt(
+        SummarizationMetric, "generate_reason",
+        contradictions=inputs["contradictions"],
+        redundancies=inputs["redundancies"],
+        questions=questions,
+        score=_score(inputs),
+    )
+    if len(questions) > 0:
+        prompt += f"""Questions the original text can answer but not the summary:
+{questions}
+
+"""
+    prompt += """JSON:
+"""
+    return prompt
 
 
 def _json_correctness_reason(inputs):
@@ -976,6 +1000,31 @@ PROMPT_RENDERERS = {
     "ToxicityMetric._experimental_system_one_verdict": lambda i: _prompt(
         ToxicityMetric, "_experimental_system_one_verdict",
     ),
+    "SummarizationMetric.generate_questions": lambda i: _prompt(
+        SummarizationMetric, "generate_questions",
+        text=i["text"],
+        n=i["n"],
+    ),
+    "SummarizationMetric.generate_answers": lambda i: _prompt(
+        SummarizationMetric, "generate_answers",
+        questions=i["questions"],
+        text=i["text"],
+    ),
+    # The truths are joined with blank lines, as the metric joins them.
+    "SummarizationMetric.generate_alignment_verdicts": lambda i: _prompt(
+        SummarizationMetric, "generate_alignment_verdicts",
+        summary_claims=i["summary_claims"],
+        original_text="\n\n".join(i["truths"]),
+    ),
+    "SummarizationMetric.generate_reason": _summarization_reason,
+    # Summarization's questions end with one Noul per assessment question.
+    "SummarizationMetric._experimental_system_one_questions": lambda i: _prompt(
+        SummarizationMetric, "_experimental_system_one_questions",
+        assessment_questions=i["assessment_questions"],
+    ),
+    "SummarizationMetric._experimental_system_one_verdict": lambda i: _prompt(
+        SummarizationMetric, "_experimental_system_one_verdict",
+    ),
     "PIILeakageMetric._experimental_system_one_questions": lambda i: _prompt(
         PIILeakageMetric, "_experimental_system_one_questions",
     ),
@@ -1024,6 +1073,11 @@ UNRENDERED_TEMPLATES = {
     "GEval.generate_trace_evaluation_results",
     "GEval.generate_strict_trace_evaluation_results",
 }
+
+PARK_TEXT = (
+    "The city council approved a new riverside park on Monday. Construction starts in "
+    "March and the park opens in May. It will have a lake, a playground and 200 new trees."
+)
 
 PARIS_CONTEXT = [
     "Paris is the capital and largest city of France.",
@@ -1497,6 +1551,65 @@ PROMPT_CASES = {
         "template": "HallucinationMetric._experimental_system_one_verdict",
         "inputs": {},
     },
+    "summarization_generate_questions": {
+        "template": "SummarizationMetric.generate_questions",
+        "inputs": {"text": PARK_TEXT, "n": 3},
+    },
+    "summarization_generate_answers": {
+        "template": "SummarizationMetric.generate_answers",
+        "inputs": {
+            "questions": ["Was a riverside park approved?", "Does the park's café open in May?"],
+            "text": "The council approved a riverside park with a lake. It opens in May.",
+        },
+    },
+    "summarization_generate_alignment_verdicts": {
+        "template": "SummarizationMetric.generate_alignment_verdicts",
+        "inputs": {
+            "truths": [
+                "The city council approved a new riverside park.",
+                "The park opens in May.",
+            ],
+            "summary_claims": ["The council approved a riverside park.", "The park's café opens in June."],
+        },
+    },
+    # The questions the summary cannot answer follow the redundancies.
+    "summarization_generate_reason": {
+        "template": "SummarizationMetric.generate_reason",
+        "inputs": {
+            "score": 0.3333333333333333,
+            "contradictions": ["The park opens in May, not June.", None],
+            "redundancies": [None],
+            "questions": ["Will the park have a playground?"],
+        },
+    },
+    # Without such questions, "JSON:" directly follows the redundancies.
+    "summarization_generate_reason_all_answered": {
+        "template": "SummarizationMetric.generate_reason",
+        "inputs": {
+            "score": 1,
+            "contradictions": [],
+            "redundancies": [],
+            "questions": [],
+        },
+    },
+    # Each assessment question goes through Jinja's `tojson`.
+    "summarization_experimental_system_one_questions": {
+        "template": "SummarizationMetric._experimental_system_one_questions",
+        "inputs": {
+            "assessment_questions": [
+                "Does the park open in May?",
+                "Is the caf\u00e9 <open> & \"busy\"?",
+            ],
+        },
+    },
+    "summarization_experimental_system_one_questions_none": {
+        "template": "SummarizationMetric._experimental_system_one_questions",
+        "inputs": {"assessment_questions": []},
+    },
+    "summarization_experimental_system_one_verdict": {
+        "template": "SummarizationMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
     "tool_correctness_experimental_system_one_tool_selection_score": {
         "template": "ToolCorrectnessMetric._experimental_system_one_tool_selection_score",
         "inputs": {},
@@ -1516,7 +1629,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the fourteen metrics is rendered
+    """Fails unless every bundled template of the fifteen metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()

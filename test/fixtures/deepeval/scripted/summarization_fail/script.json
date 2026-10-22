@@ -1,0 +1,79 @@
+{
+  "description": "Summarization failing with given assessment questions (no questions call): a contradiction, an extra claim without a reason (None among the redundancies), answers needing strip() and lower(); alignment and coverage tie, so the score is alignment's",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "summarization",
+    "params": {
+      "assessment_questions": [
+        "Did the council approve a riverside park?",
+        "Does the park open in May?",
+        "Will the park have a playground?"
+      ],
+      "threshold": 0.6
+    }
+  },
+  "test_case": {
+    "input": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+    "actual_output": "The council approved a riverside park with a lake. It opens in May."
+  },
+  "responses": {
+    "summarization": {
+      "truths": [
+        {
+          "truths": [
+            "The city council approved a new riverside park on Monday.",
+            "Construction starts in March.",
+            "The park opens in May.",
+            "The park will have a lake, a playground and 200 new trees."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": [
+            "The council approved a riverside park.",
+            "Construction starts in April.",
+            "The park has a café."
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "no",
+              "reason": "The original text says construction starts in March, not April."
+            },
+            {
+              "verdict": "borderline"
+            }
+          ]
+        }
+      ],
+      "answers": [
+        {
+          "answers": [
+            "yes",
+            " Yes",
+            "YES"
+          ]
+        },
+        {
+          "answers": [
+            "NO ",
+            "yes",
+            "no"
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.33 because the summary gets the start date wrong and adds a café."
+        }
+      ]
+    }
+  }
+}

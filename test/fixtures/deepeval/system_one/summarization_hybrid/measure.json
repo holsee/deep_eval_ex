@@ -1,0 +1,21 @@
+[
+  {
+    "score": 0.3333333333333333,
+    "success": false,
+    "reason": "The score is 0.33 because the summary gets the opening month wrong and leaves out the playground.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Truths (limit=None):\n[\n    \"The city council approved a new riverside park on Monday.\",\n    \"The park opens in May.\",\n    \"The park will have a lake, a playground and 200 new trees.\"\n] \n \nClaims:\n[\n    \"The council approved a riverside park.\",\n    \"The park has a lake.\",\n    \"The park opens in June.\"\n] \n \nAssessment Questions:\n[\n    \"Did the council approve a riverside park?\",\n    \"Does the park open in May?\",\n    \"Will the park have a playground?\"\n] \n \nCoverage Verdicts:\n[\n    {\n        \"summary_verdict\": \"yes\",\n        \"original_verdict\": \"yes\",\n        \"question\": \"Did the council approve a riverside park?\"\n    },\n    {\n        \"summary_verdict\": \"no\",\n        \"original_verdict\": \"yes\",\n        \"question\": \"Does the park open in May?\"\n    },\n    {\n        \"summary_verdict\": \"no\",\n        \"original_verdict\": \"yes\",\n        \"question\": \"Will the park have a playground?\"\n    }\n] \n \nAlignment Verdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.96\"\n    },\n    {\n        \"verdict\": \"borderline\",\n        \"reason\": \"P(yes)=0.50\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"P(yes)=0.08\"\n    }\n]",
+    "confidence": 0.0,
+    "system_one_fallback_reason": null,
+    "score_breakdown": {
+      "Alignment": 0.3333333333333333,
+      "Coverage": 0.3333333333333333
+    },
+    "raised": null
+  }
+]

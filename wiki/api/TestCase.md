@@ -115,6 +115,7 @@ Different metrics require different fields:
 | Toxicity | `input`, `actual_output` |
 | PIILeakage | `input`, `actual_output` |
 | PromptAlignment | `input`, `actual_output` (and the metric's `prompt_instructions`) |
+| Summarization | `input` (the original text), `actual_output` (the summary) |
 | ArgumentCorrectness | `input`, `tools_called` |
 
 ## Helper Functions

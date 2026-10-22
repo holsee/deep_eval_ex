@@ -77,6 +77,7 @@ config :deep_eval_ex,
 | **Toxicity** | Personal attacks, mockery, hate and threats in the output |
 | **PIILeakage** | Personally identifiable information and privacy-sensitive data in the output |
 | **PromptAlignment** | Whether the output follows the prompt template's instructions |
+| **Summarization** | Whether a summary is faithful to, and covers, its original text |
 | **ToolCorrectness** | Agent tool calls against the expected tools |
 | **ArgumentCorrectness** | Whether each agent tool call's arguments address the input |
 | **ToolPermission** | Agent tool calls against an allowlist and denylist |
