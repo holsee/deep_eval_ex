@@ -112,6 +112,21 @@ Override configuration at evaluation time:
 )
 ```
 
+## Model Pricing
+
+Results report `evaluation_cost` from per-model token prices (USD per 1M
+tokens). DeepEvalEx ships deepeval's OpenAI price table; models it does not
+know get a `nil` cost rather than a guess. Price other models, or override a
+built-in price, with `:model_pricing`:
+
+```elixir
+config :deep_eval_ex,
+  model_pricing: %{
+    "my-finetuned-model" => %{input: 0.30, output: 1.20},
+    "llama3.1" => %{input: 0.0, output: 0.0}
+  }
+```
+
 ## Concurrency Settings
 
 Control parallel evaluation:

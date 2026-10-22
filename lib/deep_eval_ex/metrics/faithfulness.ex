@@ -51,7 +51,7 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, Result}
+  alias DeepEvalEx.{LLM.Adapter, LLM.Usage, Result}
   alias DeepEvalEx.Prompts.Faithfulness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.Faithfulness, as: Schema
 
@@ -80,19 +80,20 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
     retrieval_context = get_retrieval_context(test_case)
     actual_output = test_case.actual_output
 
-    # Run truths and claims extraction concurrently
+    # Run truths and claims extraction concurrently; Usage.async/1 carries
+    # the tasks' token usage back into this metric's usage scope.
     truths_task =
-      Task.async(fn ->
+      Usage.async(fn ->
         generate_truths(retrieval_context, truths_limit, opts)
       end)
 
     claims_task =
-      Task.async(fn ->
+      Usage.async(fn ->
         generate_claims(actual_output, opts)
       end)
 
-    with {:ok, truths} <- Task.await(truths_task, 60_000),
-         {:ok, claims} <- Task.await(claims_task, 60_000),
+    with {:ok, truths} <- Usage.await(truths_task, 60_000),
+         {:ok, claims} <- Usage.await(claims_task, 60_000),
          {:ok, verdicts} <- generate_verdicts(claims, truths, opts),
          score = calculate_score(verdicts),
          {:ok, reason} <- maybe_generate_reason(score, verdicts, include_reason, opts) do

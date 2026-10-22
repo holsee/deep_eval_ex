@@ -11,7 +11,12 @@ defmodule DeepEvalEx.Result do
   - `:threshold` - The threshold used for pass/fail determination (`nil` if unknown)
   - `:error` - Error message when the metric could not produce a score, else `nil`
   - `:metadata` - Additional metric-specific data
-  - `:evaluation_cost` - Cost of the LLM calls for this evaluation
+  - `:evaluation_model` - The judge model, for metrics that call an LLM
+  - `:evaluation_cost` - USD cost of the LLM calls for this evaluation; `nil`
+    when no LLM was called or a call's model is not priced
+    (see `DeepEvalEx.LLM.Pricing`)
+  - `:input_tokens` - Prompt tokens used by the LLM calls (`nil` if unknown)
+  - `:output_tokens` - Completion tokens used by the LLM calls (`nil` if unknown)
   - `:latency_ms` - Time taken for the evaluation in milliseconds
 
   ## Examples
@@ -26,9 +31,20 @@ defmodule DeepEvalEx.Result do
           claims: ["claim1", "claim2", "claim3", "claim4", "claim5"],
           verdicts: [:yes, :yes, :yes, :yes, :no]
         },
+        evaluation_model: "gpt-4o-mini",
         evaluation_cost: 0.002,
+        input_tokens: 9_200,
+        output_tokens: 1_040,
         latency_ms: 1250
       }
+
+  ## Model, tokens and cost
+
+  Like deepeval's `MetricData` (`evaluationModel`, `evaluationCost`,
+  `inputTokenCount`, `outputTokenCount`), these are filled in by
+  `DeepEvalEx.Metrics.BaseMetric` from the usage of every LLM call made while
+  measuring (see `DeepEvalEx.LLM.Usage`). They stay `nil` for metrics that
+  make no LLM call, such as `DeepEvalEx.Metrics.ExactMatch`.
 
   ## Errored vs failed
 
@@ -48,7 +64,10 @@ defmodule DeepEvalEx.Result do
           threshold: float() | nil,
           error: String.t() | nil,
           metadata: map() | nil,
+          evaluation_model: String.t() | nil,
           evaluation_cost: float() | nil,
+          input_tokens: non_neg_integer() | nil,
+          output_tokens: non_neg_integer() | nil,
           latency_ms: non_neg_integer() | nil
         }
 
@@ -61,7 +80,10 @@ defmodule DeepEvalEx.Result do
     :threshold,
     :error,
     :metadata,
+    :evaluation_model,
     :evaluation_cost,
+    :input_tokens,
+    :output_tokens,
     :latency_ms
   ]
 
@@ -75,7 +97,9 @@ defmodule DeepEvalEx.Result do
   - `:threshold` - Pass/fail threshold (default: 0.5)
   - `:reason` - Explanation for the score
   - `:metadata` - Additional data
+  - `:evaluation_model` - The judge model
   - `:evaluation_cost` - LLM API cost
+  - `:input_tokens` / `:output_tokens` - LLM token counts
   - `:latency_ms` - Evaluation time
 
   ## Examples
@@ -103,7 +127,10 @@ defmodule DeepEvalEx.Result do
       threshold: threshold,
       reason: Keyword.get(opts, :reason),
       metadata: Keyword.get(opts, :metadata),
+      evaluation_model: Keyword.get(opts, :evaluation_model),
       evaluation_cost: Keyword.get(opts, :evaluation_cost),
+      input_tokens: Keyword.get(opts, :input_tokens),
+      output_tokens: Keyword.get(opts, :output_tokens),
       latency_ms: Keyword.get(opts, :latency_ms)
     }
   end
@@ -119,7 +146,9 @@ defmodule DeepEvalEx.Result do
 
   - `:threshold` - The metric's threshold, when known (default: `nil`)
   - `:metadata` - Additional data
+  - `:evaluation_model` - The judge model
   - `:evaluation_cost` - LLM API cost incurred before the error
+  - `:input_tokens` / `:output_tokens` - LLM token counts before the error
   - `:latency_ms` - Evaluation time
 
   ## Examples
@@ -135,7 +164,10 @@ defmodule DeepEvalEx.Result do
       threshold: Keyword.get(opts, :threshold),
       error: format_error(error),
       metadata: Keyword.get(opts, :metadata),
+      evaluation_model: Keyword.get(opts, :evaluation_model),
       evaluation_cost: Keyword.get(opts, :evaluation_cost),
+      input_tokens: Keyword.get(opts, :input_tokens),
+      output_tokens: Keyword.get(opts, :output_tokens),
       latency_ms: Keyword.get(opts, :latency_ms)
     }
   end
@@ -211,6 +243,7 @@ defimpl Inspect, for: DeepEvalEx.Result do
       ]
       |> maybe_add(:error, result.error)
       |> maybe_add(:reason, result.reason)
+      |> maybe_add(:evaluation_model, result.evaluation_model)
       |> maybe_add(:evaluation_cost, result.evaluation_cost)
       |> maybe_add(:latency_ms, result.latency_ms)
 

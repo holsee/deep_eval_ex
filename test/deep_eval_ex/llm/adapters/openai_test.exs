@@ -3,6 +3,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
   use ExUnit.Case, async: false
 
   alias DeepEvalEx.LLM.Adapters.OpenAI
+  alias DeepEvalEx.LLM.Usage
 
   @stub OpenAI
   @base_opts [api_key: "sk-test", req_options: [plug: {Req.Test, @stub}, retry: false]]
@@ -235,6 +236,44 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
 
       assert {:error, {:request_failed, %Req.TransportError{reason: :econnrefused}}} =
                OpenAI.generate("hello", @base_opts)
+    end
+  end
+
+  describe "usage" do
+    defp stub_completion_with_usage(content, usage) do
+      Req.Test.stub(@stub, fn conn ->
+        Req.Test.json(conn, %{
+          "choices" => [%{"message" => %{"role" => "assistant", "content" => content}}],
+          "usage" => usage
+        })
+      end)
+    end
+
+    test "records prompt and completion tokens priced for the requested model" do
+      stub_completion_with_usage("hi", %{"prompt_tokens" => 1_000, "completion_tokens" => 500})
+
+      {result, usages} =
+        Usage.track(fn -> OpenAI.generate("hello", [{:model, "gpt-4o"} | @base_opts]) end)
+
+      assert result == {:ok, "hi"}
+      assert [%Usage{model: "gpt-4o", input_tokens: 1_000, output_tokens: 500} = usage] = usages
+      assert_in_delta usage.cost, 0.0075, 1.0e-12
+    end
+
+    test "records usage for structured output requests" do
+      stub_completion_with_usage(~s({"a": 1}), %{"prompt_tokens" => 3, "completion_tokens" => 2})
+
+      {result, usages} =
+        Usage.track(fn -> OpenAI.generate_with_schema("hello", %{}, @base_opts) end)
+
+      assert result == {:ok, %{"a" => 1}}
+      assert [%Usage{model: "gpt-4o-mini", input_tokens: 3, output_tokens: 2}] = usages
+    end
+
+    test "records nothing when the response carries no usage" do
+      stub_completion("hi")
+
+      assert {{:ok, "hi"}, []} = Usage.track(fn -> OpenAI.generate("hello", @base_opts) end)
     end
   end
 end

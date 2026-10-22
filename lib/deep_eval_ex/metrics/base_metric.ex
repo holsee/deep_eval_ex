@@ -38,10 +38,15 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   - Default implementation of `validate_test_case/2`
   - Telemetry instrumentation around `measure/2`
   - Consistent error handling
+  - The result's `:evaluation_model`, `:input_tokens`, `:output_tokens` and
+    `:evaluation_cost`, collected from the LLM calls made while measuring.
+    Calls made from tasks the metric spawns are only counted when the tasks
+    are started with `DeepEvalEx.LLM.Usage.async/1`
 
   You can override any of these defaults.
   """
 
+  alias DeepEvalEx.LLM.Usage
   alias DeepEvalEx.{Result, TestCase}
 
   @type test_case :: TestCase.t()
@@ -137,6 +142,9 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
       - Parameter validation
       - Telemetry events
       - Error handling
+      - LLM usage tracking: the judge model, token counts and cost of every
+        LLM call made by `do_measure/2` are set on the result
+        (see `DeepEvalEx.LLM.Usage`)
       """
       @spec measure(TestCase.t(), keyword()) ::
               {:ok, Result.t()} | {:error, term()}
@@ -154,31 +162,35 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
           metadata
         )
 
-        result =
-          with :ok <- validate_test_case(test_case),
-               {:ok, result} <- do_measure(test_case, opts) do
+        {outcome, usages} =
+          unquote(__MODULE__).track_usage(fn ->
+            with :ok <- validate_test_case(test_case), do: do_measure(test_case, opts)
+          end)
+
+        case outcome do
+          {:ok, result} ->
             latency = System.monotonic_time(:millisecond) - start_time
-            result = %{result | latency_ms: latency}
+
+            result =
+              unquote(__MODULE__).put_usage(%{result | latency_ms: latency}, usages)
 
             :telemetry.execute(
               [:deep_eval_ex, :metric, :stop],
-              %{duration: latency, score: result.score},
+              unquote(__MODULE__).stop_measurements(result),
               metadata
             )
 
             {:ok, result}
-          else
-            {:error, reason} = error ->
-              :telemetry.execute(
-                [:deep_eval_ex, :metric, :exception],
-                %{duration: System.monotonic_time(:millisecond) - start_time},
-                Map.put(metadata, :error, reason)
-              )
 
-              error
-          end
+          {:error, reason} = error ->
+            :telemetry.execute(
+              [:deep_eval_ex, :metric, :exception],
+              %{duration: System.monotonic_time(:millisecond) - start_time},
+              Map.put(metadata, :error, reason)
+            )
 
-        result
+            error
+        end
       end
 
       @doc """
@@ -194,5 +206,43 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
 
       defoverridable measure: 2, do_measure: 2, validate_test_case: 1
     end
+  end
+
+  @doc false
+  # Runs a measurement in its own usage scope and returns `{outcome, usages}`.
+  # The usages are also passed on to any enclosing scope, so a metric measured
+  # inside another one adds to the outer metric's usage.
+  @spec track_usage((-> outcome)) :: {outcome, [Usage.t()]} when outcome: term()
+  def track_usage(fun) do
+    {outcome, usages} = Usage.track(fun)
+    Usage.record_all(usages)
+    {outcome, usages}
+  end
+
+  @doc false
+  # Sets a result's evaluation model, token counts and cost from the usage of
+  # the LLM calls made while measuring it. A metric that made no LLM call
+  # keeps them nil, as deepeval does for non-LLM metrics.
+  @spec put_usage(Result.t(), [Usage.t()]) :: Result.t()
+  def put_usage(result, usages) do
+    case Usage.summarize(usages) do
+      nil -> result
+      summary -> struct!(result, summary)
+    end
+  end
+
+  @doc false
+  # Measurements of the `[:deep_eval_ex, :metric, :stop]` event; usage keys
+  # are only present when known.
+  @spec stop_measurements(Result.t()) :: map()
+  def stop_measurements(result) do
+    [
+      input_tokens: result.input_tokens,
+      output_tokens: result.output_tokens,
+      cost: result.evaluation_cost
+    ]
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Map.new()
+    |> Map.merge(%{duration: result.latency_ms, score: result.score})
   end
 end

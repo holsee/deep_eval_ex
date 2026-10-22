@@ -17,7 +17,10 @@ Every metric evaluation returns a `Result` struct containing the score, success 
 | `threshold` | `float() \| nil` | The threshold used for pass/fail; `nil` only if it is unknown |
 | `error` | `String.t() \| nil` | Error message when the metric could not produce a score |
 | `metadata` | `map()` | Additional metric-specific data |
-| `evaluation_cost` | `float()` | Cost of LLM calls for this evaluation |
+| `evaluation_model` | `String.t() \| nil` | Judge model used by LLM-based metrics |
+| `evaluation_cost` | `float() \| nil` | USD cost of the LLM calls; `nil` when no LLM was called or a model is not priced |
+| `input_tokens` | `integer() \| nil` | Prompt tokens used by the LLM calls |
+| `output_tokens` | `integer() \| nil` | Completion tokens used by the LLM calls |
 | `latency_ms` | `integer()` | Time taken for evaluation in milliseconds |
 
 ## Creating Results
@@ -175,6 +178,26 @@ result.metadata
 # }
 ```
 
+## Model, Tokens and Cost
+
+Like deepeval's `MetricData` (`evaluationModel`, `evaluationCost`,
+`inputTokenCount`, `outputTokenCount`), LLM-based metrics report the judge
+model and the summed token usage and cost of every LLM call they made:
+
+```elixir
+{:ok, result} = Faithfulness.measure(test_case, adapter: :openai, model: "gpt-4o-mini")
+
+result.evaluation_model  # => "gpt-4o-mini"
+result.input_tokens      # => 2_431
+result.output_tokens     # => 312
+result.evaluation_cost   # => 0.00055185
+```
+
+- Metrics that make no LLM call (e.g. `ExactMatch`) leave all four `nil`.
+- Token counts are `nil` when the adapter does not report usage.
+- `evaluation_cost` is `nil` when any call's model has no price in
+  `DeepEvalEx.LLM.Pricing`; add one with the `:model_pricing` config.
+
 ## Example: Processing Results
 
 ```elixir
@@ -221,7 +244,10 @@ end
   threshold: float() | nil,
   error: String.t() | nil,
   metadata: map() | nil,
+  evaluation_model: String.t() | nil,
   evaluation_cost: float() | nil,
+  input_tokens: non_neg_integer() | nil,
+  output_tokens: non_neg_integer() | nil,
   latency_ms: non_neg_integer() | nil
 }
 ```

@@ -33,6 +33,13 @@ defmodule DeepEvalEx.LLM.Adapter do
         def supports_log_probs?, do: false
       end
 
+  ## Reporting Token Usage
+
+  Adapters report the token usage of each call with
+  `DeepEvalEx.LLM.Usage.record/1`; results then carry the tokens and cost.
+  Adapters that report nothing still get their `model_name/1` recorded as the
+  result's `:evaluation_model`. See `DeepEvalEx.LLM.Usage`.
+
   ## Using a Custom Adapter
 
       DeepEvalEx.evaluate(test_case, [metric],
@@ -40,6 +47,8 @@ defmodule DeepEvalEx.LLM.Adapter do
         model: "custom-model-v2"
       )
   """
+
+  alias DeepEvalEx.LLM.Usage
 
   @type prompt :: String.t()
   @type schema :: module() | map()
@@ -158,6 +167,7 @@ defmodule DeepEvalEx.LLM.Adapter do
   Generates a response using the default or specified adapter.
 
   This is a convenience function that resolves the adapter and calls generate.
+  The call's `DeepEvalEx.LLM.Usage` is recorded in the caller's usage scope.
 
   ## Options
 
@@ -169,17 +179,33 @@ defmodule DeepEvalEx.LLM.Adapter do
   def generate(prompt, opts \\ []) do
     {adapter, model} = resolve_adapter(opts)
     opts = Keyword.put_new(opts, :model, model)
-    adapter.generate(prompt, opts)
+    with_usage(adapter, opts, fn -> adapter.generate(prompt, opts) end)
   end
 
   @doc """
   Generates a structured response using the default or specified adapter.
+
+  Records usage like `generate/2`.
   """
   @spec generate_with_schema(prompt(), schema(), opts()) :: {:ok, map()} | error()
   def generate_with_schema(prompt, schema, opts \\ []) do
     {adapter, model} = resolve_adapter(opts)
     opts = Keyword.put_new(opts, :model, model)
-    adapter.generate_with_schema(prompt, schema, opts)
+    with_usage(adapter, opts, fn -> adapter.generate_with_schema(prompt, schema, opts) end)
+  end
+
+  # Passes on the usage the adapter recorded. A successful call that reported
+  # none still records the adapter's model, so the judge model is known even
+  # when its tokens and cost are not.
+  defp with_usage(adapter, opts, fun) do
+    {result, usages} = Usage.track(fun)
+
+    case {result, usages} do
+      {{:ok, _}, []} -> Usage.record(%Usage{model: adapter.model_name(opts)})
+      _ -> Usage.record_all(usages)
+    end
+
+    result
   end
 
   defp resolve_adapter(opts) do

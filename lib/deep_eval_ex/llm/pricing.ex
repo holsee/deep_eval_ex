@@ -1,0 +1,136 @@
+defmodule DeepEvalEx.LLM.Pricing do
+  @moduledoc """
+  Per-model token prices used to compute `DeepEvalEx.Result` evaluation costs.
+
+  Prices are USD per 1M tokens. The built-in table mirrors the OpenAI prices in
+  deepeval's model registry (`deepeval/models/llms/constants.py`). A model that
+  is not priced has a `nil` cost: DeepEvalEx never guesses a price, just as
+  deepeval leaves `evaluation_cost` as `None` for models it cannot price.
+
+  ## Overriding prices
+
+  Entries in the `:model_pricing` config take precedence over the built-in
+  table, so you can price custom, self-hosted or newly released models:
+
+      config :deep_eval_ex,
+        model_pricing: %{
+          "gpt-4o-mini" => %{input: 0.15, output: 0.60},
+          "my-local-llama" => %{input: 0.0, output: 0.0}
+        }
+  """
+
+  @type price :: %{input: number(), output: number()}
+
+  # USD per 1M tokens, copied from deepeval 4.3.1's OPENAI_MODELS_DATA.
+  # Models deepeval lists without a price (e.g. o1-mini) are left out.
+  @openai_prices %{
+    "gpt-3.5-turbo" => {0.50, 1.50},
+    "gpt-3.5-turbo-0125" => {0.50, 1.50},
+    "gpt-3.5-turbo-1106" => {1.00, 2.00},
+    "gpt-4" => {30.00, 60.00},
+    "gpt-4-32k" => {60.00, 120.00},
+    "gpt-4-32k-0613" => {60.00, 120.00},
+    "gpt-4-0125-preview" => {10.00, 30.00},
+    "gpt-4-1106-preview" => {10.00, 30.00},
+    "gpt-4-turbo" => {10.00, 30.00},
+    "gpt-4-turbo-2024-04-09" => {10.00, 30.00},
+    "gpt-4-turbo-preview" => {10.00, 30.00},
+    "gpt-4o" => {2.50, 10.00},
+    "gpt-4o-2024-05-13" => {2.50, 10.00},
+    "gpt-4o-2024-08-06" => {2.50, 10.00},
+    "gpt-4o-2024-11-20" => {2.50, 10.00},
+    "gpt-4o-mini" => {0.15, 0.60},
+    "gpt-4o-mini-2024-07-18" => {0.15, 0.60},
+    "gpt-4.1" => {2.00, 8.00},
+    "gpt-4.1-mini" => {0.40, 1.60},
+    "gpt-4.1-nano" => {0.10, 0.40},
+    "gpt-4.5-preview" => {75.00, 150.00},
+    "gpt-4.5-preview-2025-02-27" => {75.00, 150.00},
+    "o1" => {15.00, 60.00},
+    "o1-2024-12-17" => {15.00, 60.00},
+    "o1-preview" => {15.00, 60.00},
+    "o1-preview-2024-09-12" => {15.00, 60.00},
+    "o3-mini" => {1.10, 4.40},
+    "o3-mini-2025-01-31" => {1.10, 4.40},
+    "o4-mini" => {1.10, 4.40},
+    "o4-mini-2025-04-16" => {1.10, 4.40},
+    "gpt-5" => {1.25, 10.00},
+    "gpt-5-2025-08-07" => {1.25, 10.00},
+    "gpt-5-chat-latest" => {1.25, 10.00},
+    "gpt-5-mini" => {0.25, 2.00},
+    "gpt-5-mini-2025-08-07" => {0.25, 2.00},
+    "gpt-5-nano" => {0.05, 0.40},
+    "gpt-5-nano-2025-08-07" => {0.05, 0.40},
+    "gpt-5.1" => {1.25, 10.00},
+    "gpt-5.2" => {1.75, 14.00},
+    "gpt-5.4" => {2.50, 15.00},
+    "gpt-5.4-2026-03-05" => {2.50, 15.00},
+    "gpt-5.4-mini" => {0.75, 4.50},
+    "gpt-5.5" => {5.00, 30.00},
+    "gpt-5.5-2026-04-23" => {5.00, 30.00},
+    "gpt-5.6-sol" => {4.00, 20.00},
+    "gpt-5.6-terra" => {2.00, 12.00},
+    "gpt-5.6-luna" => {0.20, 1.20},
+    "gpt-6-astra" => {10.00, 50.00},
+    "gpt-6-sol" => {2.00, 10.00},
+    "gpt-6-luna" => {0.10, 0.50}
+  }
+
+  @doc """
+  Returns the per-1M-token price of `model`, or `nil` when it is not priced.
+
+  The `:model_pricing` config is consulted before the built-in table.
+
+  ## Examples
+
+      iex> DeepEvalEx.LLM.Pricing.price("gpt-4o-mini")
+      %{input: 0.15, output: 0.6}
+
+      iex> DeepEvalEx.LLM.Pricing.price("unknown-model")
+      nil
+  """
+  @spec price(String.t() | nil) :: price() | nil
+  def price(nil), do: nil
+
+  def price(model) when is_binary(model) do
+    overrides = Application.get_env(:deep_eval_ex, :model_pricing, %{})
+
+    case Map.fetch(overrides, model) do
+      {:ok, price} ->
+        price
+
+      :error ->
+        case Map.fetch(@openai_prices, model) do
+          {:ok, {input, output}} -> %{input: input, output: output}
+          :error -> nil
+        end
+    end
+  end
+
+  @doc """
+  Returns the USD cost of a call to `model`, or `nil` when the model is not
+  priced or a token count is unknown.
+
+  ## Examples
+
+      iex> DeepEvalEx.LLM.Pricing.cost("gpt-4o-mini", 1_000_000, 0)
+      0.15
+
+      iex> DeepEvalEx.LLM.Pricing.cost("unknown-model", 100, 50)
+      nil
+  """
+  @spec cost(String.t() | nil, non_neg_integer() | nil, non_neg_integer() | nil) ::
+          float() | nil
+  def cost(_model, nil, _output_tokens), do: nil
+  def cost(_model, _input_tokens, nil), do: nil
+
+  def cost(model, input_tokens, output_tokens) do
+    case price(model) do
+      %{input: input, output: output} ->
+        (input_tokens * input + output_tokens * output) / 1_000_000
+
+      nil ->
+        nil
+    end
+  end
+end

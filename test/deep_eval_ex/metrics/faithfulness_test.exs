@@ -535,4 +535,63 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
       assert result.score == 1.0
     end
   end
+
+  describe "measure/2 usage" do
+    setup do
+      saved = Application.get_env(:deep_eval_ex, :model_pricing)
+
+      Application.put_env(:deep_eval_ex, :model_pricing, %{
+        "mock-model" => %{input: 1.0, output: 2.0}
+      })
+
+      on_exit(fn ->
+        if saved,
+          do: Application.put_env(:deep_eval_ex, :model_pricing, saved),
+          else: Application.delete_env(:deep_eval_ex, :model_pricing)
+      end)
+    end
+
+    test "accumulates tokens and cost across every LLM call, including concurrent ones" do
+      Mock.set_schema_response(~r/generate a comprehensive list of.*truths/i, %{"truths" => ["T"]})
+
+      Mock.set_schema_response(~r/extract a comprehensive list of FACTUAL/i, %{"claims" => ["C"]})
+
+      Mock.set_schema_response(
+        ~r/indicate whether EACH claim contradicts/i,
+        %{"verdicts" => [%{"verdict" => "yes"}]}
+      )
+
+      Mock.set_schema_response(~r/CONCISELY summarize the contradictions/i, %{"reason" => "Ok."})
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A", retrieval_context: ["C"])
+
+      assert {:ok, result} =
+               Faithfulness.measure(test_case,
+                 adapter: :mock,
+                 mock_usage: [input_tokens: 100_000, output_tokens: 10_000]
+               )
+
+      # truths + claims (concurrent tasks) + verdicts + reason = 4 calls
+      assert result.evaluation_model == "mock-model"
+      assert result.input_tokens == 400_000
+      assert result.output_tokens == 40_000
+      assert_in_delta result.evaluation_cost, 4 * (0.1 + 0.02), 1.0e-9
+    end
+
+    test "reports the judge model with unknown tokens and cost when usage is not reported" do
+      Mock.set_schema_response(~r/generate a comprehensive list of.*truths/i, %{"truths" => ["T"]})
+
+      Mock.set_schema_response(~r/extract a comprehensive list of FACTUAL/i, %{"claims" => []})
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A", retrieval_context: ["C"])
+
+      assert {:ok, result} =
+               Faithfulness.measure(test_case, adapter: :mock, include_reason: false)
+
+      assert result.evaluation_model == "mock-model"
+      assert result.input_tokens == nil
+      assert result.output_tokens == nil
+      assert result.evaluation_cost == nil
+    end
+  end
 end

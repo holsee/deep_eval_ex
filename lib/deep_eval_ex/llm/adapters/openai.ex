@@ -49,9 +49,17 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   - `gpt-4o-mini` - Smaller, faster GPT-4
   - `gpt-4-turbo` - GPT-4 Turbo
   - `gpt-3.5-turbo` - GPT-3.5 (faster, cheaper)
+
+  ## Usage and Cost
+
+  The `usage.prompt_tokens` and `usage.completion_tokens` of every response
+  are recorded with `DeepEvalEx.LLM.Usage`, priced for the requested model
+  by `DeepEvalEx.LLM.Pricing`.
   """
 
   use DeepEvalEx.LLM.Adapter
+
+  alias DeepEvalEx.LLM.Usage
 
   @default_base_url "https://api.openai.com/v1"
   @default_model "gpt-4o-mini"
@@ -65,7 +73,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   def generate(prompt, opts \\ []) do
     body = base_body(prompt, opts)
 
-    case make_request("/chat/completions", body, opts) do
+    case chat_completion(body, opts) do
       {:ok, %{"choices" => [%{"message" => %{"content" => content}} | _]}} ->
         {:ok, content}
 
@@ -93,7 +101,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
         }
       })
 
-    case make_request("/chat/completions", body, opts) do
+    case chat_completion(body, opts) do
       {:ok, %{"choices" => [%{"message" => %{"content" => content}} | _]}} ->
         parse_json_response(content, schema)
 
@@ -159,6 +167,25 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
 
     String.trim_trailing(url, "/")
   end
+
+  # Posts a chat completion and records the token usage it reports, whether
+  # or not its content can be used: the tokens were spent either way.
+  defp chat_completion(body, opts) do
+    with {:ok, response} <- make_request("/chat/completions", body, opts) do
+      record_usage(response, opts)
+      {:ok, response}
+    end
+  end
+
+  defp record_usage(
+         %{"usage" => %{"prompt_tokens" => input, "completion_tokens" => output}},
+         opts
+       )
+       when is_integer(input) and is_integer(output) do
+    Usage.record(Usage.new(model_name(opts), input, output))
+  end
+
+  defp record_usage(_response, _opts), do: :ok
 
   defp make_request(path, body, opts) do
     api_key = get_api_key(opts)

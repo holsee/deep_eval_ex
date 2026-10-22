@@ -14,7 +14,9 @@ defmodule DeepEvalEx.Telemetry do
     - Metadata: `%{metric: String.t(), test_case_id: String.t() | nil}`
 
   - `[:deep_eval_ex, :metric, :stop]` - Metric evaluation completed
-    - Measurements: `%{duration: integer(), score: float() | nil}` (`nil` for an errored result)
+    - Measurements: `%{duration: integer(), score: float() | nil}` (`nil` for an errored result),
+      plus `input_tokens: integer()`, `output_tokens: integer()` and `cost: float()`
+      (USD) when the metric's LLM calls reported them (see `DeepEvalEx.LLM.Usage`)
     - Metadata: `%{metric: String.t(), test_case_id: String.t() | nil}`
 
   - `[:deep_eval_ex, :metric, :exception]` - Metric evaluation failed

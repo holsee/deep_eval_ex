@@ -121,4 +121,16 @@ defmodule DeepEvalEx.Metrics.ExactMatchTest do
       assert ExactMatch.default_threshold() == 1.0
     end
   end
+
+  describe "usage" do
+    test "leaves evaluation model, tokens and cost nil as it makes no LLM call" do
+      test_case = %TestCase{input: "Q", actual_output: "4", expected_output: "4"}
+
+      assert {:ok, result} = ExactMatch.measure(test_case)
+      assert result.evaluation_model == nil
+      assert result.input_tokens == nil
+      assert result.output_tokens == nil
+      assert result.evaluation_cost == nil
+    end
+  end
 end

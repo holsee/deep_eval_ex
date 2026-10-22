@@ -10,6 +10,25 @@ defmodule DeepEvalEx.ResultTest do
       assert %Result{score: 0.8, success: true, threshold: 0.5, error: nil} = result
       refute Result.errored?(result)
     end
+
+    test "keeps the evaluation model and token counts when given" do
+      result =
+        Result.new(
+          metric: "GEval",
+          score: 0.8,
+          evaluation_model: "gpt-4o",
+          input_tokens: 10,
+          output_tokens: 5,
+          evaluation_cost: 0.0001
+        )
+
+      assert %Result{
+               evaluation_model: "gpt-4o",
+               input_tokens: 10,
+               output_tokens: 5,
+               evaluation_cost: 0.0001
+             } = result
+    end
   end
 
   describe "error/3" do
@@ -47,6 +66,12 @@ defmodule DeepEvalEx.ResultTest do
       result = Result.error("GEval", "boom", evaluation_cost: 0.01, latency_ms: 12)
 
       assert %Result{evaluation_cost: 0.01, latency_ms: 12} = result
+    end
+
+    test "keeps the evaluation model and token counts when given" do
+      result = Result.error("GEval", "boom", evaluation_model: "gpt-4o", input_tokens: 3)
+
+      assert %Result{evaluation_model: "gpt-4o", input_tokens: 3, output_tokens: nil} = result
     end
   end
 

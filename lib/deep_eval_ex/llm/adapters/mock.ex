@@ -24,9 +24,25 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
         ~r/extract claims/,
         %{"claims" => ["claim 1", "claim 2"]}
       )
+
+  ## Fake Token Usage
+
+  Pass `:mock_usage` (a keyword list or map with `:input_tokens` and
+  `:output_tokens`) to have every call record that usage, priced for
+  `"mock-model"` (unpriced unless set in the `:model_pricing` config):
+
+      DeepEvalEx.evaluate(test_case, [metric],
+        adapter: :mock,
+        mock_usage: [input_tokens: 100, output_tokens: 20]
+      )
+
+  Without it calls report no usage, so results carry the evaluation model
+  but `nil` token counts and cost.
   """
 
   use DeepEvalEx.LLM.Adapter
+
+  alias DeepEvalEx.LLM.Usage
 
   @default_response "This is a mock response."
   @ets_table :deep_eval_ex_mock_responses
@@ -39,6 +55,7 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
         response -> response
       end
 
+    record_usage(opts)
     {:ok, response}
   end
 
@@ -53,6 +70,7 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
           response
       end
 
+    record_usage(opts)
     {:ok, response}
   end
 
@@ -126,6 +144,17 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   end
 
   # Private helpers
+
+  defp record_usage(opts) do
+    case Keyword.get(opts, :mock_usage) do
+      nil ->
+        :ok
+
+      usage ->
+        usage = Map.new(usage)
+        Usage.record(Usage.new(model_name(opts), usage[:input_tokens], usage[:output_tokens]))
+    end
+  end
 
   defp ensure_table_exists do
     case :ets.whereis(@ets_table) do

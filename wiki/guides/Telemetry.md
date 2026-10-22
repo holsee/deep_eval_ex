@@ -31,11 +31,32 @@ Emitted when a metric evaluation completes successfully.
 |-------------|------|-------------|
 | `duration` | integer | Duration in milliseconds |
 | `score` | float | Evaluation score (0.0-1.0) |
+| `input_tokens` | integer | Prompt tokens used by the metric's LLM calls (only when known) |
+| `output_tokens` | integer | Completion tokens used by the metric's LLM calls (only when known) |
+| `cost` | float | USD cost of the metric's LLM calls (only when every call's model is priced) |
 
 | Metadata | Type | Description |
 |----------|------|-------------|
 | `metric` | string | Metric name |
 | `test_case_id` | string | Test case name (if set) |
+
+The usage measurements are absent for metrics that make no LLM call (such as
+`ExactMatch`) and when the adapter does not report token counts. `cost` comes
+from `DeepEvalEx.LLM.Pricing` and is left out for models without a price; see
+the `:model_pricing` option in the [Configuration](Configuration.md) guide.
+
+```elixir
+:telemetry.attach(
+  "eval-cost",
+  [:deep_eval_ex, :metric, :stop],
+  fn _event, measurements, metadata, _config ->
+    if cost = measurements[:cost] do
+      IO.puts("#{metadata.metric}: $#{cost} (#{measurements.input_tokens} in / #{measurements.output_tokens} out)")
+    end
+  end,
+  nil
+)
+```
 
 #### `[:deep_eval_ex, :metric, :exception]`
 
