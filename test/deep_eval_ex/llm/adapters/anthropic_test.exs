@@ -108,6 +108,15 @@ defmodule DeepEvalEx.LLM.Adapters.AnthropicTest do
       assert request_url(conn) == "https://env.example.com/v1/messages"
     end
 
+    test "accepts a base URL that already ends in the API version" do
+      stub_text("hi")
+      opts = [{:base_url, "https://gateway.example.com/anthropic/v1/"} | @base_opts]
+
+      assert {:ok, "hi"} = Anthropic.generate("hello", opts)
+      assert_received {:request, conn, _body}
+      assert request_url(conn) == "https://gateway.example.com/anthropic/v1/messages"
+    end
+
     test "treats a blank ANTHROPIC_BASE_URL as unset" do
       stub_text("hi")
       System.put_env("ANTHROPIC_BASE_URL", "")

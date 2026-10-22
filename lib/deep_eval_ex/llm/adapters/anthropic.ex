@@ -26,7 +26,8 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
   ## Base URL
 
   The API base URL is resolved in this order (a trailing slash is stripped,
-  and requests go to `{base_url}/v1/messages`):
+  and requests go to `{base_url}/v1/messages`; a base URL that already ends
+  in `/v1`, as some gateways publish it, is used as is):
 
   1. the `:base_url` option
   2. `config :deep_eval_ex, anthropic_base_url: "..."`
@@ -210,7 +211,9 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
         Adapter.env("ANTHROPIC_BASE_URL") ||
         @default_base_url
 
-    String.trim_trailing(url, "/")
+    url
+    |> String.trim_trailing("/")
+    |> String.replace_suffix("/v1", "")
   end
 
   # Posts a message and records the token usage it reports, whether or not
