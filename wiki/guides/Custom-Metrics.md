@@ -257,7 +257,8 @@ end
 
 ## Inverted Metrics (Lower is Better)
 
-For metrics where lower scores are better (like Hallucination):
+Every built-in metric is higher-is-better, but a custom metric can pass
+`success:` to `DeepEvalEx.Result.new/1` when lower scores are better:
 
 ```elixir
 defmodule MyApp.Metrics.Verbosity do

@@ -244,7 +244,7 @@ results = DeepEvalEx.evaluate(test_case, metrics)
 | Metric | Measures | Score Meaning |
 |--------|----------|---------------|
 | Faithfulness | Claims supported by context | Higher = more faithful |
-| Hallucination | Unsupported statements | Higher = more hallucinations |
+| Hallucination | Agreement with context | Higher = fewer contradictions |
 
 Faithfulness focuses on whether claims are grounded in context, while Hallucination detects fabricated information.
 

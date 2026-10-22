@@ -80,9 +80,10 @@ end
 
 ## Understanding Scores
 
-### Standard Metrics (Higher is Better)
+### Higher is Better
 
-Most metrics follow the pattern: `success = score >= threshold`
+Every built-in metric follows the pattern `success = score >= threshold`:
+`threshold` is the minimum passing score.
 
 ```elixir
 # Score 0.8 with threshold 0.5 => success
@@ -91,16 +92,18 @@ result.score    # => 0.8
 result.success  # => true
 ```
 
-### Inverted Metrics (Lower is Better)
-
-Some metrics like `Hallucination` are inverted: `success = score <= threshold`
+`Hallucination` included: like deepeval 4.3.1, it scores the fraction of
+contexts the output agrees with, so a low score means more contradictions.
 
 ```elixir
-# Score 0.1 with threshold 0.5 => success (low hallucination)
+# Score 0.1 with threshold 0.5 => failure (the output contradicts most contexts)
 {:ok, result} = Hallucination.measure(test_case, threshold: 0.5)
 result.score    # => 0.1
-result.success  # => true
+result.success  # => false
 ```
+
+A custom metric can still pass `success:` to `DeepEvalEx.Result.new/1` when a
+lower score is better (see [Custom Metrics](../guides/Custom-Metrics.md)).
 
 ## Working with Results
 

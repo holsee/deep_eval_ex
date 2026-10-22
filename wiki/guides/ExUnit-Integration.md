@@ -83,7 +83,8 @@ test "hallucinated response is detected" do
     context: ["The sky appears blue during the day due to light scattering."]
   )
 
-  # Hallucination should fail (score should be high = bad)
+  # Hallucination should fail: the output agrees with none of the
+  # contexts, so the score is low (below the minimum of 0.3)
   assert_fails(test_case, Metrics.Hallucination, threshold: 0.3)
 end
 ```
@@ -108,14 +109,14 @@ end
 ### Maximum Score
 
 ```elixir
-test "hallucination score is low" do
+test "response is not a verbatim copy of the expected output" do
   test_case = TestCase.new!(
-    input: "What is 2+2?",
-    actual_output: "4",
-    context: ["Basic arithmetic: 2+2=4"]
+    input: "What is the capital of France?",
+    actual_output: "Paris is the capital and largest city of France.",
+    expected_output: "Paris"
   )
 
-  assert_score(test_case, Metrics.Hallucination, max: 0.2)
+  assert_score(test_case, Metrics.ExactMatch, max: 0.0)
 end
 ```
 
@@ -254,8 +255,9 @@ defmodule MyApp.RAGEvaluationTest do
         ["Available colors: red, blue, green, yellow."]
       )
 
-      # Low hallucination score is good
-      assert_score(test_case, Metrics.Hallucination, max: 0.3)
+      # Hallucination scores the fraction of contexts the output agrees
+      # with, so higher is better
+      assert_score(test_case, Metrics.Hallucination, min: 0.7)
     end
 
     test "comprehensive RAG evaluation" do
