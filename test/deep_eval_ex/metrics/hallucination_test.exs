@@ -11,6 +11,8 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
 
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.Hallucination
+  alias DeepEvalEx.SystemOne.Adapters.Mock, as: SystemOneMock
+  alias DeepEvalEx.SystemOne.{Answers, EvalSpec, Scored}
   alias DeepEvalEx.TestCase
 
   setup do
@@ -380,6 +382,90 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
 
       assert {:error, {:missing_params, [:context]}} =
                Hallucination.measure(test_case, adapter: :mock)
+    end
+  end
+
+  describe "System One" do
+    test "system_one_eval_spec/2 asks deepeval's questions about the output and its context" do
+      assert %EvalSpec{
+               evaluation_params: [:actual_output, :context],
+               questions: [
+                 %Scored.Noul{statement: "`actual_output` agrees with" <> _, weight: 2.0},
+                 %Scored.Noul{statement: "No statement in" <> _, weight: 1.0},
+                 %Scored.Score{
+                   levels: [
+                     "Contradicts them",
+                     "Mostly contradicts them",
+                     "Mostly consistent",
+                     "Fully consistent"
+                   ]
+                 }
+               ]
+             } = Hallucination.system_one_eval_spec(%TestCase{}, [])
+    end
+
+    test "hybrid judges each context yes or no" do
+      Mock.set_schema_response(~r/reason for the hallucination score/i, %{
+        "reason" => "The score is 0.50 because the output misdates the Louvre."
+      })
+
+      # 0.5 is the lowest P(yes) that agrees: YES_NO has no borderline.
+      system_one =
+        SystemOneMock.new(
+          answer_fn: fn questions ->
+            %Answers{
+              nouls:
+                questions
+                |> Enum.zip([0.5, 0.49])
+                |> Map.new(fn {{key, _}, p} -> {key, %Answers.Noul{probability: p}} end)
+            }
+          end
+        )
+
+      test_case =
+        TestCase.new!(
+          input: "Tell me about Paris.",
+          actual_output: "Paris is the capital of France. The Louvre opened in 1893.",
+          context: ["Paris is the capital of France.", "The Louvre opened in 1793."]
+        )
+
+      assert {:ok, result} =
+               Hallucination.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one
+               )
+
+      assert result.score === 0.5
+
+      assert [%{verdict: :yes, reason: "P(yes)=0.50"}, %{verdict: :no, reason: "P(yes)=0.49"}] =
+               result.metadata.verdicts
+
+      assert [%SystemOneMock.Call{questions: questions}] = SystemOneMock.calls(system_one)
+      assert Enum.map(questions, &elem(&1, 0)) == ["context_0", "context_1"]
+    end
+
+    test "system_one answers the whole metric without the LLM" do
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.answer_everything(0.9))
+
+      test_case =
+        TestCase.new!(
+          input: "Tell me about Paris.",
+          actual_output: "Paris is the capital of France.",
+          context: ["Paris is the capital of France."]
+        )
+
+      assert {:ok, result} =
+               Hallucination.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :system_one,
+                 system_one_model: system_one
+               )
+
+      # No LLM response is scripted, so any judge call would fail the metric.
+      assert result.success
+      assert result.evaluation_model == "fake-jev"
+      assert [%SystemOneMock.Call{}] = SystemOneMock.calls(system_one)
     end
   end
 end

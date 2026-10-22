@@ -78,7 +78,11 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "ContextualRecallMetric._experimental_system_one_questions" =>
       {Prompts.ContextualRecall, :system_one_questions},
     "ContextualRecallMetric._experimental_system_one_verdict" =>
-      {Prompts.ContextualRecall, :system_one_verdict}
+      {Prompts.ContextualRecall, :system_one_verdict},
+    "HallucinationMetric._experimental_system_one_questions" =>
+      {Prompts.Hallucination, :system_one_questions},
+    "HallucinationMetric._experimental_system_one_verdict" =>
+      {Prompts.Hallucination, :system_one_verdict}
   }
 
   # {the ROADMAP unit that removes the tag, cases}. The fixtures' README

@@ -780,6 +780,12 @@ PROMPT_RENDERERS = {
     "ContextualRecallMetric._experimental_system_one_verdict": lambda i: _prompt(
         ContextualRecallMetric, "_experimental_system_one_verdict",
     ),
+    "HallucinationMetric._experimental_system_one_questions": lambda i: _prompt(
+        HallucinationMetric, "_experimental_system_one_questions",
+    ),
+    "HallucinationMetric._experimental_system_one_verdict": lambda i: _prompt(
+        HallucinationMetric, "_experimental_system_one_verdict",
+    ),
     "ToolCorrectnessMetric.get_tool_selection_score": lambda i: _prompt(
         ToolCorrectnessMetric, "get_tool_selection_score",
         user_input=i["input"],
@@ -1019,6 +1025,14 @@ PROMPT_CASES = {
     },
     "contextual_recall_experimental_system_one_verdict": {
         "template": "ContextualRecallMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "hallucination_experimental_system_one_questions": {
+        "template": "HallucinationMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "hallucination_experimental_system_one_verdict": {
+        "template": "HallucinationMetric._experimental_system_one_verdict",
         "inputs": {},
     },
     "tool_correctness_get_tool_selection_score": {

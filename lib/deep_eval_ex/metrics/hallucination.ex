@@ -58,6 +58,27 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   - `:model` - LLM model for evaluation
   - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
     (default: false)
+  - `:eval_mode` and `:system_one_model` - who decides, see "System One"
+
+  ## System One
+
+  Like deepeval 4.3.1's `HallucinationMetric`, the metric can route its
+  decisions to a System One model (see `DeepEvalEx.SystemOne.Mode`):
+
+  - `:hybrid` - the System One model judges whether `actual_output` agrees
+    with each context, one Noul per context
+    (`DeepEvalEx.Prompts.Hallucination.system_one_verdict/0`), whose P(yes)
+    is a verdict: `0.5` and above `yes` (aligned), else `no`, with the
+    reason `"P(yes)=0.91"`. The LLM still writes the reason. If the model
+    fails, the LLM judges the contexts and the result's
+    `:system_one_fallback_reason` says why
+  - `:system_one` - one request about `actual_output` and `context` answers
+    the whole metric
+    (`DeepEvalEx.Prompts.Hallucination.system_one_questions/0`, see
+    `DeepEvalEx.SystemOne.Runner`): no LLM call is made, and the score and
+    reason are built from the answers
+
+  Either way the score keeps deepeval 4.3.1's direction: higher is better.
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
@@ -73,6 +94,7 @@ defmodule DeepEvalEx.Metrics.Hallucination do
 
   alias DeepEvalEx.Prompts.Hallucination, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.Hallucination, as: Schema
+  alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
 
   @impl true
   def metric_name, do: "Hallucination"
@@ -87,6 +109,19 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   defdelegate evaluation_model(opts), to: Adapter, as: :model_name
 
   @doc """
+  The whole metric as one System One request under the `:system_one` eval
+  mode, deepeval's `_system_one_eval_spec`: its questions about the test
+  case's `actual_output` and `context`.
+  """
+  @impl true
+  def system_one_eval_spec(_test_case, _opts) do
+    %EvalSpec{
+      evaluation_params: [:actual_output, :context],
+      questions: Scored.parse!(Template.system_one_questions())
+    }
+  end
+
+  @doc """
   Measures how well the actual output aligns with its context.
 
   ## Options
@@ -99,6 +134,13 @@ defmodule DeepEvalEx.Metrics.Hallucination do
   def do_measure(test_case, opts) do
     ScoreDirection.warn_flipped(metric_name())
 
+    case Runner.run(__MODULE__, test_case, opts) do
+      {:ok, result} -> {:ok, result}
+      :continue -> measure_with_llm(test_case, opts)
+    end
+  end
+
+  defp measure_with_llm(test_case, opts) do
     threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
@@ -138,7 +180,25 @@ defmodule DeepEvalEx.Metrics.Hallucination do
     {:ok, []}
   end
 
+  # Under :hybrid the System One model judges each context; the LLM does
+  # when it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_verdicts(actual_output, contexts, opts) do
+    spec = %Spec.Verdicts{
+      instructions: Template.system_one_verdict(),
+      items: contexts,
+      item_key: "context",
+      state: [actual_output: actual_output]
+    }
+
+    decision_opts = Keyword.put_new(opts, :metric_name, metric_name())
+
+    case Decision.verdicts(spec, QAG.yes_no(), decision_opts) do
+      {:ok, verdicts} -> {:ok, verdicts}
+      :llm -> llm_verdicts(actual_output, contexts, opts)
+    end
+  end
+
+  defp llm_verdicts(actual_output, contexts, opts) do
     prompt =
       Template.generate_verdicts(
         actual_output: actual_output,

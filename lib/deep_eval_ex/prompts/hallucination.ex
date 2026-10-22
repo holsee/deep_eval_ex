@@ -25,6 +25,10 @@ defmodule DeepEvalEx.Prompts.Hallucination do
   unconditionally, so these prompts carry it too. Lists are printed as
   Python lists and scores as `format(score, ".2f")` (see
   `DeepEvalEx.Prompts.Python`).
+  `system_one_verdict/0` and `system_one_questions/0` are its System One
+  templates, `_experimental_system_one_verdict` and
+  `_experimental_system_one_questions`, which take no arguments and carry
+  no multimodal fragment.
   """
 
   alias DeepEvalEx.Prompts.Python
@@ -137,6 +141,46 @@ defmodule DeepEvalEx.Prompts.Hallucination do
     #{score}
 
     JSON:\
+    """
+  end
+
+  @doc """
+  The question a System One model is asked about each context under the
+  `:hybrid` eval mode, deepeval's `_experimental_system_one_verdict`
+  template: a Noul whose instructions pair it with the context, about a
+  state holding the `actual_output` (see
+  `DeepEvalEx.SystemOne.Spec.Verdicts`).
+  """
+  @spec system_one_verdict() :: String.t()
+  def system_one_verdict,
+    do: "Does `actual_output` agree with `context`? Answer no if it contradicts it."
+
+  @doc """
+  The questions a System One model answers about the whole test case under
+  the `:system_one` eval mode, deepeval's `_experimental_system_one_questions`
+  template: a JSON array of two Nouls and a four-level Score about
+  `actual_output` and `context`, which `DeepEvalEx.SystemOne.Scored.parse!/1`
+  reads.
+  """
+  @spec system_one_questions() :: String.t()
+  def system_one_questions do
+    """
+    [
+      {
+        "type": "noul",
+        "statement": "`actual_output` agrees with every document in `context`.",
+        "weight": 2
+      },
+      {
+        "type": "noul",
+        "statement": "No statement in `actual_output` contradicts a document in `context`."
+      },
+      {
+        "type": "score",
+        "question": "How much of `actual_output` is consistent with the documents in `context`?",
+        "levels": ["Contradicts them", "Mostly contradicts them", "Mostly consistent", "Fully consistent"]
+      }
+    ]\
     """
   end
 end

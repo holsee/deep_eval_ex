@@ -272,6 +272,8 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.ContextualPrecision.system_one_verdict/0` | `ContextualPrecisionMetric._experimental_system_one_verdict` (`contextual_precision/templates/_experimental_system_one_verdict.txt`) | none | `contextual_precision_experimental_system_one_verdict` |
 | `Prompts.ContextualRecall.system_one_questions/0` | `ContextualRecallMetric._experimental_system_one_questions` (`contextual_recall/templates/_experimental_system_one_questions.txt`) | none | `contextual_recall_experimental_system_one_questions` |
 | `Prompts.ContextualRecall.system_one_verdict/0` | `ContextualRecallMetric._experimental_system_one_verdict` (`contextual_recall/templates/_experimental_system_one_verdict.txt`) | none | `contextual_recall_experimental_system_one_verdict` |
+| `Prompts.Hallucination.system_one_questions/0` | `HallucinationMetric._experimental_system_one_questions` (`hallucination/templates/_experimental_system_one_questions.txt`) | none | `hallucination_experimental_system_one_questions` |
+| `Prompts.Hallucination.system_one_verdict/0` | `HallucinationMetric._experimental_system_one_verdict` (`hallucination/templates/_experimental_system_one_verdict.txt`) | none | `hallucination_experimental_system_one_verdict` |
 
 Templates of these metrics without a DeepEvalEx counterpart, so without a
 case:
@@ -280,9 +282,9 @@ case:
   and `generate_strict_trace_evaluation_results`: GEval on a trace (no
   `evaluation_params`), which needs tracing (P9)
 - the `_experimental_system_one_*` templates (`_questions`, `_verdict`,
-  `_tool_selection_score`) of Hallucination and ToolCorrectness, whose
-  System One eval modes come in later units (P4). The generator cannot find these private templates
-  by itself, so a case must be added for each
+  `_tool_selection_score`) of ToolCorrectness, whose System One eval modes
+  come in a later unit (P4). The generator cannot find these private
+  templates by itself, so a case must be added for each
 
 `DeepEvalEx.Prompts.GEval.format_evaluation_steps/1`, `format_params/1`,
 `format_test_case_content/2` and `format_rubric/1` and
@@ -421,5 +423,6 @@ by `DeepEvalEx.SystemOne.Adapters.Mock.from_fixture/2` and the judge by the
 Mock adapter's script, and compares the `decide()` calls of `measure()` and
 `evaluate()`, the measured state, the judge's prompts and the test run with
 the fixture, byte for byte. It covers Faithfulness, AnswerRelevancy,
-ContextualPrecision and ContextualRecall: each one's `system_one`, `hybrid`
-and `hybrid_fallback` scenarios, and `faithfulness_system_one_strict`.
+ContextualPrecision, ContextualRecall and Hallucination: each one's
+`system_one`, `hybrid` and `hybrid_fallback` scenarios, and
+`faithfulness_system_one_strict`.

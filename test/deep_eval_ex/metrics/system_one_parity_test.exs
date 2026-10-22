@@ -33,6 +33,7 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
     contextual_precision_system_one contextual_precision_hybrid
     contextual_precision_hybrid_fallback
     contextual_recall_system_one contextual_recall_hybrid contextual_recall_hybrid_fallback
+    hallucination_system_one hallucination_hybrid hallucination_hybrid_fallback
   )
 
   for scenario <- @scenarios,

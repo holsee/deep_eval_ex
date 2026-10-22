@@ -413,6 +413,29 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   The System One parity test now also measures the `contextual_precision_*`
   and `contextual_recall_*` fixtures (`system_one`, `hybrid` and
   `hybrid_fallback`), which match deepeval byte for byte.
+- **Hallucination runs on System One** (ADR-0009), as deepeval 4.3.1's
+  `HallucinationMetric` does with `eval_mode`:
+  - `:hybrid`: the System One model judges whether `actual_output` agrees
+    with each document of `context` (`context_<i>`), one Noul per context
+    in one request. Each P(yes) becomes a `yes` (aligned, `0.5` and above)
+    or `no` verdict, never `borderline`, with the reason `"P(yes)=0.91"`;
+    the LLM still writes the metric's reason. When the request fails, the
+    LLM judges instead and the result's `:system_one_fallback_reason` says
+    why.
+  - `:system_one`: the metric implements
+    `c:BaseMetric.system_one_eval_spec/2` and calls
+    `DeepEvalEx.SystemOne.Runner.run/3`, so one request about
+    `actual_output` and `context` answers the whole metric, with no LLM
+    call. The score keeps deepeval 4.3.1's direction (higher is better).
+  - `system_one_verdict/0` and `system_one_questions/0` on
+    `DeepEvalEx.Prompts.Hallucination` render deepeval's
+    `_experimental_system_one_verdict` and
+    `_experimental_system_one_questions` templates. Two new prompt goldens
+    check them byte for byte.
+
+  The System One parity test now also measures the `hallucination_*`
+  fixtures (`system_one`, `hybrid` and `hybrid_fallback`), which match
+  deepeval byte for byte.
 - **`DeepEvalEx.Result.format_error_text/2`**, a port of deepeval 4.3.1's
   `format_error_text`: `"<type>: <message>"` with the exception's unqualified
   module name, plus `" (Run with LOG_LEVEL=DEBUG for stack trace.)"` in
