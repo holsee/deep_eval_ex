@@ -60,7 +60,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
 
   use DeepEvalEx.LLM.Adapter
 
-  alias DeepEvalEx.LLM.{Adapter, Usage}
+  alias DeepEvalEx.LLM.{Adapter, StrictSchema, Usage}
 
   @default_base_url "https://api.openai.com/v1"
   @default_model "gpt-4o-mini"
@@ -234,10 +234,11 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
     :timer.seconds(Integer.pow(2, retry_count))
   end
 
-  defp schema_to_json_schema(schema) when is_map(schema), do: schema
+  # strict: true requires closed objects with every property required.
+  defp schema_to_json_schema(schema) when is_map(schema), do: StrictSchema.to_strict(schema)
 
   defp schema_to_json_schema(schema) when is_atom(schema) do
-    schema.json_schema()
+    StrictSchema.to_strict(schema.json_schema())
   end
 
   defp parse_json_response(content, _schema) do

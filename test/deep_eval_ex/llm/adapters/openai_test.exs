@@ -224,6 +224,39 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
       assert body["temperature"] == 0.0
     end
 
+    test "converts the schema to strict form, which OpenAI requires with strict: true" do
+      stub_completion(~s({"verdicts": [{"verdict": "yes", "reason": null}]}))
+
+      schema = %{
+        "type" => "object",
+        "properties" => %{
+          "verdicts" => %{
+            "type" => "array",
+            "items" => %{
+              "type" => "object",
+              "properties" => %{
+                "verdict" => %{"type" => "string"},
+                "reason" => %{"type" => "string"}
+              },
+              "required" => ["verdict"]
+            }
+          }
+        },
+        "required" => ["verdicts"],
+        "additionalProperties" => false
+      }
+
+      assert {:ok, %{"verdicts" => [%{"verdict" => "yes", "reason" => nil}]}} =
+               OpenAI.generate_with_schema("Judge", schema, @base_opts)
+
+      assert_received {:request, _conn, body}
+      item = body["response_format"]["json_schema"]["schema"]["properties"]["verdicts"]["items"]
+
+      assert item["additionalProperties"] == false
+      assert Enum.sort(item["required"]) == ["reason", "verdict"]
+      assert item["properties"]["reason"]["type"] == ["string", "null"]
+    end
+
     test "returns a json_parse_error for non-JSON content" do
       stub_completion("not json")
 
