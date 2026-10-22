@@ -90,7 +90,7 @@ defmodule DeepEvalEx.Metrics.GEval do
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Result}
+  alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Result, TestCase}
   alias DeepEvalEx.Prompts.GEval, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.GEval, as: Schema
 
@@ -256,7 +256,7 @@ defmodule DeepEvalEx.Metrics.GEval do
     start_time = System.monotonic_time(:millisecond)
 
     # Validate required params from the metric config
-    with :ok <- validate_params(test_case, metric.evaluation_params) do
+    with :ok <- TestCase.validate_params(test_case, metric.evaluation_params) do
       adapter_opts = build_adapter_opts(metric, opts)
 
       result =
@@ -293,20 +293,6 @@ defmodule DeepEvalEx.Metrics.GEval do
         end
 
       result
-    end
-  end
-
-  defp validate_params(test_case, params) do
-    missing =
-      params
-      |> Enum.filter(fn param ->
-        value = Map.get(test_case, param)
-        is_nil(value) or value == ""
-      end)
-
-    case missing do
-      [] -> :ok
-      _ -> {:error, {:missing_params, missing}}
     end
   end
 

@@ -181,8 +181,15 @@ defmodule DeepEvalEx.Result do
   `:threshold` is given as `nil` (a score-only metric), as deepeval's
   `is_successful()` checks the threshold before the error; `error` is
   stored as a message string. Strings are kept as-is, an exception becomes its message
-  (as deepeval records `str(exception)`), `{:missing_params, params}` is
-  rendered as a readable message and any other term is inspected.
+  (as deepeval records `str(exception)`) and any other term is inspected,
+  but for the errors of `DeepEvalEx.TestCase.validate_params/2`, which get
+  the message of deepeval's `MissingTestCaseParamsError` for `metric`:
+
+  - `{:missing_params, params}` - `"'actual_output' and 'expected_output'
+    cannot be None for the 'Exact Match' metric"` (params joined as
+    `'a'`, `'a' and 'b'` or `'a', 'b', and 'c'`)
+  - `{:empty_param, :actual_output}` - `"'actual_output' cannot be empty for
+    the 'Exact Match' metric"`
 
   ## Options
 
@@ -210,7 +217,7 @@ defmodule DeepEvalEx.Result do
       score: nil,
       success: success,
       threshold: Keyword.get(opts, :threshold),
-      error: format_error(error),
+      error: format_error(error, metric),
       strict_mode: Keyword.get(opts, :strict_mode, false),
       flaky: Keyword.get(opts, :flaky, false),
       metadata: Keyword.get(opts, :metadata),
@@ -319,13 +326,26 @@ defmodule DeepEvalEx.Result do
   def status(%__MODULE__{success: false}), do: "FAIL"
   def status(%__MODULE__{success: nil}), do: "SCORED"
 
-  defp format_error({:missing_params, params}) do
-    "Missing required parameters: #{Enum.join(params, ", ")}"
+  # deepeval's check_llm_test_case_params messages (no trailing period)
+  defp format_error({:missing_params, params}, metric) when is_list(params) and params != [] do
+    "#{join_params(Enum.map(params, &"'#{&1}'"))} cannot be None for the '#{metric}' metric"
   end
 
-  defp format_error(error) when is_binary(error), do: error
-  defp format_error(error) when is_exception(error), do: Exception.message(error)
-  defp format_error(error), do: inspect(error)
+  defp format_error({:empty_param, param}, metric) when is_atom(param) do
+    "'#{param}' cannot be empty for the '#{metric}' metric"
+  end
+
+  defp format_error(error, _metric) when is_binary(error), do: error
+  defp format_error(error, _metric) when is_exception(error), do: Exception.message(error)
+  defp format_error(error, _metric), do: inspect(error)
+
+  defp join_params([param]), do: param
+  defp join_params([first, second]), do: "#{first} and #{second}"
+
+  defp join_params(params) do
+    {init, [last]} = Enum.split(params, -1)
+    Enum.join(init, ", ") <> ", and " <> last
+  end
 end
 
 defimpl String.Chars, for: DeepEvalEx.Result do

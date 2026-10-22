@@ -99,7 +99,7 @@ defmodule DeepEvalEx.Metrics.Hallucination do
     threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
-    contexts = get_contexts(test_case)
+    contexts = test_case.context
     actual_output = test_case.actual_output
 
     with {:ok, verdicts} <- generate_verdicts(actual_output, contexts, opts),
@@ -118,10 +118,6 @@ defmodule DeepEvalEx.Metrics.Hallucination do
        )}
     end
   end
-
-  defp get_contexts(%{context: ctx}) when is_list(ctx), do: ctx
-  defp get_contexts(%{retrieval_context: ctx}) when is_list(ctx), do: ctx
-  defp get_contexts(_), do: []
 
   defp generate_verdicts(_actual_output, [], _opts) do
     # No contexts means nothing to contradict

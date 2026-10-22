@@ -291,6 +291,45 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
                GEval.evaluate(metric, test_case, adapter: :mock)
     end
 
+    test "validates params as deepeval: an empty actual_output is rejected, other empties are not" do
+      metric =
+        GEval.new(
+          name: "Test",
+          evaluation_params: [:input, :actual_output, :expected_output],
+          evaluation_steps: ["Check"]
+        )
+
+      assert {:error, {:empty_param, :actual_output}} =
+               GEval.evaluate(
+                 metric,
+                 %TestCase{input: "Q", actual_output: "", expected_output: nil},
+                 adapter: :mock
+               )
+
+      Mock.set_schema_response(~r/evaluator/i, %{"score" => 10, "reason" => "Fine."})
+
+      assert {:ok, %{score: 1.0}} =
+               GEval.evaluate(
+                 metric,
+                 %TestCase{input: "Q", actual_output: "A", expected_output: ""},
+                 adapter: :mock
+               )
+    end
+
+    test "does not accept context for retrieval_context" do
+      metric =
+        GEval.new(
+          name: "Test",
+          evaluation_params: [:actual_output, :retrieval_context],
+          evaluation_steps: ["Check"]
+        )
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A", context: ["ctx"])
+
+      assert {:error, {:missing_params, [:retrieval_context]}} =
+               GEval.evaluate(metric, test_case, adapter: :mock)
+    end
+
     test "includes metadata in result" do
       Mock.set_schema_response(
         ~r/evaluator/i,

@@ -30,19 +30,24 @@ Each directory is one scenario:
 | `llm_metric`      | Two stub metrics emulating LLM judges: reason, evaluation model, cost and token counts         |
 | `metric_error`    | A metric that raises, with `ignore_errors=True`: `error` set, no `score`, counted in `errors`  |
 | `rag_and_tools`   | `retrieval_context`, `context`, `tools_called` / `expected_tools`, `token_cost`, `completion_time` |
+| `missing_params`  | `MissingTestCaseParamsError` messages from ExactMatch, Faithfulness and GEval: `context` not standing in for `retrieval_context` (and a context-only test case exporting no `retrievalContext`), an empty `actual_output`, and two and three missing params |
 | `hyperparameters` | `identifier` and `hyperparameters` (string, float, int, bool and dropped `None` values)        |
 
 and holds:
 
 - `input.json` - the scenario's inputs: `test_cases` (keyword arguments of
-  deepeval's `LLMTestCase`), `metrics` (`exact_match`, `stub` or `error`
-  specs), `identifier` and `hyperparameters`
+  deepeval's `LLMTestCase`), `metrics` (`exact_match`, `stub`, `error`,
+  `faithfulness` or `g_eval` specs), `identifier` and `hyperparameters`
 - `test_run.json` - the file deepeval wrote for those inputs, unchanged
 
 No LLM is called. The `stub` and `error` metrics are custom deepeval
 `BaseMetric`s returning fixed values or raising; the parity test mirrors them
 with `DeepEvalEx.Test.ParityMetrics.Stub` and `.Failing`
-(`test/support/parity_metrics.ex`).
+(`test/support/parity_metrics.ex`). The `faithfulness` and `g_eval` metrics
+are deepeval's own, judged by a `ScriptedJudge` without responses (any call
+would fail the metric) and reporting `judge_model`, `mock-model`, the Mock
+adapter's model name: every test case of `missing_params` fails their
+parameter check before a call.
 
 ## Regenerating
 
@@ -143,8 +148,8 @@ them:
   logprob payloads, and a matching Mock path.
 - **Metric errors.** Every scripted scenario's `measure.json` has
   `error: null`: no script makes a metric fail. An erroring metric's export is
-  covered by the `metric_error` export scenario above; a scripted response
-  that fails schema validation is not.
+  covered by the `metric_error` and `missing_params` export scenarios above;
+  a scripted response that fails schema validation is not.
 
 ### Known divergences
 
@@ -169,7 +174,7 @@ rows here.
 | measure | `tool_correctness_available_tools` | Reason prints tool names as JSON rather than Python's repr (P1.6) | P1.6 |
 | measure | `g_eval_strict` | Strict score normalised over the 0-10 range (0.1, then clamped to 0), where deepeval takes the judge's 1 as the score (P1.11) | P1.11 |
 | verbose_logs | every scenario but `exact_match_*` | No `verbose_logs` on results (P1.7) | P1.7 |
-| test_run | every scenario but `exact_match_*` and `g_eval_strict` | No `verboseLogs` in the export (P1.7). Also, as above: Hallucination's `context` exported as `retrievalContext` too (P1.4) and ToolCorrectness reasons (P1.6) | P1.7 |
+| test_run | every scenario but `exact_match_*` and `g_eval_strict` | No `verboseLogs` in the export (P1.7). Also, as above: ToolCorrectness reasons (P1.6) | P1.7 |
 | test_run | `g_eval_strict` | No `verboseLogs` (P1.7) and strict scoring (P1.11) | P1.11 |
 
 ## Prompt goldens

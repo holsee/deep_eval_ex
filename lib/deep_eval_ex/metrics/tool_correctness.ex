@@ -66,7 +66,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   def metric_name, do: "Tool Correctness"
 
   @impl true
-  def required_params, do: [:tools_called, :expected_tools]
+  def required_params, do: [:input, :tools_called, :expected_tools]
 
   @doc """
   Returns the judge model this metric is configured with.
@@ -77,26 +77,6 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   """
   @impl true
   defdelegate evaluation_model(opts), to: Adapter, as: :model_name
-
-  @doc """
-  Override validate_test_case to allow empty lists.
-
-  Python DeepEval allows empty tools_called/expected_tools and returns
-  scores rather than validation errors.
-  """
-  def validate_test_case(test_case) do
-    # Only validate that the fields exist (are not nil)
-    missing =
-      required_params()
-      |> Enum.filter(fn param ->
-        Map.get(test_case, param) == nil
-      end)
-
-    case missing do
-      [] -> :ok
-      params -> {:error, {:missing_params, params}}
-    end
-  end
 
   def do_measure(test_case, opts) do
     config = parse_config(opts)

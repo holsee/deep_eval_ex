@@ -24,7 +24,7 @@ Evaluate Retrieval-Augmented Generation pipelines:
 | Metric | Purpose | Required Params |
 |--------|---------|-----------------|
 | [Faithfulness](Faithfulness.md) | Claims supported by context | `retrieval_context` |
-| [Hallucination](Hallucination.md) | Unsupported statements | `retrieval_context` |
+| [Hallucination](Hallucination.md) | Unsupported statements | `context` |
 | [AnswerRelevancy](AnswerRelevancy.md) | Response relevance to question | `input`, `actual_output` |
 | [ContextualPrecision](ContextualPrecision.md) | Retrieval ranking quality | `retrieval_context`, `expected_output` |
 | [ContextualRecall](ContextualRecall.md) | Coverage of ground truth | `retrieval_context`, `expected_output` |

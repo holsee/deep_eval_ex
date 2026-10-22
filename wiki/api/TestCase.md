@@ -13,8 +13,8 @@ A test case contains the input prompt, the LLM's actual output, and optional con
 | `input` | `String.t()` | The input prompt sent to the LLM (required) |
 | `actual_output` | `String.t()` | The LLM's response to evaluate |
 | `expected_output` | `String.t()` | The expected/ground truth output |
-| `retrieval_context` | `[String.t()]` | List of retrieved context chunks for RAG |
-| `context` | `[String.t()]` | Alias for `retrieval_context` |
+| `retrieval_context` | `[String.t()]` | Context chunks your retriever returned at run time, for RAG metrics |
+| `context` | `[String.t()]` | Ideal, ground-truth context for the input, for Hallucination |
 | `tools_called` | `[ToolCall.t()]` | List of tool calls made by the LLM |
 | `expected_tools` | `[ToolCall.t()]` | Expected tool calls for tool use evaluation |
 | `metadata` | `map()` | Additional metadata |
@@ -70,15 +70,32 @@ end
 }
 ```
 
-## Context Alias
+## Context and Retrieval Context
 
-The `context` field is an alias for `retrieval_context`. Both work interchangeably:
+As in deepeval 4.3.1, `context` and `retrieval_context` are separate fields,
+and neither stands in for the other:
+
+- `retrieval_context` is what your retriever returned at run time. Faithfulness,
+  ContextualPrecision and ContextualRecall read it
+- `context` is the ideal, ground-truth context for the input. Hallucination
+  reads it
+
+A test case with only `context` fails Faithfulness with
+`'retrieval_context' cannot be None for the 'Faithfulness' metric`, and one
+with only `retrieval_context` fails Hallucination the same way. Exports
+include each field only when it is set (`context`, `retrievalContext`).
 
 ```elixir
-# These are equivalent
-TestCase.new!(input: "Q", actual_output: "A", context: ["doc1", "doc2"])
-TestCase.new!(input: "Q", actual_output: "A", retrieval_context: ["doc1", "doc2"])
+TestCase.new!(
+  input: "Who wrote Hamlet?",
+  actual_output: "Shakespeare wrote Hamlet.",
+  context: ["Hamlet is a tragedy written by William Shakespeare."],
+  retrieval_context: ["Hamlet, Prince of Denmark, by William Shakespeare."]
+)
 ```
+
+> Before this release `context` was copied into `retrieval_context` and each
+> satisfied a metric requiring the other. Set the field each metric reads.
 
 ## Metric Requirements
 
@@ -96,23 +113,23 @@ Different metrics require different fields:
 
 ## Helper Functions
 
-### `get_retrieval_context/1`
-
-Returns the effective retrieval context:
-
-```elixir
-TestCase.get_retrieval_context(test_case)
-# => ["doc1", "doc2"]
-```
-
 ### `validate_params/2`
 
-Validates that required parameters are present:
+Validates that required parameters are present, as deepeval's
+`check_llm_test_case_params`. Only `nil` is missing (empty lists and strings
+are present), except that a required `actual_output` must not be the empty
+string, which is checked first:
 
 ```elixir
 TestCase.validate_params(test_case, [:input, :actual_output, :retrieval_context])
-# => :ok | {:error, {:missing_params, [:retrieval_context]}}
+# => :ok
+#  | {:error, {:missing_params, [:retrieval_context]}}
+#  | {:error, {:empty_param, :actual_output}}
 ```
+
+An errored result renders these with deepeval's `MissingTestCaseParamsError`
+message, e.g. `'actual_output' and 'retrieval_context' cannot be None for the
+'Faithfulness' metric` (see [Result](Result.md)).
 
 ## Type Specification
 

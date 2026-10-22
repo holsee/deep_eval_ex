@@ -75,9 +75,25 @@ defmodule DeepEvalEx.ExUnitTest do
         expected_output: "Answer"
       }
 
-      assert_raise ExUnit.AssertionError, ~r/Missing required parameters/i, fn ->
-        assert_passes(test_case, ExactMatch)
-      end
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_passes(test_case, ExactMatch)
+        end
+
+      assert error.message =~ "'actual_output' cannot be None for the 'Exact Match' metric"
+      assert error.message =~ "Ensure your TestCase includes all required fields for this metric."
+    end
+
+    test "fails with an empty actual_output error and the missing params hint" do
+      test_case = %TestCase{input: "Question", actual_output: "", expected_output: "Answer"}
+
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_passes(test_case, ExactMatch)
+        end
+
+      assert error.message =~ "'actual_output' cannot be empty for the 'Exact Match' metric"
+      assert error.message =~ "Ensure your TestCase includes all required fields for this metric."
     end
   end
 
@@ -481,7 +497,9 @@ defmodule DeepEvalEx.ExUnitTest do
           assert_passes(missing_output_case(), ExactMatch)
         end
 
-      assert error.message =~ "metric errored: Missing required parameters: actual_output"
+      assert error.message =~
+               "metric errored: 'actual_output' cannot be None for the 'Exact Match' metric"
+
       assert error.message =~ "ERROR"
       refute error.message =~ "Score:"
     end
@@ -510,7 +528,7 @@ defmodule DeepEvalEx.ExUnitTest do
           assert_fails(missing_output_case(), ExactMatch)
         end
 
-      assert error.message =~ "metric errored: Missing required parameters"
+      assert error.message =~ "metric errored: 'actual_output' cannot be None"
     end
 
     test "assert_score reports the error instead of comparing a missing score" do
@@ -528,7 +546,9 @@ defmodule DeepEvalEx.ExUnitTest do
           assert_evaluation(missing_output_case(), [ExactMatch, ErroredMetric])
         end
 
-      assert error.message =~ "metric errored: Missing required parameters: actual_output"
+      assert error.message =~
+               "metric errored: 'actual_output' cannot be None for the 'Exact Match' metric"
+
       assert error.message =~ "metric errored: LLM returned invalid JSON"
     end
   end

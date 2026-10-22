@@ -102,17 +102,12 @@ Claim cannot be verified from context (not mentioned).
 # Verdict: borderline (not contradicting, so counted as faithful)
 ```
 
-## Using Context Alias
+## Context Is Not Retrieval Context
 
-You can use `context` as an alias for `retrieval_context`:
-
-```elixir
-test_case = TestCase.new!(
-  input: "Question",
-  actual_output: "Answer",
-  context: ["Document 1", "Document 2"]  # Same as retrieval_context
-)
-```
+Faithfulness reads `retrieval_context` only. As in deepeval 4.3.1, `context`
+(the ground truth Hallucination reads) does not stand in for it: a test case
+with only `context` errors with `'retrieval_context' cannot be None for the
+'Faithfulness' metric`.
 
 ## Limiting Truth Extraction
 

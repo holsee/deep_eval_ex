@@ -89,17 +89,13 @@ Output contradicts information in the context.
 # Verdict: no (hallucination detected)
 ```
 
-## Using Context Alias
+## Context Is Not Retrieval Context
 
-You can use `retrieval_context` as an alias for `context`:
-
-```elixir
-test_case = TestCase.new!(
-  input: "Question",
-  actual_output: "Answer",
-  retrieval_context: ["Document 1", "Document 2"]  # Same as context
-)
-```
+Hallucination reads `context`, the ideal, ground-truth context for the input,
+only. As in deepeval 4.3.1, `retrieval_context` does not stand in for it: a
+test case with only `retrieval_context` errors with `'context' cannot be None
+for the 'Hallucination' metric`. To check an output against what your
+retriever returned, use [Faithfulness](Faithfulness.md).
 
 ## Skipping Reason Generation
 

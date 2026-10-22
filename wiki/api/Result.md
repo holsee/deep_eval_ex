@@ -94,8 +94,12 @@ result.success           # => false
 result.error             # => "Evaluation timed out"
 ```
 
-`Result.error/3` accepts a string, `{:missing_params, params}` (rendered as
-`"Missing required parameters: ..."`) or any other term (inspected). The
+`Result.error/3` accepts a string, an exception (its message),
+`{:missing_params, params}` and `{:empty_param, :actual_output}` (rendered
+with deepeval's `MissingTestCaseParamsError` message, e.g. `"'actual_output'
+and 'expected_output' cannot be None for the 'Exact Match' metric"` or
+`"'actual_output' cannot be empty for the 'Exact Match' metric"`) or any
+other term (inspected). The
 evaluator uses it for every error path, so always check `Result.errored?/1`
 before reading `score`:
 

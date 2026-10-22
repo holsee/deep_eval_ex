@@ -149,7 +149,7 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
   end
 
   describe "measure/2 with empty context" do
-    test "returns error when context is empty list" do
+    test "accepts an empty context list, as deepeval only rejects a missing one" do
       test_case =
         TestCase.new!(
           input: "What is the capital of France?",
@@ -157,9 +157,11 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
           context: []
         )
 
-      # Empty context is treated as missing for required params
-      assert {:error, {:missing_params, [:context]}} =
-               Hallucination.measure(test_case, adapter: :mock)
+      assert {:ok, result} =
+               Hallucination.measure(test_case, adapter: :mock, include_reason: false)
+
+      assert result.score == 1
+      assert result.metadata.context_count == 0
     end
   end
 
@@ -272,30 +274,17 @@ defmodule DeepEvalEx.Metrics.HallucinationTest do
     end
   end
 
-  describe "measure/2 with retrieval_context alias" do
-    test "accepts retrieval_context as alias for context" do
-      # Mock verdicts
-      Mock.set_schema_response(
-        ~r/indicate whether the given 'actual output' agrees/i,
-        %{"verdicts" => [%{"verdict" => "yes", "reason" => "Agrees."}]}
-      )
-
-      # Mock reason
-      Mock.set_schema_response(
-        ~r/provide a reason for the hallucination score/i,
-        %{"reason" => "Good."}
-      )
-
-      # Using retrieval_context instead of context
+  describe "measure/2 with retrieval_context only" do
+    test "does not use retrieval_context as the context, as deepeval 4.3.1" do
       test_case =
         TestCase.new!(
           input: "Q",
           actual_output: "A",
-          retrieval_context: ["Context via retrieval_context"]
+          retrieval_context: ["Retrieval context, not context"]
         )
 
-      assert {:ok, result} = Hallucination.measure(test_case, adapter: :mock)
-      assert result.score == 1.0
+      assert {:error, {:missing_params, [:context]}} =
+               Hallucination.measure(test_case, adapter: :mock)
     end
   end
 

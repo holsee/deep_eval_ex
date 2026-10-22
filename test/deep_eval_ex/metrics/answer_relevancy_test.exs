@@ -442,7 +442,7 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
         actual_output: ""
       }
 
-      assert {:error, {:missing_params, [:actual_output]}} =
+      assert {:error, {:empty_param, :actual_output}} =
                AnswerRelevancy.measure(test_case, adapter: :mock)
     end
   end

@@ -1,0 +1,48 @@
+{
+  "test_cases": [
+    {
+      "input": "Who wrote Hamlet?",
+      "actual_output": "William Shakespeare wrote Hamlet.",
+      "expected_output": "William Shakespeare",
+      "context": [
+        "Hamlet is a tragedy written by William Shakespeare."
+      ],
+      "name": "context-only"
+    },
+    {
+      "input": "What is the capital of Italy?",
+      "actual_output": "",
+      "expected_output": "Rome",
+      "retrieval_context": [
+        "Rome is the capital of Italy."
+      ],
+      "name": "empty-output"
+    },
+    {
+      "input": "What is the boiling point of water?",
+      "name": "input-only"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "exact_match"
+    },
+    {
+      "kind": "faithfulness",
+      "judge_model": "mock-model"
+    },
+    {
+      "kind": "g_eval",
+      "name": "Correctness",
+      "criteria": "Is the actual output supported by the retrieval context?",
+      "evaluation_params": [
+        "actual_output",
+        "expected_output",
+        "retrieval_context"
+      ],
+      "judge_model": "mock-model"
+    }
+  ],
+  "identifier": null,
+  "hyperparameters": null
+}

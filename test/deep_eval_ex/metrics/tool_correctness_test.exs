@@ -532,8 +532,8 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
       assert ToolCorrectness.metric_name() == "Tool Correctness"
     end
 
-    test "required_params/0 returns required parameters" do
-      assert ToolCorrectness.required_params() == [:tools_called, :expected_tools]
+    test "required_params/0 returns deepeval's required parameters" do
+      assert ToolCorrectness.required_params() == [:input, :tools_called, :expected_tools]
     end
 
     test "default_threshold/0 returns 0.5" do

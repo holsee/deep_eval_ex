@@ -24,8 +24,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `DeepEvalEx.TestCase` data and `%DeepEvalEx.Result{}` entries. Every fixture
   round-trips byte for byte.
 - **Golden parity fixtures.** `scripts/parity/generate_fixtures.py` runs real
-  deepeval 4.3.1 over five scenarios (exact match, LLM-style metrics, an
-  erroring metric, RAG with tool calls, hyperparameters); the parity suite
+  deepeval 4.3.1 over six scenarios (exact match, LLM-style metrics, an
+  erroring metric, RAG with tool calls, hyperparameters, missing test case
+  params); the parity suite
   compares DeepEvalEx's export against them key for key and byte for byte.
 - **Scripted-judge parity fixtures for every metric.** The fixture generator
   also runs deepeval 4.3.1's real ExactMatch, GEval, Faithfulness,
@@ -201,6 +202,27 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   each metric's `strictMode` and `flaky` come from its result.
   `MetricData.to_result/1` keeps them. Loading a deepeval file reads a metric
   without `success` as `nil` (deepeval's default) instead of `false`.
+- **BREAKING: `context` and `retrieval_context` are separate.** As in
+  deepeval 4.3.1, `DeepEvalEx.TestCase.new/1` no longer copies `:context`
+  into `:retrieval_context`, and neither satisfies a metric that requires
+  the other: Faithfulness, ContextualPrecision and ContextualRecall read
+  `:retrieval_context` only, Hallucination `:context` only. A context-only
+  test case now errors on Faithfulness with `'retrieval_context' cannot be
+  None for the 'Faithfulness' metric`, and is exported without
+  `retrievalContext`. Set the field each metric reads: `:retrieval_context`
+  for what your retriever returned, `:context` for the ground truth.
+- **BREAKING: required test case params are checked as deepeval's
+  `check_llm_test_case_params`.** Only `nil` counts as missing, so an empty
+  list or string (other than `actual_output`) no longer fails validation: a
+  Hallucination test case with `context: []` is scored, not rejected. A
+  required `actual_output` of `""` is reported before any missing param, as
+  `{:error, {:empty_param, :actual_output}}`. GEval and ToolCorrectness
+  validate the same way, and ToolCorrectness requires `:input` too, as in
+  deepeval. Errored results and the exported `error` carry deepeval's
+  `MissingTestCaseParamsError` message (`'actual_output' and
+  'expected_output' cannot be None for the 'Exact Match' metric`,
+  `'actual_output' cannot be empty for the 'Exact Match' metric`) instead of
+  `Missing required parameters: ...`.
 - **Metric names now match deepeval**, because they key the exported
   `metricsData` and `metricsScores`: `ExactMatch` is reported as
   `"Exact Match"`, and GEval as `"<name> [GEval]"`.
@@ -227,6 +249,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 ### Removed
 
 - The `ecto` dependency.
+- **BREAKING:** `DeepEvalEx.TestCase.get_retrieval_context/1`, which fell
+  back to `:context`. Read `test_case.retrieval_context` instead.
 
 ### Fixed
 

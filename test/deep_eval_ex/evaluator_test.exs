@@ -344,7 +344,7 @@ defmodule DeepEvalEx.EvaluatorTest do
       assert %Result{
                score: nil,
                success: false,
-               error: "Missing required parameters: actual_output",
+               error: "'actual_output' cannot be None for the 'Exact Match' metric",
                threshold: 1
              } = Evaluator.evaluate_metric(incomplete, ExactMatch, [])
     end

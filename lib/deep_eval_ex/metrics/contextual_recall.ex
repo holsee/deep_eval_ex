@@ -88,7 +88,7 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
     include_reason = Keyword.get(opts, :include_reason, true)
 
     expected_output = test_case.expected_output
-    retrieval_context = get_retrieval_context(test_case)
+    retrieval_context = test_case.retrieval_context
 
     with {:ok, verdicts} <- generate_verdicts(expected_output, retrieval_context, opts),
          score = calculate_score(verdicts, threshold, opts),
@@ -108,10 +108,6 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
        )}
     end
   end
-
-  defp get_retrieval_context(%{retrieval_context: ctx}) when is_list(ctx), do: ctx
-  defp get_retrieval_context(%{context: ctx}) when is_list(ctx), do: ctx
-  defp get_retrieval_context(_), do: []
 
   defp generate_verdicts(_expected_output, [], _opts) do
     {:ok, []}

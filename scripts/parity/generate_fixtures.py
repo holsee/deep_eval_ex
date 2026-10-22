@@ -17,7 +17,10 @@ compares its export with test_run.json.
 
 No LLM is called: metrics are deepeval's ExactMatchMetric or custom
 `BaseMetric` stubs returning fixed values, so the output only depends on
-deepeval itself.
+deepeval itself. The `missing_params` scenario also runs FaithfulnessMetric
+and GEval, with a `ScriptedJudge` holding no responses: every test case
+lacks one of their required params, so they fail validation before calling
+it (a call would raise and show up as the metric's error).
 
 Scripted-judge scenarios run deepeval's real metrics against `ScriptedJudge`,
 a `DeepEvalBaseLLM` that answers each call with a canned response from a
@@ -215,6 +218,15 @@ def build_metric(spec):
         )
     if kind == "error":
         return ErrorMetric(spec["name"], spec["threshold"], spec["exception"], spec["message"])
+    if kind == "faithfulness":
+        return FaithfulnessMetric(model=ScriptedJudge(spec["judge_model"], {}))
+    if kind == "g_eval":
+        return GEval(
+            name=spec["name"],
+            criteria=spec["criteria"],
+            evaluation_params=[SingleTurnParams(p) for p in spec["evaluation_params"]],
+            model=ScriptedJudge(spec["judge_model"], {}),
+        )
     raise ValueError(f"unknown metric kind {kind!r}")
 
 
@@ -330,6 +342,43 @@ SCENARIOS = {
             },
         ],
         "metrics": [{"kind": "exact_match"}, STUB_JUDGE],
+        "identifier": None,
+        "hyperparameters": None,
+    },
+    # deepeval's check_llm_test_case_params: `context` does not stand in for
+    # `retrieval_context`, an empty `actual_output` is rejected before any
+    # missing param, and missing params are joined "'a'", "'a' and 'b'" or
+    # "'a', 'b', and 'c'". A context-only test case exports no
+    # retrievalContext.
+    "missing_params": {
+        "test_cases": [
+            {
+                "input": "Who wrote Hamlet?",
+                "actual_output": "William Shakespeare wrote Hamlet.",
+                "expected_output": "William Shakespeare",
+                "context": ["Hamlet is a tragedy written by William Shakespeare."],
+                "name": "context-only",
+            },
+            {
+                "input": "What is the capital of Italy?",
+                "actual_output": "",
+                "expected_output": "Rome",
+                "retrieval_context": ["Rome is the capital of Italy."],
+                "name": "empty-output",
+            },
+            {"input": "What is the boiling point of water?", "name": "input-only"},
+        ],
+        "metrics": [
+            {"kind": "exact_match"},
+            {"kind": "faithfulness", "judge_model": "mock-model"},
+            {
+                "kind": "g_eval",
+                "name": "Correctness",
+                "criteria": "Is the actual output supported by the retrieval context?",
+                "evaluation_params": ["actual_output", "expected_output", "retrieval_context"],
+                "judge_model": "mock-model",
+            },
+        ],
         "identifier": None,
         "hyperparameters": None,
     },

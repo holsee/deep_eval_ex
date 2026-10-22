@@ -96,7 +96,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
 
     input = test_case.input
     expected_output = test_case.expected_output
-    retrieval_context = get_retrieval_context(test_case)
+    retrieval_context = test_case.retrieval_context
 
     with {:ok, verdicts} <- generate_verdicts(input, expected_output, retrieval_context, opts),
          score =
@@ -118,10 +118,6 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
        )}
     end
   end
-
-  defp get_retrieval_context(%{retrieval_context: ctx}) when is_list(ctx), do: ctx
-  defp get_retrieval_context(%{context: ctx}) when is_list(ctx), do: ctx
-  defp get_retrieval_context(_), do: []
 
   defp generate_verdicts(_input, _expected_output, [], _opts) do
     {:ok, []}

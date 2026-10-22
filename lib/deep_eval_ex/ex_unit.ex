@@ -376,8 +376,11 @@ defmodule DeepEvalEx.ExUnit do
     """
   end
 
-  defp format_error_hint("Missing required parameters" <> _) do
-    "Ensure your TestCase includes all required fields for this metric."
+  # deepeval's MissingTestCaseParamsError messages (see DeepEvalEx.Result.error/3)
+  defp format_error_hint(error) when is_binary(error) do
+    if error =~ ~r/ cannot be (None|empty) for the '.*' metric$/s,
+      do: "Ensure your TestCase includes all required fields for this metric.",
+      else: ""
   end
 
   defp format_error_hint(_error), do: ""

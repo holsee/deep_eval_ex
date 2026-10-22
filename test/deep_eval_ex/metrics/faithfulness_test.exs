@@ -528,42 +528,17 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
     end
   end
 
-  describe "measure/2 with context alias" do
-    test "accepts context as alias for retrieval_context" do
-      # Mock truths extraction
-      Mock.set_schema_response(
-        ~r/generate a comprehensive list of.*truths/i,
-        %{"truths" => ["Truth"]}
-      )
-
-      # Mock claims extraction
-      Mock.set_schema_response(
-        ~r/extract a comprehensive list of FACTUAL/i,
-        %{"claims" => ["Claim"]}
-      )
-
-      # Mock verdicts
-      Mock.set_schema_response(
-        ~r/indicate whether EACH claim contradicts/i,
-        %{"verdicts" => [%{"verdict" => "yes"}]}
-      )
-
-      # Mock reason
-      Mock.set_schema_response(
-        ~r/CONCISELY summarize the contradictions/i,
-        %{"reason" => "Good."}
-      )
-
-      # Using context instead of retrieval_context
+  describe "measure/2 with context only" do
+    test "does not use context as the retrieval context, as deepeval 4.3.1" do
       test_case =
         TestCase.new!(
           input: "Q",
           actual_output: "A",
-          context: ["Context via alias"]
+          context: ["Context, not retrieval context"]
         )
 
-      assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
-      assert result.score == 1.0
+      assert {:error, {:missing_params, [:retrieval_context]}} =
+               Faithfulness.measure(test_case, adapter: :mock)
     end
   end
 

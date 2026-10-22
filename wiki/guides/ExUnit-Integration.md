@@ -346,7 +346,7 @@ the error distinctly instead of a low score:
 ### Missing Parameters
 
 ```
-Faithfulness metric errored: Missing required parameters: retrieval_context
+Faithfulness metric errored: 'retrieval_context' cannot be None for the 'Faithfulness' metric
 
 Metric:    Faithfulness
 Threshold: 0.5 (50.0%)

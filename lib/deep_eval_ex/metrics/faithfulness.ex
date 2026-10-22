@@ -87,7 +87,7 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
     include_reason = Keyword.get(opts, :include_reason, true)
     truths_limit = Keyword.get(opts, :truths_extraction_limit)
 
-    retrieval_context = get_retrieval_context(test_case)
+    retrieval_context = test_case.retrieval_context
     actual_output = test_case.actual_output
 
     # Run truths and claims extraction concurrently; Usage.async/1 carries
@@ -122,10 +122,6 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
        )}
     end
   end
-
-  defp get_retrieval_context(%{retrieval_context: ctx}) when is_list(ctx), do: ctx
-  defp get_retrieval_context(%{context: ctx}) when is_list(ctx), do: ctx
-  defp get_retrieval_context(_), do: []
 
   defp generate_truths(retrieval_context, limit, opts) do
     context_text = Enum.join(retrieval_context, "\n\n")

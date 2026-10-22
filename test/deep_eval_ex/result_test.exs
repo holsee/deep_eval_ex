@@ -113,10 +113,24 @@ defmodule DeepEvalEx.ResultTest do
                Result.error("Custom", "boom", threshold: 1, strict_mode: true, flaky: true)
     end
 
-    test "formats missing parameter errors" do
-      result = Result.error("ExactMatch", {:missing_params, [:actual_output, :expected_output]})
+    test "formats missing parameter errors as deepeval's MissingTestCaseParamsError" do
+      assert Result.error("Faithfulness", {:missing_params, [:retrieval_context]}).error ==
+               "'retrieval_context' cannot be None for the 'Faithfulness' metric"
 
-      assert result.error == "Missing required parameters: actual_output, expected_output"
+      assert Result.error("Exact Match", {:missing_params, [:actual_output, :expected_output]}).error ==
+               "'actual_output' and 'expected_output' cannot be None for the 'Exact Match' metric"
+
+      assert Result.error(
+               "Correctness [GEval]",
+               {:missing_params, [:actual_output, :expected_output, :retrieval_context]}
+             ).error ==
+               "'actual_output', 'expected_output', and 'retrieval_context' cannot be None " <>
+                 "for the 'Correctness [GEval]' metric"
+    end
+
+    test "formats an empty actual_output as deepeval's MissingTestCaseParamsError" do
+      assert Result.error("Hallucination", {:empty_param, :actual_output}).error ==
+               "'actual_output' cannot be empty for the 'Hallucination' metric"
     end
 
     test "inspects non-string error terms" do

@@ -3,6 +3,8 @@ defmodule DeepEvalEx.TestCaseTest do
 
   alias DeepEvalEx.TestCase
 
+  doctest DeepEvalEx.TestCase
+
   describe "new/1" do
     test "creates a valid test case with required fields" do
       assert {:ok, test_case} =
@@ -39,14 +41,16 @@ defmodule DeepEvalEx.TestCaseTest do
       assert errors != nil
     end
 
-    test "normalizes context to retrieval_context" do
-      assert {:ok, test_case} =
-               TestCase.new(
-                 input: "Question",
-                 context: ["context 1"]
-               )
+    test "keeps context and retrieval_context separate, as deepeval's LLMTestCase" do
+      assert {:ok, test_case} = TestCase.new(input: "Question", context: ["context 1"])
 
-      assert test_case.retrieval_context == ["context 1"]
+      assert test_case.context == ["context 1"]
+      assert test_case.retrieval_context == nil
+
+      assert {:ok, test_case} = TestCase.new(input: "Question", retrieval_context: ["chunk 1"])
+
+      assert test_case.retrieval_context == ["chunk 1"]
+      assert test_case.context == nil
     end
   end
 
@@ -93,20 +97,58 @@ defmodule DeepEvalEx.TestCaseTest do
     end
   end
 
-  describe "get_retrieval_context/1" do
-    test "returns retrieval_context when set" do
-      test_case = TestCase.new!(input: "Q", retrieval_context: ["ctx"])
-      assert TestCase.get_retrieval_context(test_case) == ["ctx"]
+  describe "validate_params/2, as deepeval's check_llm_test_case_params" do
+    test "does not accept context for retrieval_context" do
+      test_case = TestCase.new!(input: "Q", actual_output: "A", context: ["ctx"])
+
+      assert {:error, {:missing_params, [:retrieval_context]}} =
+               TestCase.validate_params(test_case, [:input, :actual_output, :retrieval_context])
     end
 
-    test "falls back to context when retrieval_context is nil" do
-      test_case = %TestCase{input: "Q", context: ["ctx"], retrieval_context: nil}
-      assert TestCase.get_retrieval_context(test_case) == ["ctx"]
+    test "does not accept retrieval_context for context" do
+      test_case = TestCase.new!(input: "Q", actual_output: "A", retrieval_context: ["ctx"])
+
+      assert {:error, {:missing_params, [:context]}} =
+               TestCase.validate_params(test_case, [:input, :actual_output, :context])
     end
 
-    test "returns nil when both are nil" do
-      test_case = TestCase.new!(input: "Q")
-      assert TestCase.get_retrieval_context(test_case) == nil
+    test "lists missing params in the order they are required" do
+      test_case = %TestCase{input: nil}
+
+      assert {:error, {:missing_params, [:input, :expected_output, :retrieval_context]}} =
+               TestCase.validate_params(test_case, [:input, :expected_output, :retrieval_context])
+    end
+
+    test "only counts nil as missing: empty lists and strings are present" do
+      test_case = %TestCase{
+        input: "",
+        actual_output: "A",
+        expected_output: "",
+        context: [],
+        retrieval_context: []
+      }
+
+      assert :ok =
+               TestCase.validate_params(test_case, [
+                 :input,
+                 :actual_output,
+                 :expected_output,
+                 :context,
+                 :retrieval_context
+               ])
+    end
+
+    test "rejects an empty actual_output before looking for missing params" do
+      test_case = %TestCase{input: "Q", actual_output: ""}
+
+      assert {:error, {:empty_param, :actual_output}} =
+               TestCase.validate_params(test_case, [:input, :actual_output, :retrieval_context])
+    end
+
+    test "accepts an empty actual_output a metric does not require" do
+      test_case = %TestCase{input: "Q", actual_output: ""}
+
+      assert :ok = TestCase.validate_params(test_case, [:input])
     end
   end
 

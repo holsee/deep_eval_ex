@@ -93,17 +93,12 @@ Position 3 (yes): precision@3 = 2/3 = 0.67
 Score = (1.0 + 0.67) / 2 = 0.83
 ```
 
-## Using Context Alias
+## Context Is Not Retrieval Context
 
-You can use `context` as an alias for `retrieval_context`:
-
-```elixir
-test_case = TestCase.new!(
-  input: "Question",
-  expected_output: "Answer",
-  context: ["Doc 1", "Doc 2", "Doc 3"]  # Same as retrieval_context
-)
-```
+ContextualPrecision reads `retrieval_context` only. As in deepeval 4.3.1,
+`context` does not stand in for it: a test case with only `context` errors
+with `'retrieval_context' cannot be None for the 'Contextual Precision'
+metric`.
 
 ## Skipping Reason Generation
 

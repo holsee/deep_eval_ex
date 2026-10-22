@@ -28,7 +28,7 @@ defmodule DeepEvalEx.ParityTest do
 
   import ExUnit.CaptureLog
 
-  alias DeepEvalEx.Metrics.ExactMatch
+  alias DeepEvalEx.Metrics.{ExactMatch, Faithfulness, GEval}
   alias DeepEvalEx.Test.JSONDiff
   alias DeepEvalEx.Test.ParityMetrics.{Failing, Stub}
   alias DeepEvalEx.TestCase
@@ -53,7 +53,9 @@ defmodule DeepEvalEx.ParityTest do
 
   test "covers every scenario of the fixture script" do
     assert @scenarios ==
-             Enum.sort(~w(exact_match hyperparameters llm_metric metric_error rag_and_tools))
+             Enum.sort(
+               ~w(exact_match hyperparameters llm_metric metric_error missing_params rag_and_tools)
+             )
   end
 
   for scenario <- @scenarios do
@@ -92,8 +94,11 @@ defmodule DeepEvalEx.ParityTest do
     dir = Path.join(@fixtures, scenario)
     input = dir |> Path.join("input.json") |> File.read!() |> decode()
 
+    # Judge-based metrics run on the Mock adapter, whose model is deepeval's
+    # `judge_model` ("mock-model"); the scenarios never let them call it.
     opts =
       [
+        adapter: :mock,
         results_folder: tmp_dir,
         identifier: get(input, "identifier"),
         hyperparameters: hyperparameters(get(input, "hyperparameters"))
@@ -155,6 +160,16 @@ defmodule DeepEvalEx.ParityTest do
           input_tokens: get(spec, "input_tokens"),
           output_tokens: get(spec, "output_tokens")
         }
+
+      "faithfulness" ->
+        Faithfulness
+
+      "g_eval" ->
+        GEval.new(
+          name: get(spec, "name"),
+          criteria: get(spec, "criteria"),
+          evaluation_params: Enum.map(get(spec, "evaluation_params"), &String.to_existing_atom/1)
+        )
 
       "error" ->
         %Failing{

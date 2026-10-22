@@ -212,7 +212,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
   end
 
   describe "measure/2 with empty context" do
-    test "returns error when retrieval_context is empty" do
+    test "accepts an empty retrieval_context list, as deepeval only rejects a missing one" do
       test_case =
         TestCase.new!(
           input: "Question",
@@ -220,8 +220,11 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
           retrieval_context: []
         )
 
-      assert {:error, {:missing_params, [:retrieval_context]}} =
-               ContextualPrecision.measure(test_case, adapter: :mock)
+      assert {:ok, result} =
+               ContextualPrecision.measure(test_case, adapter: :mock, include_reason: false)
+
+      assert result.score == 0
+      assert result.metadata.context_count == 0
     end
   end
 
@@ -343,30 +346,17 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
     end
   end
 
-  describe "measure/2 with context alias" do
-    test "accepts context as alias for retrieval_context" do
-      # Mock verdicts
-      Mock.set_schema_response(
-        ~r/determine whether each node in the retrieval context was remotely useful/i,
-        %{"verdicts" => [%{"verdict" => "yes", "reason" => "Relevant."}]}
-      )
-
-      # Mock reason
-      Mock.set_schema_response(
-        ~r/provide a CONCISE summary for the score/i,
-        %{"reason" => "Good."}
-      )
-
-      # Using context instead of retrieval_context
+  describe "measure/2 with context only" do
+    test "does not use context as the retrieval context, as deepeval 4.3.1" do
       test_case =
         TestCase.new!(
           input: "Q",
           expected_output: "A",
-          context: ["Context via alias"]
+          context: ["Context, not retrieval context"]
         )
 
-      assert {:ok, result} = ContextualPrecision.measure(test_case, adapter: :mock)
-      assert result.score == 1.0
+      assert {:error, {:missing_params, [:retrieval_context]}} =
+               ContextualPrecision.measure(test_case, adapter: :mock)
     end
   end
 

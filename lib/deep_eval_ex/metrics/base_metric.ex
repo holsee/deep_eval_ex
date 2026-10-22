@@ -111,13 +111,16 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   @doc """
   Returns the list of required test case parameters for this metric.
 
-  These are validated before `measure/2` is called.
+  These are validated before `measure/2` is called, as deepeval's
+  `check_llm_test_case_params` (see `DeepEvalEx.TestCase.validate_params/2`).
 
   Common parameters:
   - `:input` - The input prompt
   - `:actual_output` - The LLM's response
   - `:expected_output` - Expected response (for comparison)
   - `:retrieval_context` - Retrieved context (for RAG metrics)
+  - `:context` - Ground-truth context (for Hallucination); it does not stand
+    in for `:retrieval_context`, nor the other way round
   """
   @callback required_params() :: [atom()]
 
@@ -178,7 +181,7 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
       Validates that a test case has all required parameters.
       """
       @spec validate_test_case(TestCase.t()) ::
-              :ok | {:error, {:missing_params, [atom()]}}
+              :ok | {:error, {:missing_params, [atom()]} | {:empty_param, :actual_output}}
       def validate_test_case(test_case) do
         TestCase.validate_params(test_case, required_params())
       end

@@ -10,8 +10,11 @@ defmodule DeepEvalEx.TestCase do
   - `:input` - The input prompt sent to the LLM (required)
   - `:actual_output` - The LLM's response to evaluate (required for most metrics)
   - `:expected_output` - The expected/ground truth output (optional)
-  - `:retrieval_context` - List of retrieved context chunks for RAG evaluation
-  - `:context` - Alias for retrieval_context (for compatibility)
+  - `:retrieval_context` - List of context chunks your retriever returned at
+    run time, for RAG metrics (Faithfulness, ContextualPrecision,
+    ContextualRecall)
+  - `:context` - List of ideal, ground-truth context for the input, for
+    Hallucination
   - `:tools_called` - List of tool calls made by the LLM
   - `:expected_tools` - Expected tool calls for tool use evaluation
   - `:metadata` - Additional metadata for the test case
@@ -26,6 +29,10 @@ defmodule DeepEvalEx.TestCase do
 
   The last six fields mirror deepeval's `LLMTestCase` and are carried through
   to results and exports unchanged; no metric reads them.
+
+  As in deepeval 4.3.1, `:context` and `:retrieval_context` are separate
+  fields: neither stands in for the other, and each is exported only when
+  set (`context` and `retrievalContext`).
 
   ## Examples
 
@@ -128,7 +135,7 @@ defmodule DeepEvalEx.TestCase do
   - `:actual_output` - The LLM's response
   - `:expected_output` - Expected output for comparison
   - `:retrieval_context` - List of retrieved context strings
-  - `:context` - Alias for retrieval_context
+  - `:context` - List of ground-truth context strings
   - `:tools_called` - List of tool calls made
   - `:expected_tools` - Expected tool calls
   - `:metadata` - Additional metadata map
@@ -153,7 +160,6 @@ defmodule DeepEvalEx.TestCase do
 
     case test_case_schema(attrs) do
       {:ok, validated} ->
-        validated = normalize_context(validated)
         validated = convert_tool_calls(validated)
         {:ok, struct(__MODULE__, validated)}
 
@@ -205,33 +211,46 @@ defmodule DeepEvalEx.TestCase do
   end
 
   @doc """
-  Returns the effective retrieval context, preferring :retrieval_context over :context.
-  """
-  @spec get_retrieval_context(t()) :: [String.t()] | nil
-  def get_retrieval_context(%__MODULE__{retrieval_context: ctx}) when not is_nil(ctx), do: ctx
-  def get_retrieval_context(%__MODULE__{context: ctx}), do: ctx
+  Validates that the test case has the required parameters for a given metric,
+  as deepeval 4.3.1's `check_llm_test_case_params`.
 
-  @doc """
-  Validates that the test case has the required parameters for a given metric.
+  - When `:actual_output` is required and is the empty string, returns
+    `{:error, {:empty_param, :actual_output}}`, before looking for missing
+    params
+  - Otherwise returns `{:error, {:missing_params, params}}` with every
+    required param that is `nil`, in the order given
 
-  Handles aliases:
-  - `:context` and `:retrieval_context` are interchangeable
+  Only `nil` is missing: empty lists and other empty strings are present.
+  Each param stands for itself, so `:context` does not satisfy
+  `:retrieval_context` or the other way round.
+
+  `DeepEvalEx.Result.error/3` renders both errors with deepeval's
+  `MissingTestCaseParamsError` message.
+
+  ## Examples
+
+      iex> test_case = DeepEvalEx.TestCase.new!(input: "Q", actual_output: "A", context: ["c"])
+      iex> DeepEvalEx.TestCase.validate_params(test_case, [:input, :actual_output, :retrieval_context])
+      {:error, {:missing_params, [:retrieval_context]}}
   """
-  @spec validate_params(t(), [atom()]) :: :ok | {:error, {:missing_params, [atom()]}}
+  @spec validate_params(t(), [atom()]) ::
+          :ok | {:error, {:missing_params, [atom()]} | {:empty_param, :actual_output}}
   def validate_params(test_case, required_params) do
-    missing =
-      required_params
-      |> Enum.filter(fn param ->
-        not has_param?(test_case, param)
-      end)
+    missing = Enum.filter(required_params, &is_nil(Map.get(test_case, &1)))
 
-    case missing do
-      [] -> :ok
-      params -> {:error, {:missing_params, params}}
+    cond do
+      :actual_output in required_params and Map.get(test_case, :actual_output) == "" ->
+        {:error, {:empty_param, :actual_output}}
+
+      missing != [] ->
+        {:error, {:missing_params, missing}}
+
+      true ->
+        :ok
     end
   end
 
-  # Normalize string keys to atoms and handle aliases
+  # Normalize string keys to atoms
   defp normalize_attrs(attrs) when is_map(attrs) do
     attrs
     |> Enum.map(fn
@@ -270,17 +289,6 @@ defmodule DeepEvalEx.TestCase do
     end)
   end
 
-  # If context is provided but retrieval_context is not, use context as retrieval_context
-  defp normalize_context(validated) do
-    case {Map.get(validated, :retrieval_context), Map.get(validated, :context)} do
-      {nil, context} when not is_nil(context) ->
-        Map.put(validated, :retrieval_context, context)
-
-      _ ->
-        validated
-    end
-  end
-
   # Convert nested tool call maps to ToolCall structs
   defp convert_tool_calls(validated) do
     validated
@@ -293,23 +301,5 @@ defmodule DeepEvalEx.TestCase do
       nil -> validated
       tools -> Map.put(validated, key, Enum.map(tools, &struct(ToolCall, &1)))
     end
-  end
-
-  # Check if param is present, handling aliases
-  defp has_param?(test_case, :context) do
-    has_value?(test_case, :context) or has_value?(test_case, :retrieval_context)
-  end
-
-  defp has_param?(test_case, :retrieval_context) do
-    has_value?(test_case, :retrieval_context) or has_value?(test_case, :context)
-  end
-
-  defp has_param?(test_case, param) do
-    has_value?(test_case, param)
-  end
-
-  defp has_value?(test_case, param) do
-    value = Map.get(test_case, param)
-    not (is_nil(value) or value == "" or value == [])
   end
 end
