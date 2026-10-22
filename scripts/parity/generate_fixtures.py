@@ -46,7 +46,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the eight LLM-judged metrics, the way the metric itself renders it
+uses for the ten LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -113,6 +113,7 @@ from deepeval.evaluate.configs import (  # noqa: E402
 from deepeval.metrics import (  # noqa: E402
     AnswerRelevancyMetric,
     BaseMetric,
+    BiasMetric,
     ContextualPrecisionMetric,
     ContextualRecallMetric,
     ContextualRelevancyMetric,
@@ -121,6 +122,7 @@ from deepeval.metrics import (  # noqa: E402
     GEval,
     HallucinationMetric,
     ToolCorrectnessMetric,
+    ToxicityMetric,
 )
 from deepeval.metrics.contextual_precision.contextual_precision import (  # noqa: E402
     _contextual_precision_verdict_fields,
@@ -547,6 +549,8 @@ SCRIPTED_METRICS = {
     "contextual_precision": ContextualPrecisionMetric,
     "contextual_recall": ContextualRecallMetric,
     "contextual_relevancy": ContextualRelevancyMetric,
+    "bias": BiasMetric,
+    "toxicity": ToxicityMetric,
     "tool_correctness": ToolCorrectnessMetric,
 }
 
@@ -772,6 +776,32 @@ PROMPT_RENDERERS = {
         relevant_statements=i["relevant_statements"],
         score=_score(i),
     ),
+    "BiasMetric.generate_opinions": lambda i: _prompt(
+        BiasMetric, "generate_opinions",
+        actual_output=i["actual_output"],
+    ),
+    "BiasMetric.generate_verdicts": lambda i: _prompt(
+        BiasMetric, "generate_verdicts",
+        opinions=i["opinions"],
+    ),
+    "BiasMetric.generate_reason": lambda i: _prompt(
+        BiasMetric, "generate_reason",
+        biases=i["biases"],
+        score=_score(i),
+    ),
+    "ToxicityMetric.generate_opinions": lambda i: _prompt(
+        ToxicityMetric, "generate_opinions",
+        actual_output=i["actual_output"],
+    ),
+    "ToxicityMetric.generate_verdicts": lambda i: _prompt(
+        ToxicityMetric, "generate_verdicts",
+        opinions=i["opinions"],
+    ),
+    "ToxicityMetric.generate_reason": lambda i: _prompt(
+        ToxicityMetric, "generate_reason",
+        toxics=i["toxics"],
+        score=_score(i),
+    ),
     # System One (`eval_mode`) templates: the questions of the whole metric
     # under `system_one`, and the question asked about each item under
     # `hybrid`. They take no arguments.
@@ -804,6 +834,18 @@ PROMPT_RENDERERS = {
     ),
     "ContextualRelevancyMetric._experimental_system_one_verdict": lambda i: _prompt(
         ContextualRelevancyMetric, "_experimental_system_one_verdict",
+    ),
+    "BiasMetric._experimental_system_one_questions": lambda i: _prompt(
+        BiasMetric, "_experimental_system_one_questions",
+    ),
+    "BiasMetric._experimental_system_one_verdict": lambda i: _prompt(
+        BiasMetric, "_experimental_system_one_verdict",
+    ),
+    "ToxicityMetric._experimental_system_one_questions": lambda i: _prompt(
+        ToxicityMetric, "_experimental_system_one_questions",
+    ),
+    "ToxicityMetric._experimental_system_one_verdict": lambda i: _prompt(
+        ToxicityMetric, "_experimental_system_one_verdict",
     ),
     "HallucinationMetric._experimental_system_one_questions": lambda i: _prompt(
         HallucinationMetric, "_experimental_system_one_questions",
@@ -1042,6 +1084,54 @@ PROMPT_CASES = {
             "relevant_statements": ["Paris is the capital of France."],
         },
     },
+    "bias_generate_opinions": {
+        "template": "BiasMetric.generate_opinions",
+        "inputs": {
+            "actual_output": "I think the new mayor is doing a terrible job. "
+                             "Paris is the capital of France.",
+        },
+    },
+    "bias_generate_verdicts": {
+        "template": "BiasMetric.generate_verdicts",
+        "inputs": {
+            "opinions": [
+                "I think the new mayor is doing a terrible job.",
+                "Engineers from that country can't be trusted.",
+            ],
+        },
+    },
+    "bias_generate_reason": {
+        "template": "BiasMetric.generate_reason",
+        "inputs": {
+            "score": 0.5,
+            "biases": [
+                "'Engineers from that country can't be trusted' stereotypes a nationality.",
+                None,
+            ],
+        },
+    },
+    "toxicity_generate_opinions": {
+        "template": "ToxicityMetric.generate_opinions",
+        "inputs": {
+            "actual_output": "Only an idiot would ask that. The meeting is at noon.",
+        },
+    },
+    "toxicity_generate_verdicts": {
+        "template": "ToxicityMetric.generate_verdicts",
+        "inputs": {
+            "opinions": [
+                "Only an idiot would ask that.",
+                "I'd rather meet in the morning.",
+            ],
+        },
+    },
+    "toxicity_generate_reason": {
+        "template": "ToxicityMetric.generate_reason",
+        "inputs": {
+            "score": 0.5,
+            "toxics": ["'Only an idiot would ask that' insults the reader.", None],
+        },
+    },
     "faithfulness_experimental_system_one_questions": {
         "template": "FaithfulnessMetric._experimental_system_one_questions",
         "inputs": {},
@@ -1082,6 +1172,22 @@ PROMPT_CASES = {
         "template": "ContextualRelevancyMetric._experimental_system_one_verdict",
         "inputs": {},
     },
+    "bias_experimental_system_one_questions": {
+        "template": "BiasMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "bias_experimental_system_one_verdict": {
+        "template": "BiasMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
+    "toxicity_experimental_system_one_questions": {
+        "template": "ToxicityMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "toxicity_experimental_system_one_verdict": {
+        "template": "ToxicityMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
     "hallucination_experimental_system_one_questions": {
         "template": "HallucinationMetric._experimental_system_one_questions",
         "inputs": {},
@@ -1109,7 +1215,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the eight metrics is rendered
+    """Fails unless every bundled template of the ten metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()

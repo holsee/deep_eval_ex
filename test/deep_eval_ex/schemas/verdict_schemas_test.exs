@@ -6,11 +6,13 @@ defmodule DeepEvalEx.Schemas.VerdictSchemasTest do
 
   alias DeepEvalEx.Schemas.MetricOutputs.{
     AnswerRelevancy,
+    Bias,
     ContextualPrecision,
     ContextualRecall,
     ContextualRelevancy,
     Faithfulness,
-    Hallucination
+    Hallucination,
+    Toxicity
   }
 
   # deepeval 4.3.1's verdict schemas: `YesNoBorderline` for Faithfulness and
@@ -21,7 +23,9 @@ defmodule DeepEvalEx.Schemas.VerdictSchemasTest do
     {Hallucination, ["yes", "no"]},
     {ContextualRecall, ["yes", "no"]},
     {ContextualPrecision, ["yes", "no"]},
-    {ContextualRelevancy, ["yes", "no"]}
+    {ContextualRelevancy, ["yes", "no"]},
+    {Bias, ["yes", "no"]},
+    {Toxicity, ["yes", "no"]}
   ]
 
   for {schema, vocabulary} <- @vocabularies do

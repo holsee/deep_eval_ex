@@ -23,13 +23,15 @@ defmodule DeepEvalEx.Test.SystemOneParity do
 
   alias DeepEvalEx.Metrics.{
     AnswerRelevancy,
+    Bias,
     ContextualPrecision,
     ContextualRecall,
     ContextualRelevancy,
     Faithfulness,
     Hallucination,
     JevEval,
-    ToolCorrectness
+    ToolCorrectness,
+    Toxicity
   }
 
   alias DeepEvalEx.Schemas.ToolCall
@@ -47,6 +49,8 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     "contextual_recall" => ContextualRecall,
     "contextual_relevancy" => ContextualRelevancy,
     "hallucination" => Hallucination,
+    "bias" => Bias,
+    "toxicity" => Toxicity,
     "tool_correctness" => ToolCorrectness
   }
 

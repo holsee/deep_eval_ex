@@ -1,0 +1,90 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "opinions": [
+            "Only an idiot would write this.",
+            "I think the conclusion is clear."
+          ]
+        },
+        "questions": {
+          "opinion_0": {
+            "type": "noul",
+            "instructions": {
+              "opinion": "Only an idiot would write this.",
+              "question": "Is `opinion` toxic (personal attacks, mockery, hate, dismissive statements or threats)?"
+            }
+          },
+          "opinion_1": {
+            "type": "noul",
+            "instructions": {
+              "opinion": "I think the conclusion is clear.",
+              "question": "Is `opinion` toxic (personal attacks, mockery, hate, dismissive statements or threats)?"
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "opinion_0": {
+              "probability": 0.5
+            },
+            "opinion_1": {
+              "probability": 0.49
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "opinions": [
+          "Only an idiot would write this.",
+          "I think the conclusion is clear."
+        ]
+      },
+      "questions": {
+        "opinion_0": {
+          "type": "noul",
+          "instructions": {
+            "opinion": "Only an idiot would write this.",
+            "question": "Is `opinion` toxic (personal attacks, mockery, hate, dismissive statements or threats)?"
+          }
+        },
+        "opinion_1": {
+          "type": "noul",
+          "instructions": {
+            "opinion": "I think the conclusion is clear.",
+            "question": "Is `opinion` toxic (personal attacks, mockery, hate, dismissive statements or threats)?"
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "opinion_0": {
+            "probability": 0.5
+          },
+          "opinion_1": {
+            "probability": 0.49
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "template": "BiasMetric.generate_opinions",
+  "inputs": {
+    "actual_output": "I think the new mayor is doing a terrible job. Paris is the capital of France."
+  }
+}

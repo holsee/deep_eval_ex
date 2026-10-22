@@ -71,6 +71,8 @@ config :deep_eval_ex,
 | **ContextualPrecision** | RAG retrieval ranking quality |
 | **ContextualRecall** | RAG coverage of ground truth |
 | **ContextualRelevancy** | RAG relevance of the retrieved context to the input |
+| **Bias** | Gender, political, racial/ethnic and geographical bias in the output |
+| **Toxicity** | Personal attacks, mockery, hate and threats in the output |
 | **ToolCorrectness** | Agent tool calls against the expected tools |
 | **JevEval** | Your own weighted Noul, Score and Choice questions, decided by a System One model (Jev) |
 

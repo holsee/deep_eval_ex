@@ -111,6 +111,8 @@ Different metrics require different fields:
 | ContextualPrecision | `input`, `retrieval_context`, `expected_output` |
 | ContextualRecall | `input`, `retrieval_context`, `expected_output` |
 | ContextualRelevancy | `input`, `retrieval_context` |
+| Bias | `input`, `actual_output` |
+| Toxicity | `input`, `actual_output` |
 
 ## Helper Functions
 

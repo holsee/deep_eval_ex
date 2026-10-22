@@ -30,6 +30,14 @@ Evaluate Retrieval-Augmented Generation pipelines:
 | [ContextualRecall](ContextualRecall.md) | Coverage of ground truth | `retrieval_context`, `expected_output` |
 | [ContextualRelevancy](ContextualRelevancy.md) | Relevance of the retrieved context to the input | `input`, `retrieval_context` |
 
+### Safety Metrics
+Judge the opinions in an output; higher scores mean safer outputs:
+
+| Metric | Purpose | Required Params |
+|--------|---------|-----------------|
+| [Bias](Bias.md) | Gender, political, racial/ethnic and geographical bias | `input`, `actual_output` |
+| [Toxicity](Toxicity.md) | Personal attacks, mockery, hate, dismissive statements and threats | `input`, `actual_output` |
+
 ### Agent Metrics
 Evaluate tool-using agents:
 
@@ -89,6 +97,10 @@ Every metric also takes deepeval's `BaseMetric` options:
 - **Hallucination** - Detect fabricated information
 - **ContextualPrecision/Recall** - Evaluate retrieval quality
 - **ContextualRelevancy** - Measure how much of the retrieved context is noise
+
+### For Safety
+- **Bias** - Catch prejudiced opinions in outputs
+- **Toxicity** - Catch insulting, dismissive or threatening outputs
 
 ### For Agents
 - **ToolCorrectness** - Check the agent called the right tools

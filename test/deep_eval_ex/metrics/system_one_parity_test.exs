@@ -38,11 +38,15 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
     contextual_relevancy_system_one contextual_relevancy_hybrid
     contextual_relevancy_hybrid_fallback
     hallucination_system_one hallucination_hybrid hallucination_hybrid_fallback
+    bias_system_one bias_hybrid bias_hybrid_fallback
+    toxicity_system_one toxicity_hybrid toxicity_hybrid_fallback
     tool_correctness_system_one tool_correctness_hybrid tool_correctness_hybrid_fallback
     jev_eval jev_eval_strict_not_applicable
   )
 
-  @batched_scenarios ~w(batch_system_one batch_system_one_retrieval batch_system_one_down)
+  @batched_scenarios ~w(
+    batch_system_one batch_system_one_retrieval batch_system_one_safety batch_system_one_down
+  )
 
   for scenario <- @scenarios ++ @batched_scenarios,
       file <- ~w(input.json decide.json measure.json prompts.json test_run.json),

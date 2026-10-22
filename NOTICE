@@ -30,9 +30,10 @@ Key components derived from DeepEval:
 
 Verbatim prompt templates:
 
-The judge prompts in lib/deep_eval_ex/prompts/ (answer_relevancy.ex,
+The judge prompts in lib/deep_eval_ex/prompts/ (answer_relevancy.ex, bias.ex,
 contextual_precision.ex, contextual_recall.ex, contextual_relevancy.ex,
-faithfulness.ex, g_eval.ex, hallucination.ex and tool_correctness.ex) contain text copied verbatim from
+faithfulness.ex, g_eval.ex, hallucination.ex, tool_correctness.ex and
+toxicity.ex) contain text copied verbatim from
 DeepEval 4.3.1's prompt templates (deepeval/metrics/*/templates/*.txt and
 deepeval/templates/metrics/fragments/*.txt), Copyright 2023-2024 Confident
 AI, licensed under the Apache License, Version 2.0. The text is reproduced

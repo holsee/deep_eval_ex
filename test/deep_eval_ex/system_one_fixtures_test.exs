@@ -31,7 +31,8 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
   # The scenarios of scripts/parity/generate_system_one_fixtures.py.
   @expected ~w(
     answer_relevancy_hybrid answer_relevancy_hybrid_fallback answer_relevancy_system_one
-    batch_system_one batch_system_one_down batch_system_one_retrieval
+    batch_system_one batch_system_one_down batch_system_one_retrieval batch_system_one_safety
+    bias_hybrid bias_hybrid_fallback bias_system_one
     contextual_precision_hybrid contextual_precision_hybrid_fallback
     contextual_precision_system_one
     contextual_recall_hybrid contextual_recall_hybrid_fallback contextual_recall_system_one
@@ -43,6 +44,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     jev_eval jev_eval_strict_not_applicable
     refusal_classifier_system_one
     tool_correctness_hybrid tool_correctness_hybrid_fallback tool_correctness_system_one
+    toxicity_hybrid toxicity_hybrid_fallback toxicity_system_one
   )
 
   @answer_kinds %{"noul" => "nouls", "score" => "scores", "choice" => "choices"}
@@ -58,7 +60,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
   test "covers every eval-mode metric in system_one, hybrid and hybrid fallback" do
     for kind <-
           ~w(faithfulness hallucination answer_relevancy contextual_precision contextual_recall
-             contextual_relevancy tool_correctness),
+             contextual_relevancy bias toxicity tool_correctness),
         suffix <- ~w(system_one hybrid hybrid_fallback) do
       assert "#{kind}_#{suffix}" in @scenarios
     end

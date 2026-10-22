@@ -65,6 +65,12 @@ defmodule DeepEvalEx.PromptGoldenTest do
       {Prompts.ContextualRelevancy, :generate_verdicts},
     "ContextualRelevancyMetric.generate_reason" =>
       {Prompts.ContextualRelevancy, :generate_reason},
+    "BiasMetric.generate_opinions" => {Prompts.Bias, :generate_opinions},
+    "BiasMetric.generate_verdicts" => {Prompts.Bias, :generate_verdicts},
+    "BiasMetric.generate_reason" => {Prompts.Bias, :generate_reason},
+    "ToxicityMetric.generate_opinions" => {Prompts.Toxicity, :generate_opinions},
+    "ToxicityMetric.generate_verdicts" => {Prompts.Toxicity, :generate_verdicts},
+    "ToxicityMetric.generate_reason" => {Prompts.Toxicity, :generate_reason},
     "ToolCorrectnessMetric.get_tool_selection_score" =>
       {Prompts.ToolCorrectness, :get_tool_selection_score},
     "FaithfulnessMetric._experimental_system_one_questions" =>
@@ -87,6 +93,11 @@ defmodule DeepEvalEx.PromptGoldenTest do
       {Prompts.ContextualRelevancy, :system_one_questions},
     "ContextualRelevancyMetric._experimental_system_one_verdict" =>
       {Prompts.ContextualRelevancy, :system_one_verdict},
+    "BiasMetric._experimental_system_one_questions" => {Prompts.Bias, :system_one_questions},
+    "BiasMetric._experimental_system_one_verdict" => {Prompts.Bias, :system_one_verdict},
+    "ToxicityMetric._experimental_system_one_questions" =>
+      {Prompts.Toxicity, :system_one_questions},
+    "ToxicityMetric._experimental_system_one_verdict" => {Prompts.Toxicity, :system_one_verdict},
     "HallucinationMetric._experimental_system_one_questions" =>
       {Prompts.Hallucination, :system_one_questions},
     "HallucinationMetric._experimental_system_one_verdict" =>
@@ -109,7 +120,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the eight LLM metrics" do
+  test "covers every template of the ten LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -119,13 +130,15 @@ defmodule DeepEvalEx.PromptGoldenTest do
     prompt_functions =
       for module <- [
             Prompts.AnswerRelevancy,
+            Prompts.Bias,
             Prompts.ContextualPrecision,
             Prompts.ContextualRecall,
             Prompts.ContextualRelevancy,
             Prompts.Faithfulness,
             Prompts.GEval,
             Prompts.Hallucination,
-            Prompts.ToolCorrectness
+            Prompts.ToolCorrectness,
+            Prompts.Toxicity
           ],
           {fun, arity} <- module.__info__(:functions),
           arity in [0, 1],
@@ -275,6 +288,22 @@ defmodule DeepEvalEx.PromptGoldenTest do
       relevant_statements: inputs["relevant_statements"]
     ]
   end
+
+  defp options("BiasMetric.generate_opinions", inputs),
+    do: [actual_output: inputs["actual_output"]]
+
+  defp options("BiasMetric.generate_verdicts", inputs), do: [opinions: inputs["opinions"]]
+
+  defp options("BiasMetric.generate_reason", inputs),
+    do: [score: inputs["score"], biases: inputs["biases"]]
+
+  defp options("ToxicityMetric.generate_opinions", inputs),
+    do: [actual_output: inputs["actual_output"]]
+
+  defp options("ToxicityMetric.generate_verdicts", inputs), do: [opinions: inputs["opinions"]]
+
+  defp options("ToxicityMetric.generate_reason", inputs),
+    do: [score: inputs["score"], toxics: inputs["toxics"]]
 
   defp options("ToolCorrectnessMetric.get_tool_selection_score", inputs) do
     [

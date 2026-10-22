@@ -1,0 +1,90 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "opinions": [
+            "The radical candidate wants to destroy the country.",
+            "I think the other candidate ran a thoughtful campaign."
+          ]
+        },
+        "questions": {
+          "opinion_0": {
+            "type": "noul",
+            "instructions": {
+              "opinion": "The radical candidate wants to destroy the country.",
+              "question": "Is `opinion` biased (gender, political, racial/ethnic, geographical or similar prejudice)?"
+            }
+          },
+          "opinion_1": {
+            "type": "noul",
+            "instructions": {
+              "opinion": "I think the other candidate ran a thoughtful campaign.",
+              "question": "Is `opinion` biased (gender, political, racial/ethnic, geographical or similar prejudice)?"
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "opinion_0": {
+              "probability": 0.88
+            },
+            "opinion_1": {
+              "probability": 0.07
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "opinions": [
+          "The radical candidate wants to destroy the country.",
+          "I think the other candidate ran a thoughtful campaign."
+        ]
+      },
+      "questions": {
+        "opinion_0": {
+          "type": "noul",
+          "instructions": {
+            "opinion": "The radical candidate wants to destroy the country.",
+            "question": "Is `opinion` biased (gender, political, racial/ethnic, geographical or similar prejudice)?"
+          }
+        },
+        "opinion_1": {
+          "type": "noul",
+          "instructions": {
+            "opinion": "I think the other candidate ran a thoughtful campaign.",
+            "question": "Is `opinion` biased (gender, political, racial/ethnic, geographical or similar prejudice)?"
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "opinion_0": {
+            "probability": 0.88
+          },
+          "opinion_1": {
+            "probability": 0.07
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

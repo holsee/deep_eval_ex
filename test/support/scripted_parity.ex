@@ -21,6 +21,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
 
   alias DeepEvalEx.Metrics.{
     AnswerRelevancy,
+    Bias,
     ContextualPrecision,
     ContextualRecall,
     ContextualRelevancy,
@@ -28,7 +29,8 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     Faithfulness,
     GEval,
     Hallucination,
-    ToolCorrectness
+    ToolCorrectness,
+    Toxicity
   }
 
   alias DeepEvalEx.Schemas.ToolCall
@@ -46,6 +48,8 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "contextual_precision" => ContextualPrecision,
     "contextual_recall" => ContextualRecall,
     "contextual_relevancy" => ContextualRelevancy,
+    "bias" => Bias,
+    "toxicity" => Toxicity,
     "tool_correctness" => ToolCorrectness
   }
 

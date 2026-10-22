@@ -7,7 +7,7 @@ Fixtures written by **deepeval 4.3.1**, in five sets:
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
-  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's nine
+  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's eleven
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
 - [prompt goldens](#prompt-goldens) (`prompts/`), used by
@@ -128,7 +128,8 @@ calling an LLM. A script holds:
 
 - `metric` - `kind` (`exact_match`, `g_eval`, `faithfulness`, `hallucination`,
   `answer_relevancy`, `contextual_precision`, `contextual_recall`,
-  `contextual_relevancy` or `tool_correctness`) and the metric's constructor `params`
+  `contextual_relevancy`, `bias`, `toxicity` or `tool_correctness`) and the
+  metric's constructor `params`
 - `test_case` - keyword arguments of deepeval's `LLMTestCase`
 - `judge_model` - the name the judge reports as the evaluation model
 - `responses` - the judge's answers, keyed by metric kind, then by step, then
@@ -181,6 +182,8 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | ContextualPrecision | `contextual_precision_pass`, `contextual_precision_fail`, `contextual_precision_strict` |
 | ContextualRecall | `contextual_recall_pass`, `contextual_recall_fail`, `contextual_recall_strict` |
 | ContextualRelevancy | `contextual_relevancy_pass`, `contextual_relevancy_fail` (a `no` verdict without a reason, listed as `None` in the reason prompt), `contextual_relevancy_no_statements` (an empty list for every node: the integer `0`), `contextual_relevancy_strict`; one `verdicts` call per retrieval context node, in order |
+| Bias | `bias_pass`, `bias_fail` (a `yes` verdict without a reason, listed as `None` in the reason prompt), `bias_no_opinions` (no opinions: no `verdicts` call, the integer `1`), `bias_strict` |
+| Toxicity | `toxicity_pass`, `toxicity_fail` (a `yes` verdict without a reason, listed as `None` in the reason prompt), `toxicity_no_opinions` (no opinions: no `verdicts` call, the integer `1`), `toxicity_strict` |
 | ToolCorrectness | `tool_correctness_pass`, `tool_correctness_fail`, `tool_correctness_available_tools` (LLM-scored tool selection), `tool_correctness_strict` |
 
 ### Not covered
@@ -213,7 +216,7 @@ scenarios, why it fails and its tag.
 ## Prompt goldens
 
 `prompts/<case>/` holds one prompt deepeval 4.3.1 renders for one of the
-eight LLM-judged metrics, for fixed inputs:
+ten LLM-judged metrics, for fixed inputs:
 
 - `input.json` - `template`, deepeval's template class key and method (e.g.
   `FaithfulnessMetric.generate_truths`, from
@@ -266,6 +269,12 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.ContextualRecall.generate_reason/1` | `ContextualRecallMetric.generate_reason` (`contextual_recall/templates/generate_reason.txt`) | `expected_output`, `supportive_reasons`, `unsupportive_reasons` (lists), `score` (`.2f`), `content_type` | `contextual_recall_generate_reason` |
 | `Prompts.ContextualRelevancy.generate_verdicts/1` | `ContextualRelevancyMetric.generate_verdicts` (`contextual_relevancy/templates/generate_verdicts.txt`) | `input`, `context` (one node), `context_type`, `statement_or_image`, `extraction_instructions`, `empty_context_instruction` | `contextual_relevancy_generate_verdicts` |
 | `Prompts.ContextualRelevancy.generate_reason/1` | `ContextualRelevancyMetric.generate_reason` (`contextual_relevancy/templates/generate_reason.txt`) | `input`, `irrelevant_statements`, `relevant_statements` (lists), `score` (`.2f`) | `contextual_relevancy_generate_reason` |
+| `Prompts.Bias.generate_opinions/1` | `BiasMetric.generate_opinions` (`bias/templates/generate_opinions.txt`) | `actual_output`, `multimodal` (`False`: no multimodal rules) | `bias_generate_opinions` |
+| `Prompts.Bias.generate_verdicts/1` | `BiasMetric.generate_verdicts` (`bias/templates/generate_verdicts.txt`) | `opinions` (list), `multimodal` (`False`) | `bias_generate_verdicts` |
+| `Prompts.Bias.generate_reason/1` | `BiasMetric.generate_reason` (`bias/templates/generate_reason.txt`) | `biases` (list, `None` included), `score` (`.2f`) | `bias_generate_reason` |
+| `Prompts.Toxicity.generate_opinions/1` | `ToxicityMetric.generate_opinions` (`toxicity/templates/generate_opinions.txt`) | `actual_output` (the multimodal rules always included) | `toxicity_generate_opinions` |
+| `Prompts.Toxicity.generate_verdicts/1` | `ToxicityMetric.generate_verdicts` (`toxicity/templates/generate_verdicts.txt`) | `opinions` (list; the multimodal rules always included) | `toxicity_generate_verdicts` |
+| `Prompts.Toxicity.generate_reason/1` | `ToxicityMetric.generate_reason` (`toxicity/templates/generate_reason.txt`) | `toxics` (list, `None` included), `score` (`.2f`) | `toxicity_generate_reason` |
 | `Prompts.ToolCorrectness.get_tool_selection_score/1` | `ToolCorrectnessMetric.get_tool_selection_score` (`tool_correctness/templates/get_tool_selection_score.txt`) | `user_input`, `tools_called`, `available_tools` (both `print_tools_called`) | `tool_correctness_get_tool_selection_score` |
 | `Prompts.Faithfulness.system_one_questions/0` | `FaithfulnessMetric._experimental_system_one_questions` (`faithfulness/templates/_experimental_system_one_questions.txt`) | none | `faithfulness_experimental_system_one_questions` |
 | `Prompts.Faithfulness.system_one_verdict/0` | `FaithfulnessMetric._experimental_system_one_verdict` (`faithfulness/templates/_experimental_system_one_verdict.txt`) | none | `faithfulness_experimental_system_one_verdict` |
@@ -277,6 +286,10 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.ContextualRecall.system_one_verdict/0` | `ContextualRecallMetric._experimental_system_one_verdict` (`contextual_recall/templates/_experimental_system_one_verdict.txt`) | none | `contextual_recall_experimental_system_one_verdict` |
 | `Prompts.ContextualRelevancy.system_one_questions/0` | `ContextualRelevancyMetric._experimental_system_one_questions` (`contextual_relevancy/templates/_experimental_system_one_questions.txt`) | none | `contextual_relevancy_experimental_system_one_questions` |
 | `Prompts.ContextualRelevancy.system_one_verdict/0` | `ContextualRelevancyMetric._experimental_system_one_verdict` (`contextual_relevancy/templates/_experimental_system_one_verdict.txt`) | none | `contextual_relevancy_experimental_system_one_verdict` |
+| `Prompts.Bias.system_one_questions/0` | `BiasMetric._experimental_system_one_questions` (`bias/templates/_experimental_system_one_questions.txt`) | none | `bias_experimental_system_one_questions` |
+| `Prompts.Bias.system_one_verdict/0` | `BiasMetric._experimental_system_one_verdict` (`bias/templates/_experimental_system_one_verdict.txt`) | none | `bias_experimental_system_one_verdict` |
+| `Prompts.Toxicity.system_one_questions/0` | `ToxicityMetric._experimental_system_one_questions` (`toxicity/templates/_experimental_system_one_questions.txt`) | none | `toxicity_experimental_system_one_questions` |
+| `Prompts.Toxicity.system_one_verdict/0` | `ToxicityMetric._experimental_system_one_verdict` (`toxicity/templates/_experimental_system_one_verdict.txt`) | none | `toxicity_experimental_system_one_verdict` |
 | `Prompts.Hallucination.system_one_questions/0` | `HallucinationMetric._experimental_system_one_questions` (`hallucination/templates/_experimental_system_one_questions.txt`) | none | `hallucination_experimental_system_one_questions` |
 | `Prompts.Hallucination.system_one_verdict/0` | `HallucinationMetric._experimental_system_one_verdict` (`hallucination/templates/_experimental_system_one_verdict.txt`) | none | `hallucination_experimental_system_one_verdict` |
 | `Prompts.ToolCorrectness.system_one_tool_selection_score/0` | `ToolCorrectnessMetric._experimental_system_one_tool_selection_score` (`tool_correctness/templates/_experimental_system_one_tool_selection_score.txt`) | none | `tool_correctness_experimental_system_one_tool_selection_score` |
@@ -322,7 +335,8 @@ ordered levels) or a **Choice** (one of a closed set of options). A metric's
 - `system_one` - one `decide(state, questions)` request answers the whole
   metric: the state is the test case's fields, the questions come from the
   metric's `_experimental_system_one_questions` template (two Nouls and a
-  four-level Score for each of the six RAG metrics). The score is the
+  four-level Score for each of the six RAG metrics, one Noul and a
+  four-level Score about `actual_output` for Bias and Toxicity). The score is the
   weighted mean of the answers, the reason deterministic text built from
   them, and no LLM is called. A Jev error is not caught.
 - `hybrid` - the LLM extracts and writes the reason; Jev takes the decisions,
@@ -404,14 +418,15 @@ Each `system_one/<scenario>/` holds:
 
 | Scenario | Covers |
 | --- | --- |
-| `<metric>_system_one` | Faithfulness, Hallucination, AnswerRelevancy, ContextualPrecision, ContextualRecall, ContextualRelevancy: the whole metric in one request; ToolCorrectness: runs as `hybrid`, Jev scores tool selection |
+| `<metric>_system_one` | Faithfulness, Hallucination, AnswerRelevancy, ContextualPrecision, ContextualRecall, ContextualRelevancy, Bias, Toxicity: the whole metric in one request; ToolCorrectness: runs as `hybrid`, Jev scores tool selection |
 | `faithfulness_system_one_strict` | Strict mode on Jev: one question misses the strict bar, score 0 |
-| `<metric>_hybrid` | The same seven metrics in `hybrid`: the LLM extracts and explains (`prompts.json`), Jev decides each item; ContextualRelevancy asks one request per retrieval context node, about its sentences (`statement_<i>`) |
+| `<metric>_hybrid` | The same nine metrics in `hybrid`: the LLM extracts and explains (`prompts.json`), Jev decides each item; ContextualRelevancy asks one request per retrieval context node, about its sentences (`statement_<i>`); Bias and Toxicity ask whether each opinion is biased (toxic), `opinion_<i>`, P(yes) of `0.5` and above failing it |
 | `<metric>_hybrid_fallback` | `hybrid` with `ExplodingSystemOneModel`: each Jev call fails, the scripted judge takes the decisions, `system_one_fallback_reason` set |
 | `jev_eval` | `JevEval` with a weighted Noul, a Score and a Choice (credits and a not-applicable option) |
 | `jev_eval_strict_not_applicable` | `JevEval` in strict mode without the `[JevEval]` suffix, a Noul with `true` / `false` criteria, a Choice judged not applicable |
 | `batch_system_one` | Faithfulness, AnswerRelevancy and ContextualRecall batched into one request by `evaluate()`; cost and tokens split by question count |
 | `batch_system_one_retrieval` | ContextualRelevancy and ContextualPrecision batched into one request by `evaluate()` |
+| `batch_system_one_safety` | Bias and Toxicity batched into one request about `actual_output` by `evaluate()` |
 | `batch_system_one_down` | Two batched metrics with Jev down: no fallback, `measure()` raises and `evaluate()` records the error on each metric |
 | `refusal_classifier_system_one` | `RefusalClassifier` on Jev: one Choice over its labels, deterministic reason |
 
@@ -429,8 +444,8 @@ by `DeepEvalEx.SystemOne.Adapters.Mock.from_fixture/2` and the judge by the
 Mock adapter's script, and compares the `decide()` calls of `measure()` and
 `evaluate()`, the measured state, the judge's prompts and the test run with
 the fixture, byte for byte. It covers Faithfulness, AnswerRelevancy,
-ContextualPrecision, ContextualRecall, ContextualRelevancy, Hallucination and
-ToolCorrectness: each one's `system_one`, `hybrid` and `hybrid_fallback`
+ContextualPrecision, ContextualRecall, ContextualRelevancy, Hallucination,
+Bias, Toxicity and ToolCorrectness: each one's `system_one`, `hybrid` and `hybrid_fallback`
 scenarios, and `faithfulness_system_one_strict`, and
 `DeepEvalEx.Metrics.JevEval` (`jev_eval` and
 `jev_eval_strict_not_applicable`), and the batched scenarios.

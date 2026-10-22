@@ -215,6 +215,7 @@ defmodule DeepEvalEx.LLM.StrictSchemaTest do
   describe "built-in metric schemas" do
     @schemas [
       {MetricOutputs.AnswerRelevancy, [:statements_schema, :verdicts_schema, :reason_schema]},
+      {MetricOutputs.Bias, [:opinions_schema, :verdicts_schema, :reason_schema]},
       {MetricOutputs.ContextualPrecision, [:verdicts_schema, :reason_schema]},
       {MetricOutputs.ContextualRecall, [:verdicts_schema, :reason_schema]},
       {MetricOutputs.ContextualRelevancy, [:verdicts_schema, :reason_schema]},
@@ -222,7 +223,8 @@ defmodule DeepEvalEx.LLM.StrictSchemaTest do
        [:claims_schema, :truths_schema, :verdicts_schema, :reason_schema]},
       {MetricOutputs.GEval, [:steps_schema, :reason_score_schema]},
       {MetricOutputs.Hallucination, [:verdicts_schema, :reason_schema]},
-      {MetricOutputs.ToolCorrectness, [:tool_selection_score_schema]}
+      {MetricOutputs.ToolCorrectness, [:tool_selection_score_schema]},
+      {MetricOutputs.Toxicity, [:opinions_schema, :verdicts_schema, :reason_schema]}
     ]
 
     test "all satisfy OpenAI strict mode once converted" do

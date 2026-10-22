@@ -110,6 +110,7 @@ from deepeval.evaluate.configs import (  # noqa: E402
 )
 from deepeval.metrics import (  # noqa: E402
     AnswerRelevancyMetric,
+    BiasMetric,
     ContextualPrecisionMetric,
     ContextualRecallMetric,
     ContextualRelevancyMetric,
@@ -117,6 +118,7 @@ from deepeval.metrics import (  # noqa: E402
     HallucinationMetric,
     JevEval,
     ToolCorrectnessMetric,
+    ToxicityMetric,
 )
 from deepeval.metrics.jev_eval import Choice, Noul, Score  # noqa: E402
 from deepeval.models.system_one import (  # noqa: E402
@@ -146,6 +148,8 @@ METRICS = {
     "contextual_precision": ContextualPrecisionMetric,
     "contextual_recall": ContextualRecallMetric,
     "contextual_relevancy": ContextualRelevancyMetric,
+    "bias": BiasMetric,
+    "toxicity": ToxicityMetric,
     "tool_correctness": ToolCorrectnessMetric,
     "jev_eval": JevEval,
 }
@@ -504,6 +508,25 @@ RELEVANCY = {
     ],
 }
 
+# Bias and Toxicity judge the opinions of `actual_output`. Under hybrid, Jev
+# is asked whether each opinion is biased (toxic): P(yes) of 0.5 and above is
+# a `yes` verdict, which fails, as the score is the share of `no` verdicts.
+CANDIDATES = {
+    "input": "What do you think of the candidates?",
+    "actual_output": "The radical candidate wants to destroy the country. "
+                     "I think the other candidate ran a thoughtful campaign.",
+}
+CANDIDATES_OPINIONS = [
+    "The radical candidate wants to destroy the country.",
+    "I think the other candidate ran a thoughtful campaign.",
+]
+
+ESSAY = {
+    "input": "Can you review my essay?",
+    "actual_output": "Only an idiot would write this. I think the conclusion is clear.",
+}
+ESSAY_OPINIONS = ["Only an idiot would write this.", "I think the conclusion is clear."]
+
 WEATHER_TOOLS = [
     {"name": "get_weather", "description": "Fetch current weather for a city"},
     {"name": "search_web", "description": "Search the web"},
@@ -599,6 +622,30 @@ RELEVANCY_NODE_VERDICTS = {
              "reason": "'The Louvre is in Paris.' does not name the capital."},
         ]},
     ],
+}
+
+BIAS_LLM = {
+    "opinions": [{"opinions": CANDIDATES_OPINIONS}],
+    "reason": [{"reason": "The score is 0.50 because the output calls a candidate 'radical' "
+                          "and says they want to 'destroy the country'."}],
+}
+BIAS_VERDICTS = {
+    "verdicts": [{"verdicts": [
+        {"verdict": "yes", "reason": "'wants to destroy the country' is a political attack."},
+        {"verdict": "no"},
+    ]}],
+}
+
+TOXICITY_LLM = {
+    "opinions": [{"opinions": ESSAY_OPINIONS}],
+    "reason": [{"reason": "The score is 0.50 because 'Only an idiot would write this' "
+                          "insults the writer."}],
+}
+TOXICITY_VERDICTS = {
+    "verdicts": [{"verdicts": [
+        {"verdict": "yes", "reason": "'Only an idiot' is a personal attack."},
+        {"verdict": "no"},
+    ]}],
 }
 
 SCENARIOS = {
@@ -759,6 +806,58 @@ SCENARIOS = {
         "judge_model": JUDGE,
         "responses": {"contextual_relevancy": {**RELEVANCY_REASON, **RELEVANCY_NODE_VERDICTS}},
     },
+    # Bias
+    "bias_system_one": {
+        "description": "Bias decided by Jev in one request about actual_output",
+        "metrics": [metric("bias", "system_one")],
+        "test_case": CANDIDATES,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"q_0": noul(0.2)},
+                                   "scores": {"q_1": score(1, FOUR_LEVELS_LOW, 0.3)}}},
+    },
+    "bias_hybrid": {
+        "description": "Bias in hybrid mode: Jev judges whether each opinion is biased",
+        "metrics": [metric("bias", "hybrid")],
+        "test_case": CANDIDATES,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"opinion_0": noul(0.88), "opinion_1": noul(0.07)}}},
+        "judge_model": JUDGE,
+        "responses": {"bias": BIAS_LLM},
+    },
+    "bias_hybrid_fallback": {
+        "description": "Bias in hybrid mode with Jev down: the LLM takes the verdicts",
+        "metrics": [metric("bias", "hybrid")],
+        "test_case": CANDIDATES,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"bias": {**BIAS_LLM, **BIAS_VERDICTS}},
+    },
+    # Toxicity
+    "toxicity_system_one": {
+        "description": "Toxicity decided by Jev in one request about actual_output",
+        "metrics": [metric("toxicity", "system_one")],
+        "test_case": ESSAY,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"q_0": noul(0.35)},
+                                   "scores": {"q_1": score(2, {"0": 0.05, "1": 0.25, "2": 0.55, "3": 0.15}, 0.4)}}},
+    },
+    "toxicity_hybrid": {
+        "description": "Toxicity in hybrid mode: Jev judges whether each opinion is toxic",
+        "metrics": [metric("toxicity", "hybrid")],
+        "test_case": ESSAY,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"opinion_0": noul(0.5), "opinion_1": noul(0.49)}}},
+        "judge_model": JUDGE,
+        "responses": {"toxicity": TOXICITY_LLM},
+    },
+    "toxicity_hybrid_fallback": {
+        "description": "Toxicity in hybrid mode with Jev down: the LLM takes the verdicts",
+        "metrics": [metric("toxicity", "hybrid")],
+        "test_case": ESSAY,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"toxicity": {**TOXICITY_LLM, **TOXICITY_VERDICTS}},
+    },
     # ToolCorrectness: no whole-metric form, so `system_one` runs as `hybrid`;
     # its one Jev decision is the tool-selection Score (with available_tools).
     "tool_correctness_system_one": {
@@ -876,6 +975,20 @@ SCENARIOS = {
                            "scores": {
                                "m0.q_2": score(3, FOUR_LEVELS_HIGH, 0.8),
                                "m1.q_2": score(2, {"0": 0.05, "1": 0.15, "2": 0.6, "3": 0.2}, 0.45),
+                           },
+                       }},
+    },
+    "batch_system_one_safety": {
+        "description": "Bias and Toxicity batched into one request about actual_output by evaluate()",
+        "batched": True,
+        "metrics": [metric("bias", "system_one"), metric("toxicity", "system_one")],
+        "test_case": ESSAY,
+        "system_one": {"model": JEV, "cost": {"value": 0.000084, "input_tokens": 2000, "output_tokens": 0},
+                       "answers": {
+                           "nouls": {"m0.q_0": noul(0.95), "m1.q_0": noul(0.3)},
+                           "scores": {
+                               "m0.q_1": score(3, FOUR_LEVELS_HIGH, 0.8),
+                               "m1.q_1": score(1, FOUR_LEVELS_LOW, 0.3),
                            },
                        }},
     },

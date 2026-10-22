@@ -49,6 +49,10 @@ defmodule DeepEvalEx do
   - `DeepEvalEx.Metrics.ContextualRecall` - RAG coverage of ground truth
   - `DeepEvalEx.Metrics.ContextualRelevancy` - RAG relevance of the
     retrieved context to the input
+  - `DeepEvalEx.Metrics.Bias` - Gender, political, racial/ethnic and
+    geographical bias in the output's opinions
+  - `DeepEvalEx.Metrics.Toxicity` - Personal attacks, mockery, hate,
+    dismissive statements and threats in the output's opinions
   - `DeepEvalEx.Metrics.ToolCorrectness` - Agent tool calls against the
     expected tools
   - `DeepEvalEx.Metrics.JevEval` - Your own weighted questions, decided by

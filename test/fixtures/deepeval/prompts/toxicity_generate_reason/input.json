@@ -1,0 +1,10 @@
+{
+  "template": "ToxicityMetric.generate_reason",
+  "inputs": {
+    "score": 0.5,
+    "toxics": [
+      "'Only an idiot would ask that' insults the reader.",
+      null
+    ]
+  }
+}
