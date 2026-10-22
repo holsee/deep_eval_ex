@@ -15,6 +15,30 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
   end
 
+  defmodule ConfigurableMetric do
+    @moduledoc false
+
+    @default_threshold 0.5
+
+    defstruct threshold: nil, label: nil
+
+    def metric_name, do: "ConfigurableMetric"
+
+    def measure(_test_case, opts) do
+      threshold = Keyword.get(opts, :threshold, @default_threshold)
+      label = Keyword.get(opts, :label, "default")
+
+      {:ok,
+       %Result{
+         metric: metric_name(),
+         score: 1.0,
+         success: true,
+         threshold: threshold,
+         reason: label
+       }}
+    end
+  end
+
   defp test_case do
     TestCase.new!(input: "What is 2 + 2?", actual_output: "4", expected_output: "4")
   end
@@ -35,6 +59,29 @@ defmodule DeepEvalEx.EvaluatorTest do
         assert result.score == 0.0
         assert result.reason == "Evaluation timed out"
       end
+    end
+  end
+
+  describe "evaluate_metric/3 with metric structs" do
+    test "per-metric configuration overrides run-level options" do
+      metric = %ConfigurableMetric{threshold: 0.9}
+
+      assert [[%Result{threshold: 0.9}]] =
+               Evaluator.evaluate([test_case()], [metric], threshold: 0.5)
+    end
+
+    test "run-level options apply when the metric leaves a field unset" do
+      metric = %ConfigurableMetric{threshold: nil, label: "custom"}
+
+      assert [[%Result{threshold: 0.7, reason: "custom"}]] =
+               Evaluator.evaluate([test_case()], [metric], threshold: 0.7)
+    end
+
+    test "unset metric fields fall back to the metric's own default" do
+      metric = %ConfigurableMetric{}
+
+      assert %Result{threshold: 0.5, reason: "default"} =
+               Evaluator.evaluate_metric(test_case(), metric, [])
     end
   end
 end

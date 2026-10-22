@@ -23,6 +23,11 @@ defmodule DeepEvalEx.Evaluator do
   - `:model` - Default LLM model for LLM-based metrics
   - `:adapter` - Default LLM adapter
 
+  Run-level options are defaults only: when a metric is passed as a struct,
+  any non-nil field on that struct overrides the run-level option of the
+  same name, so `GEval.new(threshold: 0.9)` keeps its 0.9 threshold even
+  when the run sets `threshold: 0.5`.
+
   ## Results
 
   Returns a list of result lists, one per test case:
@@ -117,8 +122,8 @@ defmodule DeepEvalEx.Evaluator do
   end
 
   def evaluate_metric(test_case, %{__struct__: module} = metric_struct, opts) do
-    # For metric structs that contain configuration
-    merged_opts = Keyword.merge(struct_to_opts(metric_struct), opts)
+    # Run-level options are defaults; a metric's own configuration wins.
+    merged_opts = Keyword.merge(opts, struct_to_opts(metric_struct))
 
     case module.measure(test_case, merged_opts) do
       {:ok, result} -> result
@@ -126,12 +131,13 @@ defmodule DeepEvalEx.Evaluator do
     end
   end
 
-  # Convert a metric struct to options keyword list
+  # Convert a metric struct to an options keyword list, dropping unset
+  # (nil) fields so they neither mask run-level options nor shadow the
+  # metric's own defaults in `Keyword.get/3`.
   defp struct_to_opts(struct) do
     struct
     |> Map.from_struct()
-    |> Map.to_list()
-    |> Keyword.new()
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
   end
 
   defp error_result(reason, metrics) do
