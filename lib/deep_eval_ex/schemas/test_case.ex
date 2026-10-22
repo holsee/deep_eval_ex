@@ -15,8 +15,11 @@ defmodule DeepEvalEx.TestCase do
     ContextualRecall, ContextualRelevancy)
   - `:context` - List of ideal, ground-truth context for the input, for
     Hallucination
-  - `:tools_called` - List of tool calls made by the LLM
-  - `:expected_tools` - Expected tool calls for tool use evaluation
+  - `:tools_called` - List of tool calls made by the LLM. `nil` (deepeval's
+    `None`) when not given, which a metric requiring it reports as missing;
+    an empty list is a test case that called no tools
+  - `:expected_tools` - Expected tool calls for tool use evaluation, `nil`
+    when not given
   - `:metadata` - Additional metadata for the test case
   - `:name` - Optional name identifying the test case
   - `:tags` - Optional list of tags
@@ -89,8 +92,8 @@ defmodule DeepEvalEx.TestCase do
           expected_output: String.t() | nil,
           retrieval_context: [String.t()] | nil,
           context: [String.t()] | nil,
-          tools_called: [ToolCall.t()],
-          expected_tools: [ToolCall.t()],
+          tools_called: [ToolCall.t()] | nil,
+          expected_tools: [ToolCall.t()] | nil,
           metadata: map() | nil,
           name: String.t() | nil,
           tags: [String.t()] | nil,
@@ -120,8 +123,8 @@ defmodule DeepEvalEx.TestCase do
     :completion_time,
     :custom_column_key_values,
     :expected_labels,
-    tools_called: [],
-    expected_tools: [],
+    :tools_called,
+    :expected_tools,
     flaky: false
   ]
 

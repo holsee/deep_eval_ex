@@ -6,6 +6,7 @@ defmodule DeepEvalEx.Schemas.VerdictSchemasTest do
 
   alias DeepEvalEx.Schemas.MetricOutputs.{
     AnswerRelevancy,
+    ArgumentCorrectness,
     Bias,
     ContextualPrecision,
     ContextualRecall,
@@ -29,7 +30,8 @@ defmodule DeepEvalEx.Schemas.VerdictSchemasTest do
     {Bias, ["yes", "no"]},
     {Toxicity, ["yes", "no"]},
     {PIILeakage, ["yes", "no"]},
-    {PromptAlignment, ["yes", "no"]}
+    {PromptAlignment, ["yes", "no"]},
+    {ArgumentCorrectness, ["yes", "no"]}
   ]
 
   for {schema, vocabulary} <- @vocabularies do

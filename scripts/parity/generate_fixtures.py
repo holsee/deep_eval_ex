@@ -46,7 +46,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the twelve LLM-judged metrics, the way the metric itself renders it
+uses for the thirteen LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -112,6 +112,7 @@ from deepeval.evaluate.configs import (  # noqa: E402
 )
 from deepeval.metrics import (  # noqa: E402
     AnswerRelevancyMetric,
+    ArgumentCorrectnessMetric,
     BaseMetric,
     BiasMetric,
     ContextualPrecisionMetric,
@@ -555,6 +556,7 @@ SCRIPTED_METRICS = {
     "toxicity": ToxicityMetric,
     "pii_leakage": PIILeakageMetric,
     "prompt_alignment": PromptAlignmentMetric,
+    "argument_correctness": ArgumentCorrectnessMetric,
     "tool_correctness": ToolCorrectnessMetric,
 }
 
@@ -840,6 +842,19 @@ PROMPT_RENDERERS = {
         actual_output=i["actual_output"],
         score=_score(i),
     ),
+    # ArgumentCorrectness prints the ToolCalls themselves: Jinja's str() of
+    # the list, each its ToolCall.__repr__.
+    "ArgumentCorrectnessMetric.generate_verdicts": lambda i: _prompt(
+        ArgumentCorrectnessMetric, "generate_verdicts",
+        input=i["input"],
+        stringified_tools_called=[ToolCall(**t) for t in i["tools_called"]],
+    ),
+    "ArgumentCorrectnessMetric.generate_reason": lambda i: _prompt(
+        ArgumentCorrectnessMetric, "generate_reason",
+        incorrect_tool_calls_reasons=i["incorrect_tool_calls_reasons"],
+        input=i["input"],
+        score=_score(i),
+    ),
     # System One (`eval_mode`) templates: the questions of the whole metric
     # under `system_one`, and the question asked about each item under
     # `hybrid`. They take no arguments.
@@ -898,6 +913,12 @@ PROMPT_RENDERERS = {
     ),
     "PromptAlignmentMetric._experimental_system_one_verdict": lambda i: _prompt_alignment(
         "_experimental_system_one_verdict", i,
+    ),
+    "ArgumentCorrectnessMetric._experimental_system_one_questions": lambda i: _prompt(
+        ArgumentCorrectnessMetric, "_experimental_system_one_questions",
+    ),
+    "ArgumentCorrectnessMetric._experimental_system_one_verdict": lambda i: _prompt(
+        ArgumentCorrectnessMetric, "_experimental_system_one_verdict",
     ),
     "HallucinationMetric._experimental_system_one_questions": lambda i: _prompt(
         HallucinationMetric, "_experimental_system_one_questions",
@@ -1228,6 +1249,44 @@ PROMPT_CASES = {
             "actual_output": "Your order ships tomorrow.",
         },
     },
+    # Each tool call is its ToolCall.__repr__: the set fields, `type` always,
+    # input_parameters and a dict output as json.dumps(indent=4,
+    # ensure_ascii=False), any other output as its repr(). Keys are sorted
+    # so the golden does not depend on dict order.
+    "argument_correctness_generate_verdicts": {
+        "template": "ArgumentCorrectnessMetric.generate_verdicts",
+        "inputs": {
+            "input": "Book a table for two in Zürich on Friday.",
+            "tools_called": [
+                {
+                    "name": "restaurant_search",
+                    "description": "Finds \"open\" restaurants",
+                    "reasoning": "I need a restaurant in Zürich first.",
+                    "input_parameters": {
+                        "city": "Zürich",
+                        "filters": {"cuisine": ["swiss", "italian"], "open": True},
+                        "party_size": 2,
+                    },
+                    "output": {"results": [{"name": "Café Odéon", "rating": 4.5}]},
+                },
+                {
+                    "name": "book_table",
+                    "type": "MCP",
+                    "input_parameters": {"day": "Saturday", "restaurant": "Café Odéon"},
+                    "output": "Booked for Saturday at 19:00",
+                },
+                {"name": "get_time", "output": 3},
+            ],
+        },
+    },
+    "argument_correctness_generate_reason": {
+        "template": "ArgumentCorrectnessMetric.generate_reason",
+        "inputs": {
+            "score": 0.3333333333333333,
+            "incorrect_tool_calls_reasons": ["It books Saturday, not Friday.", None],
+            "input": "Book a table for two in Zürich on Friday.",
+        },
+    },
     "faithfulness_experimental_system_one_questions": {
         "template": "FaithfulnessMetric._experimental_system_one_questions",
         "inputs": {},
@@ -1307,6 +1366,14 @@ PROMPT_CASES = {
         "template": "PromptAlignmentMetric._experimental_system_one_verdict",
         "inputs": {"prompt_instructions": ["Reply in English."]},
     },
+    "argument_correctness_experimental_system_one_questions": {
+        "template": "ArgumentCorrectnessMetric._experimental_system_one_questions",
+        "inputs": {},
+    },
+    "argument_correctness_experimental_system_one_verdict": {
+        "template": "ArgumentCorrectnessMetric._experimental_system_one_verdict",
+        "inputs": {},
+    },
     "hallucination_experimental_system_one_questions": {
         "template": "HallucinationMetric._experimental_system_one_questions",
         "inputs": {},
@@ -1334,7 +1401,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the twelve metrics is rendered
+    """Fails unless every bundled template of the thirteen metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()

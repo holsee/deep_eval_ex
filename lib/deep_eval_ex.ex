@@ -59,6 +59,8 @@ defmodule DeepEvalEx do
     prompt template's instructions
   - `DeepEvalEx.Metrics.ToolCorrectness` - Agent tool calls against the
     expected tools
+  - `DeepEvalEx.Metrics.ArgumentCorrectness` - Whether each agent tool
+    call's arguments address the input
   - `DeepEvalEx.Metrics.JevEval` - Your own weighted questions, decided by
     a System One model (Jev)
 

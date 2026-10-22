@@ -76,6 +76,7 @@ config :deep_eval_ex,
 | **PIILeakage** | Personally identifiable information and privacy-sensitive data in the output |
 | **PromptAlignment** | Whether the output follows the prompt template's instructions |
 | **ToolCorrectness** | Agent tool calls against the expected tools |
+| **ArgumentCorrectness** | Whether each agent tool call's arguments address the input |
 | **JevEval** | Your own weighted Noul, Score and Choice questions, decided by a System One model (Jev) |
 
 See the [Metrics Overview](wiki/metrics/Overview.md) for detailed documentation on each metric.

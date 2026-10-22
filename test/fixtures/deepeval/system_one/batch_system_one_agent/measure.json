@@ -1,0 +1,118 @@
+[
+  {
+    "score": 0.37916666666666665,
+    "success": false,
+    "reason": "Decided by fake-jev, minimum confidence 0.40.\n1. Every tool call in `tools_called` has `input_parameters` that correctly address `input`. -> likely fails (P(yes)=0.30, confidence=0.40, weight=2)\n2. No tool call in `tools_called` has `input_parameters` that are missing, irrelevant to `input`, or wrong for `input`. -> likely fails (P(yes)=0.25, confidence=0.50)\n3. How many of the tool calls in `tools_called` have `input_parameters` that correctly address `input`? -> \"Most of them\" (expected level=0.67 of 1.00, confidence=0.40)\nScore: 0.38 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 8.4e-05,
+    "input_tokens": 2000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every tool call in `tools_called` has `input_parameters` that correctly address `input`.\n   value=0.300 applicable=True probabilities={'true': 0.3, 'false': 0.7} confidence=0.400\n2. [noul, weight=1] No tool call in `tools_called` has `input_parameters` that are missing, irrelevant to `input`, or wrong for `input`.\n   value=0.250 applicable=True probabilities={'true': 0.25, 'false': 0.75} confidence=0.500\n3. [score, weight=1] How many of the tool calls in `tools_called` have `input_parameters` that correctly address `input`?\n   value=0.667 applicable=True probabilities={'None of them': 0.05, 'Less than half': 0.3, 'Most of them': 0.55, 'All of them': 0.1} confidence=0.400",
+    "confidence": 0.4,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every tool call in `tools_called` has `input_parameters` that correctly address `input`.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.3,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.3,
+          "false": 0.7
+        },
+        "confidence": 0.4,
+        "passed": null
+      },
+      {
+        "question": "No tool call in `tools_called` has `input_parameters` that are missing, irrelevant to `input`, or wrong for `input`.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.25,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.25,
+          "false": 0.75
+        },
+        "confidence": 0.5,
+        "passed": null
+      },
+      {
+        "question": "How many of the tool calls in `tools_called` have `input_parameters` that correctly address `input`?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.6666666666666666,
+        "applicable": true,
+        "probabilities": {
+          "None of them": 0.05,
+          "Less than half": 0.3,
+          "Most of them": 0.55,
+          "All of them": 0.1
+        },
+        "confidence": 0.4,
+        "passed": null
+      }
+    ],
+    "raised": null
+  },
+  {
+    "score": 0.8125,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.40.\n1. Every statement in `actual_output` is relevant to addressing `input`. -> likely holds (P(yes)=0.70, confidence=0.40, weight=2)\n2. `actual_output` directly addresses what `input` asks for, rather than a different or broader topic. -> clearly holds (P(yes)=0.85, confidence=0.70)\n3. How much of `actual_output` is relevant to addressing `input`? -> \"All of it\" (expected level=1.00 of 1.00, confidence=0.80)\nScore: 0.81 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 8.4e-05,
+    "input_tokens": 2000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every statement in `actual_output` is relevant to addressing `input`.\n   value=0.700 applicable=True probabilities={'true': 0.7, 'false': 0.3} confidence=0.400\n2. [noul, weight=1] `actual_output` directly addresses what `input` asks for, rather than a different or broader topic.\n   value=0.850 applicable=True probabilities={'true': 0.85, 'false': 0.15} confidence=0.700\n3. [score, weight=1] How much of `actual_output` is relevant to addressing `input`?\n   value=1.000 applicable=True probabilities={'None of it': 0.0, 'Less than half': 0.05, 'Most of it': 0.15, 'All of it': 0.8} confidence=0.800",
+    "confidence": 0.3999999999999999,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every statement in `actual_output` is relevant to addressing `input`.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.7,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.7,
+          "false": 0.30000000000000004
+        },
+        "confidence": 0.3999999999999999,
+        "passed": null
+      },
+      {
+        "question": "`actual_output` directly addresses what `input` asks for, rather than a different or broader topic.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.85,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.85,
+          "false": 0.15000000000000002
+        },
+        "confidence": 0.7,
+        "passed": null
+      },
+      {
+        "question": "How much of `actual_output` is relevant to addressing `input`?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 1.0,
+        "applicable": true,
+        "probabilities": {
+          "None of it": 0.0,
+          "Less than half": 0.05,
+          "Most of it": 0.15,
+          "All of it": 0.8
+        },
+        "confidence": 0.8,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

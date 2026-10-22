@@ -54,7 +54,7 @@ defmodule DeepEvalEx.ScriptedParityTest do
     end
   end
 
-  test "covers each of the thirteen metrics" do
+  test "covers each of the fourteen metrics" do
     kinds =
       @scenarios
       |> Enum.map(&(&1 |> fixture("script.json") |> File.read!() |> Jason.decode!()))
@@ -63,7 +63,7 @@ defmodule DeepEvalEx.ScriptedParityTest do
       |> Enum.sort()
 
     assert kinds ==
-             ~w(answer_relevancy bias contextual_precision contextual_recall contextual_relevancy
+             ~w(answer_relevancy argument_correctness bias contextual_precision contextual_recall contextual_relevancy
                 exact_match faithfulness g_eval hallucination pii_leakage prompt_alignment
                 tool_correctness toxicity)
   end

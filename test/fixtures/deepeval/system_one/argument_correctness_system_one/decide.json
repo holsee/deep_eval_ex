@@ -1,0 +1,158 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "Book a table for two in Zürich on Friday.",
+            "tools_called": [
+              {
+                "name": "restaurant_search",
+                "type": "FUNCTION",
+                "description": "Find restaurants in a city",
+                "input_parameters": {
+                  "city": "Zürich",
+                  "party_size": 2
+                }
+              },
+              {
+                "name": "book_table",
+                "type": "FUNCTION",
+                "output": "Booked for Saturday at 19:00",
+                "input_parameters": {
+                  "day": "Saturday",
+                  "restaurant": "Café Odéon"
+                }
+              }
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every tool call in `tools_called` has `input_parameters` that correctly address `input`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "No tool call in `tools_called` has `input_parameters` that are missing, irrelevant to `input`, or wrong for `input`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How many of the tool calls in `tools_called` have `input_parameters` that correctly address `input`?",
+            "criteria": [
+              "None of them",
+              "Less than half",
+              "Most of them",
+              "All of them"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.2
+            },
+            "q_1": {
+              "probability": 0.3
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 2.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.3,
+                "2": 0.55,
+                "3": 0.1
+              },
+              "confidence": 0.4
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "input": "Book a table for two in Zürich on Friday.",
+          "tools_called": [
+            {
+              "name": "restaurant_search",
+              "type": "FUNCTION",
+              "description": "Find restaurants in a city",
+              "input_parameters": {
+                "city": "Zürich",
+                "party_size": 2
+              }
+            },
+            {
+              "name": "book_table",
+              "type": "FUNCTION",
+              "output": "Booked for Saturday at 19:00",
+              "input_parameters": {
+                "day": "Saturday",
+                "restaurant": "Café Odéon"
+              }
+            }
+          ]
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "Every tool call in `tools_called` has `input_parameters` that correctly address `input`."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "No tool call in `tools_called` has `input_parameters` that are missing, irrelevant to `input`, or wrong for `input`."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "How many of the tool calls in `tools_called` have `input_parameters` that correctly address `input`?",
+          "criteria": [
+            "None of them",
+            "Less than half",
+            "Most of them",
+            "All of them"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.2
+          },
+          "q_1": {
+            "probability": 0.3
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 2.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.3,
+              "2": 0.55,
+              "3": 0.1
+            },
+            "confidence": 0.4
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

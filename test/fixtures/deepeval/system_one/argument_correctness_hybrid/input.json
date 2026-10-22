@@ -1,0 +1,62 @@
+{
+  "description": "ArgumentCorrectness in hybrid mode: Jev judges each tool call's input parameters",
+  "metrics": [
+    {
+      "kind": "argument_correctness",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Book a table for two in Zürich on Friday.",
+    "actual_output": "Your table at Café Odéon is booked for Saturday.",
+    "tools_called": [
+      {
+        "name": "restaurant_search",
+        "description": "Find restaurants in a city",
+        "input_parameters": {
+          "city": "Zürich",
+          "party_size": 2
+        }
+      },
+      {
+        "name": "book_table",
+        "input_parameters": {
+          "day": "Saturday",
+          "restaurant": "Café Odéon"
+        },
+        "output": "Booked for Saturday at 19:00"
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "tool_call_0": {
+          "probability": 0.92
+        },
+        "tool_call_1": {
+          "probability": 0.08
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "argument_correctness": {
+      "reason": [
+        {
+          "reason": "The score is 0.50 because the booking is for Saturday, not Friday."
+        }
+      ]
+    }
+  }
+}

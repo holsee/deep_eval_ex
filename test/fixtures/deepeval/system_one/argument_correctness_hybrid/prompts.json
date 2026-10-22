@@ -1,0 +1,8 @@
+[
+  [
+    {
+      "step": "reason",
+      "prompt": "Given the argument correctness score, the list of reasons of incorrect tool calls, and the input, provide a CONCISE reason for the score. Explain why it is not higher, but also why it is at its current score. You can mention tool calls or input, but do not mention an output or a response.\nIf there is nothing incorrect, just say something positive with an upbeat encouraging tone (but don't overdo it otherwise it gets annoying).\n\n\n\n**\nIMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason. Ensure all strings are closed appropriately. Repair any invalid JSON before you output it.\n\nExample:\nExample JSON:\n{\n  \"reason\": \"The score is <argument_correctness_score> because <your_reason>.\"\n}\n===== END OF EXAMPLE ======\n**\n\n\nArgument Correctness Score:\n0.50\n\nReasons why the score can't be higher based on incorrect tool calls:\n['P(yes)=0.08']\n\nInput:\nBook a table for two in Zürich on Friday.\n\nJSON:"
+    }
+  ]
+]

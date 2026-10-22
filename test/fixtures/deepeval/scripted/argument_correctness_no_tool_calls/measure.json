@@ -1,0 +1,12 @@
+{
+  "score": 1.0,
+  "success": true,
+  "reason": "No tool calls provided",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Verdicts:\n[]"
+}

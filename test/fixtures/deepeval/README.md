@@ -7,7 +7,7 @@ Fixtures written by **deepeval 4.3.1**, in five sets:
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
-  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's thirteen
+  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's fourteen
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
 - [prompt goldens](#prompt-goldens) (`prompts/`), used by
@@ -128,8 +128,9 @@ calling an LLM. A script holds:
 
 - `metric` - `kind` (`exact_match`, `g_eval`, `faithfulness`, `hallucination`,
   `answer_relevancy`, `contextual_precision`, `contextual_recall`,
-  `contextual_relevancy`, `bias`, `toxicity`, `pii_leakage`, `prompt_alignment`
-  or `tool_correctness`) and the metric's constructor `params`
+  `contextual_relevancy`, `bias`, `toxicity`, `pii_leakage`, `prompt_alignment`,
+  `argument_correctness` or `tool_correctness`) and the metric's constructor
+  `params`
 - `test_case` - keyword arguments of deepeval's `LLMTestCase`
 - `judge_model` - the name the judge reports as the evaluation model
 - `responses` - the judge's answers, keyed by metric kind, then by step, then
@@ -186,6 +187,7 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | Toxicity | `toxicity_pass`, `toxicity_fail` (a `yes` verdict without a reason, listed as `None` in the reason prompt), `toxicity_no_opinions` (no opinions: no `verdicts` call, the integer `1`), `toxicity_strict` |
 | PIILeakage | `pii_leakage_pass`, `pii_leakage_fail`, `pii_leakage_no_pii` (nothing extracted: no `verdicts` call, the integer `1`), `pii_leakage_strict`; every verdict has a reason, which deepeval's `PIILeakageVerdict` requires |
 | PromptAlignment | `prompt_alignment_pass`, `prompt_alignment_fail` (a `no` verdict without a reason, listed as `None` in the reason prompt), `prompt_alignment_no_verdicts` (an empty list: the integer `1`), `prompt_alignment_strict`; `prompt_instructions` is a constructor param |
+| ArgumentCorrectness | `argument_correctness_pass`, `argument_correctness_fail` (an MCP tool call, a call with no input parameters, a `no` verdict without a reason, listed as `None` in the reason prompt), `argument_correctness_no_tool_calls` (`tools_called: []`: no judge call, the float `1.0`, `"No tool calls provided"`, and `toolsCalled: []` in the export), `argument_correctness_strict`; each tool call reaches the verdicts prompt as its `ToolCall.__repr__` |
 | ToolCorrectness | `tool_correctness_pass`, `tool_correctness_fail`, `tool_correctness_available_tools` (LLM-scored tool selection), `tool_correctness_strict` |
 
 ### Not covered
@@ -218,7 +220,7 @@ scenarios, why it fails and its tag.
 ## Prompt goldens
 
 `prompts/<case>/` holds one prompt deepeval 4.3.1 renders for one of the
-twelve LLM-judged metrics, for fixed inputs:
+thirteen LLM-judged metrics, for fixed inputs:
 
 - `input.json` - `template`, deepeval's template class key and method (e.g.
   `FaithfulnessMetric.generate_truths`, from
@@ -282,6 +284,8 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.PIILeakage.generate_reason/1` | `PIILeakageMetric.generate_reason` (`pii_leakage/templates/generate_reason.txt`) | `privacy_violations` (list), `score` (`.2f`) | `pii_leakage_generate_reason` |
 | `Prompts.PromptAlignment.generate_verdicts/1` | `PromptAlignmentMetric.generate_verdicts` (`prompt_alignment/templates/generate_verdicts.txt`) | `prompt_instructions` (list), `input`, `actual_output` (the multimodal rules always included) | `prompt_alignment_generate_verdicts` |
 | `Prompts.PromptAlignment.generate_reason/1` | `PromptAlignmentMetric.generate_reason` (`prompt_alignment/templates/generate_reason.txt`) | `unalignment_reasons` (list, `None` included), `input`, `actual_output`, `score` (`.2f`) | `prompt_alignment_generate_reason` |
+| `Prompts.ArgumentCorrectness.generate_verdicts/1` | `ArgumentCorrectnessMetric.generate_verdicts` (`argument_correctness/templates/generate_verdicts.txt`) | `input`, `tools_called` (a Python list of `ToolCall.__repr__`: every set field, `type` always, `input_parameters` and a dict `output` as `json.dumps(indent=4, ensure_ascii=False)`, any other `output` as its `repr()`; the multimodal rules left out for a text-only test case) | `argument_correctness_generate_verdicts` |
+| `Prompts.ArgumentCorrectness.generate_reason/1` | `ArgumentCorrectnessMetric.generate_reason` (`argument_correctness/templates/generate_reason.txt`) | `incorrect_tool_calls_reasons` (list, `None` included), `input`, `score` (`.2f`) | `argument_correctness_generate_reason` |
 | `Prompts.ToolCorrectness.get_tool_selection_score/1` | `ToolCorrectnessMetric.get_tool_selection_score` (`tool_correctness/templates/get_tool_selection_score.txt`) | `user_input`, `tools_called`, `available_tools` (both `print_tools_called`) | `tool_correctness_get_tool_selection_score` |
 | `Prompts.Faithfulness.system_one_questions/0` | `FaithfulnessMetric._experimental_system_one_questions` (`faithfulness/templates/_experimental_system_one_questions.txt`) | none | `faithfulness_experimental_system_one_questions` |
 | `Prompts.Faithfulness.system_one_verdict/0` | `FaithfulnessMetric._experimental_system_one_verdict` (`faithfulness/templates/_experimental_system_one_verdict.txt`) | none | `faithfulness_experimental_system_one_verdict` |
@@ -301,6 +305,8 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.PIILeakage.system_one_verdict/0` | `PIILeakageMetric._experimental_system_one_verdict` (`pii_leakage/templates/_experimental_system_one_verdict.txt`) | none | `pii_leakage_experimental_system_one_verdict` |
 | `Prompts.PromptAlignment.system_one_questions/1` | `PromptAlignmentMetric._experimental_system_one_questions` (`prompt_alignment/templates/_experimental_system_one_questions.txt`) | `prompt_instructions` (one Noul each, written with Jinja's `tojson`: non-ASCII, `<`, `>`, `&` and `'` escaped) | `prompt_alignment_experimental_system_one_questions` |
 | `Prompts.PromptAlignment.system_one_verdict/0` | `PromptAlignmentMetric._experimental_system_one_verdict` (`prompt_alignment/templates/_experimental_system_one_verdict.txt`) | none | `prompt_alignment_experimental_system_one_verdict` |
+| `Prompts.ArgumentCorrectness.system_one_questions/0` | `ArgumentCorrectnessMetric._experimental_system_one_questions` (`argument_correctness/templates/_experimental_system_one_questions.txt`) | none | `argument_correctness_experimental_system_one_questions` |
+| `Prompts.ArgumentCorrectness.system_one_verdict/0` | `ArgumentCorrectnessMetric._experimental_system_one_verdict` (`argument_correctness/templates/_experimental_system_one_verdict.txt`) | none | `argument_correctness_experimental_system_one_verdict` |
 | `Prompts.Hallucination.system_one_questions/0` | `HallucinationMetric._experimental_system_one_questions` (`hallucination/templates/_experimental_system_one_questions.txt`) | none | `hallucination_experimental_system_one_questions` |
 | `Prompts.Hallucination.system_one_verdict/0` | `HallucinationMetric._experimental_system_one_verdict` (`hallucination/templates/_experimental_system_one_verdict.txt`) | none | `hallucination_experimental_system_one_verdict` |
 | `Prompts.ToolCorrectness.system_one_tool_selection_score/0` | `ToolCorrectnessMetric._experimental_system_one_tool_selection_score` (`tool_correctness/templates/_experimental_system_one_tool_selection_score.txt`) | none | `tool_correctness_experimental_system_one_tool_selection_score` |
@@ -348,7 +354,9 @@ ordered levels) or a **Choice** (one of a closed set of options). A metric's
   metric's `_experimental_system_one_questions` template (two Nouls and a
   four-level Score for each of the six RAG metrics, one Noul and a
   four-level Score about `actual_output` for Bias, Toxicity and PIILeakage,
-  one Noul per prompt instruction for PromptAlignment). The score is the
+  one Noul per prompt instruction for PromptAlignment, two Nouls and a
+  four-level Score about `input` and the structured `tools_called` for
+  ArgumentCorrectness). The score is the
   weighted mean of the answers, the reason deterministic text built from
   them, and no LLM is called. A Jev error is not caught.
 - `hybrid` - the LLM extracts and writes the reason; Jev takes the decisions,
@@ -430,9 +438,9 @@ Each `system_one/<scenario>/` holds:
 
 | Scenario | Covers |
 | --- | --- |
-| `<metric>_system_one` | Faithfulness, Hallucination, AnswerRelevancy, ContextualPrecision, ContextualRecall, ContextualRelevancy, Bias, Toxicity, PIILeakage, PromptAlignment: the whole metric in one request; ToolCorrectness: runs as `hybrid`, Jev scores tool selection |
+| `<metric>_system_one` | Faithfulness, Hallucination, AnswerRelevancy, ContextualPrecision, ContextualRecall, ContextualRelevancy, Bias, Toxicity, PIILeakage, PromptAlignment, ArgumentCorrectness: the whole metric in one request; ToolCorrectness: runs as `hybrid`, Jev scores tool selection |
 | `faithfulness_system_one_strict` | Strict mode on Jev: one question misses the strict bar, score 0 |
-| `<metric>_hybrid` | The same eleven metrics in `hybrid`: the LLM extracts and explains (`prompts.json`), Jev decides each item; ContextualRelevancy asks one request per retrieval context node, about its sentences (`statement_<i>`); Bias and Toxicity ask whether each opinion is biased (toxic), `opinion_<i>`, P(yes) of `0.5` and above failing it; PIILeakage whether each extracted statement holds PII, `statement_<i>`, likewise; PromptAlignment whether each instruction is followed, `instruction_<i>` with `input` and `actual_output` in the state, P(yes) of `0.5` and above passing it (no LLM extraction) |
+| `<metric>_hybrid` | The same twelve metrics in `hybrid`: the LLM extracts and explains (`prompts.json`), Jev decides each item; ContextualRelevancy asks one request per retrieval context node, about its sentences (`statement_<i>`); Bias and Toxicity ask whether each opinion is biased (toxic), `opinion_<i>`, P(yes) of `0.5` and above failing it; PIILeakage whether each extracted statement holds PII, `statement_<i>`, likewise; PromptAlignment whether each instruction is followed, `instruction_<i>` with `input` and `actual_output` in the state, P(yes) of `0.5` and above passing it (no LLM extraction); ArgumentCorrectness whether each tool call's input parameters address the input, `tool_call_<i>` holding the call's `ToolCall.__repr__` with `input` in the state, likewise passing (no LLM extraction) |
 | `<metric>_hybrid_fallback` | `hybrid` with `ExplodingSystemOneModel`: each Jev call fails, the scripted judge takes the decisions, `system_one_fallback_reason` set |
 | `jev_eval` | `JevEval` with a weighted Noul, a Score and a Choice (credits and a not-applicable option) |
 | `jev_eval_strict_not_applicable` | `JevEval` in strict mode without the `[JevEval]` suffix, a Noul with `true` / `false` criteria, a Choice judged not applicable |
@@ -440,6 +448,7 @@ Each `system_one/<scenario>/` holds:
 | `batch_system_one_retrieval` | ContextualRelevancy and ContextualPrecision batched into one request by `evaluate()` |
 | `batch_system_one_safety` | Bias and Toxicity batched into one request about `actual_output` by `evaluate()` |
 | `batch_system_one_pii_alignment` | PIILeakage and PromptAlignment (with its own `prompt_instructions`) batched into one request by `evaluate()` |
+| `batch_system_one_agent` | ArgumentCorrectness and AnswerRelevancy batched into one request by `evaluate()`, the state merging `input`, `tools_called` and `actual_output` |
 | `batch_system_one_down` | Two batched metrics with Jev down: no fallback, `measure()` raises and `evaluate()` records the error on each metric |
 | `refusal_classifier_system_one` | `RefusalClassifier` on Jev: one Choice over its labels, deterministic reason |
 
@@ -458,7 +467,7 @@ Mock adapter's script, and compares the `decide()` calls of `measure()` and
 `evaluate()`, the measured state, the judge's prompts and the test run with
 the fixture, byte for byte. It covers Faithfulness, AnswerRelevancy,
 ContextualPrecision, ContextualRecall, ContextualRelevancy, Hallucination,
-Bias, Toxicity, PIILeakage, PromptAlignment and ToolCorrectness: each one's `system_one`, `hybrid` and `hybrid_fallback`
+Bias, Toxicity, PIILeakage, PromptAlignment, ArgumentCorrectness and ToolCorrectness: each one's `system_one`, `hybrid` and `hybrid_fallback`
 scenarios, and `faithfulness_system_one_strict`, and
 `DeepEvalEx.Metrics.JevEval` (`jev_eval` and
 `jev_eval_strict_not_applicable`), and the batched scenarios.

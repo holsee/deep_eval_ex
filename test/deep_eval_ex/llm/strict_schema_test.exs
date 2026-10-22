@@ -215,6 +215,7 @@ defmodule DeepEvalEx.LLM.StrictSchemaTest do
   describe "built-in metric schemas" do
     @schemas [
       {MetricOutputs.AnswerRelevancy, [:statements_schema, :verdicts_schema, :reason_schema]},
+      {MetricOutputs.ArgumentCorrectness, [:verdicts_schema, :reason_schema]},
       {MetricOutputs.Bias, [:opinions_schema, :verdicts_schema, :reason_schema]},
       {MetricOutputs.ContextualPrecision, [:verdicts_schema, :reason_schema]},
       {MetricOutputs.ContextualRecall, [:verdicts_schema, :reason_schema]},

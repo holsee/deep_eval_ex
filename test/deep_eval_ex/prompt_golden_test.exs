@@ -76,6 +76,10 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "PIILeakageMetric.generate_reason" => {Prompts.PIILeakage, :generate_reason},
     "PromptAlignmentMetric.generate_verdicts" => {Prompts.PromptAlignment, :generate_verdicts},
     "PromptAlignmentMetric.generate_reason" => {Prompts.PromptAlignment, :generate_reason},
+    "ArgumentCorrectnessMetric.generate_verdicts" =>
+      {Prompts.ArgumentCorrectness, :generate_verdicts},
+    "ArgumentCorrectnessMetric.generate_reason" =>
+      {Prompts.ArgumentCorrectness, :generate_reason},
     "ToolCorrectnessMetric.get_tool_selection_score" =>
       {Prompts.ToolCorrectness, :get_tool_selection_score},
     "FaithfulnessMetric._experimental_system_one_questions" =>
@@ -111,6 +115,10 @@ defmodule DeepEvalEx.PromptGoldenTest do
       {Prompts.PromptAlignment, :system_one_questions},
     "PromptAlignmentMetric._experimental_system_one_verdict" =>
       {Prompts.PromptAlignment, :system_one_verdict},
+    "ArgumentCorrectnessMetric._experimental_system_one_questions" =>
+      {Prompts.ArgumentCorrectness, :system_one_questions},
+    "ArgumentCorrectnessMetric._experimental_system_one_verdict" =>
+      {Prompts.ArgumentCorrectness, :system_one_verdict},
     "HallucinationMetric._experimental_system_one_questions" =>
       {Prompts.Hallucination, :system_one_questions},
     "HallucinationMetric._experimental_system_one_verdict" =>
@@ -133,7 +141,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the twelve LLM metrics" do
+  test "covers every template of the thirteen LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -143,6 +151,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     prompt_functions =
       for module <- [
             Prompts.AnswerRelevancy,
+            Prompts.ArgumentCorrectness,
             Prompts.Bias,
             Prompts.ContextualPrecision,
             Prompts.ContextualRecall,
@@ -348,6 +357,17 @@ defmodule DeepEvalEx.PromptGoldenTest do
 
   defp options("PromptAlignmentMetric._experimental_system_one_questions", inputs),
     do: [prompt_instructions: inputs["prompt_instructions"]]
+
+  defp options("ArgumentCorrectnessMetric.generate_verdicts", inputs),
+    do: [input: inputs["input"], tools_called: tool_calls(inputs["tools_called"])]
+
+  defp options("ArgumentCorrectnessMetric.generate_reason", inputs) do
+    [
+      incorrect_tool_calls_reasons: inputs["incorrect_tool_calls_reasons"],
+      input: inputs["input"],
+      score: inputs["score"]
+    ]
+  end
 
   defp options("ToolCorrectnessMetric.get_tool_selection_score", inputs) do
     [

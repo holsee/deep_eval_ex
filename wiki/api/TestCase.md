@@ -15,8 +15,8 @@ A test case contains the input prompt, the LLM's actual output, and optional con
 | `expected_output` | `String.t()` | The expected/ground truth output |
 | `retrieval_context` | `[String.t()]` | Context chunks your retriever returned at run time, for RAG metrics |
 | `context` | `[String.t()]` | Ideal, ground-truth context for the input, for Hallucination |
-| `tools_called` | `[ToolCall.t()]` | List of tool calls made by the LLM |
-| `expected_tools` | `[ToolCall.t()]` | Expected tool calls for tool use evaluation |
+| `tools_called` | `[ToolCall.t()]` | List of tool calls made by the LLM; `nil` when not given (an empty list means no tools were called) |
+| `expected_tools` | `[ToolCall.t()]` | Expected tool calls for tool use evaluation; `nil` when not given |
 | `metadata` | `map()` | Additional metadata |
 | `name` | `String.t()` | Optional name/identifier for the test case |
 | `tags` | `[String.t()]` | Tags for filtering/grouping |
@@ -115,6 +115,7 @@ Different metrics require different fields:
 | Toxicity | `input`, `actual_output` |
 | PIILeakage | `input`, `actual_output` |
 | PromptAlignment | `input`, `actual_output` (and the metric's `prompt_instructions`) |
+| ArgumentCorrectness | `input`, `tools_called` |
 
 ## Helper Functions
 

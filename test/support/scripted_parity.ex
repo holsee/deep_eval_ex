@@ -21,6 +21,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
 
   alias DeepEvalEx.Metrics.{
     AnswerRelevancy,
+    ArgumentCorrectness,
     Bias,
     ContextualPrecision,
     ContextualRecall,
@@ -54,6 +55,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "toxicity" => Toxicity,
     "pii_leakage" => PIILeakage,
     "prompt_alignment" => PromptAlignment,
+    "argument_correctness" => ArgumentCorrectness,
     "tool_correctness" => ToolCorrectness
   }
 

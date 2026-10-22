@@ -477,8 +477,8 @@ defmodule DeepEvalEx.TestRun do
   `DeepEvalEx.TestRun.JSON.encode!/1` for deepeval's exact bytes, or with
   `Jason` for ordinary JSON.
 
-  Empty `tools_called`, `expected_tools` and `retrieval_context` lists are
-  left out, as deepeval does for test cases that do not set them. Raw JSON
+  An empty `retrieval_context` list is left out, while empty `tools_called`
+  and `expected_tools` lists are kept, as deepeval does. Raw JSON
   fields are written as they are, and `:extra` keys after the others (see
   "Raw JSON" in the module documentation).
   """
@@ -610,8 +610,8 @@ defmodule DeepEvalEx.TestRun do
       expected_output: test_case.expected_output,
       context: test_case.context,
       retrieval_context: non_empty(test_case.retrieval_context),
-      tools_called: non_empty(test_case.tools_called),
-      expected_tools: non_empty(test_case.expected_tools),
+      tools_called: test_case.tools_called,
+      expected_tools: test_case.expected_tools,
       token_cost: test_case.token_cost,
       input_token_count: test_case.input_token_count,
       output_token_count: test_case.output_token_count,

@@ -127,6 +127,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/PIILeakage.md",
         "wiki/metrics/PromptAlignment.md",
         "wiki/metrics/ToolCorrectness.md",
+        "wiki/metrics/ArgumentCorrectness.md",
         # API
         "wiki/api/TestCase.md",
         "wiki/api/Result.md",

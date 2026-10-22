@@ -334,8 +334,8 @@ defmodule DeepEvalEx.TestRunTest do
       assert encode(%TestRun{prompts: []}) =~ ~s("prompts": [])
     end
 
-    test "omits empty tool call and retrieval context lists but keeps an empty context" do
-      test_case = %TestCase{input: "a", context: [], retrieval_context: [], tools_called: []}
+    test "omits an empty retrieval context list but keeps an empty context" do
+      test_case = %TestCase{input: "a", context: [], retrieval_context: []}
       map = [test_case] |> TestRun.from_results([[ok("M", 1.0)]]) |> TestRun.to_map()
 
       [case_map] = get(map, "testCases")
@@ -343,8 +343,16 @@ defmodule DeepEvalEx.TestRunTest do
 
       assert "context" in keys
       refute "retrievalContext" in keys
-      refute "toolsCalled" in keys
-      refute "expectedTools" in keys
+    end
+
+    test "keeps an empty tool call list and omits unset ones, as deepeval's exclude_none" do
+      test_case = %TestCase{input: "a", tools_called: []}
+      map = [test_case] |> TestRun.from_results([[ok("M", 1.0)]]) |> TestRun.to_map()
+
+      [case_map] = get(map, "testCases")
+
+      assert get(case_map, "toolsCalled") == []
+      refute "expectedTools" in Enum.map(case_map.values, &elem(&1, 0))
     end
 
     test "serialises tool calls like deepeval's ToolCall" do

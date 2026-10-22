@@ -110,6 +110,7 @@ from deepeval.evaluate.configs import (  # noqa: E402
 )
 from deepeval.metrics import (  # noqa: E402
     AnswerRelevancyMetric,
+    ArgumentCorrectnessMetric,
     BiasMetric,
     ContextualPrecisionMetric,
     ContextualRecallMetric,
@@ -154,6 +155,7 @@ METRICS = {
     "toxicity": ToxicityMetric,
     "pii_leakage": PIILeakageMetric,
     "prompt_alignment": PromptAlignmentMetric,
+    "argument_correctness": ArgumentCorrectnessMetric,
     "tool_correctness": ToolCorrectnessMetric,
     "jev_eval": JevEval,
 }
@@ -549,6 +551,21 @@ GREETING = {
 }
 GREETING_INSTRUCTIONS = ["Reply in English.", "Respond in all upper case.", "Use the word 'welcome'."]
 
+# ArgumentCorrectness judges the input parameters of each tool call. Under
+# system_one the state holds the structured `tools_called`; under hybrid Jev
+# is asked about each call's repr() (`tool_call_<i>`) with `input` in the
+# state, and a `yes` verdict passes.
+BOOKING = {
+    "input": "Book a table for two in Zürich on Friday.",
+    "actual_output": "Your table at Café Odéon is booked for Saturday.",
+    "tools_called": [
+        {"name": "restaurant_search", "description": "Find restaurants in a city",
+         "input_parameters": {"city": "Zürich", "party_size": 2}},
+        {"name": "book_table", "input_parameters": {"day": "Saturday", "restaurant": "Café Odéon"},
+         "output": "Booked for Saturday at 19:00"},
+    ],
+}
+
 WEATHER_TOOLS = [
     {"name": "get_weather", "description": "Fetch current weather for a city"},
     {"name": "search_web", "description": "Search the web"},
@@ -689,6 +706,16 @@ ALIGNMENT_VERDICTS = {
         {"verdict": "yes"},
         {"verdict": "no", "reason": "The output is not in upper case."},
         {"verdict": "yes"},
+    ]}],
+}
+
+ARGUMENTS_LLM = {
+    "reason": [{"reason": "The score is 0.50 because the booking is for Saturday, not Friday."}],
+}
+ARGUMENTS_VERDICTS = {
+    "verdicts": [{"verdicts": [
+        {"verdict": "yes"},
+        {"verdict": "no", "reason": "It books Saturday, not Friday."},
     ]}],
 }
 
@@ -959,6 +986,31 @@ SCENARIOS = {
         "judge_model": JUDGE,
         "responses": {"prompt_alignment": {**ALIGNMENT_LLM, **ALIGNMENT_VERDICTS}},
     },
+    # ArgumentCorrectness
+    "argument_correctness_system_one": {
+        "description": "ArgumentCorrectness decided by Jev in one request about input and tools_called",
+        "metrics": [metric("argument_correctness", "system_one")],
+        "test_case": BOOKING,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.2, 0.3, 2, {"0": 0.05, "1": 0.3, "2": 0.55, "3": 0.1}, 0.4)},
+    },
+    "argument_correctness_hybrid": {
+        "description": "ArgumentCorrectness in hybrid mode: Jev judges each tool call's input parameters",
+        "metrics": [metric("argument_correctness", "hybrid")],
+        "test_case": BOOKING,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"nouls": {"tool_call_0": noul(0.92), "tool_call_1": noul(0.08)}}},
+        "judge_model": JUDGE,
+        "responses": {"argument_correctness": ARGUMENTS_LLM},
+    },
+    "argument_correctness_hybrid_fallback": {
+        "description": "ArgumentCorrectness in hybrid mode with Jev down: the LLM takes the verdicts",
+        "metrics": [metric("argument_correctness", "hybrid")],
+        "test_case": BOOKING,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"argument_correctness": {**ARGUMENTS_LLM, **ARGUMENTS_VERDICTS}},
+    },
     # ToolCorrectness: no whole-metric form, so `system_one` runs as `hybrid`;
     # its one Jev decision is the tool-selection Score (with available_tools).
     "tool_correctness_system_one": {
@@ -1105,6 +1157,20 @@ SCENARIOS = {
                            "nouls": {"m0.q_0": noul(0.96), "m1.q_0": noul(0.95),
                                      "m1.q_1": noul(0.1), "m1.q_2": noul(0.9)},
                            "scores": {"m0.q_1": score(3, FOUR_LEVELS_HIGH, 0.8)},
+                       }},
+    },
+    "batch_system_one_agent": {
+        "description": "ArgumentCorrectness and AnswerRelevancy batched into one request by evaluate()",
+        "batched": True,
+        "metrics": [metric("argument_correctness", "system_one"),
+                    metric("answer_relevancy", "system_one")],
+        "test_case": BOOKING,
+        "system_one": {"model": JEV, "cost": {"value": 0.000084, "input_tokens": 2000, "output_tokens": 0},
+                       "answers": {
+                           "nouls": {"m0.q_0": noul(0.3), "m0.q_1": noul(0.25),
+                                     "m1.q_0": noul(0.7), "m1.q_1": noul(0.85)},
+                           "scores": {"m0.q_2": score(2, {"0": 0.05, "1": 0.3, "2": 0.55, "3": 0.1}, 0.4),
+                                      "m1.q_2": score(3, FOUR_LEVELS_HIGH, 0.8)},
                        }},
     },
     "batch_system_one_down": {

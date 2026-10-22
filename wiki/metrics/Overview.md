@@ -52,6 +52,7 @@ Evaluate tool-using agents:
 | Metric | Purpose | Required Params |
 |--------|---------|-----------------|
 | [ToolCorrectness](ToolCorrectness.md) | Tools called vs. expected tools | `tools_called`, `expected_tools` |
+| [ArgumentCorrectness](ArgumentCorrectness.md) | Whether each tool call's arguments address the input | `input`, `tools_called` |
 
 ## Common Parameters
 
@@ -116,6 +117,7 @@ Every metric also takes deepeval's `BaseMetric` options:
 
 ### For Agents
 - **ToolCorrectness** - Check the agent called the right tools
+- **ArgumentCorrectness** - Check the agent called its tools with the right arguments
 
 ### For Exact Matching
 - **ExactMatch** - When output must exactly match expected
