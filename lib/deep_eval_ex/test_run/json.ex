@@ -178,7 +178,7 @@ defmodule DeepEvalEx.TestRun.JSON do
     [
       open,
       pad,
-      Enum.intersperse(members, [?, | pad]),
+      Enum.intersperse(members, [?,, pad]),
       "\n",
       String.duplicate(" ", indent * level),
       close
