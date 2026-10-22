@@ -1085,8 +1085,11 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   raises for `None`, instead of measuring an empty list; ArgumentCorrectness
   would otherwise score a test case without tool calls as `1.0`. The test
   run export keeps an explicitly empty list (`"toolsCalled": []`), as
-  deepeval's `exclude_none` does, and leaves out unset ones as before. Code
-  reading the fields must now handle `nil`.
+  deepeval's `exclude_none` does, and leaves out unset ones as before.
+  `DeepEvalEx.TestRun.to_results/1` keeps them as they were too: an unset
+  list comes back `nil` and an empty one `[]`, so a loaded run without
+  `toolsCalled` is still reported missing them and re-exports without the
+  key. Code reading the fields must now handle `nil`.
 - `TYPESAFE_COST_PER_INPUT_TOKEN` (and `config :deep_eval_ex,
   typesafe_cost_per_input_token:`) accepts `0`, a free Jev, as deepeval's
   `TypeSafeModel` does; only a negative price is rejected.

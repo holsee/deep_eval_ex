@@ -324,8 +324,9 @@ defmodule DeepEvalEx.TestRun do
 
     Keeps the test case's own fields and drops the evaluation (`:success`,
     `:metrics_data`, `:run_duration`, `:evaluation_cost` and `:order`).
-    Missing tool call lists become empty lists, the `DeepEvalEx.TestCase`
-    default.
+    Tool call lists pass through as they are: an unset one stays `nil`, the
+    `DeepEvalEx.TestCase` default, and an empty one stays `[]`, so a metric
+    requiring them still reports an unset one missing.
     """
     @spec to_test_case(t()) :: DeepEvalEx.TestCase.t()
     def to_test_case(%__MODULE__{} = test_case) do
@@ -336,8 +337,8 @@ defmodule DeepEvalEx.TestRun do
         expected_output: test_case.expected_output,
         context: test_case.context,
         retrieval_context: test_case.retrieval_context,
-        tools_called: test_case.tools_called || [],
-        expected_tools: test_case.expected_tools || [],
+        tools_called: test_case.tools_called,
+        expected_tools: test_case.expected_tools,
         token_cost: test_case.token_cost,
         input_token_count: test_case.input_token_count,
         output_token_count: test_case.output_token_count,

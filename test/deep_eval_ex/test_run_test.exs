@@ -1,6 +1,7 @@
 defmodule DeepEvalEx.TestRunTest do
   use ExUnit.Case, async: true
 
+  alias DeepEvalEx.Metrics.ArgumentCorrectness
   alias DeepEvalEx.{Result, TestCase, TestRun}
   alias DeepEvalEx.Schemas.ToolCall
   alias DeepEvalEx.TestRun.JSON
@@ -353,6 +354,29 @@ defmodule DeepEvalEx.TestRunTest do
 
       assert get(case_map, "toolsCalled") == []
       refute "expectedTools" in Enum.map(case_map.values, &elem(&1, 0))
+    end
+
+    test "to_results/1 keeps unset tool call lists nil and an empty one empty" do
+      test_cases = [%TestCase{input: "a"}, %TestCase{input: "b", tools_called: []}]
+      test_run = TestRun.from_results(test_cases, [[ok("M", 1.0)], [ok("M", 1.0)]])
+
+      assert {[unset, empty], _results} = TestRun.to_results(test_run)
+
+      assert %TestCase{tools_called: nil, expected_tools: nil} = unset
+      assert %TestCase{tools_called: [], expected_tools: nil} = empty
+
+      assert {:error, _missing} = ArgumentCorrectness.validate_test_case(unset)
+
+      [unset_map, empty_map] =
+        test_cases
+        |> TestRun.from_results([[ok("M", 1.0)], [ok("M", 1.0)]])
+        |> TestRun.to_results()
+        |> then(fn {cases, results} -> TestRun.from_results(cases, results) end)
+        |> TestRun.to_map()
+        |> get("testCases")
+
+      refute "toolsCalled" in Enum.map(unset_map.values, &elem(&1, 0))
+      assert get(empty_map, "toolsCalled") == []
     end
 
     test "serialises tool calls like deepeval's ToolCall" do

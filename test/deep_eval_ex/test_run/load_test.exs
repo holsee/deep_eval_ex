@@ -451,12 +451,18 @@ defmodule DeepEvalEx.TestRun.LoadTest do
       assert flaky.score == nil
     end
 
-    test "defaults missing tool call lists to empty lists" do
-      {[test_case], _results} =
-        TestRun.to_results(from_map!(%{"testCases" => [%{"name" => "a", "input" => "q"}]}))
+    test "keeps missing tool call lists nil and empty ones empty, as deepeval's None" do
+      cases = [
+        %{"name" => "a", "input" => "q"},
+        %{"name" => "b", "input" => "q", "toolsCalled" => [], "expectedTools" => []}
+      ]
 
-      assert test_case.tools_called == []
-      assert test_case.expected_tools == []
+      {[missing, empty], _results} = TestRun.to_results(from_map!(%{"testCases" => cases}))
+
+      assert missing.tools_called == nil
+      assert missing.expected_tools == nil
+      assert empty.tools_called == []
+      assert empty.expected_tools == []
     end
   end
 end
