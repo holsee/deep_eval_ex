@@ -119,6 +119,21 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | ContextualRecall | `contextual_recall_pass`, `contextual_recall_fail`, `contextual_recall_strict` |
 | ToolCorrectness | `tool_correctness_pass`, `tool_correctness_fail`, `tool_correctness_available_tools` (LLM-scored tool selection), `tool_correctness_strict` |
 
+### Not covered
+
+Two cases need fixtures of their own, to be added with the unit that needs
+them:
+
+- **GEval logprob weighting (P1.10).** `ScriptedJudge` has no
+  `generate_raw_response`, so deepeval's rubric scoring takes its
+  `AttributeError` fallback and uses the raw `score`, as for any judge without
+  logprobs. Exercising the weighting needs a judge that replays canned
+  logprob payloads, and a matching Mock path.
+- **Metric errors.** Every scripted scenario's `measure.json` has
+  `error: null`: no script makes a metric fail. An erroring metric's export is
+  covered by the `metric_error` export scenario above; a scripted response
+  that fails schema validation is not.
+
 ### Known divergences
 
 Comparisons that fail today because of a documented divergence from 4.3.1 (see
