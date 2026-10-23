@@ -3015,6 +3015,17 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - GEval prompts name `:tools_called`, `:expected_tools`, `:metadata` and
   `:tags` as deepeval does (`Tools Called`, `Expected Tools`, `Metadata`,
   `Tags`), instead of `Tools_called` and `Expected_tools`.
+- The Mock LLM adapter (`DeepEvalEx.LLM.Adapters.Mock`) lost its configured
+  responses and recorded prompts, even mid-test, when the process that first
+  used it exited: its ETS table belonged to whichever process created it,
+  such as a test process, a `Task` or an `async_stream` worker, and two
+  processes creating it at once could raise `ArgumentError`. The table now
+  belongs to a process the `:deep_eval_ex` application supervises (started
+  on first use when the application is not running). `get_recorded_prompts/0`
+  also dropped prompts sent concurrently, which were keyed by the table's
+  size and overwrote one another; each prompt is now recorded once, in the
+  order it was sent. The Mock's moduledoc explains how `async: true` tests
+  should keep only their own recorded prompts.
 
 ### Security
 

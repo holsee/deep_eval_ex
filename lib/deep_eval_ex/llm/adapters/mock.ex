@@ -39,6 +39,24 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   Without it calls report no usage, so results carry the evaluation model
   but `nil` token counts and cost.
 
+  ## Configured Responses and Recorded Prompts
+
+  Responses set with `set_response/2` and `set_schema_response/2`, and the
+  prompts `get_recorded_prompts/0` returns, are shared by every process on
+  the node: a response set in a test serves the Tasks its metric starts, and
+  their prompts are recorded in the order they were sent. They are kept in
+  an ETS table owned by a process of the `:deep_eval_ex` application, so
+  they outlive the process that set or sent them.
+
+  Being shared, they are also seen by every other test running at the same
+  time, and `clear_responses/0` and `clear_recorded_prompts/0` clear them
+  for all. An `async: true` test should configure patterns only its own
+  prompts match, and keep only its own prompts from `get_recorded_prompts/0`:
+
+      prompts = Enum.filter(Mock.get_recorded_prompts(), &(&1 =~ "2 + 2?"))
+
+  or use scripted mode below, whose script and prompts are its own.
+
   ## Scripted Mode
 
   `script/2` replays a judge script, the same one deepeval's scripted judge
@@ -71,14 +89,13 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
 
   use DeepEvalEx.LLM.Adapter
 
+  alias DeepEvalEx.LLM.Adapters.Mock.Table
   alias DeepEvalEx.LLM.Usage
 
   @default_response "This is a mock response."
   # The step of generate_raw_response/2 calls, as deepeval's scripted judge
   # names it.
   @raw_response_step "raw_response"
-  @ets_table :deep_eval_ex_mock_responses
-
   # Registry of the processes that loaded a script, each with its script's
   # agent as value; started by DeepEvalEx.Application.
   @scripts __MODULE__.Scripts
@@ -178,8 +195,7 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   """
   @spec set_response(String.t() | Regex.t(), String.t()) :: :ok
   def set_response(pattern, response) do
-    ensure_table_exists()
-    :ets.insert(@ets_table, {{:response, pattern}, response})
+    :ets.insert(Table.ensure(), {{:response, pattern}, response})
     :ok
   end
 
@@ -188,41 +204,38 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   """
   @spec set_schema_response(String.t() | Regex.t(), map()) :: :ok
   def set_schema_response(pattern, response) do
-    ensure_table_exists()
-    :ets.insert(@ets_table, {{:schema_response, pattern}, response})
+    :ets.insert(Table.ensure(), {{:schema_response, pattern}, response})
     :ok
   end
 
   @doc """
-  Clears all configured mock responses.
+  Clears all configured mock responses, and the recorded prompts with them,
+  for every process.
   """
   @spec clear_responses() :: :ok
   def clear_responses do
-    ensure_table_exists()
-    :ets.delete_all_objects(@ets_table)
+    :ets.delete_all_objects(Table.ensure())
     :ok
   end
 
   @doc """
-  Records all prompts sent to this adapter (for assertions).
+  Returns the prompts sent to this adapter outside scripted mode, by any
+  process, in the order they were sent (for assertions).
   """
   @spec get_recorded_prompts() :: [String.t()]
   def get_recorded_prompts do
-    ensure_table_exists()
-
-    @ets_table
+    Table.ensure()
     |> :ets.match({{:recorded_prompt, :"$1"}, :"$2"})
     |> Enum.sort_by(fn [idx, _] -> idx end)
     |> Enum.map(fn [_, prompt] -> prompt end)
   end
 
   @doc """
-  Clears recorded prompts.
+  Clears the recorded prompts of every process.
   """
   @spec clear_recorded_prompts() :: :ok
   def clear_recorded_prompts do
-    ensure_table_exists()
-    :ets.match_delete(@ets_table, {{:recorded_prompt, :_}, :_})
+    :ets.match_delete(Table.ensure(), {{:recorded_prompt, :_}, :_})
     :ok
   end
 
@@ -398,30 +411,18 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
     end
   end
 
-  defp ensure_table_exists do
-    case :ets.whereis(@ets_table) do
-      :undefined ->
-        :ets.new(@ets_table, [:named_table, :public, :set])
-
-      _ref ->
-        :ok
-    end
-  end
-
   defp get_configured_response(prompt) do
     record_prompt(prompt)
-    ensure_table_exists()
 
-    @ets_table
+    Table.ensure()
     |> :ets.match({{:response, :"$1"}, :"$2"})
     |> find_matching_response(prompt)
   end
 
   defp get_configured_schema_response(prompt) do
     record_prompt(prompt)
-    ensure_table_exists()
 
-    @ets_table
+    Table.ensure()
     |> :ets.match({{:schema_response, :"$1"}, :"$2"})
     |> find_matching_response(prompt)
   end
@@ -439,9 +440,11 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
     end)
   end
 
+  # Keyed by a node-wide monotonic integer, so concurrent callers never share
+  # a key and prompts sort in the order they were sent, whatever else the
+  # table holds or has had cleared.
   defp record_prompt(prompt) do
-    ensure_table_exists()
-    idx = :ets.info(@ets_table, :size)
-    :ets.insert(@ets_table, {{:recorded_prompt, idx}, prompt})
+    key = {:recorded_prompt, System.unique_integer([:monotonic, :positive])}
+    :ets.insert(Table.ensure(), {key, prompt})
   end
 end
