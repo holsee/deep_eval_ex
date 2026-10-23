@@ -86,9 +86,7 @@ defmodule DeepEvalEx.MixProject do
   end
 
   defp aliases do
-    [
-      test: ["test --trace"]
-    ]
+    []
   end
 
   defp package do
