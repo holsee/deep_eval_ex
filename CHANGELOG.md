@@ -3309,8 +3309,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   on first use when the application is not running). `get_recorded_prompts/0`
   also dropped prompts sent concurrently, which were keyed by the table's
   size and overwrote one another; each prompt is now recorded once, in the
-  order it was sent. The Mock's moduledoc explains how `async: true` tests
-  should keep only their own recorded prompts.
+  order it was sent. Configured responses and recorded prompts are shared
+  node-wide, so they are for `async: false` test modules; async tests use
+  the per-process `Mock.script/2` (see the Mock's moduledoc).
 - The test suite failed at some seeds (for example `mix test --seed 3`) now
   that test modules run in parallel: the GEval and ToolCorrectness tests,
   both `async: true`, configured and cleared the Mock adapter's node-wide
