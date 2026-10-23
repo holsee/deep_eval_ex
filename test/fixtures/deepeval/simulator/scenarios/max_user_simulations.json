@@ -1,0 +1,134 @@
+{
+  "simulator": {},
+  "goldens": [
+    {
+      "scenario": "Small talk about the weather.",
+      "persona": {
+        "characteristics": "Chatty."
+      }
+    }
+  ],
+  "max_user_simulations": 2,
+  "script": {
+    "simulated_input": [
+      {
+        "simulated_input": "Lovely day, isn't it?"
+      },
+      {
+        "simulated_input": "Will it rain later?"
+      }
+    ]
+  },
+  "replies": [
+    "It is!",
+    "Maybe this evening."
+  ],
+  "prompts": [
+    {
+      "step": "simulated_input",
+      "prompt": "Pretend you are a user of an LLM app. Your goal is to start a conversation in English based on a scenario \n            and persona. The scenario defines your context and motivation for interacting with the LLM, \n            while the persona describes who you are and how you speak.\n\n            Guidelines:\n            1. The opening message should clearly convey the user's intent or need within the scenario.\n            2. Match the persona's tone faithfully. If the user is frustrated, impatient, blunt, or impolite, reflect that naturally instead of making them warm or courteous.\n            3. Avoid providing excessive details upfront; the goal is to initiate the conversation and build rapport, not to solve it in the first message.\n            4. The message should be concise, ideally no more than 1-3 sentences.\n\n\n        --- MULTIMODAL INPUT RULES ---\n        - Treat image content as factual evidence.\n        - Only reference visual details that are explicitly and clearly visible.\n        - Do not infer or guess objects, text, or details not visibly present.\n        - If an image is unclear or ambiguous, mark uncertainty explicitly.\n\n\n            IMPORTANT: The output must be formatted as a JSON object with a single key `simulated_input`, where the value is the generated opening message in English.\n\n            Example Language: english\n            Example Persona:\n            <persona>\n            Jeff Seid, is available Monday and Thursday afternoons, and their phone number is 0010281839. He suffers from chronic migraines.\n            </persona>\n            Example Scenario: \"A sick person trying to get a diagnosis for persistent headaches and fever.\"\n            Example JSON Output:\n            {\n                \"simulated_input\": \"Hi, I haven’t been feeling well lately. I’ve had these headaches and a fever that just won’t go away. Could you help me figure out what’s going on?\"\n            }\n\n            Language: English\n            <persona>\n            Chatty.\n            </persona>\n            Scenario: \"Small talk about the weather.\"\n            JSON Output:\n"
+    },
+    {
+      "step": "simulated_input",
+      "prompt": "\n            Pretend you are a user of an LLM app. Your task is to generate the next user input in English \n            based on the provided scenario, persona, and the previous conversation.\n\n            Guidelines:\n            1. Use the scenario and persona as the guiding context for the user's next input.\n            2. Ensure the next input feels natural, conversational, and relevant to the last assistant reply in the conversation.\n            3. Keep the tone consistent with the previous user inputs.\n            4. The generated user input should be concise, ideally no more than 1-2 sentences.\n\n\n        --- MULTIMODAL INPUT RULES ---\n        - Treat image content as factual evidence.\n        - Only reference visual details that are explicitly and clearly visible.\n        - Do not infer or guess objects, text, or details not visibly present.\n        - If an image is unclear or ambiguous, mark uncertainty explicitly.\n\n\n            IMPORTANT: The output must be formatted as a JSON object with a single key `simulated_input`, \n            where the value is the generated user input in English.\n\n            Example Language: english\n            Example Persona:\n            <persona>\n            Jeff Seid, is available Monday and Thursday afternoons, and their phone number is 0010281839.\n            </persona>\n            Example Scenario: \"A user seeking tips for securing a funding round.\"\n            Example Previous Conversation:\n            [\n                {\"role\": \"user\", \"content\": \"Hi, I need help preparing for my funding pitch.\"},\n                {\"role\": \"assistant\", \"content\": \"Of course! Can you share more about your business and the type of investors you are targeting?\"}\n            ]\n            Example JSON Output:\n            {\n                \"simulated_input\": \"Sure, we are a SaaS startup focusing on productivity tools for small businesses.\"\n            }\n\n            Language: English\n            <persona>\n            Chatty.\n            </persona>\n            Scenario: \"Small talk about the weather.\"\n            Previous Conversation:\n            [\n    {\n        \"role\": \"user\",\n        \"content\": \"Lovely day, isn't it?\",\n        \"user_id\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": null\n    },\n    {\n        \"role\": \"assistant\",\n        \"content\": \"It is!\",\n        \"user_id\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": null\n    }\n]\n\n            JSON Output:\n"
+    }
+  ],
+  "callback_calls": [
+    {
+      "input": "Lovely day, isn't it?",
+      "turns": 1
+    },
+    {
+      "input": "Will it rain later?",
+      "turns": 3
+    }
+  ],
+  "on_turn": [
+    {
+      "index": 0,
+      "turns": 1
+    },
+    {
+      "index": 0,
+      "turns": 2
+    },
+    {
+      "index": 0,
+      "turns": 3
+    },
+    {
+      "index": 0,
+      "turns": 4
+    }
+  ],
+  "completed": [
+    0
+  ],
+  "test_cases": [
+    {
+      "turns": [
+        {
+          "role": "user",
+          "content": "Lovely day, isn't it?",
+          "user_id": null,
+          "latency_ms": null,
+          "interrupted": null,
+          "retrieval_context": null,
+          "tools_called": null,
+          "mcp_tools_called": null,
+          "mcp_resources_called": null,
+          "mcp_prompts_called": null,
+          "metadata": null
+        },
+        {
+          "role": "assistant",
+          "content": "It is!",
+          "user_id": null,
+          "latency_ms": null,
+          "interrupted": null,
+          "retrieval_context": null,
+          "tools_called": null,
+          "mcp_tools_called": null,
+          "mcp_resources_called": null,
+          "mcp_prompts_called": null,
+          "metadata": null
+        },
+        {
+          "role": "user",
+          "content": "Will it rain later?",
+          "user_id": null,
+          "latency_ms": null,
+          "interrupted": null,
+          "retrieval_context": null,
+          "tools_called": null,
+          "mcp_tools_called": null,
+          "mcp_resources_called": null,
+          "mcp_prompts_called": null,
+          "metadata": null
+        },
+        {
+          "role": "assistant",
+          "content": "Maybe this evening.",
+          "user_id": null,
+          "latency_ms": null,
+          "interrupted": null,
+          "retrieval_context": null,
+          "tools_called": null,
+          "mcp_tools_called": null,
+          "mcp_resources_called": null,
+          "mcp_prompts_called": null,
+          "metadata": null
+        }
+      ],
+      "scenario": "Small talk about the weather.",
+      "expected_outcome": null,
+      "user_description": "Chatty.",
+      "context": null,
+      "name": null,
+      "comments": null,
+      "additional_metadata": {
+        "Persona": "Chatty."
+      }
+    }
+  ]
+}

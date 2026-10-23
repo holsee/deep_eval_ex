@@ -2766,6 +2766,54 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     construction), conversational and text-to-SQL goldens, `save_as`,
     `to_pandas` and deepeval's `async_mode=False` path. See the
     [Synthesizer](wiki/guides/Synthesizer.md) guide.
+- **`DeepEvalEx.ConversationSimulator`: conversations simulated from
+  conversational goldens**, a port of deepeval 4.3.1's
+  `ConversationSimulator` (`simulator/conversation_simulator.py`,
+  `template.py`, `schema.py`, `controller/` and `simulation_graph/`), text
+  mode.
+  - `ConversationSimulator.new/1` takes the chatbot under test as
+    `:model_callback` (a function of the input, the turns and the thread
+    id, of arity 1 to 3, or a `{module, function, args}` tuple; it returns
+    a `DeepEvalEx.Turn` or a string, alone or as `{:ok, reply}`, or
+    `{:error, reason}`), the simulator's model (`:model`, `:adapter`),
+    `:simulation_graph`, `:stopping_controller`, `:max_concurrent`
+    (default `5`) and `:language` (default `"English"`).
+  - `simulate/3` plays each `DeepEvalEx.Dataset.ConversationalGolden`
+    out from its turns, up to `:max_user_simulations` simulated user turns
+    (default `10`; deepeval's `ValueError` message as an `ArgumentError`
+    when not positive), answering a trailing user turn first, and returns
+    `{:ok, simulator}` with `:simulated_conversations` (one
+    `DeepEvalEx.ConversationalTestCase` per golden, in order, with the
+    persona's characteristics as `"Persona"` in its metadata) and
+    `:simulation_cost` (the native model's cost, else `nil`), or the first
+    error. Goldens run concurrently with `Task.async_stream/3`; the
+    `:on_turn` and `:on_simulation_complete` hooks are called as deepeval
+    calls them, and an `:on_turn` hook that raises is logged and ignored.
+  - Stopping controllers (`DeepEvalEx.ConversationSimulator.Controller`):
+    the default `:expected_outcome` asks the model whether the golden's
+    expected outcome was reached, skipping empty conversations and goldens
+    without one; a custom controller is a function or MFA of a
+    `Controller.Context` returning `Controller.proceed/0` or
+    `Controller.stop/1` (deepeval's `proceed()` and `end()`).
+  - Simulation graphs (`DeepEvalEx.ConversationSimulator.SimulationNode`):
+    nodes with actions, `:terminal` and `:max_visits`, edges routed by the
+    model, and `SimulationNode.default/1`, the model-driven node, with an
+    optional custom `DeepEvalEx.ConversationSimulator.SimulationTemplate`.
+    Nodes are immutable, so graphs have no cycles.
+  - The templates copied verbatim (`SimulationTemplate`,
+    `SimulatorControllerTemplate`, `SimulationGraphTemplate`) and the
+    schemas in `DeepEvalEx.ConversationSimulator.Schema`.
+  - Parity fixtures written by deepeval
+    (`scripts/parity/generate_simulator_fixtures.py`): every template's
+    prompts, byte for byte, and ten scenarios replaying a scripted judge
+    and chatbot, compared prompt by prompt, call by call and test case by
+    test case.
+  - Not ported: voice simulation, deepeval's `async_mode=False` path, the
+    multimodal model check, progress bars and the deprecated `controller`
+    argument. See the
+    [Conversation Simulator](wiki/guides/Conversation-Simulator.md) guide.
+- `DeepEvalEx.Prompts.Python.dedent/1`, Python's `textwrap.dedent`, which
+  deepeval applies to the simulator's templates after filling them in.
 
 ### Changed
 

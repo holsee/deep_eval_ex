@@ -22,6 +22,8 @@ defmodule DeepEvalEx.Prompts.Python do
   - `round/2` - Python's `round(number, ndigits)`, as in deepeval's
     `round(p, 3)` before a dict of probabilities is printed
   - `tojson/1` - Jinja's `tojson` filter on a string
+  - `dedent/1` - Python's `textwrap.dedent`, which deepeval applies to
+    some templates after filling them in
 
   Floats are rounded from their exact binary value, ties to even, as
   CPython does, and `round/2` returns the float nearest the rounded
@@ -168,6 +170,71 @@ defmodule DeepEvalEx.Prompts.Python do
 
   def str(atom) when is_atom(atom) and atom not in [nil, true, false], do: Atom.to_string(atom)
   def str(term), do: repr(term)
+
+  @doc """
+  Removes the leading whitespace common to every line of `text`, as
+  Python's `textwrap.dedent`.
+
+  As in Python, lines holding only spaces and tabs are emptied first and
+  do not count; spaces and tabs are not equal, so `"  a"` and `"\\ta"` have
+  no common margin. deepeval dedents some templates after filling them in,
+  so the values filled in count too: a value spanning lines that are not
+  indented leaves the whole prompt as it is.
+
+  ## Examples
+
+      iex> DeepEvalEx.Prompts.Python.dedent("    a\\n      b\\n  \\n    c\\n")
+      "a\\n  b\\n\\nc\\n"
+
+      iex> DeepEvalEx.Prompts.Python.dedent("a\\n    b")
+      "a\\n    b"
+  """
+  @spec dedent(String.t()) :: String.t()
+  def dedent(text) when is_binary(text) do
+    lines =
+      text
+      |> String.split("\n")
+      |> Enum.map(&if(&1 =~ ~r/\A[ \t]+\z/, do: "", else: &1))
+
+    margin =
+      lines
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.map(&leading_whitespace/1)
+      |> Enum.reduce(nil, &common_margin/2)
+
+    case margin do
+      margin when margin in [nil, ""] ->
+        Enum.join(lines, "\n")
+
+      margin ->
+        size = byte_size(margin)
+
+        Enum.map_join(lines, "\n", fn
+          <<^margin::binary-size(size), rest::binary>> -> rest
+          line -> line
+        end)
+    end
+  end
+
+  defp leading_whitespace(line) do
+    [indent] = Regex.run(~r/\A[ \t]*/, line)
+    indent
+  end
+
+  defp common_margin(indent, nil), do: indent
+
+  defp common_margin(indent, margin) do
+    cond do
+      String.starts_with?(indent, margin) -> margin
+      String.starts_with?(margin, indent) -> indent
+      true -> common_prefix(margin, indent, "")
+    end
+  end
+
+  defp common_prefix(<<c, a::binary>>, <<c, b::binary>>, acc),
+    do: common_prefix(a, b, acc <> <<c>>)
+
+  defp common_prefix(_a, _b, acc), do: acc
 
   @doc """
   Formats `string` like Jinja's `tojson` filter, which deepeval's templates

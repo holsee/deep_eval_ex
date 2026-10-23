@@ -1,0 +1,16 @@
+{
+  "simulator": {},
+  "goldens": [
+    {
+      "scenario": "Never simulated."
+    }
+  ],
+  "max_user_simulations": 0,
+  "script": {},
+  "replies": [],
+  "prompts": [],
+  "raised": {
+    "type": "ValueError",
+    "message": "max_user_simulations must be greater than 0"
+  }
+}

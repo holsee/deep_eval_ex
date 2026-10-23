@@ -57,12 +57,28 @@ The unit tests and the existing byte-parity suite stay green throughout.
 
 ## Shipped
 
-What has shipped, release by release, is in the [Changelog](CHANGELOG.md):
-eight metrics (ExactMatch, GEval, Faithfulness, AnswerRelevancy,
-ContextualPrecision, ContextualRecall, Hallucination, ToolCorrectness), the
-concurrent evaluator with errored results, OpenAI, Anthropic, Ollama and Mock
-adapters with token and cost capture, and a deepeval-compatible test run export
-checked byte for byte against golden fixtures from deepeval 4.3.1.
+**P0 to P10 have shipped**: every capability rated *core* or *important*
+below is done, which is parity with deepeval 4.3.1 as defined above. What
+each unit added, and the breaking changes on the way, are in the
+[Changelog](CHANGELOG.md) (its `[Unreleased]` section until the next
+release). The first release, 0.1.0, had eight metrics, the concurrent
+evaluator, the OpenAI, Anthropic, Ollama and Mock adapters and a
+deepeval-compatible test run export.
+
+P11, the optional backlog, and the work [beyond parity](#beyond-parity)
+remain planned.
+
+### Providers: ReqLLM instead of native adapters
+
+DeepEvalEx keeps native adapters only for OpenAI, Anthropic and Ollama
+(plus the Mock). Every other provider deepeval supports natively, such as
+Gemini, Azure OpenAI, Bedrock and OpenAI-compatible gateways, is reached
+through `DeepEvalEx.LLM.Adapters.ReqLLM` on
+[ReqLLM](https://hexdocs.pm/req_llm), an optional dependency (P10.2). This
+supersedes the planned native Gemini adapter (P10.3): one adapter on a
+maintained provider library covers more providers than DeepEvalEx could
+keep up natively, and applications that need none of them do not pull it
+in.
 
 ### Known divergences from 4.3.1 today
 
@@ -72,10 +88,11 @@ None known: the parity suites run with no `known_divergence` tag.
 
 ## Plan
 
-Twelve phases, P0 to P11. P0 to P10 are in parity scope; P11 is the optional
-backlog. Each phase lists its goal, exit criteria, dependencies and units.
+Twelve phases, P0 to P11. P0 to P10 are in parity scope and have shipped;
+P11 is the optional backlog, still planned. Each phase lists its goal, exit
+criteria, dependencies and units.
 
-### P0 Parity verification harness
+### P0 Parity verification harness (shipped)
 
 **Goal:** make byte and behaviour parity mechanically checkable before changing
 anything: fixtures from real deepeval in the dev container, System One fixtures
@@ -92,7 +109,7 @@ fixtures; the live tag exists and is skipped by default.
 | P0.3 | System One fixtures from deepeval fakes | core |
 | P0.4 | Live Jev check scaffold | core |
 
-### P1 Correct the existing metric surface
+### P1 Correct the existing metric surface (shipped)
 
 **Goal:** make the eight existing metrics match 4.3.1 in `llm` mode:
 Hallucination direction, borderline verdicts, `strict_mode`, score-only mode,
@@ -117,7 +134,7 @@ the Hallucination flip and the context split as breaking.
 | P1.10 | GEval logprob-weighted scoring | core |
 | P1.11 | GEval Rubric ranges and 4.3.1 behaviour | core |
 
-### P2 Evaluation engine and output parity
+### P2 Evaluation engine and output parity (shipped)
 
 **Goal:** make `evaluate` and `assert_test` behave like deepeval: return shape,
 ErrorConfig, AsyncConfig, timeout strings, full TestRun keys, the rolling
@@ -139,7 +156,7 @@ ExUnit failure messages match `assert_test`.
 | P2.8 | Settings and env-var parity | important |
 | P2.9 | Retry policy parity | important |
 
-### P3 System One foundation
+### P3 System One foundation (shipped)
 
 **Goal:** build the System One stack once so any metric can opt in: behaviour
 and schemas, eval-mode resolution, budget limits, TypeSafe (Jev) and Mock
@@ -165,7 +182,7 @@ adapter passes contract tests against recorded payloads.
 | P3.10 | Whole-chain runner | core |
 | P3.11 | Export semantics in System One modes | core |
 
-### P4 System One wiring, JevEval and batching
+### P4 System One wiring, JevEval and batching (shipped)
 
 **Goal:** give every existing metric the System One support deepeval gives it,
 ship `JevEval`, and batch `system_one` metrics per test case in `evaluate`.
@@ -187,7 +204,7 @@ live Jev check passes with a key.
 | P4.8 | System One request telemetry | important |
 | P4.9 | Live Jev check | core |
 
-### P5 Single-turn metric breadth
+### P5 Single-turn metric breadth (shipped)
 
 **Goal:** port the remaining commonly used single-turn metrics, each with its
 deepeval System One spec, plus user-overridable templates.
@@ -206,7 +223,7 @@ template override is exercised in tests.
 | P5.7 | SummarizationMetric | important |
 | P5.8 | evaluation_template override | important |
 
-### P6 Datasets and goldens
+### P6 Datasets and goldens (shipped)
 
 **Goal:** load and save deepeval datasets unchanged and run tasks over goldens.
 **Exit:** deepeval-produced CSV, JSON and JSONL datasets load unchanged; files
@@ -223,7 +240,7 @@ byte-parity test run.
 | P6.5 | Dataset save_as | important |
 | P6.6 | Dataset.evaluate(task) | important |
 
-### P7 Multi-turn (conversational) stack
+### P7 Multi-turn (conversational) stack (shipped)
 
 **Goal:** `ConversationalTestCase`, its export and the commonly used
 conversational metrics, all with System One specs, plus `ConversationalJevEval`.
@@ -246,7 +263,7 @@ mixed list of single-turn and conversational cases is rejected.
 | P7.10 | GoalAccuracy and ToolUse | important |
 | P7.11 | ConversationalGolden and Persona core fields | important |
 
-### P8 Test runner, console report, cache, classifiers and expectations
+### P8 Test runner, console report, cache, classifiers and expectations (shipped)
 
 **Goal:** match `deepeval test run` and `assert_test` end to end, add the test
 run cache, and add the Choice-based classifiers and expectations that Jev
@@ -264,7 +281,7 @@ fixtures match Python in `llm` and `system_one` modes.
 | P8.4 | Classifier framework and expected_labels | important |
 | P8.5 | Expectations and the expectation evaluator | important |
 
-### P9 Tracing and agentic evaluation
+### P9 Tracing and agentic evaluation (shipped)
 
 **Goal:** a span and trace model in Elixir style, component-level evaluation,
 the trace export, and the trace-consuming agentic metrics with System One specs.
@@ -288,7 +305,7 @@ pass their `llm` and System One fixtures.
 | P9.11 | GEval trace mode | important |
 | P9.12 | LLM spans from our adapters | important |
 
-### P10 Remaining important extensions
+### P10 Remaining important extensions (shipped)
 
 **Goal:** close the remaining important-tier capabilities: DAG, providers,
 multimodal, MCP, arena, synthesizer and simulator.
@@ -307,7 +324,7 @@ exports. After this phase every core and important capability is done.
 | P10.7 | Synthesizer from contexts and scratch with evolutions | important |
 | P10.8 | ConversationSimulator | important |
 
-### P11 Optional backlog (post-parity)
+### P11 Optional backlog (post-parity, planned)
 
 **Goal:** niche capabilities, picked up on demand.
 **Exit:** each unit is held to the same fixture standard when picked up.
@@ -354,7 +371,7 @@ Effort is described by what drives the cost of the work, not by calendar time:
 | P7 Multi-turn | 11 | Port + adapt | Fixture + fake | None | 3 |
 | P8 Runner, cache, classifiers | 5 | Adapt | Fixture + judgement | Mix task and CLI UX | 2 |
 | P9 Tracing and agents | 12 | Design + adapt | Fixture + judgement | Span and observe API shape (telemetry/OpenTelemetry) | 2 |
-| P10 Remaining important | 8 | Mixed | Fixture + live | A ReqLLM provider for live checks; whether to include synthesizer and simulator | 4 |
+| P10 Remaining important | 8 | Mixed | Fixture + live | A ReqLLM provider for live checks; synthesizer and simulator included (decided) | 4 |
 | P11 Optional backlog | 8 | Port | Fixture | Which items, if any | Many |
 
 **Totals:** 102 units, 90 of them in parity scope (P0–P10).

@@ -125,6 +125,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/guides/Classifiers.md",
         "wiki/guides/Expectations.md",
         "wiki/guides/Synthesizer.md",
+        "wiki/guides/Conversation-Simulator.md",
         "wiki/guides/Test-Run-Cache.md",
         "wiki/guides/Console-Report.md",
         "wiki/guides/Phoenix-Integration.md",
@@ -229,6 +230,7 @@ defmodule DeepEvalEx.MixProject do
         "System One": ~r/DeepEvalEx\.SystemOne(\..*)?$/,
         Datasets: ~r/DeepEvalEx\.Dataset(\..*)?$/,
         Synthesizer: ~r/DeepEvalEx\.Synthesizer(\..*)?$/,
+        "Conversation Simulator": ~r/DeepEvalEx\.ConversationSimulator(\..*)?$/,
         Reports: ~r/DeepEvalEx\.Report(\..*)?$/,
         Tracing: ~r/DeepEvalEx\.Tracing(\..*)?$/,
         "Test Runner": [

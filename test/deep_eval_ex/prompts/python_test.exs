@@ -329,4 +329,19 @@ defmodule DeepEvalEx.Prompts.PythonTest do
     <<float::float-64>> = <<bits::unsigned-64>>
     float
   end
+
+  describe "dedent/1" do
+    # Expected values from CPython's textwrap.dedent.
+    test "takes the longest common run of spaces and tabs as the margin" do
+      assert Python.dedent("  a\n\tb") == "  a\n\tb"
+      assert Python.dedent("    a\n  \tb") == "  a\n\tb"
+      assert Python.dedent("\t\ta\n\tb") == "\ta\nb"
+    end
+
+    test "empties whitespace-only lines, which do not count" do
+      assert Python.dedent("\n    a\n    \n      b\n   ") == "\na\n\n  b\n"
+      assert Python.dedent("  x\r\n  y") == "x\r\ny"
+      assert Python.dedent("") == ""
+    end
+  end
 end

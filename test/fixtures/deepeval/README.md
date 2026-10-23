@@ -1,11 +1,12 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in sixteen sets:
+Fixtures written by **deepeval 4.3.1**, in seventeen sets:
 
 - export scenarios (the directories below, except `scripted/`, `prompts/`,
   `round_trip/`, `system_one/`, `datasets/`, `classifiers/`,
   `expectations/`, `cache/`, `report/`, `cli/`, `traced/`,
-  `loop_detection/`, `multimodal/`, `mcp/` and `synthesizer/`), used by
+  `loop_detection/`, `multimodal/`, `mcp/`, `synthesizer/` and
+  `simulator/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
@@ -72,6 +73,12 @@ Fixtures written by **deepeval 4.3.1**, in sixteen sets:
   a scripted judge and makes of its answers, used by
   `test/deep_eval_ex/synthesizer/templates_test.exs` and
   `test/deep_eval_ex/synthesizer/synthesizer_parity_test.exs`
+- [simulator fixtures](#simulator-fixtures) (`simulator/`), what
+  deepeval's simulator templates render and what its
+  `ConversationSimulator` sends a scripted judge, asks a scripted chatbot
+  and makes of their answers, used by
+  `test/deep_eval_ex/simulator/templates_test.exs` and
+  `test/deep_eval_ex/simulator/conversation_simulator_parity_test.exs`
 
 ## Export scenarios
 
@@ -1265,3 +1272,43 @@ devcontainer exec --workspace-folder . \
   env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_synthesizer_fixtures.py
 ```
 
+## Simulator fixtures
+
+`scripts/parity/generate_simulator_fixtures.py` writes `simulator/`:
+
+- `templates.json`, one entry per render of a simulator template
+  (`SimulationTemplate`, `SimulatorControllerTemplate` and
+  `SimulationGraphTemplate`): the template, its arguments (a golden as its
+  fields, turns as dicts) and the prompt.
+  `test/deep_eval_ex/simulator/templates_test.exs` renders each with
+  `DeepEvalEx.ConversationSimulator`'s template modules and compares the
+  bytes, and checks every template function is covered
+- `scenarios/<name>.json`, one run of deepeval's `ConversationSimulator`
+  (default `async_mode=True`) with a scripted custom judge and a scripted
+  chatbot replying in order: the simulator's options (the simulation graph
+  and stopping controller as specs), the goldens, `max_user_simulations`,
+  the script and replies, then the prompts the judge was sent with their
+  steps, the chatbot's calls (input and number of turns), the `on_turn`
+  and `on_simulation_complete` calls and the test cases returned, or the
+  exception raised.
+  `test/deep_eval_ex/simulator/conversation_simulator_parity_test.exs`
+  replays them through `DeepEvalEx.ConversationSimulator` and compares
+  all of them
+
+| Scenario | What it covers |
+| --- | --- |
+| `outcome_reached` | a persona, no completion check before the first turn, a check saying to go on, then one saying the outcome was reached |
+| `max_user_simulations` | no expected outcome, so no check; the cap ends it |
+| `seeded_user_last` | golden turns ending with a user turn, answered first and not counted; the golden's fields and metadata carried over |
+| `seeded_assistant_last` | golden turns ending with the assistant, continued in German |
+| `custom_controller` | a controller ending after two simulated user turns |
+| `multiple_goldens` | two goldens simulated one after the other (`max_concurrent=1`) |
+| `graph_max_visits` | the default node routing to a fixed-text node that stays put until its `max_visits` runs out |
+| `graph_terminal` | edge choices `null` and out of range staying on the node, then a terminal node |
+| `graph_root_max_visits` | a root with `max_visits=1`: the second entry ends the conversation without a turn |
+| `max_user_simulations_zero` | deepeval's `ValueError` |
+
+```sh
+devcontainer exec --workspace-folder . \
+  env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_simulator_fixtures.py
+```

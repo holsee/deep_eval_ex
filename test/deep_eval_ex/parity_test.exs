@@ -55,7 +55,8 @@ defmodule DeepEvalEx.ParityTest do
   # TracedFixturesTest, loop_detection/ the tables of
   # Metrics.Utils.SequenceMatcherTest and Metrics.AgentLoopDetectionTest,
   # multimodal/ the content parts of LLM.MultimodalTest, synthesizer/ the
-  # templates and scenarios of the Synthesizer tests. mcp/ holds two
+  # templates and scenarios of the Synthesizer tests, simulator/ those of
+  # the ConversationSimulator tests. mcp/ holds two
   # export scenarios, run here with their run-level MCP servers, and the
   # dumps of MCPTest.
   @mcp_scenarios ~w(mcp/export_conversational mcp/export_single)
@@ -63,8 +64,8 @@ defmodule DeepEvalEx.ParityTest do
              |> File.ls!()
              |> Enum.reject(
                &(&1 in ~w(cache classifiers cli datasets expectations loop_detection mcp
-                        multimodal prompts report round_trip scripted synthesizer system_one
-                        traced))
+                        multimodal prompts report round_trip scripted simulator synthesizer
+                        system_one traced))
              )
              |> Enum.filter(&File.dir?(Path.join(@fixtures, &1)))
              |> Kernel.++(@mcp_scenarios)
