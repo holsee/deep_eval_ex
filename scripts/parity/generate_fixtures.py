@@ -47,7 +47,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the twenty-six LLM-judged metrics, the way the metric itself renders it
+uses for the twenty-eight LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -69,7 +69,8 @@ With the argument `traced` it writes only the traced fixtures,
 test/fixtures/deepeval/traced/: agent scripts (`TRACED_SCENARIOS`) run
 through deepeval's @observe tracing outside evaluation and under the sync
 and async evals_iterator, and `iso_table.json`, deepeval's ISO timestamps
-for fixed epoch times. See the comment above `TRACED_SCENARIOS`.
+for fixed epoch times. Scenario names after `traced` regenerate only those
+scenarios. See the comment above `TRACED_SCENARIOS`.
 
 See test/fixtures/deepeval/README.md.
 """
@@ -147,6 +148,7 @@ from deepeval.metrics import (  # noqa: E402
     PIILeakageMetric,
     PromptAlignmentMetric,
     RoleAdherenceMetric,
+    StepEfficiencyMetric,
     SummarizationMetric,
     TaskCompletionMetric,
     ToolCorrectnessMetric,
@@ -791,6 +793,8 @@ SCRIPTED_METRICS = {
     "turn_contextual_relevancy": TurnContextualRelevancyMetric,
     "goal_accuracy": GoalAccuracyMetric,
     "tool_use": ToolUseMetric,
+    "task_completion": TaskCompletionMetric,
+    "step_efficiency": StepEfficiencyMetric,
 }
 
 # Metrics that call no LLM and take no `model`.
@@ -841,6 +845,16 @@ def write_json(path, data):
         f.write("\n")
 
 
+def build_scripted_test_case(script):
+    """The script's test case; with a `trace` (a nested trace dict, made
+    JSON as serialize_to_json does), carrying it as the `_trace_dict` the
+    trace metrics read, as evals_iterator gives a traced test case."""
+    test_case = build_test_case(script["test_case"])
+    if "trace" in script:
+        test_case._trace_dict = json.loads(json.dumps(script["trace"]))
+    return test_case
+
+
 def run_scripted_scenario(name):
     out_dir = os.path.join(SCRIPTED, name)
     with open(os.path.join(out_dir, "script.json"), encoding="utf-8") as f:
@@ -849,7 +863,7 @@ def run_scripted_scenario(name):
     # measure(): the metric's own state, and the prompts it sent.
     measured, judge = build_scripted_metric(script)
     try:
-        measured.measure(build_test_case(script["test_case"]), _show_indicator=False)
+        measured.measure(build_scripted_test_case(script), _show_indicator=False)
     except ValueError:
         # trimAndLoadJson sets metric.error before raising; keep the state
         # the metric was left in.
@@ -863,7 +877,7 @@ def run_scripted_scenario(name):
     results_folder = tempfile.mkdtemp(prefix=f"{name}_", dir=WORK_DIR)
     metric, judge = build_scripted_metric(script)
     evaluate(
-        test_cases=[build_test_case(script["test_case"])],
+        test_cases=[build_scripted_test_case(script)],
         metrics=[metric],
         async_config=AsyncConfig(run_async=True),
         display_config=DisplayConfig(
@@ -956,6 +970,13 @@ def _render_conversational_g_eval_results(inputs):
 
 def _prompt(metric_cls, method, **kwargs):
     return metric_cls(model=_prompt_judge())._get_prompt(method, multimodal=False, **kwargs)
+
+
+def _step_efficiency(method, inputs, **kwargs):
+    # StepEfficiencyMetric passes the test case's multimodal flag.
+    return StepEfficiencyMetric(model=_prompt_judge())._get_prompt(
+        method, multimodal=inputs.get("multimodal", False), **kwargs,
+    )
 
 
 def _turn_dicts(turns):
@@ -1592,6 +1613,48 @@ PROMPT_RENDERERS = {
         tools_called=print_tools_called([ToolCall(**t) for t in i["tools_called"]]),
         available_tools=print_tools_called([ToolCall(**t) for t in i["available_tools"]]),
     ),
+    # TaskCompletion and StepEfficiency print the nested trace dict with
+    # serialize_to_json(indent=2); TaskCompletion without a trace prints the
+    # tools called as print_tools_called does.
+    "TaskCompletionMetric.extract_goal_and_outcome": lambda i: _prompt(
+        TaskCompletionMetric, "extract_goal_and_outcome",
+        input=i["input"],
+        actual_output=i["actual_output"],
+        tools_called_formatted=print_tools_called(
+            [ToolCall(**t) for t in i.get("tools_called", [])]
+        ),
+    ),
+    "TaskCompletionMetric.extract_task_and_outcome_from_trace": lambda i: _prompt(
+        TaskCompletionMetric, "extract_task_and_outcome_from_trace",
+        trace_json=serialize_to_json(i["trace"], indent=2),
+    ),
+    "TaskCompletionMetric.generate_verdict": lambda i: _prompt(
+        TaskCompletionMetric, "generate_verdict",
+        task=i["task"], actual_outcome=i["outcome"],
+    ),
+    "TaskCompletionMetric._experimental_system_one_score": lambda i: _prompt(
+        TaskCompletionMetric, "_experimental_system_one_score",
+    ),
+    "TaskCompletionMetric._experimental_system_one_questions": lambda i: _prompt(
+        TaskCompletionMetric, "_experimental_system_one_questions",
+        has_trace=i["has_trace"], has_task=i["has_task"],
+    ),
+    "StepEfficiencyMetric.extract_task_from_trace": lambda i: _step_efficiency(
+        "extract_task_from_trace", i,
+        trace_json=serialize_to_json(i["trace"], indent=2),
+    ),
+    "StepEfficiencyMetric.get_execution_efficiency": lambda i: _step_efficiency(
+        "get_execution_efficiency", i,
+        task=i["task"],
+        trace_json_str=serialize_to_json(i["trace"], indent=2),
+    ),
+    "StepEfficiencyMetric._experimental_system_one_score": lambda i: _prompt(
+        StepEfficiencyMetric, "_experimental_system_one_score",
+    ),
+    "StepEfficiencyMetric._experimental_system_one_questions": lambda i: _prompt(
+        StepEfficiencyMetric, "_experimental_system_one_questions",
+        has_trace=i["has_trace"],
+    ),
 }
 
 # Bundled templates of these metrics that no prompt case renders: GEval's
@@ -1651,6 +1714,47 @@ PERSON_SCHEMA = {
     "required": ["name", "age", "tags", "address"],
     "title": "Person",
     "type": "object",
+}
+
+# A nested trace dict (create_nested_spans_dict's shape, made JSON as
+# serialize_to_json does) for the trace metrics' prompts: an agent span
+# with a tool call (every ToolCall field, as vars() gives them), a tool
+# child and an LLM child, and a non-ASCII character json.dumps escapes.
+AGENT_TRACE = {
+    "name": "booking_agent",
+    "type": "agent",
+    "input": {"query": "Book a table for two at Café Odéon on Saturday."},
+    "output": "Booked: Saturday at 19:00, for two.",
+    "tools_called": [{
+        "name": "book_table",
+        "type": "FUNCTION",
+        "description": None,
+        "reasoning": None,
+        "output": "Booked for Saturday at 19:00",
+        "input_parameters": {"day": "Saturday", "restaurant": "Café Odéon"},
+    }],
+    "available_tools": ["book_table", "search_web"],
+    "agent_handoffs": [],
+    "children": [
+        {
+            "name": "book_table",
+            "type": "tool",
+            "input": {"day": "Saturday", "restaurant": "Café Odéon"},
+            "output": "Booked for Saturday at 19:00",
+            "description": "Book a restaurant table",
+            "children": [],
+        },
+        {
+            "name": "confirm",
+            "type": "llm",
+            "input": "Confirm the booking.",
+            "output": "Booked: Saturday at 19:00, for two.",
+            "model": "gpt-4o-mini",
+            "input_token_count": 42.0,
+            "output_token_count": 9.0,
+            "children": [],
+        },
+    ],
 }
 
 PROMPT_CASES = {
@@ -2006,6 +2110,78 @@ PROMPT_CASES = {
     "goal_accuracy_experimental_system_one_questions": {
         "template": "GoalAccuracyMetric._experimental_system_one_questions",
         "inputs": {},
+    },
+    "task_completion_extract_goal_and_outcome": {
+        "template": "TaskCompletionMetric.extract_goal_and_outcome",
+        "inputs": {
+            "input": "Book a table for two at Café Odéon on Saturday.",
+            "actual_output": "Booked: Saturday at 19:00, for two.",
+            "tools_called": [{"name": "book_table",
+                              "input_parameters": {"day": "Saturday", "restaurant": "Café Odéon"},
+                              "output": "Booked for Saturday at 19:00"}],
+        },
+    },
+    "task_completion_extract_goal_and_outcome_no_tools": {
+        "template": "TaskCompletionMetric.extract_goal_and_outcome",
+        "inputs": {"input": "What is 2 + 2?", "actual_output": "4"},
+    },
+    "task_completion_extract_task_and_outcome_from_trace": {
+        "template": "TaskCompletionMetric.extract_task_and_outcome_from_trace",
+        "inputs": {"trace": AGENT_TRACE},
+    },
+    "task_completion_generate_verdict": {
+        "template": "TaskCompletionMetric.generate_verdict",
+        "inputs": {"task": "Book a table for two on Saturday.",
+                   "outcome": "The system booked a table for two on Saturday at 19:00."},
+    },
+    "task_completion_experimental_system_one_score": {
+        "template": "TaskCompletionMetric._experimental_system_one_score",
+        "inputs": {},
+    },
+    "task_completion_experimental_system_one_questions": {
+        "template": "TaskCompletionMetric._experimental_system_one_questions",
+        "inputs": {"has_trace": False, "has_task": False},
+    },
+    "task_completion_experimental_system_one_questions_task": {
+        "template": "TaskCompletionMetric._experimental_system_one_questions",
+        "inputs": {"has_trace": False, "has_task": True},
+    },
+    "task_completion_experimental_system_one_questions_trace": {
+        "template": "TaskCompletionMetric._experimental_system_one_questions",
+        "inputs": {"has_trace": True, "has_task": False},
+    },
+    "task_completion_experimental_system_one_questions_trace_task": {
+        "template": "TaskCompletionMetric._experimental_system_one_questions",
+        "inputs": {"has_trace": True, "has_task": True},
+    },
+    "step_efficiency_extract_task_from_trace": {
+        "template": "StepEfficiencyMetric.extract_task_from_trace",
+        "inputs": {"trace": AGENT_TRACE},
+    },
+    "step_efficiency_extract_task_from_trace_no_trace": {
+        "template": "StepEfficiencyMetric.extract_task_from_trace",
+        "inputs": {"trace": None},
+    },
+    "step_efficiency_get_execution_efficiency": {
+        "template": "StepEfficiencyMetric.get_execution_efficiency",
+        "inputs": {"task": "Book a table for two at Café Odéon on Saturday.", "trace": AGENT_TRACE},
+    },
+    "step_efficiency_get_execution_efficiency_multimodal": {
+        "template": "StepEfficiencyMetric.get_execution_efficiency",
+        "inputs": {"task": "Book a table for two on Saturday.", "trace": AGENT_TRACE,
+                   "multimodal": True},
+    },
+    "step_efficiency_experimental_system_one_score": {
+        "template": "StepEfficiencyMetric._experimental_system_one_score",
+        "inputs": {},
+    },
+    "step_efficiency_experimental_system_one_questions": {
+        "template": "StepEfficiencyMetric._experimental_system_one_questions",
+        "inputs": {"has_trace": False},
+    },
+    "step_efficiency_experimental_system_one_questions_trace": {
+        "template": "StepEfficiencyMetric._experimental_system_one_questions",
+        "inputs": {"has_trace": True},
     },
     "tool_use_get_tool_selection_score": {
         "template": "ToolUseMetric.get_tool_selection_score",
@@ -2756,7 +2932,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the twenty-six metrics is rendered
+    """Fails unless every bundled template of the twenty-eight metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()
@@ -2988,6 +3164,19 @@ TASK_COMPLETION = {
                           "outcome": "The agent searched twice, then answered."}],
         "reason,verdict": [{"verdict": 0.8,
                             "reason": "The agent answered, after repeating a search."}],
+    },
+}
+
+# StepEfficiency judged from a span's trace dict: one task extraction and
+# one efficiency score per measure.
+STEP_EFFICIENCY = {
+    "kind": "step_efficiency",
+    "judge_model": "mock-model",
+    "params": {"threshold": 0.5},
+    "responses": {
+        "task": [{"task": "Tell the user how to reset their password"}],
+        "reason,score": [{"score": 0.75,
+                          "reason": "The agent repeated its search once before answering."}],
     },
 }
 
@@ -3388,6 +3577,32 @@ TRACED_SCENARIOS = {
         },
         "app": [{"call": "agent", "args": ["{input}"]}],
     },
+    "trace_metrics": {
+        "description": "The trace metrics judged by ScriptedJudges from nested trace dicts: "
+                       "TaskCompletion on the trace and StepEfficiency on the agent span",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [TASK_COMPLETION],
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "observe": {"available_tools": ["search"]},
+                "metrics": [STEP_EFFICIENCY],
+                "body": [
+                    {"call": "search", "args": ["$query"]},
+                    {"call": "search", "args": ["$query"]},
+                    {"call": "generate", "args": ["$query", []], "as": "answer"},
+                    # The sync iterator's trace has no output of its own.
+                    {"update_current_trace": {"output": "$answer"}},
+                ],
+                "returns": "$answer",
+            },
+            "search": {"type": "tool", "params": [["query"]], "returns": ["result for {query}"]},
+            "generate": TRACED_GENERATE,
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    },
 }
 
 TRACED_EXCEPTIONS = {"ValueError": ValueError, "RuntimeError": RuntimeError}
@@ -3428,10 +3643,10 @@ class TracedRun:
         kind = spec["kind"]
         if kind == "agent_loop_detection":
             return AgentLoopDetectionMetric(**spec.get("params", {}))
-        if kind == "task_completion":
+        if kind in ("task_completion", "step_efficiency"):
             judge = ScriptedJudge(spec["judge_model"], spec["responses"])
             self.judges.append(judge)
-            return TaskCompletionMetric(model=judge, **spec.get("params", {}))
+            return SCRIPTED_METRICS[kind](model=judge, **spec.get("params", {}))
         return build_metric(spec)
 
     def metrics(self, specs):
@@ -3730,15 +3945,22 @@ def write_iso_table():
     write_json(os.path.join(TRACED, "iso_table.json"), rows)
 
 
-def generate_traced():
+def generate_traced(names=None):
     """Every traced scenario's untraced capture first: a sync evaluation
     switches trace_manager's environment to "testing" for good, and
-    create_trace_api exports it."""
-    write_iso_table()
-    print(f"wrote {os.path.relpath(os.path.join(TRACED, 'iso_table.json'), ROOT)}")
-    for name, script in TRACED_SCENARIOS.items():
+    create_trace_api exports it. `names` regenerates only those scenarios
+    (and not iso_table.json)."""
+    unknown = sorted(set(names or []) - set(TRACED_SCENARIOS))
+    if unknown:
+        sys.exit(f"unknown traced scenarios: {', '.join(unknown)}")
+    scenarios = {name: script for name, script in TRACED_SCENARIOS.items()
+                 if not names or name in names}
+    if not names:
+        write_iso_table()
+        print(f"wrote {os.path.relpath(os.path.join(TRACED, 'iso_table.json'), ROOT)}")
+    for name, script in scenarios.items():
         run_traced_scenario(name, script)
-    for name, script in TRACED_SCENARIOS.items():
+    for name, script in scenarios.items():
         run_traced_evaluations(name, script)
         print(f"wrote {os.path.relpath(os.path.join(TRACED, name), ROOT)}")
 
@@ -3746,14 +3968,14 @@ def generate_traced():
 def main():
     if deepeval.__version__ != DEEPEVAL_VERSION:
         sys.exit(f"expected deepeval {DEEPEVAL_VERSION}, found {deepeval.__version__}")
-    if sys.argv[1:] == ["traced"]:
+    if sys.argv[1:2] == ["traced"]:
         try:
-            generate_traced()
+            generate_traced(sys.argv[2:])
         finally:
             shutil.rmtree(WORK_DIR, ignore_errors=True)
         return
     if sys.argv[1:]:
-        sys.exit(f"usage: {os.path.basename(__file__)} [traced]")
+        sys.exit(f"usage: {os.path.basename(__file__)} [traced [scenario ...]]")
     try:
         for name, scenario in SCENARIOS.items():
             run_scenario(name, scenario)

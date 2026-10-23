@@ -1,0 +1,122 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "Where is my invoice?",
+            "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+          },
+          "task": "Find the invoice for March."
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "`actual_output` (with the tools in `tools_called`) fully accomplishes `task`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "The final outcome of `actual_output` (with the tools in `tools_called`) is what `task` asks for: not a partial result, a different result, or only a plan to get it."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How completely does `actual_output` (with the tools in `tools_called`) accomplish `task`?",
+            "criteria": [
+              "Not achieved",
+              "Partly achieved",
+              "Mostly achieved",
+              "Fully achieved"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.3
+            },
+            "q_1": {
+              "probability": 0.2
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 1.0,
+              "probabilities": {
+                "0": 0.1,
+                "1": 0.6,
+                "2": 0.2,
+                "3": 0.1
+              },
+              "confidence": 0.4
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "input": "Where is my invoice?",
+          "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+        },
+        "task": "Find the invoice for March."
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "`actual_output` (with the tools in `tools_called`) fully accomplishes `task`."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "The final outcome of `actual_output` (with the tools in `tools_called`) is what `task` asks for: not a partial result, a different result, or only a plan to get it."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "How completely does `actual_output` (with the tools in `tools_called`) accomplish `task`?",
+          "criteria": [
+            "Not achieved",
+            "Partly achieved",
+            "Mostly achieved",
+            "Fully achieved"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.3
+          },
+          "q_1": {
+            "probability": 0.2
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 1.0,
+            "probabilities": {
+              "0": 0.1,
+              "1": 0.6,
+              "2": 0.2,
+              "3": 0.1
+            },
+            "confidence": 0.4
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

@@ -5,7 +5,8 @@ defmodule DeepEvalEx.Test.ScriptedParity do
   for the same script.
 
   Each scenario's `script.json` holds one metric (`kind` and constructor
-  `params`), one `test_case` and the judge's `responses`, keyed by metric
+  `params`), one `test_case` (with a `trace`, the nested trace dict it
+  carries as `:trace_dict`) and the judge's `responses`, keyed by metric
   kind, step and call index. `scripts/parity/generate_fixtures.py` ran it
   through deepeval with a scripted judge and recorded `prompts.json`,
   `measure.json` and `test_run.json` next to it; here
@@ -39,7 +40,9 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     PIILeakage,
     PromptAlignment,
     RoleAdherence,
+    StepEfficiency,
     Summarization,
+    TaskCompletion,
     ToolCorrectness,
     ToolPermission,
     ToolUse,
@@ -86,7 +89,9 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "turn_contextual_recall" => TurnContextualRecall,
     "turn_contextual_relevancy" => TurnContextualRelevancy,
     "goal_accuracy" => GoalAccuracy,
-    "tool_use" => ToolUse
+    "tool_use" => ToolUse,
+    "task_completion" => TaskCompletion,
+    "step_efficiency" => StepEfficiency
   }
 
   # Pairs of steps that need not keep deepeval's relative order, as neither
@@ -312,6 +317,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
 
     script
     |> Map.put("test_case", ordered["test_case"])
+    |> Map.put("trace", ordered["trace"])
     |> keep_order(ordered, ["metric", "params", "expected_schema"])
   end
 
@@ -327,14 +333,16 @@ defmodule DeepEvalEx.Test.ScriptedParity do
   end
 
   # One with turns is a conversational test case, each turn built likewise.
-  defp test_case(%{"test_case" => %OrderedObject{} = spec}) do
+  # A `trace` is the nested trace dict the test case carries (deepeval's
+  # `_trace_dict`), its keys in their order.
+  defp test_case(%{"test_case" => %OrderedObject{} = spec} = script) do
     if turns = spec["turns"] do
       spec
       |> fields()
       |> Map.put("turns", Enum.map(turns, &fields/1))
       |> ConversationalTestCase.new!()
     else
-      spec |> fields() |> TestCase.new!()
+      %{TestCase.new!(fields(spec)) | trace_dict: script["trace"]}
     end
   end
 

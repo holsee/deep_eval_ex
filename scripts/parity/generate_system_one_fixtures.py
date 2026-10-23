@@ -133,7 +133,9 @@ from deepeval.metrics import (  # noqa: E402
     PIILeakageMetric,
     PromptAlignmentMetric,
     RoleAdherenceMetric,
+    StepEfficiencyMetric,
     SummarizationMetric,
+    TaskCompletionMetric,
     ToolCorrectnessMetric,
     ToolUseMetric,
     ToxicityMetric,
@@ -191,6 +193,8 @@ METRICS = {
     "turn_contextual_relevancy": TurnContextualRelevancyMetric,
     "goal_accuracy": GoalAccuracyMetric,
     "tool_use": ToolUseMetric,
+    "task_completion": TaskCompletionMetric,
+    "step_efficiency": StepEfficiencyMetric,
 }
 
 # Metrics that follow their eval mode but never build a System One model, so
@@ -587,6 +591,28 @@ INVOICE_TRACE = {
             "children": [],
         },
     ],
+}
+
+# The test case INVOICE_TRACE was captured for, as evals_iterator builds
+# it from the trace.
+INVOICE = {
+    "input": "Where is my invoice?",
+    "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+}
+
+# The trace metrics' LLM steps: TaskCompletion extracts the task and
+# outcome, then judges a verdict; StepEfficiency extracts the task, then
+# scores the run's efficiency.
+TASK_COMPLETION_EXTRACT = {
+    "outcome,task": [{"task": "Find the user's latest invoice.",
+                      "outcome": "The agent looked up invoice INV-42 and said where to find it."}],
+}
+TASK_COMPLETION_VERDICT = {
+    "reason,verdict": [{"verdict": 0.9, "reason": "The invoice was found and its place given."}],
+}
+STEP_EFFICIENCY_TASK = {"task": [{"task": "Find my latest invoice."}]}
+STEP_EFFICIENCY_SCORE = {
+    "reason,score": [{"score": 0.75, "reason": "The lookup was needed; the reply was direct."}],
 }
 
 CAPITAL = {
@@ -1795,6 +1821,83 @@ SCENARIOS = {
                 "nothing_to_cite", {"cites": 0.1, "does_not_cite": 0.2, "nothing_to_cite": 0.7}, 0.55,
             )},
         }},
+    },
+    # TaskCompletion
+    "task_completion_system_one": {
+        "description": "TaskCompletion decided by Jev in one request about the compacted trace",
+        "metrics": [metric("task_completion", "system_one")],
+        "test_case": INVOICE,
+        "trace": INVOICE_TRACE,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.9, 0.8, 3, FOUR_LEVELS_HIGH, 0.6)},
+    },
+    "task_completion_system_one_task": {
+        "description": "TaskCompletion with its own task and no trace, decided by Jev about the "
+                       "input, output, tools called and the task",
+        "metrics": [metric("task_completion", "system_one", task="Find the invoice for March.")],
+        "test_case": INVOICE,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": whole_metric(0.3, 0.2, 1, FOUR_LEVELS_LOW, 0.4)},
+    },
+    "task_completion_hybrid": {
+        "description": "TaskCompletion in hybrid mode: the LLM extracts the task and outcome from "
+                       "the trace, Jev scores how well the outcome achieves the task",
+        "metrics": [metric("task_completion", "hybrid")],
+        "test_case": INVOICE,
+        "trace": INVOICE_TRACE,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"scores": {"verdict": score(2, FOUR_LEVELS_HIGH, 0.6)}}},
+        "judge_model": JUDGE,
+        "responses": {"task_completion": TASK_COMPLETION_EXTRACT},
+    },
+    "task_completion_hybrid_fallback": {
+        "description": "TaskCompletion in hybrid mode with Jev down: the LLM judges the verdict",
+        "metrics": [metric("task_completion", "hybrid")],
+        "test_case": INVOICE,
+        "trace": INVOICE_TRACE,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"task_completion": {**TASK_COMPLETION_EXTRACT, **TASK_COMPLETION_VERDICT}},
+    },
+    # StepEfficiency
+    "step_efficiency_system_one": {
+        "description": "StepEfficiency decided by Jev in one request about the compacted trace",
+        "metrics": [metric("step_efficiency", "system_one")],
+        "test_case": INVOICE,
+        "trace": INVOICE_TRACE,
+        "system_one": {"model": JEV, "cost": JEV_COST, "answers": {
+            "nouls": {"q_0": noul(0.7), "q_1": noul(0.85)},
+            "scores": {"q_2": score(3, FIVE_LEVELS_MID, 0.4)},
+        }},
+    },
+    "step_efficiency_hybrid": {
+        "description": "StepEfficiency in hybrid mode: the LLM extracts the task from the trace, "
+                       "Jev scores the run's efficiency from the task and the compacted trace",
+        "metrics": [metric("step_efficiency", "hybrid")],
+        "test_case": INVOICE,
+        "trace": INVOICE_TRACE,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"scores": {"verdict": score(4, FIVE_LEVELS_HIGH, 0.55)}}},
+        "judge_model": JUDGE,
+        "responses": {"step_efficiency": STEP_EFFICIENCY_TASK},
+    },
+    "step_efficiency_hybrid_fallback": {
+        "description": "StepEfficiency in hybrid mode with Jev down: the LLM scores the efficiency",
+        "metrics": [metric("step_efficiency", "hybrid")],
+        "test_case": INVOICE,
+        "trace": INVOICE_TRACE,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"step_efficiency": {**STEP_EFFICIENCY_TASK, **STEP_EFFICIENCY_SCORE}},
+    },
+    "step_efficiency_hybrid_no_trace": {
+        "description": "StepEfficiency in hybrid mode without a trace: Jev is not asked, the LLM "
+                       "scores the efficiency",
+        "metrics": [metric("step_efficiency", "hybrid")],
+        "test_case": INVOICE,
+        "system_one": NO_JEV,
+        "judge_model": JUDGE,
+        "responses": {"step_efficiency": {**STEP_EFFICIENCY_TASK, **STEP_EFFICIENCY_SCORE}},
     },
     "jev_eval_trace": {
         "description": "JevEval without evaluation_params: its state is the test case's trace "

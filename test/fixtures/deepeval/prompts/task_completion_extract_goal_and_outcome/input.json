@@ -1,0 +1,17 @@
+{
+  "template": "TaskCompletionMetric.extract_goal_and_outcome",
+  "inputs": {
+    "input": "Book a table for two at Café Odéon on Saturday.",
+    "actual_output": "Booked: Saturday at 19:00, for two.",
+    "tools_called": [
+      {
+        "name": "book_table",
+        "input_parameters": {
+          "day": "Saturday",
+          "restaurant": "Café Odéon"
+        },
+        "output": "Booked for Saturday at 19:00"
+      }
+    ]
+  }
+}

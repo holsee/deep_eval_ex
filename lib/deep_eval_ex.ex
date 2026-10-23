@@ -69,6 +69,10 @@ defmodule DeepEvalEx do
     call's arguments address the input
   - `DeepEvalEx.Metrics.ToolPermission` - Agent tool calls against an
     allowlist and denylist
+  - `DeepEvalEx.Metrics.TaskCompletion` - Whether a traced agent
+    accomplished its task, judged from its trace
+  - `DeepEvalEx.Metrics.StepEfficiency` - Whether a traced agent took only
+    the steps its task needed, judged from its trace
   - `DeepEvalEx.Metrics.JevEval` - Your own weighted questions, decided by
     a System One model (Jev)
 

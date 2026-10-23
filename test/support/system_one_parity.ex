@@ -41,7 +41,9 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     PIILeakage,
     PromptAlignment,
     RoleAdherence,
+    StepEfficiency,
     Summarization,
+    TaskCompletion,
     ToolCorrectness,
     ToolUse,
     Toxicity,
@@ -84,7 +86,9 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     "turn_contextual_recall" => TurnContextualRecall,
     "turn_contextual_relevancy" => TurnContextualRelevancy,
     "goal_accuracy" => GoalAccuracy,
-    "tool_use" => ToolUse
+    "tool_use" => ToolUse,
+    "task_completion" => TaskCompletion,
+    "step_efficiency" => StepEfficiency
   }
 
   @eval_modes %{"llm" => :llm, "hybrid" => :hybrid, "system_one" => :system_one}

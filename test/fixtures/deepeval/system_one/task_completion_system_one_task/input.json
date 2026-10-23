@@ -1,0 +1,47 @@
+{
+  "description": "TaskCompletion with its own task and no trace, decided by Jev about the input, output, tools called and the task",
+  "metrics": [
+    {
+      "kind": "task_completion",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5,
+        "task": "Find the invoice for March."
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Where is my invoice?",
+    "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.3
+        },
+        "q_1": {
+          "probability": 0.2
+        }
+      },
+      "scores": {
+        "q_2": {
+          "score": 1,
+          "probabilities": {
+            "0": 0.1,
+            "1": 0.6,
+            "2": 0.2,
+            "3": 0.1
+          },
+          "confidence": 0.4
+        }
+      }
+    }
+  }
+}

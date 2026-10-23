@@ -180,7 +180,10 @@ deepeval walks the spans in two ways, and `:mode` picks one:
 A span that raised, or every span of a trace whose root raised, has its
 metrics skipped and is exported `ERRORED` with its error. Metrics that
 judge the whole run (`requires_trace?`) get the span's nested trace dict
-as the test case's `:trace_dict`.
+as the test case's `:trace_dict`: `DeepEvalEx.Metrics.TaskCompletion`
+(did the agent accomplish its task?) and `DeepEvalEx.Metrics.StepEfficiency`
+(did it take only the steps it needed?) judge the agent's trajectory from
+it, and are measured even when the span has no input.
 
 ## Evaluating a traced agent over goldens
 

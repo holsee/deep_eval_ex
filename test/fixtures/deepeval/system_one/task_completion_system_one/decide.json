@@ -1,0 +1,202 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "trace": {
+            "name": "answer",
+            "type": "agent",
+            "input": {
+              "query": "Where is my invoice?"
+            },
+            "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+            "tools_called": [
+              {
+                "name": "lookup_invoice",
+                "type": "FUNCTION",
+                "description": "Finds the latest invoice",
+                "reasoning": null,
+                "output": "INV-42",
+                "input_parameters": {
+                  "account": "acme"
+                }
+              }
+            ],
+            "available_tools": [
+              "lookup_invoice",
+              "escalate"
+            ],
+            "children": [
+              {
+                "name": "lookup_invoice",
+                "type": "tool",
+                "description": "Finds the latest invoice",
+                "input": {
+                  "account": "acme"
+                },
+                "output": "INV-42"
+              },
+              {
+                "name": "reply",
+                "type": "llm",
+                "input": {
+                  "query": "Where is my invoice?",
+                  "invoice": "INV-42"
+                },
+                "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+                "model": "gpt-4o-mini"
+              }
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "The agent run in `trace` fully accomplishes the user's task (the root span's input in `trace`)."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "The final outcome of the agent run in `trace` is what the user's task (the root span's input in `trace`) asks for: not a partial result, a different result, or only a plan to get it."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How completely does the agent run in `trace` accomplish the user's task (the root span's input in `trace`)?",
+            "criteria": [
+              "Not achieved",
+              "Partly achieved",
+              "Mostly achieved",
+              "Fully achieved"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.9
+            },
+            "q_1": {
+              "probability": 0.8
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 3.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.05,
+                "2": 0.15,
+                "3": 0.8
+              },
+              "confidence": 0.6
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "trace": {
+          "name": "answer",
+          "type": "agent",
+          "input": {
+            "query": "Where is my invoice?"
+          },
+          "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+          "tools_called": [
+            {
+              "name": "lookup_invoice",
+              "type": "FUNCTION",
+              "description": "Finds the latest invoice",
+              "reasoning": null,
+              "output": "INV-42",
+              "input_parameters": {
+                "account": "acme"
+              }
+            }
+          ],
+          "available_tools": [
+            "lookup_invoice",
+            "escalate"
+          ],
+          "children": [
+            {
+              "name": "lookup_invoice",
+              "type": "tool",
+              "description": "Finds the latest invoice",
+              "input": {
+                "account": "acme"
+              },
+              "output": "INV-42"
+            },
+            {
+              "name": "reply",
+              "type": "llm",
+              "input": {
+                "query": "Where is my invoice?",
+                "invoice": "INV-42"
+              },
+              "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+              "model": "gpt-4o-mini"
+            }
+          ]
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "The agent run in `trace` fully accomplishes the user's task (the root span's input in `trace`)."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "The final outcome of the agent run in `trace` is what the user's task (the root span's input in `trace`) asks for: not a partial result, a different result, or only a plan to get it."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "How completely does the agent run in `trace` accomplish the user's task (the root span's input in `trace`)?",
+          "criteria": [
+            "Not achieved",
+            "Partly achieved",
+            "Mostly achieved",
+            "Fully achieved"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.9
+          },
+          "q_1": {
+            "probability": 0.8
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.05,
+              "2": 0.15,
+              "3": 0.8
+            },
+            "confidence": 0.6
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

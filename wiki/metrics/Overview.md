@@ -82,6 +82,8 @@ Evaluate tool-using agents:
 | [ToolCorrectness](ToolCorrectness.md) | Tools called vs. expected tools | `tools_called`, `expected_tools` |
 | [ArgumentCorrectness](ArgumentCorrectness.md) | Whether each tool call's arguments address the input | `input`, `tools_called` |
 | [ToolPermission](ToolPermission.md) | Tool calls within an allowlist and denylist (no LLM) | `tools_called` (and `allowed_tools` or `denied_tools`) |
+| [TaskCompletion](TaskCompletion.md) | Whether the agent accomplished its task, judged from its trace | `input`, `actual_output` (and the trace) |
+| [StepEfficiency](StepEfficiency.md) | Whether the agent took only the steps its task needed, judged from its trace | `input`, `actual_output` (and the trace) |
 
 ## Common Parameters
 
@@ -170,6 +172,8 @@ Faithfulness.measure(test_case, evaluation_template: MyFaithfulnessTemplate)
 - **ToolCorrectness** - Check the agent called the right tools
 - **ArgumentCorrectness** - Check the agent called its tools with the right arguments
 - **ToolPermission** - Check the agent only called the tools it may
+- **TaskCompletion** - Check a traced agent finished the job it was given
+- **StepEfficiency** - Check a traced agent did not wander, repeat or over-fetch
 
 ### For Exact Matching
 - **ExactMatch** - When output must exactly match expected

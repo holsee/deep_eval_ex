@@ -1,0 +1,87 @@
+{
+  "description": "StepEfficiency: the task extracted from the nested trace dict, then the execution's efficiency scored",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "step_efficiency",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "Book a table for two at Café Odéon on Saturday.",
+    "actual_output": "Booked: Saturday at 19:00, for two."
+  },
+  "trace": {
+    "name": "booking_agent",
+    "type": "agent",
+    "input": {
+      "query": "Book a table for two at Café Odéon on Saturday."
+    },
+    "output": "Booked: Saturday at 19:00, for two.",
+    "tools_called": [
+      {
+        "name": "book_table",
+        "type": "FUNCTION",
+        "description": null,
+        "reasoning": null,
+        "output": "Booked for Saturday at 19:00",
+        "input_parameters": {
+          "day": "Saturday",
+          "restaurant": "Café Odéon"
+        }
+      }
+    ],
+    "available_tools": [
+      "book_table",
+      "search_web"
+    ],
+    "agent_handoffs": [],
+    "children": [
+      {
+        "name": "search_web",
+        "type": "tool",
+        "input": {
+          "q": "Café Odéon"
+        },
+        "output": "Café Odéon, 12 Rue de l'Odéon",
+        "children": []
+      },
+      {
+        "name": "book_table",
+        "type": "tool",
+        "input": {
+          "day": "Saturday",
+          "restaurant": "Café Odéon"
+        },
+        "output": "Booked for Saturday at 19:00",
+        "description": "Book a restaurant table",
+        "children": []
+      },
+      {
+        "name": "confirm",
+        "type": "llm",
+        "input": "Confirm the booking.",
+        "output": "Booked: Saturday at 19:00, for two.",
+        "model": "gpt-4o-mini",
+        "input_token_count": 42.0,
+        "output_token_count": 9.0,
+        "children": []
+      }
+    ]
+  },
+  "responses": {
+    "step_efficiency": {
+      "task": [
+        {
+          "task": "Book a table for two at Café Odéon on Saturday."
+        }
+      ],
+      "reason,score": [
+        {
+          "score": 0.75,
+          "reason": "The web search was not needed to book the table."
+        }
+      ]
+    }
+  }
+}

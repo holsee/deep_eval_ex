@@ -47,6 +47,7 @@ defmodule DeepEvalEx.Evaluator.AgenticParityTest do
       mode = unquote(mode)
       input = TracedFixtures.load!(scenario, "input.json")
       metrics = Enum.map(input["metrics"] || [], &TracingScenarios.metric/1)
+      TracingScenarios.script_judges(input)
 
       test_cases =
         scenario

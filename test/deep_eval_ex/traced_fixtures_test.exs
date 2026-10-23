@@ -34,7 +34,7 @@ defmodule DeepEvalEx.TracedFixturesTest do
   @expected ~w(
     dropped_span errored_trace function_kwargs llm_prompt_fields metrics_without_input
     nested_spans next_span_staging provider_normalisation raised_caught raised_uncaught
-    requires_trace span_test_case two_top_level
+    requires_trace span_test_case trace_metrics two_top_level
   )
 
   @buckets ~w(baseSpans agentSpans llmSpans retrieverSpans toolSpans)
@@ -83,7 +83,8 @@ defmodule DeepEvalEx.TracedFixturesTest do
       end
 
       test "has its files", %{input: input} do
-        judged? = Enum.any?(metric_specs(input), &(&1["kind"] == "task_completion"))
+        judged? =
+          Enum.any?(metric_specs(input), &(&1["kind"] in ~w(task_completion step_efficiency)))
 
         expected =
           ~w(input.json trace_api.json nested.json compact.json) ++

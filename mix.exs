@@ -157,6 +157,8 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/ToolCorrectness.md",
         "wiki/metrics/ArgumentCorrectness.md",
         "wiki/metrics/ToolPermission.md",
+        "wiki/metrics/TaskCompletion.md",
+        "wiki/metrics/StepEfficiency.md",
         # API
         "wiki/api/TestCase.md",
         "wiki/api/Result.md",

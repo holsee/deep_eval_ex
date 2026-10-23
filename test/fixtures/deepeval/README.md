@@ -8,7 +8,7 @@ Fixtures written by **deepeval 4.3.1**, in twelve sets:
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
-  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's twenty-nine
+  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's thirty-one
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
 - [prompt goldens](#prompt-goldens) (`prompts/`), used by
@@ -188,7 +188,8 @@ calling an LLM. A script holds:
   `pattern_match`, `tool_permission`, `conversational_g_eval`, `turn_relevancy`,
   `conversation_completeness`, `knowledge_retention`, `role_adherence`,
   `turn_faithfulness`, `turn_contextual_precision`, `turn_contextual_recall`,
-  `turn_contextual_relevancy`, `goal_accuracy` or `tool_use`) and the metric's
+  `turn_contextual_relevancy`, `goal_accuracy`, `tool_use`, `task_completion`
+  or `step_efficiency`) and the metric's
   constructor
   `params`. JsonCorrectness's `expected_schema` is a pydantic model's
   `model_json_schema()`: the generator rebuilds the model from it
@@ -198,6 +199,10 @@ calling an LLM. A script holds:
   `ConversationalTestCase` when they have `turns` (each turn built as a
   `Turn`); a `retrieval_context` item written as a `{"context", "source"}` object is a
   `RetrievedContextData` (`DeepEvalEx.Schemas.RetrievedContextData`)
+- `trace` - optional: a nested trace dict (`create_nested_spans_dict`'s
+  shape, made JSON as `serialize_to_json` does) the test case carries as
+  its private `_trace_dict`, as `evals_iterator` gives a traced test case
+  (DeepEvalEx's `:trace_dict`, keys in their order)
 - `judge_model` - the name the judge reports as the evaluation model
 - `responses` - the judge's answers, keyed by metric kind, then by step, then
   listed by call index. An answer is an object the judge returns as the
@@ -253,6 +258,8 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | TurnContextualRecall | `turn_contextual_recall_pass`, `turn_contextual_recall_fail` (`window_size` 1; a `RetrievedContextData` node; a window without retrieval context; a raw-text verdict out of vocabulary dropped), `turn_contextual_recall_strict` (no reasons), `turn_contextual_recall_no_windows` |
 | GoalAccuracy | `goal_accuracy_pass` (a unit with two assistant turns, its steps accumulating, the first with its tool calls as `print_tools_called` prints them; an integer judge score read as `1.0`), `goal_accuracy_fail` (an opening assistant turn joins the first unit, whose goal then has no user message; a unit with two user turns), `goal_accuracy_strict` (the integer `0`, `Final Score: 0` and `Threshold: 1` in the reason prompt), `goal_accuracy_no_units` (no unit interaction: the score `0.0`, and a reason all the same). Goals are all scored before plans; the reason is plain text (step `text`), written whatever `include_reason` says, its goal evaluations concatenated without a separator and its verbose logs keeping deepeval's stray `c` |
 | ToolUse | `tool_use_pass` (one unit calls a tool, one does not, so one argument score), `tool_use_fail` (two user and two assistant turns in one unit, their calls joined with commas; a call with empty `input_parameters`, left out of its `ToolCall.__repr__`), `tool_use_strict` (the integer `0`), `tool_use_no_tools` (no call: no argument score, so the score is `0.0`). Both reasons use `get_tool_selection_final_reason`, as deepeval does. deepeval's `measure()` never sets ToolUse's success, so `measure.json` has `success: null` while the test run, from `is_successful()`, has the boolean |
+| TaskCompletion | `task_completion_pass` (no trace: the task and outcome extracted from the input, the tools called as `print_tools_called` prints them and the output), `task_completion_task` (its own `task` replaces the extracted one in the verdict prompt; strict, the integer `0`), `task_completion_trace` (the task and outcome extracted from the trace, printed by `serialize_to_json(indent=2)` with non-ASCII escaped; a verdict without a reason, `null`). The verbose logs hold the task and outcome only |
+| StepEfficiency | `step_efficiency_pass` (the task, then the score, from the trace), `step_efficiency_strict` (the integer `0`), `step_efficiency_no_trace` (no trace: both prompts print `null`; an integer score read as `1.0`) |
 | TurnContextualRelevancy | `turn_contextual_relevancy_pass` (one request per node), `turn_contextual_relevancy_fail` (`window_size` 1; an irrelevant statement without a reason, `: None` in the reason prompt; a raw-text verdict out of vocabulary dropped), `turn_contextual_relevancy_strict`, `turn_contextual_relevancy_no_windows`. deepeval 4.3.1 raises on a `RetrievedContextData` node, so no scenario has one |
 | Faithfulness | `faithfulness_pass`, `faithfulness_fail`, `faithfulness_borderline`, `faithfulness_penalize_ambiguous` (`penalize_ambiguous_claims`: the borderline verdict fails and is an `(Ambiguous)` contradiction), `faithfulness_no_claims` (empty list), `faithfulness_strict` |
 | Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_no_verdicts` (empty list), `hallucination_strict`, `hallucination_messy_json` (raw-text answers: prose, a code fence and trailing commas around the verdicts, a reason missing its closing brace), `hallucination_invalid_json` (a raw-text answer with no JSON: the metric errors) |
@@ -301,7 +308,7 @@ scenarios, why it fails and its tag.
 ## Prompt goldens
 
 `prompts/<case>/` holds one prompt deepeval 4.3.1 renders for one of the
-twenty-six LLM-judged metrics, for fixed inputs:
+twenty-eight LLM-judged metrics, for fixed inputs:
 
 - `input.json` - `template`, deepeval's template class key and method (e.g.
   `FaithfulnessMetric.generate_truths`, from
@@ -443,6 +450,12 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.ToolUse.get_tool_selection_score/1`, `get_argument_correctness_score/1` | `ToolUseMetric.get_tool_selection_score`, `get_argument_correctness_score` (`tool_use/templates/`) | `user_input`, `assistant_messages`, `tools_called` and `available_tools` (each `ToolCall.__repr__`, joined with commas) | `tool_use_get_tool_selection_score`, `tool_use_get_argument_correctness_score` |
 | `Prompts.ToolUse.get_tool_selection_final_reason/1`, `get_tool_argument_final_reason/1` | `ToolUseMetric.get_tool_selection_final_reason`, `get_tool_argument_final_reason` (which deepeval never renders) | `all_scores_and_reasons`, `final_score`, `threshold` (unformatted) | `tool_use_get_tool_selection_final_reason`, `_strict`, `tool_use_get_tool_argument_final_reason` |
 | `Prompts.ToolUse.system_one_tool_selection_score/0`, `system_one_argument_correctness_score/0`, `system_one_questions/0` | `ToolUseMetric._experimental_system_one_tool_selection_score`, `_argument_correctness_score`, `_questions` | none | `tool_use_experimental_system_one_tool_selection_score`, `_argument_correctness_score`, `_questions` |
+| `Prompts.TaskCompletion.extract_goal_and_outcome/1` | `TaskCompletionMetric.extract_goal_and_outcome` (`task_completion/templates/extract_goal_and_outcome.txt`) | `input`, `actual_output`, `tools_called_formatted` (`print_tools_called`, `""` for none) | `task_completion_extract_goal_and_outcome`, `_no_tools` |
+| `Prompts.TaskCompletion.extract_task_and_outcome_from_trace/1` | `TaskCompletionMetric.extract_task_and_outcome_from_trace` | `trace_json` (`serialize_to_json(trace, indent=2)`) | `task_completion_extract_task_and_outcome_from_trace` |
+| `Prompts.TaskCompletion.generate_verdict/1` | `TaskCompletionMetric.generate_verdict` | `task`, `actual_outcome` | `task_completion_generate_verdict` |
+| `Prompts.TaskCompletion.system_one_score/0`, `system_one_questions/1` | `TaskCompletionMetric._experimental_system_one_score`, `_questions` | `has_trace`, `has_task` (the questions; `tojson` escapes `'` as `\u0027`) | `task_completion_experimental_system_one_score`, `_questions`, `_questions_task`, `_questions_trace`, `_questions_trace_task` |
+| `Prompts.StepEfficiency.extract_task_from_trace/1`, `get_execution_efficiency/1` | `StepEfficiencyMetric.extract_task_from_trace`, `get_execution_efficiency` (`step_efficiency/templates/`) | `trace_json` or `trace_json_str` (`serialize_to_json(trace, indent=2)`, `null` without a trace), `task`; the multimodal input rules are always included, whatever `multimodal` says | `step_efficiency_extract_task_from_trace`, `_no_trace`, `step_efficiency_get_execution_efficiency`, `_multimodal` |
+| `Prompts.StepEfficiency.system_one_score/0`, `system_one_questions/1` | `StepEfficiencyMetric._experimental_system_one_score`, `_questions` | `has_trace` (the questions) | `step_efficiency_experimental_system_one_score`, `_questions`, `_questions_trace` |
 | `Prompts.ToolCorrectness.system_one_tool_selection_score/0` | `ToolCorrectnessMetric._experimental_system_one_tool_selection_score` (`tool_correctness/templates/_experimental_system_one_tool_selection_score.txt`) | none | `tool_correctness_experimental_system_one_tool_selection_score` |
 
 Templates of these metrics without a DeepEvalEx counterpart, so without a
@@ -658,6 +671,11 @@ Each `system_one/<scenario>/` holds:
 | `goal_accuracy_hybrid`, `tool_use_hybrid` | `hybrid` with a `SystemOneScoreSpec` per score: GoalAccuracy one request per unit's goal, then per plan, about its `task` and `steps_taken`; ToolUse one per unit's tool selection, then per unit that called a tool for its arguments, about its `user_messages`, `assistant_messages`, `tools_called` and `available_tools` (the prompt's texts). The LLM writes the reasons |
 | `goal_accuracy_hybrid_fallback`, `tool_use_hybrid_fallback` | The same with Jev down: each score falls back to the LLM, the reasons joined in `system_one_fallback_reason` |
 | `batch_system_one_goal_tool` | GoalAccuracy and ToolUse batched into one request by `evaluate()`, the state holding the turns with their tools and the `available_tools` |
+| `task_completion_system_one`, `step_efficiency_system_one` | The whole-metric request of the trace metrics (a weighted Noul, a Noul and a four- or five-level Score) about `compact_trace` of the test case's `_trace_dict`, under its own `trace` key, and no test case field |
+| `task_completion_system_one_task` | TaskCompletion with its own `task` and no trace: the request asks about `input`, `actual_output` and `tools_called` under `test_case` and the `task` under its own key |
+| `task_completion_hybrid`, `step_efficiency_hybrid` | `hybrid` with one `SystemOneScoreSpec` each: TaskCompletion's verdict about the extracted `task` and `outcome`, StepEfficiency's score about the extracted `task` and the compacted `trace`. The LLM extracts (`prompts.json`); the reason is `format_decision_reason`'s |
+| `task_completion_hybrid_fallback`, `step_efficiency_hybrid_fallback` | The same with Jev down: the LLM judges, its reason kept, the error in `system_one_fallback_reason` |
+| `step_efficiency_hybrid_no_trace` | StepEfficiency in `hybrid` without a trace: no Score spec, so no `decide()` call and the LLM scores |
 | `batch_system_one_retention_role` | KnowledgeRetention and RoleAdherence batched into one request by `evaluate()`, the state holding the turns and the `chatbot_role` |
 | `batch_system_one_down` | Two batched metrics with Jev down: no fallback, `measure()` raises and `evaluate()` records the error on each metric |
 | `refusal_classifier_system_one` | `RefusalClassifier` on Jev: one Choice over its labels, deterministic reason |
@@ -1004,6 +1022,9 @@ devcontainer exec --workspace-folder . \
   env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_fixtures.py traced
 ```
 
+Scenario names after `traced` regenerate only those scenarios, leaving the
+others' uuids and timestamps as they were.
+
 A scenario's `input.json` is a declarative agent script that both sides
 interpret into the same call tree: `goldens`, trace-level `metrics`, the
 iterator `modes` it runs in, `functions` (each an `@observe`'d function:
@@ -1017,8 +1038,8 @@ current span (`drop_current_span`) or raise (`raise`). A string value
 `"$name"` is that argument or bound result, and any other string is
 formatted with them (`str.format`); the generator's comment above
 `TRACED_SCENARIOS` has the details. Metric specs are the export
-scenarios' (`stub`, `exact_match`), `agent_loop_detection` and a
-ScriptedJudge-backed `task_completion`.
+scenarios' (`stub`, `exact_match`), `agent_loop_detection` and the
+ScriptedJudge-backed `task_completion` and `step_efficiency`.
 
 Each scenario directory also holds:
 
@@ -1052,6 +1073,7 @@ Each scenario directory also holds:
 | `dropped_span` | A span that drops itself: re-parented children outside evaluation, kept by the walkers |
 | `two_top_level` | Two top-level spans per golden: sync keeps `root_spans[0].children[0]`, async makes a test case of each trace |
 | `requires_trace` | AgentLoopDetection on the trace, a span and a `{}`-input span (the `input="None"` placeholder in async), and TaskCompletion judged from the nested dict |
+| `trace_metrics` | TaskCompletion on the trace and StepEfficiency on the agent span, each judged by its own ScriptedJudge from the nested dict of its trace or span (`prompts_<mode>.json` lists one judge's prompts, then the other's) |
 | `llm_prompt_fields` | LlmSpan prompt fields from `observe(prompt=...)`, `update_llm_span(prompt=...)` and `next_llm_span(prompt=...)`; `tokenIntervals` |
 | `provider_normalisation` | Providers normalised to deepeval's `Provider` values outside evaluation, exported raw by the walkers |
 

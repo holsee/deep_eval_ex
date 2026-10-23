@@ -59,7 +59,11 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     prompt_alignment_hybrid prompt_alignment_hybrid_fallback prompt_alignment_system_one
     refusal_classifier_system_one
     role_adherence_hybrid role_adherence_hybrid_fallback role_adherence_system_one
+    step_efficiency_hybrid step_efficiency_hybrid_fallback step_efficiency_hybrid_no_trace
+    step_efficiency_system_one
     summarization_hybrid summarization_hybrid_fallback summarization_system_one
+    task_completion_hybrid task_completion_hybrid_fallback task_completion_system_one
+    task_completion_system_one_task
     tool_correctness_hybrid tool_correctness_hybrid_fallback tool_correctness_system_one
     tool_use_hybrid tool_use_hybrid_fallback tool_use_system_one
     toxicity_hybrid toxicity_hybrid_fallback toxicity_system_one
@@ -83,6 +87,12 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
 
   defp asks?(spec), do: spec["kind"] not in @asks_nothing
 
+  # Scenarios whose test case gives the metric nothing to ask: StepEfficiency
+  # has no hybrid Score without a trace.
+  @asks_nothing_of_test_case ~w(step_efficiency_hybrid_no_trace)
+
+  defp asks?(scenario, spec), do: scenario not in @asks_nothing_of_test_case and asks?(spec)
+
   # A JevEval has no eval mode: it is always decided by System One.
   defp decided_by_system_one?(spec),
     do: spec["eval_mode"] == "system_one" or spec["kind"] in ~w(jev_eval conversational_jev_eval)
@@ -101,7 +111,8 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
              contextual_relevancy bias toxicity pii_leakage prompt_alignment summarization
              argument_correctness tool_correctness turn_relevancy conversation_completeness
              knowledge_retention role_adherence turn_faithfulness turn_contextual_precision
-             turn_contextual_recall turn_contextual_relevancy goal_accuracy tool_use),
+             turn_contextual_recall turn_contextual_relevancy goal_accuracy tool_use
+             task_completion step_efficiency),
         suffix <- ~w(system_one hybrid hybrid_fallback) do
       assert "#{kind}_#{suffix}" in @scenarios
     end
@@ -150,10 +161,11 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
       test "records well-formed decide() calls", %{input: input, decide: decide} do
         calls = decide["evaluate"] ++ List.flatten(decide["measure"])
         specs = input["metrics"] || [input["classifier"]]
-        assert calls != [] or not Enum.any?(specs, &asks?/1)
+        assert calls != [] or not Enum.any?(specs, &asks?(unquote(scenario), &1))
         Enum.each(calls, &assert_call/1)
 
-        for {spec, measured} <- Enum.zip(specs, decide["measure"]), not asks?(spec) do
+        for {spec, measured} <- Enum.zip(specs, decide["measure"]),
+            not asks?(unquote(scenario), spec) do
           assert measured == []
         end
       end
@@ -197,7 +209,8 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
           end
 
           # Confidence comes from Jev's answers only.
-          assert is_number(state["confidence"]) == (asks?(spec) and not failed?)
+          assert is_number(state["confidence"]) ==
+                   (asks?(unquote(scenario), spec) and not failed?)
         end
       end
 

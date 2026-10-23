@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.9,
+    "success": true,
+    "reason": "The invoice was found and its place given.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "verbose_logs": "Task: Find the user's latest invoice. \n \nOutcome: The agent looked up invoice INV-42 and said where to find it.",
+    "confidence": null,
+    "system_one_fallback_reason": "ConnectionError: Jev is down",
+    "score_breakdown": null,
+    "raised": null
+  }
+]

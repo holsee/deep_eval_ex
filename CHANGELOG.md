@@ -2360,6 +2360,37 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `mix deep_eval.test` records the test case with its trace.
   `Agentic.evaluate/3` with `index: nil` now names an unnamed golden's test
   case `"test_case_None"`, as deepeval's `create_api_test_case`.
+- **`DeepEvalEx.Metrics.TaskCompletion` and `DeepEvalEx.Metrics.StepEfficiency`**,
+  ports of deepeval 4.3.1's `TaskCompletionMetric` and
+  `StepEfficiencyMetric`, the first trace metrics: both return `true` from
+  `requires_trace?/0`, so `DeepEvalEx.evaluate_traced/3`,
+  `DeepEvalEx.ExUnit.assert_trace/3` and span metrics give their test case
+  the nested trace dict (`:trace_dict`), printed in their prompts as
+  deepeval's `serialize_to_json(trace_dict, indent=2)`.
+  - TaskCompletion extracts the task and a factual outcome, from the trace
+    or, without one, from the test case's input, output and tools called;
+    its own `:task` option replaces the extracted task; the score is the
+    judge's 0-1 verdict. StepEfficiency extracts the task from the trace,
+    then scores how close the steps came to the minimal sequence (a missing
+    trace prints as `null`, and its prompts always hold the multimodal
+    input rules, as deepeval's do).
+  - Both follow `:eval_mode`. `:hybrid` asks System One one four-level
+    (TaskCompletion: the `task` and `outcome`) or five-level
+    (StepEfficiency: the `task` and the compacted `trace`, only when there
+    is one) Score, falling back to the LLM. `:system_one` asks the whole
+    metric in one request about the trace compacted by
+    `DeepEvalEx.Tracing.CompactTrace` (or, without one, `input`,
+    `actual_output` and `tools_called`, and TaskCompletion's own `task`).
+  - Their prompts are `DeepEvalEx.Prompts.TaskCompletion` and
+    `DeepEvalEx.Prompts.StepEfficiency`, overridable with
+    `:evaluation_template`.
+  - Parity: 16 prompt goldens, 6 scripted scenarios (a scripted test case
+    can now carry a `trace` as its `_trace_dict`), 8 System One scenarios
+    and a `trace_metrics` traced scenario (TaskCompletion on the trace,
+    StepEfficiency on the agent span) whose `evaluate_traced/3` test runs
+    and judge prompts match deepeval's byte for byte in both modes.
+    `generate_fixtures.py traced <scenario> ...` now regenerates only the
+    named traced scenarios.
 
 ### Changed
 

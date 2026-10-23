@@ -26,6 +26,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
   alias DeepEvalEx.Metrics.Utils.Turns
   alias DeepEvalEx.Prompts
   alias DeepEvalEx.Schemas.ToolCall
+  alias DeepEvalEx.Tracing.NestedDict
   alias Jason.OrderedObject
 
   @moduletag :parity
@@ -234,7 +235,25 @@ defmodule DeepEvalEx.PromptGoldenTest do
       {Prompts.ToolUse, :system_one_tool_selection_score},
     "ToolUseMetric._experimental_system_one_argument_correctness_score" =>
       {Prompts.ToolUse, :system_one_argument_correctness_score},
-    "ToolUseMetric._experimental_system_one_questions" => {Prompts.ToolUse, :system_one_questions}
+    "ToolUseMetric._experimental_system_one_questions" =>
+      {Prompts.ToolUse, :system_one_questions},
+    "TaskCompletionMetric.extract_goal_and_outcome" =>
+      {Prompts.TaskCompletion, :extract_goal_and_outcome},
+    "TaskCompletionMetric.extract_task_and_outcome_from_trace" =>
+      {Prompts.TaskCompletion, :extract_task_and_outcome_from_trace},
+    "TaskCompletionMetric.generate_verdict" => {Prompts.TaskCompletion, :generate_verdict},
+    "TaskCompletionMetric._experimental_system_one_score" =>
+      {Prompts.TaskCompletion, :system_one_score},
+    "TaskCompletionMetric._experimental_system_one_questions" =>
+      {Prompts.TaskCompletion, :system_one_questions},
+    "StepEfficiencyMetric.extract_task_from_trace" =>
+      {Prompts.StepEfficiency, :extract_task_from_trace},
+    "StepEfficiencyMetric.get_execution_efficiency" =>
+      {Prompts.StepEfficiency, :get_execution_efficiency},
+    "StepEfficiencyMetric._experimental_system_one_score" =>
+      {Prompts.StepEfficiency, :system_one_score},
+    "StepEfficiencyMetric._experimental_system_one_questions" =>
+      {Prompts.StepEfficiency, :system_one_questions}
   }
 
   # {the ROADMAP unit that removes the tag, cases}. The fixtures' README
@@ -251,7 +270,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the twenty-six LLM metrics" do
+  test "covers every template of the twenty-eight LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -277,7 +296,9 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.PIILeakage,
             Prompts.PromptAlignment,
             Prompts.RoleAdherence,
+            Prompts.StepEfficiency,
             Prompts.Summarization,
+            Prompts.TaskCompletion,
             Prompts.ToolCorrectness,
             Prompts.ToolUse,
             Prompts.Toxicity,
@@ -350,6 +371,29 @@ defmodule DeepEvalEx.PromptGoldenTest do
       turns: Enum.map(test_case.turns, &Turns.convert_turn_to_dict(&1, metric.evaluation_params)),
       parameters: Prompts.ConversationalGEval.format_params(metric.evaluation_params),
       rubric: Prompts.ConversationalGEval.format_rubric(metric.rubric)
+    ]
+  end
+
+  # The trace metrics print their nested trace dict in its key order, so it
+  # is read again with its order kept.
+  defp options(template, inputs, name)
+       when template in [
+              "TaskCompletionMetric.extract_task_and_outcome_from_trace",
+              "StepEfficiencyMetric.extract_task_from_trace",
+              "StepEfficiencyMetric.get_execution_efficiency"
+            ] do
+    ordered =
+      Path.join([@fixtures, name, "input.json"])
+      |> File.read!()
+      |> Jason.decode!(objects: :ordered_objects)
+
+    trace_json = NestedDict.to_json(ordered["inputs"]["trace"])
+
+    [
+      trace_json: trace_json,
+      trace_json_str: trace_json,
+      task: inputs["task"],
+      multimodal: Map.get(inputs, "multimodal", false)
     ]
   end
 
@@ -747,6 +791,26 @@ defmodule DeepEvalEx.PromptGoldenTest do
         inputs["available_tools"] |> tool_calls() |> Prompts.ToolCorrectness.format_tools()
     ]
   end
+
+  # TaskCompletion without a trace prints its tools called as
+  # print_tools_called does.
+  defp options("TaskCompletionMetric.extract_goal_and_outcome", inputs) do
+    [
+      input: inputs["input"],
+      actual_output: inputs["actual_output"],
+      tools_called_formatted:
+        (inputs["tools_called"] || []) |> tool_calls() |> Prompts.ToolCorrectness.format_tools()
+    ]
+  end
+
+  defp options("TaskCompletionMetric.generate_verdict", inputs),
+    do: [task: inputs["task"], actual_outcome: inputs["outcome"]]
+
+  defp options("TaskCompletionMetric._experimental_system_one_questions", inputs),
+    do: [has_trace: inputs["has_trace"], has_task: inputs["has_task"]]
+
+  defp options("StepEfficiencyMetric._experimental_system_one_questions", inputs),
+    do: [has_trace: inputs["has_trace"]]
 
   # GoalAccuracy joins a unit's steps with newlines and builds its
   # evaluations as GoalAccuracy._generate_reason does.

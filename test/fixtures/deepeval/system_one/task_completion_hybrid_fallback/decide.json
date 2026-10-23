@@ -1,0 +1,52 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "task": "Find the user's latest invoice.",
+          "outcome": "The agent looked up invoice INV-42 and said where to find it."
+        },
+        "questions": {
+          "verdict": {
+            "type": "score",
+            "instructions": "How well does `outcome` achieve `task`?",
+            "criteria": [
+              "Not achieved",
+              "Partly achieved",
+              "Mostly achieved",
+              "Fully achieved"
+            ]
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "task": "Find the user's latest invoice.",
+        "outcome": "The agent looked up invoice INV-42 and said where to find it."
+      },
+      "questions": {
+        "verdict": {
+          "type": "score",
+          "instructions": "How well does `outcome` achieve `task`?",
+          "criteria": [
+            "Not achieved",
+            "Partly achieved",
+            "Mostly achieved",
+            "Fully achieved"
+          ]
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

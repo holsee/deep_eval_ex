@@ -9,6 +9,10 @@ defmodule DeepEvalEx.Evaluator.TracedParityTest do
   golden, the sync wrapper strip, the uncaught error's marking, the
   `prompts` and `hyperparameters` its LLM spans log).
 
+  When the scenario's metrics have ScriptedJudges, the prompts their
+  judges got (`prompts_sync.json`, `prompts_async.json`) are compared too,
+  each metric's on its own: deepeval's file lists them judge by judge.
+
   `requires_trace` declares metrics ported by later units.
   """
 
@@ -16,7 +20,8 @@ defmodule DeepEvalEx.Evaluator.TracedParityTest do
 
   alias DeepEvalEx.Dataset.Golden
   alias DeepEvalEx.Evaluator.Traced
-  alias DeepEvalEx.Test.{TracedFixtures, TracingScenarios}
+  alias DeepEvalEx.LLM.Adapters.Mock
+  alias DeepEvalEx.Test.{ScriptedParity, TracedFixtures, TracingScenarios}
 
   @moduletag :parity
   @moduletag :tmp_dir
@@ -37,6 +42,7 @@ defmodule DeepEvalEx.Evaluator.TracedParityTest do
       mode = unquote(mode)
       input = TracedFixtures.load!(scenario, "input.json")
       module = TracingScenarios.compile(scenario)
+      TracingScenarios.script_judges(input)
 
       {_evaluation, _test_run, path} =
         Traced.run(
@@ -54,8 +60,34 @@ defmodule DeepEvalEx.Evaluator.TracedParityTest do
 
       assert TracedFixtures.normalise(File.read!(path)) ==
                TracedFixtures.normalise(TracedFixtures.read!(scenario, "test_run_#{mode}.json"))
+
+      if File.regular?(Path.join([TracedFixtures.dir(), scenario, "prompts_#{mode}.json"])) do
+        expected = Jason.decode!(TracedFixtures.read!(scenario, "prompts_#{mode}.json"))
+        assert_judge_prompts(input, Mock.scripted_prompts(), expected)
+      end
     end
   end
+
+  # Each judged metric's prompts, by the steps its responses script, as
+  # ScriptedParity compares a scripted scenario's.
+  defp assert_judge_prompts(input, ours, theirs) do
+    steps =
+      for spec <- (input["metrics"] || []) ++ function_metrics(input),
+          responses = spec["responses"],
+          do: Enum.map(responses.values, &elem(&1, 0))
+
+    assert Enum.sort(List.flatten(steps)) == theirs |> Enum.map(& &1["step"]) |> Enum.sort()
+
+    for judge_steps <- steps do
+      ScriptedParity.assert_prompts(
+        Enum.filter(ours, &(&1.step in judge_steps)),
+        Enum.filter(theirs, &(&1["step"] in judge_steps))
+      )
+    end
+  end
+
+  defp function_metrics(input),
+    do: Enum.flat_map(input["functions"].values, fn {_name, spec} -> spec["metrics"] || [] end)
 
   defp goldens(input) do
     for golden <- input["goldens"] do

@@ -92,6 +92,8 @@ config :deep_eval_ex,
 | **ToolCorrectness** | Agent tool calls against the expected tools |
 | **ArgumentCorrectness** | Whether each agent tool call's arguments address the input |
 | **ToolPermission** | Agent tool calls against an allowlist and denylist |
+| **TaskCompletion** | Whether a traced agent accomplished the task it was given, judged from its trace |
+| **StepEfficiency** | Whether a traced agent took only the steps its task needed, judged from its trace |
 | **JevEval** | Your own weighted Noul, Score and Choice questions, decided by a System One model (Jev) |
 | **ConversationalJevEval** | JevEval for multi-turn conversations: your own questions about the turns, decided by a System One model (Jev) |
 

@@ -25,6 +25,7 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   `supported_metrics?/1` tells whether a scenario has one.
   """
 
+  alias DeepEvalEx.LLM.Adapters.Mock, as: LLMMock
   alias DeepEvalEx.Metrics.ExactMatch
   alias DeepEvalEx.Test.ParityMetrics.Stub
   alias DeepEvalEx.Test.TracedFixtures
@@ -41,6 +42,12 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   }
 
   @next ~w(next_span next_agent_span next_llm_span next_tool_span next_retriever_span)
+
+  # The metrics the generator judges with a ScriptedJudge.
+  @judged %{
+    "task_completion" => DeepEvalEx.Metrics.TaskCompletion,
+    "step_efficiency" => DeepEvalEx.Metrics.StepEfficiency
+  }
 
   @supported_steps ["call", "raise", "with", "drop_current_span" | Map.keys(@updates)]
 
@@ -231,8 +238,10 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   @doc """
   The metric spec of a script metric, as the generator's `build_metric`:
   a `stub` is a `DeepEvalEx.Test.ParityMetrics.Stub`, an `exact_match`
-  `DeepEvalEx.Metrics.ExactMatch`. `nil` for a metric DeepEvalEx does not
-  have yet.
+  `DeepEvalEx.Metrics.ExactMatch`, and a `task_completion` or
+  `step_efficiency` the metric with its params, judged by
+  `DeepEvalEx.LLM.Adapters.Mock` as `script_judges/1` scripts it. `nil`
+  for a metric DeepEvalEx does not have yet.
   """
   @spec metric(OrderedObject.t()) :: DeepEvalEx.Tracing.Span.metric_spec() | nil
   def metric(spec) do
@@ -252,9 +261,37 @@ defmodule DeepEvalEx.Test.TracingScenarios do
       "exact_match" ->
         ExactMatch
 
+      kind when is_map_key(@judged, kind) ->
+        module = Map.fetch!(@judged, kind)
+        Code.ensure_loaded!(module)
+
+        params =
+          for {key, value} <- (spec["params"] || OrderedObject.new([])).values,
+              do: {String.to_existing_atom(key), plain(value)}
+
+        {module, [adapter: :mock] ++ params}
+
       _not_yet_ported ->
         nil
     end
+  end
+
+  @doc """
+  Scripts `DeepEvalEx.LLM.Adapters.Mock` with the responses of every
+  judged metric of a scenario's `input.json` (the generator's
+  ScriptedJudges), merged by step: the scenarios give each judged metric
+  its own steps. Returns `:ok`.
+  """
+  @spec script_judges(OrderedObject.t()) :: :ok
+  def script_judges(input) do
+    judged = input |> metric_specs() |> Enum.filter(&is_map_key(@judged, &1["kind"]))
+
+    responses =
+      Enum.reduce(judged, %{}, fn spec, acc -> Map.merge(acc, plain(spec["responses"])) end)
+
+    model = Enum.find_value(judged, "mock-model", & &1["judge_model"])
+    LLMMock.script(responses, model: model)
+    :ok
   end
 
   @doc """

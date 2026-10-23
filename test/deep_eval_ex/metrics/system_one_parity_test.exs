@@ -67,6 +67,10 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
     goal_accuracy_system_one goal_accuracy_system_one_strict goal_accuracy_hybrid
     goal_accuracy_hybrid_fallback
     tool_use_system_one tool_use_hybrid tool_use_hybrid_fallback
+    task_completion_system_one task_completion_system_one_task task_completion_hybrid
+    task_completion_hybrid_fallback
+    step_efficiency_system_one step_efficiency_hybrid step_efficiency_hybrid_fallback
+    step_efficiency_hybrid_no_trace
   )
 
   @batched_scenarios ~w(
