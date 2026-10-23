@@ -33,11 +33,13 @@ defmodule DeepEvalEx.ConversationalTestCase do
     id to `DeepEvalEx.MLLMImage`; `new/1` takes a list (or a map) of
     images or of their attributes, as `DeepEvalEx.TestCase` does
   - `:voice` - Whether the conversation holds audio (see below)
+  - `:mcp_servers` - The MCP servers the chatbot could use
+    (`DeepEvalEx.MCPServer`, or the attributes `DeepEvalEx.MCPServer.new/1`
+    takes); a turn's tool call one of them lists becomes an MCP tool call
+    when the test case is evaluated (see `DeepEvalEx.MCP.process_servers/2`)
   - `:dataset_rank` - The test case's position in the dataset it was added
     to, deepeval's private `_dataset_rank`; `nil` outside a dataset, and
     `new/1` never sets it
-
-  deepeval's `mcp_servers` is not ported, as for `DeepEvalEx.TestCase`.
 
   ## Modality flags
 
@@ -79,7 +81,7 @@ defmodule DeepEvalEx.ConversationalTestCase do
   import Peri
 
   alias DeepEvalEx.Dataset.Expectations
-  alias DeepEvalEx.MLLMImage
+  alias DeepEvalEx.{MCPServer, MLLMImage}
   alias DeepEvalEx.Schemas.RetrievedContextData
   alias DeepEvalEx.Turn
 
@@ -97,6 +99,7 @@ defmodule DeepEvalEx.ConversationalTestCase do
           flaky: boolean(),
           expectations: Expectations.t() | nil,
           expected_labels: %{optional(String.t()) => String.t()} | nil,
+          mcp_servers: [MCPServer.t()] | nil,
           call_recording_path: String.t() | nil,
           multimodal: boolean(),
           images: %{optional(String.t()) => MLLMImage.t()} | nil,
@@ -117,6 +120,7 @@ defmodule DeepEvalEx.ConversationalTestCase do
     :tags,
     :expectations,
     :expected_labels,
+    :mcp_servers,
     :call_recording_path,
     :images,
     :dataset_rank,
@@ -146,6 +150,7 @@ defmodule DeepEvalEx.ConversationalTestCase do
     flaky: ["flaky"],
     expectations: ["expectations"],
     expected_labels: ["expectedLabels", "expected_labels"],
+    mcp_servers: ["mcp_servers"],
     multimodal: ["multimodal"],
     voice: ["voice"],
     images: ["images", "imagesMapping"]
@@ -166,6 +171,7 @@ defmodule DeepEvalEx.ConversationalTestCase do
     flaky: {:boolean, {:default, false}},
     expectations: {:custom, {Expectations, :cast}},
     expected_labels: {:map, :string, :string},
+    mcp_servers: {:list, {:custom, {MCPServer, :cast}}},
     multimodal: {:boolean, {:default, false}},
     voice: {:boolean, {:default, false}},
     images: {:custom, {MLLMImage, :cast_images}}
@@ -238,8 +244,9 @@ defmodule DeepEvalEx.ConversationalTestCase do
 
   Like deepeval, it checks no other param: a turn-level param such as
   `:content` or `:retrieval_context`, `:context` and `:user_description`
-  are never missing. deepeval's `mcp_servers` check is not ported, nor its
-  checks that the judge model accepts multimodal or audio input.
+  are never missing. deepeval's `mcp_servers` check, which only its MCP
+  metrics ask for, is not ported, nor its checks that the judge model
+  accepts multimodal or audio input.
 
   `DeepEvalEx.Result.error/3` renders each error with deepeval's
   `MissingTestCaseParamsError` message.

@@ -21,12 +21,11 @@ defmodule DeepEvalEx.Turn do
     `DeepEvalEx.Schemas.RetrievedContextData` structs, in any mix
   - `:tools_called` - Tool calls made in the turn
     (`DeepEvalEx.Schemas.ToolCall`)
+  - `:mcp_tools_called`, `:mcp_resources_called`, `:mcp_prompts_called` -
+    MCP calls made in the turn (`DeepEvalEx.MCPToolCall`,
+    `DeepEvalEx.MCPResourceCall`, `DeepEvalEx.MCPPromptCall`), or the
+    attributes their `new/1` takes
   - `:metadata` - A map of metadata
-
-  deepeval's MCP fields (`mcp_tools_called`, `mcp_resources_called`,
-  `mcp_prompts_called`) are not ported, as for `DeepEvalEx.TestCase`;
-  `model_dump_for_prompt/1` still writes them as `null`, as deepeval does
-  when they are unset.
 
   ## deepeval keys
 
@@ -46,6 +45,7 @@ defmodule DeepEvalEx.Turn do
 
   import Peri
 
+  alias DeepEvalEx.{MCPPromptCall, MCPResourceCall, MCPToolCall}
   alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
   alias Jason.OrderedObject
 
@@ -61,6 +61,9 @@ defmodule DeepEvalEx.Turn do
           provider_transcript: String.t() | nil,
           retrieval_context: [String.t() | RetrievedContextData.t()] | nil,
           tools_called: [ToolCall.t()] | nil,
+          mcp_tools_called: [MCPToolCall.t()] | nil,
+          mcp_resources_called: [MCPResourceCall.t()] | nil,
+          mcp_prompts_called: [MCPPromptCall.t()] | nil,
           metadata: map() | nil
         }
 
@@ -75,6 +78,9 @@ defmodule DeepEvalEx.Turn do
     :provider_transcript,
     :retrieval_context,
     :tools_called,
+    :mcp_tools_called,
+    :mcp_resources_called,
+    :mcp_prompts_called,
     :metadata
   ]
 
@@ -92,6 +98,9 @@ defmodule DeepEvalEx.Turn do
     provider_transcript: ["providerTranscript", "provider_transcript"],
     retrieval_context: ["retrievalContext", "retrieval_context"],
     tools_called: ["toolsCalled", "tools_called"],
+    mcp_tools_called: ["mcp_tools_called"],
+    mcp_resources_called: ["mcp_resources_called"],
+    mcp_prompts_called: ["mcp_prompts_called"],
     metadata: ["metadata", "additionalMetadata", "additional_metadata"]
   ]
 
@@ -105,6 +114,9 @@ defmodule DeepEvalEx.Turn do
     provider_transcript: :string,
     retrieval_context: {:list, {:custom, {RetrievedContextData, :cast_item}}},
     tools_called: {:list, ToolCall.schema()},
+    mcp_tools_called: {:list, {:custom, {MCPToolCall, :cast}}},
+    mcp_resources_called: {:list, {:custom, {MCPResourceCall, :cast}}},
+    mcp_prompts_called: {:list, {:custom, {MCPPromptCall, :cast}}},
     metadata: :map
   })
 
@@ -141,11 +153,11 @@ defmodule DeepEvalEx.Turn do
   The turn as data for an LLM prompt, deepeval's `model_dump_for_prompt()`:
   `model_dump()` without `audio` and `provider_transcript`.
 
-  Returns a `Jason.OrderedObject` with deepeval's field names in its order,
-  unset fields as `nil` and the unported MCP fields as `nil`. A
-  `RetrievedContextData` dumps as its `"source: context"` string (its
-  `model_serializer`) and a tool call as `ToolCall.model_dump()`, its type
-  as `"FUNCTION"` or `"MCP"`.
+  Returns a `Jason.OrderedObject` with deepeval's field names in its order
+  and unset fields as `nil`. A `RetrievedContextData` dumps as its
+  `"source: context"` string (its `model_serializer`), a tool call as
+  `ToolCall.model_dump()`, its type as `"FUNCTION"` or `"MCP"`, and an MCP
+  call as its `model_dump/1`.
 
   ## Examples
 
@@ -189,9 +201,11 @@ defmodule DeepEvalEx.Turn do
       {"provider_transcript", turn.provider_transcript},
       {"retrieval_context", dump_retrieval_context(turn.retrieval_context)},
       {"tools_called", dump_tools_called(turn.tools_called)},
-      {"mcp_tools_called", nil},
-      {"mcp_resources_called", nil},
-      {"mcp_prompts_called", nil},
+      {"mcp_tools_called", dump_mcp_calls(turn.mcp_tools_called, &MCPToolCall.model_dump/1)},
+      {"mcp_resources_called",
+       dump_mcp_calls(turn.mcp_resources_called, &MCPResourceCall.model_dump/1)},
+      {"mcp_prompts_called",
+       dump_mcp_calls(turn.mcp_prompts_called, &MCPPromptCall.model_dump/1)},
       {"metadata", turn.metadata}
     ])
   end
@@ -235,6 +249,9 @@ defmodule DeepEvalEx.Turn do
 
   defp dump_context_item(%RetrievedContextData{} = data), do: to_string(data)
   defp dump_context_item(text), do: text
+
+  defp dump_mcp_calls(nil, _dump), do: nil
+  defp dump_mcp_calls(calls, dump), do: Enum.map(calls, dump)
 
   defp dump_tools_called(nil), do: nil
   defp dump_tools_called(tools), do: Enum.map(tools, &dump_tool_call/1)

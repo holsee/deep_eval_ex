@@ -9,7 +9,11 @@ defprotocol DeepEvalEx.SystemOne.Dumpable do
 
   `dump/1` returns a JSON-ready term or one `DeepEvalEx.SystemOne.State.dump/1`
   finishes, such as a `Jason.OrderedObject` whose values are other structs.
-  `DeepEvalEx.Schemas.ToolCall` implements it. A struct without an
+  `DeepEvalEx.Schemas.ToolCall` and the MCP calls
+  (`DeepEvalEx.MCPToolCall`, `DeepEvalEx.MCPResourceCall`,
+  `DeepEvalEx.MCPPromptCall`) implement it, and `DeepEvalEx.MCPServer`,
+  a dataclass deepeval sends as its `str()`, as its Python `repr()`. A
+  struct without an
   implementation is sent as text, deepeval's `str(value)` fallback: its
   `to_string/1` when it implements `String.Chars` (a `Date`), else its
   `inspect/1`.
@@ -43,6 +47,17 @@ defimpl DeepEvalEx.SystemOne.Dumpable, for: DeepEvalEx.Schemas.ToolCall do
     |> Enum.reject(fn {_key, value} -> is_nil(value) end)
     |> Jason.OrderedObject.new()
   end
+end
+
+defimpl DeepEvalEx.SystemOne.Dumpable,
+  for: [DeepEvalEx.MCPToolCall, DeepEvalEx.MCPResourceCall, DeepEvalEx.MCPPromptCall] do
+  # model_dump(mode="json", exclude_none=True): every field is set.
+  def dump(call), do: @for.model_dump(call)
+end
+
+defimpl DeepEvalEx.SystemOne.Dumpable, for: DeepEvalEx.MCPServer do
+  # deepeval's _jsonable sends a dataclass as str(), its repr().
+  def dump(server), do: DeepEvalEx.Prompts.Python.repr(server)
 end
 
 defimpl DeepEvalEx.SystemOne.Dumpable, for: Any do

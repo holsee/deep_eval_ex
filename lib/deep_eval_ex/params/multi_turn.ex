@@ -27,8 +27,7 @@ defmodule DeepEvalEx.Params.MultiTurn do
 
   The display names are deepeval's `CONVERSATIONAL_G_EVAL_PARAMS`, which
   name the params in conversational G-Eval prompts; deepeval gives the
-  others none. DeepEvalEx does not port deepeval's MCP fields yet; they are
-  listed so the set matches deepeval's.
+  others none. The MCP params name a turn's MCP calls.
   """
 
   @type t ::

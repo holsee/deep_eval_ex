@@ -54,14 +54,18 @@ defmodule DeepEvalEx.ParityTest do
   # those of CLI.TestArgsTest and CLI.IntegrationTest, traced/ those of
   # TracedFixturesTest, loop_detection/ the tables of
   # Metrics.Utils.SequenceMatcherTest and Metrics.AgentLoopDetectionTest,
-  # multimodal/ the content parts of LLM.MultimodalTest.
+  # multimodal/ the content parts of LLM.MultimodalTest. mcp/ holds two
+  # export scenarios, run here with their run-level MCP servers, and the
+  # dumps of MCPTest.
+  @mcp_scenarios ~w(mcp/export_conversational mcp/export_single)
   @scenarios @fixtures
              |> File.ls!()
              |> Enum.reject(
-               &(&1 in ~w(cache classifiers cli datasets expectations loop_detection multimodal
-                        prompts report round_trip scripted system_one traced))
+               &(&1 in ~w(cache classifiers cli datasets expectations loop_detection mcp
+                        multimodal prompts report round_trip scripted system_one traced))
              )
              |> Enum.filter(&File.dir?(Path.join(@fixtures, &1)))
+             |> Kernel.++(@mcp_scenarios)
              |> Enum.sort()
 
   # The exception DeepEvalEx raises where deepeval raised the Python one:
@@ -84,8 +88,8 @@ defmodule DeepEvalEx.ParityTest do
     assert @scenarios ==
              Enum.sort(
                ~w(conversational exact_match hyperparameters ignore_errors_false llm_metric
-                  metric_error missing_params missing_params_ignore_errors_false rag_and_tools
-                  skip_on_missing_params)
+                  mcp/export_conversational mcp/export_single metric_error missing_params
+                  missing_params_ignore_errors_false rag_and_tools skip_on_missing_params)
              )
 
     assert @raising == ~w(ignore_errors_false missing_params_ignore_errors_false)
@@ -164,7 +168,8 @@ defmodule DeepEvalEx.ParityTest do
         identifier: get(input, "identifier"),
         hyperparameters: hyperparameters(get(input, "hyperparameters")),
         ignore_errors: get(error_config, "ignore_errors"),
-        skip_on_missing_params: get(error_config, "skip_on_missing_params")
+        skip_on_missing_params: get(error_config, "skip_on_missing_params"),
+        mcp_servers: mcp_servers(get(input, "mcp_servers"))
       ]
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
@@ -211,6 +216,9 @@ defmodule DeepEvalEx.ParityTest do
       {key, tool_calls} when key in ["tools_called", "expected_tools"] ->
         {key, Enum.map(tool_calls, &Map.new(&1.values))}
 
+      {"mcp_servers", servers} ->
+        {"mcp_servers", mcp_servers(servers)}
+
       {"retrieval_context", items} ->
         {"retrieval_context", Enum.map(items, &context_item/1)}
 
@@ -218,6 +226,10 @@ defmodule DeepEvalEx.ParityTest do
         pair
     end)
   end
+
+  # MCP servers' attributes; their available tools stay ordered.
+  defp mcp_servers(nil), do: nil
+  defp mcp_servers(servers), do: Enum.map(servers, &Map.new(&1.values))
 
   # A {"context", "source"} item is a RetrievedContextData, as the fixture
   # script builds it.

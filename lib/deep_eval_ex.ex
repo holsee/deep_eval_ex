@@ -116,7 +116,7 @@ defmodule DeepEvalEx do
   `DeepEvalEx.TestRun.load/1` reads them back; see `DeepEvalEx.TestRun`.
   """
 
-  alias DeepEvalEx.{Config, EvaluationResult, Evaluator, Result, TestCase, TestRun}
+  alias DeepEvalEx.{Config, EvaluationResult, Evaluator, MCP, Result, TestCase, TestRun}
   alias DeepEvalEx.Evaluator.Traced
   alias DeepEvalEx.ExUnit.Collector
   alias DeepEvalEx.Report.{Console, Markdown, Terminal}
@@ -196,6 +196,11 @@ defmodule DeepEvalEx do
     built-ins); their `DeepEvalEx.Classification`s are each
     `DeepEvalEx.TestResult`'s `:classifications`, and decide its success
     with the metrics (see "Classifiers" in `evaluate_run/3`)
+  - `:mcp_servers` - `DeepEvalEx.MCPServer`s (or their attributes) for the
+    test cases that list none of their own. Before evaluating, every tool
+    call that a test case's servers list among their available tools is
+    marked `:mcp` (exported as `"type": "MCP"`), as deepeval's
+    `process_mcp_servers` does; see `DeepEvalEx.MCP.process_servers/2`
   - `:results_folder`, `:results_subfolder`, `:identifier`,
     `:hyperparameters` - Save the run in deepeval's format, see
     `evaluate_run/3`
@@ -237,6 +242,8 @@ defmodule DeepEvalEx do
   def evaluate(test_cases, metrics, opts) when is_list(test_cases) do
     opts = Keyword.put_new(opts, :print_results, false)
     {results, classifications, _test_run, _path} = run(test_cases, metrics, opts)
+    # The test cases as run() evaluated them, MCP tool calls marked
+    test_cases = MCP.process_servers(test_cases, opts[:mcp_servers])
     {:ok, EvaluationResult.from_results(test_cases, results, classifications)}
   end
 
@@ -474,6 +481,8 @@ defmodule DeepEvalEx do
       do: Evaluator.validate_expectation_coverage!(test_cases)
 
     Evaluator.check_valid_test_cases_type!(test_cases)
+    {mcp_servers, eval_opts} = Keyword.pop(eval_opts, :mcp_servers)
+    test_cases = MCP.process_servers(test_cases, mcp_servers)
     Console.display!(Keyword.get(export_opts, :display, :all))
 
     if metrics != [] and not expectations?,

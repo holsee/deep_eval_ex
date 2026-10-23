@@ -97,11 +97,6 @@ defmodule DeepEvalEx.Metrics.ConversationalJevEval do
   - `:flaky` - never decide the test case's success (default: `false`)
   - `:include_jev_eval_suffix` - append `" [Conversational JevEval]"` to
     the name (default: `true`)
-
-  ## Differences from deepeval
-
-  deepeval's MCP turn params (`MCP_TOOLS`, `MCP_RESOURCES`,
-  `MCP_PROMPTS`) are not ported, so they never reach the state.
   """
 
   use DeepEvalEx.Metrics.BaseConversationalMetric, default_threshold: 0.5

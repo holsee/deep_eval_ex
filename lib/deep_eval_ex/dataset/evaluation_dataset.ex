@@ -140,7 +140,7 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
   """
 
   alias DeepEvalEx.Dataset.{Golden, Loader, Writer}
-  alias DeepEvalEx.{EvaluationResult, Evaluator, Result, TestCase, TestRun}
+  alias DeepEvalEx.{EvaluationResult, Evaluator, MCP, Result, TestCase, TestRun}
 
   require Logger
 
@@ -687,6 +687,8 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
       )
 
     {results, classifications, test_run, path} = DeepEvalEx.run(test_cases, metrics, opts)
+    # The test cases as DeepEvalEx.run/3 evaluated them, MCP tool calls marked
+    test_cases = MCP.process_servers(test_cases, opts[:mcp_servers])
     {test_cases, results, classifications, test_run, path}
   end
 

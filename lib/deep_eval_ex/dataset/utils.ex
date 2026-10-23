@@ -31,6 +31,7 @@ defmodule DeepEvalEx.Dataset.Utils do
 
   alias DeepEvalEx.Dataset.Persona
   alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
+  alias DeepEvalEx.SystemOne.Dumpable
   alias DeepEvalEx.TestRun.JSON
   alias DeepEvalEx.Turn
   alias Jason.OrderedObject
@@ -150,9 +151,10 @@ defmodule DeepEvalEx.Dataset.Utils do
   Writes turns as one JSON string, deepeval's `format_turns`: per turn an
   object of `role`, `content`, `user_id`, `retrieval_context` (serialised
   as `serialize_retrieval_context/1`), `tools_called` (each tool call
-  without its `nil` fields, `input_parameters` as `inputParameters`), the
-  unported MCP fields as `null`, and `metadata`. No tool calls and empty
-  metadata are `null`.
+  without its `nil` fields, `input_parameters` as `inputParameters`),
+  `mcp_tools_called`, `mcp_resources_called` and `mcp_prompts_called` (each
+  call's `model_dump/1`), and `metadata`. No tool calls, no MCP calls and
+  empty metadata are `null`.
 
   As deepeval's `json.dumps(..., ensure_ascii=False)`, items are separated
   by `", "` and non-ASCII characters are kept. The audio, latency,
@@ -169,9 +171,9 @@ defmodule DeepEvalEx.Dataset.Utils do
         {"user_id", turn.user_id},
         {"retrieval_context", serialize_retrieval_context(turn.retrieval_context)},
         {"tools_called", dump_tool_calls(turn.tools_called)},
-        {"mcp_tools_called", nil},
-        {"mcp_resources_called", nil},
-        {"mcp_prompts_called", nil},
+        {"mcp_tools_called", dump_mcp_calls(turn.mcp_tools_called)},
+        {"mcp_resources_called", dump_mcp_calls(turn.mcp_resources_called)},
+        {"mcp_prompts_called", dump_mcp_calls(turn.mcp_prompts_called)},
         {"metadata", if(turn.metadata != %{}, do: turn.metadata)}
       ])
     end)
@@ -256,6 +258,13 @@ defmodule DeepEvalEx.Dataset.Utils do
     |> Enum.reject(fn {_key, value} -> is_nil(value) end)
     |> OrderedObject.new()
   end
+
+  # deepeval's _dump_list over MCP calls: model_dump(mode="json",
+  # by_alias=True, exclude_none=True), which for these is their dump; nil or
+  # no calls are None
+  defp dump_mcp_calls(nil), do: nil
+  defp dump_mcp_calls([]), do: nil
+  defp dump_mcp_calls(calls), do: Enum.map(calls, &Dumpable.dump/1)
 
   defp parse_turn_list(parsed) when is_list(parsed) do
     parsed

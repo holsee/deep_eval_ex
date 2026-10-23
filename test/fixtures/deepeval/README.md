@@ -1,11 +1,11 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in fourteen sets:
+Fixtures written by **deepeval 4.3.1**, in fifteen sets:
 
 - export scenarios (the directories below, except `scripted/`, `prompts/`,
   `round_trip/`, `system_one/`, `datasets/`, `classifiers/`,
   `expectations/`, `cache/`, `report/`, `cli/`, `traced/`,
-  `loop_detection/` and `multimodal/`), used by
+  `loop_detection/`, `multimodal/` and `mcp/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
@@ -63,6 +63,10 @@ Fixtures written by **deepeval 4.3.1**, in fourteen sets:
   the message content deepeval's OpenAI, Anthropic and Ollama models build
   from a prompt holding image placeholders, used by
   `test/deep_eval_ex/llm/multimodal_test.exs`
+- [MCP fixtures](#mcp-fixtures) (`mcp/`), two export scenarios run with
+  MCP servers, used by `test/deep_eval_ex/parity_test.exs`, and what
+  deepeval makes of MCP calls in turns and test cases, used by
+  `test/deep_eval_ex/mcp_test.exs`
 
 ## Export scenarios
 
@@ -1158,6 +1162,33 @@ DeepEvalEx's traces, exports and test runs with them.
   (combining characters counted as code points), dicts dumped with sorted
   keys and non-ASCII escaped, cut at 64 characters, and lists, numbers and
   booleans as their `str()`
+
+## MCP fixtures
+
+`generate_fixtures.py mcp` writes `mcp/` (`generate_mcp`):
+
+- `export_single/` and `export_conversational/`, export scenarios as the
+  others, whose `input.json` also holds the run-level `mcp_servers`
+  `evaluate()` is given and test cases with their own. They check
+  deepeval's `process_mcp_servers`: a tool call named among the servers'
+  available tools exports as `"type": "MCP"`, a test case's own servers
+  win over the run's (unless it has none, or an empty list), and servers
+  that list no tools mark nothing. `test/deep_eval_ex/parity_test.exs`
+  runs them with the other export scenarios.
+- `dumps.json`: turns and a test case holding MCP calls (`turns`,
+  `test_case`), resource URIs (`uris`, each with the string deepeval's
+  `AnyUrl` makes of it), and what deepeval makes of them: each turn's
+  `repr()`, `format_turns`, `convert_turn_to_dict` as prompts print it,
+  the multi-turn and single-turn System One states, expectation evidence,
+  a turn in verbose logs (`prettify_list`), the servers' `repr()` and
+  `get_available_mcp_tool_names`. `test/deep_eval_ex/mcp_test.exs` builds
+  the same turns and test case and compares each.
+
+deepeval validates a turn's or test case's MCP calls against the optional
+`mcp` package's result types, which its image does not install, so the
+dumps build them with pydantic's `model_construct`. Their results are plain
+dicts shaped as the MCP spec's, which deepeval dumps as they are, as
+DeepEvalEx keeps them.
 
 ## Multimodal content parts
 

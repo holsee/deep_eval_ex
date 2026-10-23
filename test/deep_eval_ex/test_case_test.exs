@@ -428,18 +428,18 @@ defmodule DeepEvalEx.TestCaseTest do
       assert [%ToolCall{name: "search", input_parameters: %{"q" => "x"}}] = test_case.tools_called
     end
 
-    test "drops unknown atom keys and deepeval fields DeepEvalEx does not port" do
+    test "drops unknown atom keys, deepeval fields DeepEvalEx does not port and serialization aliases" do
       assert {:ok, test_case} =
                TestCase.new(%{
                  "input" => "Q",
-                 "mcpServers" => [],
+                 "mcpToolsCalled" => [],
                  "success" => true,
                  :bogus => 1
                })
 
       refute Map.has_key?(test_case, :bogus)
-      refute Map.has_key?(test_case, :mcp_servers)
       refute Map.has_key?(test_case, :success)
+      assert test_case.mcp_tools_called == nil
     end
 
     test "does not take a dataset rank, deepeval's private _dataset_rank" do

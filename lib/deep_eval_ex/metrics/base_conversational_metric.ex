@@ -66,7 +66,7 @@ defmodule DeepEvalEx.Metrics.BaseConversationalMetric do
     (default: `false`)
 
   deepeval's `_requires_mcp_servers` has no counterpart, as DeepEvalEx does
-  not port MCP servers.
+  not port the MCP metrics that set it.
   """
 
   alias DeepEvalEx.ConversationalTestCase

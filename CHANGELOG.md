@@ -2677,6 +2677,42 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     See the [TestCase](wiki/api/TestCase.md) and
     [LLM Adapters](wiki/api/LLM-Adapters.md) pages.
 
+- **MCP servers and calls on test cases**, ports of deepeval 4.3.1's
+  `test_case/mcp.py` and of `classify_tool_call_types` and
+  `process_mcp_servers`.
+  - `DeepEvalEx.MCPServer` (`server_name`, `transport` as `:stdio`, `:sse`
+    or `:streamable_http`, and the available tools, resources and prompts
+    as lists of maps, checked as deepeval's `validate_mcp_servers`), and
+    the calls `DeepEvalEx.MCPToolCall` (`name`, `args`, `result`),
+    `DeepEvalEx.MCPResourceCall` (`uri`, normalised as pydantic's `AnyUrl`
+    for the URIs `URI.new/1` parses, and `result`) and
+    `DeepEvalEx.MCPPromptCall` (`name`, `result`). Where deepeval types a
+    result as the `mcp` package's models, DeepEvalEx takes plain data
+    shaped as the MCP spec's result (a map holding a `"content"`,
+    `"contents"` or `"messages"` list) and keeps it as given.
+  - `DeepEvalEx.TestCase` takes `mcp_servers`, `mcp_tools_called`,
+    `mcp_resources_called` and `mcp_prompts_called`, `DeepEvalEx.Turn` the
+    three call fields and `DeepEvalEx.ConversationalTestCase`
+    `mcp_servers`, as structs or as the attributes their `new/1` takes;
+    `new/1` dropped these keys before.
+  - `DeepEvalEx.evaluate/3`, `evaluate_run/3` and dataset evaluation mark
+    as `:mcp` each tool call (and expected tool, and turn tool call) named
+    among the test case's servers' available tools, exported as
+    `"type": "MCP"`, as deepeval's `evaluate()` does; `evaluate/3` takes
+    `mcp_servers:` for the test cases with none of their own.
+    `DeepEvalEx.MCP` holds `available_tool_names/1`,
+    `classify_tool_call_types/2` and `process_servers/2`.
+  - The MCP calls are written where deepeval writes them: a turn's
+    `model_dump/1` and verbose logs, dataset `format_turns` (both wrote
+    `null` before), Python `repr/1` (and so a turn's in prompts),
+    expectation evidence, and System One states, where a conversational
+    metric's MCP turn params (`:mcp_tools_called`, `:mcp_resources_called`,
+    `:mcp_prompts_called`) and the single-turn MCP params now reach the
+    state. A test run does not export them, as deepeval's does not.
+  - Parity fixtures written by deepeval (`generate_fixtures.py mcp`): two
+    export scenarios run with MCP servers, and `mcp/dumps.json`. See the
+    [TestCase](wiki/api/TestCase.md) page.
+
 ### Changed
 
 - The Anthropic adapter's `supports_multimodal?/0` is now `true`, as for

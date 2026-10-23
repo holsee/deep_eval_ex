@@ -87,6 +87,10 @@ test/fixtures/deepeval/multimodal/content_parts.json: the message content
 deepeval's OpenAI, Anthropic and Ollama models build from a prompt holding
 image placeholders, see `write_content_parts`.
 
+With the argument `mcp` it writes only test/fixtures/deepeval/mcp/: two
+export scenarios run with MCP servers, and `dumps.json`, what deepeval makes
+of MCP calls in turns and test cases, see `generate_mcp`.
+
 With the argument `traced` it writes only the traced fixtures,
 test/fixtures/deepeval/traced/: agent scripts (`TRACED_SCENARIOS`) run
 through deepeval's @observe tracing outside evaluation and under the sync
@@ -228,6 +232,10 @@ from deepeval.templates import iter_base_template_methods  # noqa: E402
 from deepeval.test_case import (  # noqa: E402
     ConversationalTestCase,
     LLMTestCase,
+    MCPPromptCall,
+    MCPResourceCall,
+    MCPServer,
+    MCPToolCall,
     MLLMImage,
     MultiTurnParams,
     RetrievedContextData,
@@ -428,6 +436,8 @@ def build_test_case(spec):
     first, so deepeval's image registry resolves their placeholders."""
     spec = dict(spec)
     register_images(spec.pop("images", []))
+    if "mcp_servers" in spec:
+        spec["mcp_servers"] = [MCPServer(**server) for server in spec["mcp_servers"]]
     if "turns" in spec:
         spec["turns"] = [build_turn(turn) for turn in spec["turns"]]
         return ConversationalTestCase(**spec)
@@ -3401,7 +3411,7 @@ DEFAULT_ERROR_CONFIG = {"ignore_errors": True, "skip_on_missing_params": False}
 def run_scenario(name, scenario):
     out_dir = os.path.join(FIXTURES, name)
     os.makedirs(out_dir, exist_ok=True)
-    results_folder = tempfile.mkdtemp(prefix=f"{name}_", dir=WORK_DIR)
+    results_folder = tempfile.mkdtemp(prefix=f"{name.replace(os.sep, '_')}_", dir=WORK_DIR)
     scenario = {**scenario, "error_config": scenario.get("error_config", DEFAULT_ERROR_CONFIG)}
 
     kwargs = {}
@@ -3409,6 +3419,8 @@ def run_scenario(name, scenario):
         kwargs["identifier"] = scenario["identifier"]
     if scenario["hyperparameters"] is not None:
         kwargs["hyperparameters"] = scenario["hyperparameters"]
+    if scenario.get("mcp_servers") is not None:
+        kwargs["mcp_servers"] = [MCPServer(**server) for server in scenario["mcp_servers"]]
 
     try:
         evaluate(
@@ -4716,6 +4728,240 @@ def write_content_parts():
     write_json(os.path.join(MULTIMODAL_DIR, "content_parts.json"), cases)
 
 
+# MCP fixtures (test/fixtures/deepeval/mcp/): two export scenarios, where
+# evaluate() marks the tool calls named by an MCP server's available tools as
+# MCP (process_mcp_servers), and dumps.json, what deepeval makes of MCP calls
+# in turns and test cases.
+#
+# deepeval validates a test case's or turn's MCP calls against mcp.types
+# (CallToolResult, ReadResourceResult, GetPromptResult), which needs the
+# optional `mcp` package its image does not install. The dumps build those
+# test cases and turns with model_construct, skipping that validation: their
+# results are plain dicts shaped as the MCP spec's, which deepeval dumps as
+# they are, as DeepEvalEx keeps them.
+MCP_DIR = os.path.join(FIXTURES, "mcp")
+
+WEATHER_SERVER = {
+    "server_name": "weather",
+    "transport": "stdio",
+    "available_tools": [
+        {"name": "get_weather", "description": "Current weather for a city"},
+        {"name": "get_forecast"},
+    ],
+}
+CALCULATOR_SERVER = {"server_name": "calculator", "available_tools": [{"name": "add"}]}
+
+MCP_SCENARIOS = {
+    "export_single": {
+        "test_cases": [
+            {
+                "input": "What's the weather in Paris?",
+                "actual_output": "18°C",
+                "expected_output": "18°C",
+                "mcp_servers": [WEATHER_SERVER],
+                "tools_called": [
+                    {"name": "get_weather", "input_parameters": {"city": "Paris"}, "output": "18°C"},
+                    {"name": "format_answer", "output": "18°C"},
+                ],
+                "expected_tools": [{"name": "get_weather"}, {"name": "add"}],
+            },
+            # No servers of its own: the run's
+            {
+                "input": "Add 2 and 3",
+                "actual_output": "5",
+                "expected_output": "5",
+                "tools_called": [{"name": "add", "input_parameters": {"a": 2, "b": 3}, "output": 5}],
+            },
+            # Its own server, which lists no tools: nothing is marked, the
+            # run's servers are not used
+            {
+                "input": "Add 1 and 1",
+                "actual_output": "2",
+                "expected_output": "2",
+                "mcp_servers": [{"server_name": "empty", "transport": "sse"}],
+                "tools_called": [{"name": "add", "output": 2}],
+            },
+            # An empty list of servers falls back to the run's
+            {
+                "input": "Add 4 and 4",
+                "actual_output": "8",
+                "expected_output": "8",
+                "mcp_servers": [],
+                "tools_called": [{"name": "add", "output": 8}],
+            },
+        ],
+        "metrics": [{"kind": "exact_match"}],
+        "mcp_servers": [CALCULATOR_SERVER],
+        "identifier": None,
+        "hyperparameters": None,
+    },
+    "export_conversational": {
+        "test_cases": [
+            {
+                "scenario": "Weather lookup",
+                "mcp_servers": [WEATHER_SERVER],
+                "turns": [
+                    {"role": "user", "content": "Weather in Paris?"},
+                    {
+                        "role": "assistant",
+                        "content": "18°C",
+                        "tools_called": [
+                            {"name": "get_weather", "input_parameters": {"city": "Paris"}},
+                            {"name": "lookup_city"},
+                        ],
+                    },
+                ],
+            },
+            {
+                "scenario": "Sums",
+                "turns": [
+                    {"role": "user", "content": "2 + 3?"},
+                    {"role": "assistant", "content": "5", "tools_called": [{"name": "add"}]},
+                ],
+            },
+        ],
+        "metrics": [{**STUB_JUDGE, "kind": "conversational_stub"}],
+        "mcp_servers": [CALCULATOR_SERVER],
+        "identifier": None,
+        "hyperparameters": None,
+    },
+}
+
+MCP_TOOL_CALL = {
+    "name": "get_weather",
+    "args": {"city": "Paris", "units": "metric"},
+    "result": {
+        "content": [{"type": "text", "text": "18°C, partly cloudy"}],
+        "structuredContent": None,
+        "isError": False,
+    },
+}
+MCP_RESOURCE_CALL = {
+    "uri": "HTTPS://Example.COM",
+    "result": {"contents": [{"uri": "https://example.com/", "mimeType": "text/plain", "text": "It's sunny"}]},
+}
+MCP_PROMPT_CALL = {
+    "name": "forecast_prompt",
+    "result": {
+        "description": None,
+        "messages": [{"role": "user", "content": {"type": "text", "text": "Forecast for Paris"}}],
+    },
+}
+
+MCP_TURNS = [
+    {"role": "user", "content": "Weather in Paris?"},
+    {
+        "role": "assistant",
+        "content": "18°C, partly cloudy",
+        "tools_called": [{"name": "get_weather", "input_parameters": {"city": "Paris"}, "type": "MCP"}],
+        "mcp_tools_called": [MCP_TOOL_CALL],
+        "mcp_resources_called": [MCP_RESOURCE_CALL],
+        "mcp_prompts_called": [MCP_PROMPT_CALL],
+        "metadata": {"source": "mcp"},
+    },
+]
+MCP_TEST_CASE = {
+    "input": "Weather in Paris?",
+    "actual_output": "18°C, partly cloudy",
+    "mcp_servers": [WEATHER_SERVER, {"server_name": "notes", "transport": "streamable-http"}],
+    "mcp_tools_called": [MCP_TOOL_CALL],
+    "mcp_resources_called": [MCP_RESOURCE_CALL],
+    "mcp_prompts_called": [MCP_PROMPT_CALL],
+}
+
+# Resource URIs as deepeval's AnyUrl writes them, for the URIs DeepEvalEx
+# normalises (no percent-encoding or IDNA)
+MCP_URIS = [
+    "file:///notes.txt",
+    "HTTPS://Example.COM",
+    "HTTP://Example.com:80/a?b=1#c",
+    "https://example.com:8443/x",
+    "ftp://Files.Example.com",
+    "mcp://Server/Resource",
+    "Custom:Thing",
+]
+
+MCP_TURN_PARAMS = [
+    MultiTurnParams.CONTENT,
+    MultiTurnParams.ROLE,
+    MultiTurnParams.TOOLS_CALLED,
+    MultiTurnParams.MCP_TOOLS,
+    MultiTurnParams.MCP_RESOURCES,
+    MultiTurnParams.MCP_PROMPTS,
+    MultiTurnParams.SCENARIO,
+]
+MCP_SINGLE_PARAMS = [
+    SingleTurnParams.INPUT,
+    SingleTurnParams.MCP_SERVERS,
+    SingleTurnParams.MCP_TOOLS_CALLED,
+    SingleTurnParams.MCP_RESOURCES_CALLED,
+    SingleTurnParams.MCP_PROMPTS_CALLED,
+]
+
+
+def build_mcp_turn(spec):
+    spec = dict(spec)
+    for key, cls in (
+        ("mcp_tools_called", MCPToolCall),
+        ("mcp_resources_called", MCPResourceCall),
+        ("mcp_prompts_called", MCPPromptCall),
+    ):
+        if spec.get(key) is not None:
+            spec[key] = [cls(**call) for call in spec[key]]
+    return spec
+
+
+def write_mcp_dumps():
+    """Writes mcp/dumps.json: the inputs (MCP_TURNS, MCP_TEST_CASE,
+    MCP_URIS) and what deepeval makes of them."""
+    from deepeval.dataset.expectations import expectation_evidence
+    from deepeval.dataset.utils import format_turns
+    from deepeval.metrics.jev_eval.utils import (
+        construct_multi_turn_state,
+        construct_single_turn_state,
+    )
+    from deepeval.test_case import get_available_mcp_tool_names
+    from deepeval.utils import prettify_list
+    from pydantic import AnyUrl
+
+    turns = [
+        Turn.model_construct(**build_tools_and_contexts(build_mcp_turn(t))) for t in MCP_TURNS
+    ]
+    conversation = ConversationalTestCase(scenario="Weather lookup", turns=turns)
+    spec = build_mcp_turn(MCP_TEST_CASE)
+    spec["mcp_servers"] = [MCPServer(**server) for server in spec["mcp_servers"]]
+    test_case = LLMTestCase.model_construct(**spec)
+    # A turn without the resource call: deepeval's verbose logs json.dumps
+    # model_dump(), which cannot write a resource call's AnyUrl
+    loggable = Turn.model_construct(
+        **build_tools_and_contexts(build_mcp_turn({**MCP_TURNS[1], "mcp_resources_called": None}))
+    )
+
+    dumps = {
+        "turns": MCP_TURNS,
+        "test_case": MCP_TEST_CASE,
+        "turn_reprs": [repr(turn) for turn in turns],
+        "format_turns": format_turns(turns),
+        "turn_dicts": [repr(convert_turn_to_dict(turn, MCP_TURN_PARAMS)) for turn in turns],
+        "multi_turn_state": construct_multi_turn_state(MCP_TURN_PARAMS, conversation),
+        "conversational_evidence": expectation_evidence(conversation),
+        "verbose_turn": prettify_list([loggable]),
+        "single_turn_state": construct_single_turn_state(MCP_SINGLE_PARAMS, test_case),
+        "evidence": expectation_evidence(test_case),
+        "servers_repr": repr(test_case.mcp_servers),
+        "available_tool_names": sorted(get_available_mcp_tool_names(test_case.mcp_servers)),
+        "uris": {uri: str(AnyUrl(uri)) for uri in MCP_URIS},
+    }
+    write_json(os.path.join(MCP_DIR, "dumps.json"), dumps)
+
+
+def generate_mcp():
+    for name, scenario in MCP_SCENARIOS.items():
+        run_scenario(os.path.join("mcp", name), scenario)
+    write_mcp_dumps()
+    print(f"wrote {os.path.relpath(MCP_DIR, ROOT)}")
+
+
 def main():
     if deepeval.__version__ != DEEPEVAL_VERSION:
         sys.exit(f"expected deepeval {DEEPEVAL_VERSION}, found {deepeval.__version__}")
@@ -4742,6 +4988,12 @@ def main():
         shutil.rmtree(WORK_DIR, ignore_errors=True)
         print(f"wrote {os.path.relpath(MULTIMODAL_DIR, ROOT)}")
         return
+    if sys.argv[1:] == ["mcp"]:
+        try:
+            generate_mcp()
+        finally:
+            shutil.rmtree(WORK_DIR, ignore_errors=True)
+        return
     if sys.argv[1:] == ["loop_detection"]:
         write_loop_detection_tables()
         shutil.rmtree(WORK_DIR, ignore_errors=True)
@@ -4750,7 +5002,7 @@ def main():
     if sys.argv[1:]:
         sys.exit(f"usage: {os.path.basename(__file__)} "
                  "[traced [scenario ...] | scripted [scenario ...] | prompts [case ...] | "
-                 "loop_detection | multimodal]")
+                 "loop_detection | multimodal | mcp]")
     try:
         for name, scenario in SCENARIOS.items():
             run_scenario(name, scenario)
@@ -4762,6 +5014,7 @@ def main():
         print(f"wrote {os.path.relpath(LOOP_DETECTION_DIR, ROOT)}")
         write_content_parts()
         print(f"wrote {os.path.relpath(MULTIMODAL_DIR, ROOT)}")
+        generate_mcp()
         generate_prompts()
     finally:
         shutil.rmtree(WORK_DIR, ignore_errors=True)

@@ -123,12 +123,14 @@ defmodule DeepEvalEx.Dataset.Expectations do
   def present?(nil), do: false
 
   # deepeval's expectation_evidence include set, in the order of the test
-  # case models' fields (DeepEvalEx has no MCP fields).
+  # case models' fields.
+  @mcp_calls [:mcp_tools_called, :mcp_resources_called, :mcp_prompts_called]
   @single_turn_evidence [:input, :actual_output, :context, :retrieval_context, :metadata] ++
-                          [:tools_called, :tags]
+                          [:tools_called, :tags | @mcp_calls]
   @multi_turn_evidence [:turns, :scenario, :context, :chatbot_role, :metadata, :tags]
   @turn_fields [:role, :content, :user_id, :audio, :latency_ms, :interrupted] ++
-                 [:provider_transcript, :retrieval_context, :tools_called, :metadata]
+                 [:provider_transcript, :retrieval_context, :tools_called] ++
+                 @mcp_calls ++ [:metadata]
 
   @doc """
   The observed test case expectations are judged against, deepeval's
@@ -137,14 +139,15 @@ defmodule DeepEvalEx.Dataset.Expectations do
   order.
 
   - a `DeepEvalEx.TestCase`: `input`, `actual_output`, `context`,
-    `retrieval_context`, `metadata`, `tools_called` and `tags`
+    `retrieval_context`, `metadata`, `tools_called`, `tags`,
+    `mcp_tools_called`, `mcp_resources_called` and `mcp_prompts_called`
   - a `DeepEvalEx.ConversationalTestCase`: `turns` (each turn's fields,
     without `nil`s), `scenario`, `context`, `chatbot_role`, `metadata` and
     `tags`
 
   Unset (`nil`) fields are left out; a value inside `metadata` is kept as it
   is, `nil` included. A `DeepEvalEx.Schemas.RetrievedContextData` is dumped
-  as `"source: context"` and a tool call as its fields (see
+  as `"source: context"`, and a tool call or an MCP call as its fields (see
   `DeepEvalEx.SystemOne.Dumpable`). It is the LLM judge's "Observed case"
   and System One's `observed_case` state.
 

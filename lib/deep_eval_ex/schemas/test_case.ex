@@ -22,6 +22,13 @@ defmodule DeepEvalEx.TestCase do
     an empty list is a test case that called no tools
   - `:expected_tools` - Expected tool calls for tool use evaluation, `nil`
     when not given
+  - `:mcp_servers` - The MCP servers the application could use
+    (`DeepEvalEx.MCPServer`); a tool call one of them lists becomes an MCP
+    tool call when the test case is evaluated (see
+    `DeepEvalEx.MCP.process_servers/2`)
+  - `:mcp_tools_called`, `:mcp_resources_called`, `:mcp_prompts_called` -
+    The MCP calls made (`DeepEvalEx.MCPToolCall`,
+    `DeepEvalEx.MCPResourceCall`, `DeepEvalEx.MCPPromptCall`)
   - `:metadata` - Additional metadata for the test case
   - `:name` - Optional name identifying the test case
   - `:tags` - Optional list of tags
@@ -58,7 +65,9 @@ defmodule DeepEvalEx.TestCase do
   `:custom_column_key_values`, `:expected_labels` and `:expectations` are
   deepeval's too and are kept on the struct (a `DeepEvalEx.Dataset.Golden`
   carries them to and from test cases); deepeval does not export them in a
-  test run, and neither does DeepEvalEx.
+  test run, and neither does DeepEvalEx. Nor does it export the MCP fields,
+  which expectations and System One judge (see
+  `DeepEvalEx.Dataset.Expectations.evidence/1`).
 
   ## Images
 
@@ -135,7 +144,7 @@ defmodule DeepEvalEx.TestCase do
   import Peri
 
   alias DeepEvalEx.Dataset.Expectations
-  alias DeepEvalEx.MLLMImage
+  alias DeepEvalEx.{MCPPromptCall, MCPResourceCall, MCPServer, MCPToolCall, MLLMImage}
   alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
 
   @type t :: %__MODULE__{
@@ -146,6 +155,10 @@ defmodule DeepEvalEx.TestCase do
           context: [String.t()] | nil,
           tools_called: [ToolCall.t()] | nil,
           expected_tools: [ToolCall.t()] | nil,
+          mcp_servers: [MCPServer.t()] | nil,
+          mcp_tools_called: [MCPToolCall.t()] | nil,
+          mcp_resources_called: [MCPResourceCall.t()] | nil,
+          mcp_prompts_called: [MCPPromptCall.t()] | nil,
           metadata: map() | nil,
           name: String.t() | nil,
           tags: [String.t()] | nil,
@@ -183,6 +196,10 @@ defmodule DeepEvalEx.TestCase do
     :expectations,
     :tools_called,
     :expected_tools,
+    :mcp_servers,
+    :mcp_tools_called,
+    :mcp_resources_called,
+    :mcp_prompts_called,
     :images,
     :dataset_rank,
     :trace_dict,
@@ -216,6 +233,10 @@ defmodule DeepEvalEx.TestCase do
     multimodal: ["multimodal"],
     name: ["name"],
     tags: ["tags"],
+    mcp_servers: ["mcp_servers"],
+    mcp_tools_called: ["mcp_tools_called"],
+    mcp_resources_called: ["mcp_resources_called"],
+    mcp_prompts_called: ["mcp_prompts_called"],
     custom_column_key_values: ["customColumnKeyValues", "custom_column_key_values"],
     expected_labels: ["expectedLabels", "expected_labels"],
     expectations: ["expectations"],
@@ -233,6 +254,10 @@ defmodule DeepEvalEx.TestCase do
     metadata: :map,
     name: :string,
     tags: {:list, :string},
+    mcp_servers: {:list, {:custom, {MCPServer, :cast}}},
+    mcp_tools_called: {:list, {:custom, {MCPToolCall, :cast}}},
+    mcp_resources_called: {:list, {:custom, {MCPResourceCall, :cast}}},
+    mcp_prompts_called: {:list, {:custom, {MCPPromptCall, :cast}}},
     comments: :string,
     token_cost: :float,
     input_token_count: :integer,
@@ -260,6 +285,12 @@ defmodule DeepEvalEx.TestCase do
   - `:context` - List of ground-truth context strings
   - `:tools_called` - List of tool calls made
   - `:expected_tools` - Expected tool calls
+  - `:mcp_servers` - List of `DeepEvalEx.MCPServer`s, or of the attributes
+    `DeepEvalEx.MCPServer.new/1` takes
+  - `:mcp_tools_called`, `:mcp_resources_called`, `:mcp_prompts_called` -
+    Lists of MCP calls (`DeepEvalEx.MCPToolCall`,
+    `DeepEvalEx.MCPResourceCall`, `DeepEvalEx.MCPPromptCall`), or of the
+    attributes their `new/1` takes
   - `:metadata` - Additional metadata map
   - `:name` - Optional test case name
   - `:tags` - Optional list of tags

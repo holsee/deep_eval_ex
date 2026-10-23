@@ -28,7 +28,7 @@ defmodule DeepEvalEx.Prompts.Python do
   decimal, so `repr/1` of the result prints what Python prints.
   """
 
-  alias DeepEvalEx.MLLMImage
+  alias DeepEvalEx.{MCPPromptCall, MCPResourceCall, MCPServer, MCPToolCall, MLLMImage}
   alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
   alias DeepEvalEx.TestRun.JSON
   alias DeepEvalEx.Turn
@@ -102,6 +102,10 @@ defmodule DeepEvalEx.Prompts.Python do
   - `DeepEvalEx.Prompts.Python.EnumMember`s as `<Class.NAME: value>`
   - `DeepEvalEx.MLLMImage`s as their placeholder, unquoted, as
     `MLLMImage.__repr__`
+  - the MCP calls as pydantic's `__repr__`,
+    `MCPToolCall(name='...', args={...}, result={...})`, a resource call's
+    URI as `AnyUrl('...')`, and `DeepEvalEx.MCPServer`s as their dataclass
+    `__repr__`, `MCPServer(server_name='...', transport='stdio', ...)`
 
   ## Examples
 
@@ -490,6 +494,25 @@ defmodule DeepEvalEx.Prompts.Python do
   defp do_repr(%Turn{} = turn), do: turn(turn)
   defp do_repr(%MLLMImage{} = image), do: MLLMImage.placeholder(image)
 
+  defp do_repr(%MCPToolCall{} = call),
+    do: model("MCPToolCall", name: call.name, args: call.args, result: call.result)
+
+  defp do_repr(%MCPResourceCall{} = call),
+    do: ["MCPResourceCall(uri=AnyUrl(", string(call.uri), "), result=", do_repr(call.result), ?)]
+
+  defp do_repr(%MCPPromptCall{} = call),
+    do: model("MCPPromptCall", name: call.name, result: call.result)
+
+  defp do_repr(%MCPServer{} = server) do
+    model("MCPServer",
+      server_name: server.server_name,
+      transport: MCPServer.transport_name(server.transport),
+      available_tools: server.available_tools,
+      available_resources: server.available_resources,
+      available_prompts: server.available_prompts
+    )
+  end
+
   defp do_repr(%RetrievedContextData{context: context, source: source}),
     do: ["RetrievedContextData(context=", string(context), ", source=", string(source), ?)]
 
@@ -508,6 +531,18 @@ defmodule DeepEvalEx.Prompts.Python do
   end
 
   defp join(items), do: Enum.intersperse(items, ", ")
+
+  # A pydantic model's or dataclass's default __repr__: Class(field=repr, ...)
+  defp model(class, fields) do
+    [
+      class,
+      ?(,
+      fields
+      |> Enum.map(fn {name, value} -> [Atom.to_string(name), ?=, do_repr(value)] end)
+      |> join(),
+      ?)
+    ]
+  end
 
   defp string(binary) do
     quote_char =
@@ -547,6 +582,9 @@ defmodule DeepEvalEx.Prompts.Python do
             :user_id,
             :retrieval_context,
             :tools_called,
+            :mcp_tools_called,
+            :mcp_resources_called,
+            :mcp_prompts_called,
             :metadata
           ],
           value <- [Map.fetch!(turn, field)],

@@ -42,9 +42,9 @@ defmodule DeepEvalEx.Metrics.Utils.Turns do
 
   # The multi-turn params that name a field of a turn. deepeval skips the
   # case-level params (scenario, expected outcome, metadata, tags, audio) and
-  # those its Turn has no attribute for; DeepEvalEx's Turn has no MCP
-  # fields, which deepeval would skip anyway when unset.
-  @turn_params [:role, :content, :provider_transcript, :retrieval_context, :tools_called]
+  # those its Turn has no attribute for.
+  @turn_params [:role, :content, :provider_transcript, :retrieval_context, :tools_called] ++
+                 [:mcp_tools_called, :mcp_resources_called, :mcp_prompts_called]
 
   @default_turn_params [:content, :role]
 

@@ -1,0 +1,433 @@
+{
+  "turns": [
+    {
+      "role": "user",
+      "content": "Weather in Paris?"
+    },
+    {
+      "role": "assistant",
+      "content": "18°C, partly cloudy",
+      "tools_called": [
+        {
+          "name": "get_weather",
+          "input_parameters": {
+            "city": "Paris"
+          },
+          "type": "MCP"
+        }
+      ],
+      "mcp_tools_called": [
+        {
+          "name": "get_weather",
+          "args": {
+            "city": "Paris",
+            "units": "metric"
+          },
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "18°C, partly cloudy"
+              }
+            ],
+            "structuredContent": null,
+            "isError": false
+          }
+        }
+      ],
+      "mcp_resources_called": [
+        {
+          "uri": "HTTPS://Example.COM",
+          "result": {
+            "contents": [
+              {
+                "uri": "https://example.com/",
+                "mimeType": "text/plain",
+                "text": "It's sunny"
+              }
+            ]
+          }
+        }
+      ],
+      "mcp_prompts_called": [
+        {
+          "name": "forecast_prompt",
+          "result": {
+            "description": null,
+            "messages": [
+              {
+                "role": "user",
+                "content": {
+                  "type": "text",
+                  "text": "Forecast for Paris"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "source": "mcp"
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Weather in Paris?",
+    "actual_output": "18°C, partly cloudy",
+    "mcp_servers": [
+      {
+        "server_name": "weather",
+        "transport": "stdio",
+        "available_tools": [
+          {
+            "name": "get_weather",
+            "description": "Current weather for a city"
+          },
+          {
+            "name": "get_forecast"
+          }
+        ]
+      },
+      {
+        "server_name": "notes",
+        "transport": "streamable-http"
+      }
+    ],
+    "mcp_tools_called": [
+      {
+        "name": "get_weather",
+        "args": {
+          "city": "Paris",
+          "units": "metric"
+        },
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "18°C, partly cloudy"
+            }
+          ],
+          "structuredContent": null,
+          "isError": false
+        }
+      }
+    ],
+    "mcp_resources_called": [
+      {
+        "uri": "HTTPS://Example.COM",
+        "result": {
+          "contents": [
+            {
+              "uri": "https://example.com/",
+              "mimeType": "text/plain",
+              "text": "It's sunny"
+            }
+          ]
+        }
+      }
+    ],
+    "mcp_prompts_called": [
+      {
+        "name": "forecast_prompt",
+        "result": {
+          "description": null,
+          "messages": [
+            {
+              "role": "user",
+              "content": {
+                "type": "text",
+                "text": "Forecast for Paris"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "turn_reprs": [
+    "Turn(role='user', content='Weather in Paris?')",
+    "Turn(role='assistant', content='18°C, partly cloudy', tools_called=[ToolCall(\n    name=\"get_weather\",\n    type=\"MCP\",\n    input_parameters={\n        \"city\": \"Paris\"\n    }\n)], mcp_tools_called=[MCPToolCall(name='get_weather', args={'city': 'Paris', 'units': 'metric'}, result={'content': [{'type': 'text', 'text': '18°C, partly cloudy'}], 'structuredContent': None, 'isError': False})], mcp_resources_called=[MCPResourceCall(uri=AnyUrl('https://example.com/'), result={'contents': [{'uri': 'https://example.com/', 'mimeType': 'text/plain', 'text': \"It's sunny\"}]})], mcp_prompts_called=[MCPPromptCall(name='forecast_prompt', result={'description': None, 'messages': [{'role': 'user', 'content': {'type': 'text', 'text': 'Forecast for Paris'}}]})], metadata={'source': 'mcp'})"
+  ],
+  "format_turns": "[{\"role\": \"user\", \"content\": \"Weather in Paris?\", \"user_id\": null, \"retrieval_context\": null, \"tools_called\": null, \"mcp_tools_called\": null, \"mcp_resources_called\": null, \"mcp_prompts_called\": null, \"metadata\": null}, {\"role\": \"assistant\", \"content\": \"18°C, partly cloudy\", \"user_id\": null, \"retrieval_context\": null, \"tools_called\": [{\"name\": \"get_weather\", \"type\": \"MCP\", \"inputParameters\": {\"city\": \"Paris\"}}], \"mcp_tools_called\": [{\"name\": \"get_weather\", \"args\": {\"city\": \"Paris\", \"units\": \"metric\"}, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"18°C, partly cloudy\"}], \"structuredContent\": null, \"isError\": false}}], \"mcp_resources_called\": [{\"uri\": \"https://example.com/\", \"result\": {\"contents\": [{\"uri\": \"https://example.com/\", \"mimeType\": \"text/plain\", \"text\": \"It's sunny\"}]}}], \"mcp_prompts_called\": [{\"name\": \"forecast_prompt\", \"result\": {\"description\": null, \"messages\": [{\"role\": \"user\", \"content\": {\"type\": \"text\", \"text\": \"Forecast for Paris\"}}]}}], \"metadata\": {\"source\": \"mcp\"}}]",
+  "turn_dicts": [
+    "{'content': 'Weather in Paris?', 'role': 'user'}",
+    "{'content': '18°C, partly cloudy', 'role': 'assistant', 'tools_called': [ToolCall(\n    name=\"get_weather\",\n    type=\"MCP\",\n    input_parameters={\n        \"city\": \"Paris\"\n    }\n)], 'mcp_tools_called': [MCPToolCall(name='get_weather', args={'city': 'Paris', 'units': 'metric'}, result={'content': [{'type': 'text', 'text': '18°C, partly cloudy'}], 'structuredContent': None, 'isError': False})], 'mcp_resources_called': [MCPResourceCall(uri=AnyUrl('https://example.com/'), result={'contents': [{'uri': 'https://example.com/', 'mimeType': 'text/plain', 'text': \"It's sunny\"}]})], 'mcp_prompts_called': [MCPPromptCall(name='forecast_prompt', result={'description': None, 'messages': [{'role': 'user', 'content': {'type': 'text', 'text': 'Forecast for Paris'}}]})]}"
+  ],
+  "multi_turn_state": {
+    "turns": [
+      {
+        "content": "Weather in Paris?",
+        "role": "user"
+      },
+      {
+        "content": "18°C, partly cloudy",
+        "role": "assistant",
+        "tools_called": [
+          {
+            "name": "get_weather",
+            "type": "MCP",
+            "input_parameters": {
+              "city": "Paris"
+            }
+          }
+        ],
+        "mcp_tools_called": [
+          {
+            "name": "get_weather",
+            "args": {
+              "city": "Paris",
+              "units": "metric"
+            },
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "18°C, partly cloudy"
+                }
+              ],
+              "structuredContent": null,
+              "isError": false
+            }
+          }
+        ],
+        "mcp_resources_called": [
+          {
+            "uri": "https://example.com/",
+            "result": {
+              "contents": [
+                {
+                  "uri": "https://example.com/",
+                  "mimeType": "text/plain",
+                  "text": "It's sunny"
+                }
+              ]
+            }
+          }
+        ],
+        "mcp_prompts_called": [
+          {
+            "name": "forecast_prompt",
+            "result": {
+              "description": null,
+              "messages": [
+                {
+                  "role": "user",
+                  "content": {
+                    "type": "text",
+                    "text": "Forecast for Paris"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "test_case": {
+      "scenario": "Weather lookup"
+    }
+  },
+  "conversational_evidence": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Weather in Paris?"
+      },
+      {
+        "role": "assistant",
+        "content": "18°C, partly cloudy",
+        "tools_called": [
+          {
+            "name": "get_weather",
+            "type": "MCP",
+            "input_parameters": {
+              "city": "Paris"
+            }
+          }
+        ],
+        "mcp_tools_called": [
+          {
+            "name": "get_weather",
+            "args": {
+              "city": "Paris",
+              "units": "metric"
+            },
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "18°C, partly cloudy"
+                }
+              ],
+              "structuredContent": null,
+              "isError": false
+            }
+          }
+        ],
+        "mcp_resources_called": [
+          {
+            "uri": "https://example.com/",
+            "result": {
+              "contents": [
+                {
+                  "uri": "https://example.com/",
+                  "mimeType": "text/plain",
+                  "text": "It's sunny"
+                }
+              ]
+            }
+          }
+        ],
+        "mcp_prompts_called": [
+          {
+            "name": "forecast_prompt",
+            "result": {
+              "description": null,
+              "messages": [
+                {
+                  "role": "user",
+                  "content": {
+                    "type": "text",
+                    "text": "Forecast for Paris"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "metadata": {
+          "source": "mcp"
+        }
+      }
+    ],
+    "scenario": "Weather lookup"
+  },
+  "verbose_turn": "[\n    {\n        \"role\": \"assistant\",\n        \"content\": \"18\\u00b0C, partly cloudy\",\n        \"user_id\": null,\n        \"audio\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"provider_transcript\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": [\n            {\n                \"name\": \"get_weather\",\n                \"type\": \"MCP\",\n                \"description\": null,\n                \"reasoning\": null,\n                \"output\": null,\n                \"input_parameters\": {\n                    \"city\": \"Paris\"\n                }\n            }\n        ],\n        \"mcp_tools_called\": [\n            {\n                \"name\": \"get_weather\",\n                \"args\": {\n                    \"city\": \"Paris\",\n                    \"units\": \"metric\"\n                },\n                \"result\": {\n                    \"content\": [\n                        {\n                            \"type\": \"text\",\n                            \"text\": \"18\\u00b0C, partly cloudy\"\n                        }\n                    ],\n                    \"structuredContent\": null,\n                    \"isError\": false\n                }\n            }\n        ],\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": [\n            {\n                \"name\": \"forecast_prompt\",\n                \"result\": {\n                    \"description\": null,\n                    \"messages\": [\n                        {\n                            \"role\": \"user\",\n                            \"content\": {\n                                \"type\": \"text\",\n                                \"text\": \"Forecast for Paris\"\n                            }\n                        }\n                    ]\n                }\n            }\n        ],\n        \"metadata\": {\n            \"source\": \"mcp\"\n        }\n    }\n]",
+  "single_turn_state": {
+    "test_case": {
+      "input": "Weather in Paris?",
+      "mcp_servers": [
+        "MCPServer(server_name='weather', transport='stdio', available_tools=[{'name': 'get_weather', 'description': 'Current weather for a city'}, {'name': 'get_forecast'}], available_resources=None, available_prompts=None)",
+        "MCPServer(server_name='notes', transport='streamable-http', available_tools=None, available_resources=None, available_prompts=None)"
+      ],
+      "mcp_tools_called": [
+        {
+          "name": "get_weather",
+          "args": {
+            "city": "Paris",
+            "units": "metric"
+          },
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "18°C, partly cloudy"
+              }
+            ],
+            "structuredContent": null,
+            "isError": false
+          }
+        }
+      ],
+      "mcp_resources_called": [
+        {
+          "uri": "https://example.com/",
+          "result": {
+            "contents": [
+              {
+                "uri": "https://example.com/",
+                "mimeType": "text/plain",
+                "text": "It's sunny"
+              }
+            ]
+          }
+        }
+      ],
+      "mcp_prompts_called": [
+        {
+          "name": "forecast_prompt",
+          "result": {
+            "description": null,
+            "messages": [
+              {
+                "role": "user",
+                "content": {
+                  "type": "text",
+                  "text": "Forecast for Paris"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "evidence": {
+    "input": "Weather in Paris?",
+    "actual_output": "18°C, partly cloudy",
+    "mcp_tools_called": [
+      {
+        "name": "get_weather",
+        "args": {
+          "city": "Paris",
+          "units": "metric"
+        },
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "18°C, partly cloudy"
+            }
+          ],
+          "structuredContent": null,
+          "isError": false
+        }
+      }
+    ],
+    "mcp_resources_called": [
+      {
+        "uri": "https://example.com/",
+        "result": {
+          "contents": [
+            {
+              "uri": "https://example.com/",
+              "mimeType": "text/plain",
+              "text": "It's sunny"
+            }
+          ]
+        }
+      }
+    ],
+    "mcp_prompts_called": [
+      {
+        "name": "forecast_prompt",
+        "result": {
+          "description": null,
+          "messages": [
+            {
+              "role": "user",
+              "content": {
+                "type": "text",
+                "text": "Forecast for Paris"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "servers_repr": "[MCPServer(server_name='weather', transport='stdio', available_tools=[{'name': 'get_weather', 'description': 'Current weather for a city'}, {'name': 'get_forecast'}], available_resources=None, available_prompts=None), MCPServer(server_name='notes', transport='streamable-http', available_tools=None, available_resources=None, available_prompts=None)]",
+  "available_tool_names": [
+    "get_forecast",
+    "get_weather"
+  ],
+  "uris": {
+    "file:///notes.txt": "file:///notes.txt",
+    "HTTPS://Example.COM": "https://example.com/",
+    "HTTP://Example.com:80/a?b=1#c": "http://example.com/a?b=1#c",
+    "https://example.com:8443/x": "https://example.com:8443/x",
+    "ftp://Files.Example.com": "ftp://files.example.com/",
+    "mcp://Server/Resource": "mcp://Server/Resource",
+    "Custom:Thing": "custom:Thing"
+  }
+}

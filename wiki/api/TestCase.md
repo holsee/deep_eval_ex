@@ -17,6 +17,8 @@ A test case contains the input prompt, the LLM's actual output, and optional con
 | `context` | `[String.t()]` | Ideal, ground-truth context for the input, for Hallucination |
 | `tools_called` | `[ToolCall.t()]` | List of tool calls made by the LLM; `nil` when not given (an empty list means no tools were called) |
 | `expected_tools` | `[ToolCall.t()]` | Expected tool calls for tool use evaluation; `nil` when not given |
+| `mcp_servers` | `[MCPServer.t()]` | The MCP servers the application could use (see "MCP") |
+| `mcp_tools_called`, `mcp_resources_called`, `mcp_prompts_called` | `[MCPToolCall.t()]`, `[MCPResourceCall.t()]`, `[MCPPromptCall.t()]` | The MCP calls made (see "MCP") |
 | `metadata` | `map()` | Additional metadata |
 | `name` | `String.t()` | Optional name/identifier for the test case |
 | `tags` | `[String.t()]` | Tags for filtering/grouping |
@@ -100,6 +102,42 @@ end
   actual_output: "Answer"
 }
 ```
+
+### MCP
+
+A test case (or a conversation, and each of its turns) can record the
+Model Context Protocol servers its application could use and the MCP calls
+it made, as deepeval 4.3.1's `MCPServer`, `MCPToolCall`, `MCPResourceCall`
+and `MCPPromptCall`. A call's `result` is plain data shaped as the MCP
+spec's result (`CallToolResult`, `ReadResourceResult`, `GetPromptResult`),
+kept as given:
+
+```elixir
+test_case =
+  TestCase.new!(
+    input: "What's the weather in Paris?",
+    actual_output: "18°C, partly cloudy",
+    mcp_servers: [
+      %{server_name: "weather", transport: :stdio, available_tools: [%{"name" => "get_weather"}]}
+    ],
+    tools_called: [%{name: "get_weather", input_parameters: %{"city" => "Paris"}}],
+    mcp_tools_called: [
+      %{
+        name: "get_weather",
+        args: %{"city" => "Paris"},
+        result: %{"content" => [%{"type" => "text", "text" => "18°C, partly cloudy"}]}
+      }
+    ]
+  )
+```
+
+When the test case is evaluated, each tool call named among its servers'
+available tools becomes an MCP tool call (`type: :mcp`, exported as
+`"type": "MCP"`), as deepeval's `evaluate()` does; `DeepEvalEx.evaluate/3`
+also takes `mcp_servers:` for the test cases that list none of their own.
+The MCP calls are not exported in a test run (deepeval does not export
+them), but expectations and System One states see them, and conversational
+metrics can name a turn's MCP calls as evaluation params.
 
 ## Context and Retrieval Context
 

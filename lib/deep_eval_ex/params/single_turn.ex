@@ -22,9 +22,8 @@ defmodule DeepEvalEx.Params.SingleTurn do
   | `:mcp_prompts_called`   | `MCP_PROMPTS_CALLED`     |                     |
 
   The display names are deepeval's `G_EVAL_PARAMS`, which name the params in
-  `DeepEvalEx.Metrics.GEval`'s prompts. deepeval gives the MCP params none.
-  DeepEvalEx does not port deepeval's MCP fields yet; they are listed so the
-  set matches deepeval's.
+  `DeepEvalEx.Metrics.GEval`'s prompts. deepeval gives the MCP params none,
+  so G-Eval cannot name them; System One states can.
   """
 
   @type t ::

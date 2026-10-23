@@ -20,9 +20,9 @@ defmodule DeepEvalEx.SystemOne.State do
   alias DeepEvalEx.SystemOne.{Dumpable, EvalSpec}
   alias Jason.OrderedObject
 
-  # deepeval's _TURN_LEVEL_PARAMS, but for the MCP params DeepEvalEx does
-  # not port.
-  @turn_level_params [:role, :content, :retrieval_context, :tools_called]
+  # deepeval's _TURN_LEVEL_PARAMS.
+  @turn_level_params [:role, :content, :retrieval_context, :tools_called] ++
+                       [:mcp_tools_called, :mcp_resources_called, :mcp_prompts_called]
 
   @doc """
   The state of `spec` for `test_case`: `"test_case"` holds the populated
@@ -153,8 +153,8 @@ defmodule DeepEvalEx.SystemOne.State do
   A conversational test case's state, deepeval's
   `construct_multi_turn_state`: `{"turns": [...]}`, each turn's fields among
   `params` that name a turn field (`:role`, `:content`,
-  `:retrieval_context` and `:tools_called`, in the order of `params`, unset
-  ones left out, see
+  `:retrieval_context`, `:tools_called` and the MCP calls, in the order of
+  `params`, unset ones left out, see
   `DeepEvalEx.Metrics.Utils.Turns.convert_turn_to_dict/2`), then, when any
   is populated, `"test_case"` with the other params' fields (`:scenario`,
   `:expected_outcome`, ...), as `single_turn/2` sends them. Every value is
