@@ -32,7 +32,9 @@ defmodule DeepEvalEx.Tracing.Observe do
   - its default output is the result.
 
   The options are those of `DeepEvalEx.Tracing.span/3` (`:type`,
-  `:metrics`, `:drop_if_root`, ...), evaluated at each call.
+  `:metrics`, `:drop_if_root`, ...), evaluated at each call, except
+  `:input`, which raises `ArgumentError`: the arguments are the input
+  (deepeval's `observe` ignores one too).
 
   ## Argument names
 
@@ -53,6 +55,9 @@ defmodule DeepEvalEx.Tracing.Observe do
         text when is_binary(text) -> {:text, text}
         _other -> :unknown
       end
+
+  A body of clauses cannot also have `rescue`, `catch`, `else` or
+  `after` (`ArgumentError` at compile time).
 
   Stacktraces gain one frame, the anonymous function the body runs in.
   """
@@ -76,6 +81,12 @@ defmodule DeepEvalEx.Tracing.Observe do
   @spec __span__(String.t(), keyword(), [{String.t(), term()}], (-> result)) :: result
         when result: term()
   def __span__(name, opts, arguments, fun) do
+    if Keyword.has_key?(opts, :input) do
+      raise ArgumentError,
+            "deftraced records the call's arguments as its input; " <>
+              "use DeepEvalEx.Tracing.span/3 to give #{name} another"
+    end
+
     {type, opts} = Keyword.pop(opts, :type)
 
     opts =
@@ -91,11 +102,9 @@ defmodule DeepEvalEx.Tracing.Observe do
     {body, extra} = if Keyword.keyword?(body), do: Keyword.split(body, @body_keys), else: {[], []}
     opts = if extra == [], do: opts, else: opts ++ extra
 
-    unless Keyword.has_key?(body, :do) do
-      raise ArgumentError, "#{kind}traced needs a do block, got: #{Macro.to_string(head)}"
-    end
-
+    check_body!(kind, head, body)
     name = head |> call() |> elem(0) |> Atom.to_string()
+
     {head, arguments} = bind_head(head)
     vars = Enum.map(arguments, &elem(&1, 1))
 
@@ -112,6 +121,18 @@ defmodule DeepEvalEx.Tracing.Observe do
     case kind do
       :def -> quote(do: def(unquote(head), do: unquote(traced)))
       :defp -> quote(do: defp(unquote(head), do: unquote(traced)))
+    end
+  end
+
+  defp check_body!(kind, head, body) do
+    unless Keyword.has_key?(body, :do) do
+      raise ArgumentError, "#{kind}traced needs a do block, got: #{Macro.to_string(head)}"
+    end
+
+    if clauses?(body) and length(body) > 1 do
+      raise ArgumentError,
+            "#{kind}traced #{Macro.to_string(call(head))} lists clauses in its body, " <>
+              "which cannot have rescue, catch, else or after; put them in a function the clauses call"
     end
   end
 
@@ -139,6 +160,8 @@ defmodule DeepEvalEx.Tracing.Observe do
 
     {{name, meta, params}, arguments}
   end
+
+  defp clauses?(body), do: match?([{:->, _, _} | _], body[:do])
 
   # Clauses in the body: one anonymous function applied to the arguments.
   defp inner([do: [{:->, _, _} | _] = clauses], vars) do

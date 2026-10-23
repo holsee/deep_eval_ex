@@ -2094,7 +2094,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     argument loses its underscore, and any other pattern is named
     `arg<position>`. Guards, defaults, `@doc`, `@spec` and
     `rescue`/`catch`/`after` work, and a multi-clause function lists its
-    clauses under one head, so a call is one span.
+    clauses under one head, so a call is one span. A body of clauses with
+    `rescue`, `catch`, `else` or `after` raises `ArgumentError` at compile
+    time, and an `:input` option raises `ArgumentError` at the call, since
+    the arguments are the input.
   - `DeepEvalEx.Tracing.span/3` records a block, and `open_span/2`,
     `close_span/2` and `record_span/2` are the primitives for adapters.
     Options: `:name`, `:input`, `:metrics`, `:metric_collection`,
@@ -2114,9 +2117,12 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     also has the sync iterator's wrapper strip as `mode: :sync`).
   - `DeepEvalEx.Tracing.trace/2` ports `trace()`: it joins the open trace
     or starts one, sets its attributes when truthy in Python's sense, and
-    keeps `:llm_span_context` and `:agent_span_context` for the block. As
-    in deepeval, the trace ends when its first root span closes, so two
-    calls in a row inside one `trace/2` make two traces.
+    sets `:llm_span_context` and `:agent_span_context` for the block when
+    given, clearing both when it returns, as deepeval. As in deepeval, the
+    trace ends when its first root span closes, so two calls in a row
+    inside one `trace/2` make two traces. Unlike deepeval, a trace
+    `trace/2` started stays open past the block while a span in it is
+    still open (a task's), and the last span to close ends it.
   - The context lives in the process dictionary
     (`DeepEvalEx.Tracing.Ctx`). `Task`, `Task.async_stream` and
     `Task.Supervisor` children join their caller's trace through
@@ -2131,7 +2137,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     after `:await_open` (5,000 ms by default) is returned `:in_progress`.
     Outside a capture a closed trace goes only to telemetry.
   - `DeepEvalEx.Tracing.Store`, a supervised ETS table, holds open traces:
-    each span row is written only by the process that opened it. Unlike
+    each span row is written only by the process that opened it. A task
+    whose span joins a trace as its last span closes either keeps the
+    trace open or starts a trace of its own, so no span is lost. Unlike
     deepeval, which would keep the trace open forever, a process that dies
     with spans open has them marked `:errored` with its exit reason, and
     their trace closes.

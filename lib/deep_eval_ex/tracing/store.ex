@@ -25,10 +25,18 @@ defmodule DeepEvalEx.Tracing.Store do
     Closed traces reach their capturer through the table, never its
     mailbox
 
+  ## Closing
+
   A trace closes when its last open span closes. The closing process
   builds it with `DeepEvalEx.Tracing.Tree.build/3`, deletes its rows and
   routes it: to its capture, or, without one, only to the
   `[:deep_eval_ex, :trace, :stop]` event.
+
+  Spans of other processes (tasks that found the trace through
+  `$callers`) can join it as it closes. The closer claims the trace by
+  deleting its `:open` row only while the count is 0, so a span counted
+  first keeps it open, and a span counted later finds no row and starts
+  a trace of its own; no counted span's row is ever deleted under it.
 
   ## Divergence: dead owners
 
@@ -150,28 +158,23 @@ defmodule DeepEvalEx.Tracing.Store do
   end
 
   @doc """
-  Closes the trace, unless another process already did: builds it with
-  `status` and routes it (see the moduledoc).
+  Closes the trace if no span is open in it and no other process already
+  closed it: builds it with `status` and routes it (see the moduledoc).
+
+  The open count is removed only while it is 0, in one step, so a span
+  that joined after the last one closed keeps the trace open (and closes
+  it in turn), and a span that comes later finds it closed (see
+  "Closing").
   """
   @spec finish_trace(String.t(), Span.status()) :: :ok
   def finish_trace(trace_uuid, status \\ :success) do
-    case :ets.take(@table, {:trace, trace_uuid}) do
-      [] ->
-        :ok
-
-      [{_key, meta}] ->
-        trace = assemble(trace_uuid, meta, status, Time.now_us())
-        delete_rows(trace_uuid)
-        deliver(trace, meta)
-    end
-  end
-
-  @doc "Closes the trace if it has no open span."
-  @spec finish_if_idle(String.t()) :: :ok
-  def finish_if_idle(trace_uuid) do
-    case :ets.lookup(@table, {:open, trace_uuid}) do
-      [{_key, 0}] -> finish_trace(trace_uuid)
-      _ -> :ok
+    with 1 <- :ets.select_delete(@table, [{{{:open, trace_uuid}, 0}, [], [true]}]),
+         [{_key, meta}] <- :ets.take(@table, {:trace, trace_uuid}) do
+      trace = assemble(trace_uuid, meta, status, Time.now_us())
+      delete_rows(trace_uuid)
+      deliver(trace, meta)
+    else
+      _open_or_closed -> :ok
     end
   end
 
@@ -201,7 +204,6 @@ defmodule DeepEvalEx.Tracing.Store do
   defp delete_rows(trace_uuid) do
     :ets.match_delete(@table, {{:span, trace_uuid, :_}, :_, :_})
     :ets.match_delete(@table, {{:trace_attr, trace_uuid, :_}, :_})
-    :ets.delete(@table, {:open, trace_uuid})
   end
 
   defp deliver(%Trace{uuid: trace_uuid} = trace, %{route: ref}) when is_reference(ref) do
@@ -369,6 +371,6 @@ defmodule DeepEvalEx.Tracing.Store do
 
     @table
     |> :ets.select([{{{:trace, :"$1"}, %{owner: pid}}, [], [:"$1"]}])
-    |> Enum.each(&finish_if_idle/1)
+    |> Enum.each(&finish_trace/1)
   end
 end

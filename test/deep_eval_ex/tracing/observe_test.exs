@@ -59,6 +59,10 @@ defmodule DeepEvalEx.Tracing.ObserveTest do
     deftraced dynamic(x), name: "dynamic #{x}" do
       x
     end
+
+    deftraced with_input(x), input: "custom" do
+      x
+    end
   end
 
   defp capture(fun) do
@@ -168,5 +172,30 @@ defmodule DeepEvalEx.Tracing.ObserveTest do
       end)
 
     assert [[%Span{name: "retrieve", status: :errored}]] = Enum.map(traces, & &1.root_spans)
+  end
+
+  test "rejects an :input option, since the arguments are the input" do
+    assert_raise ArgumentError, ~r/deftraced records the call's arguments as its input/, fn ->
+      Agent.with_input(1)
+    end
+  end
+
+  test "rejects clauses in a body with rescue, catch, else or after" do
+    quoted =
+      quote do
+        defmodule DeepEvalEx.Tracing.ObserveTest.ClausesWithRescue do
+          use DeepEvalEx.Tracing
+
+          deftraced classify(input) do
+            text when is_binary(text) -> text
+          rescue
+            _error -> :rescued
+          end
+        end
+      end
+
+    assert_raise ArgumentError, ~r/deftraced classify\(input\) lists clauses in its body/, fn ->
+      Code.eval_quoted(quoted)
+    end
   end
 end

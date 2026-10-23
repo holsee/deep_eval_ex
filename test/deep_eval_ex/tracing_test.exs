@@ -398,6 +398,26 @@ defmodule DeepEvalEx.TracingTest do
       assert Tracing.llm_span_context() == nil
       assert Tracing.agent_span_context() == nil
     end
+
+    test "sets the span contexts only when given and clears them on exit, as deepeval" do
+      Tracing.trace([llm_span_context: [model: "outer"], agent_span_context: [name: "a"]], fn ->
+        Tracing.trace([name: "inner"], fn ->
+          # deepeval sets current_llm_context only when one is given.
+          assert Tracing.llm_span_context() == [model: "outer"]
+          assert Tracing.agent_span_context() == [name: "a"]
+        end)
+
+        # An empty context is still given, as an empty LlmSpanContext() is truthy.
+        Tracing.trace([llm_span_context: [], agent_span_context: [name: "b"]], fn ->
+          assert Tracing.llm_span_context() == []
+          assert Tracing.agent_span_context() == [name: "b"]
+        end)
+
+        # ...and resets both to empty contexts on exit, not to the outer ones.
+        assert Tracing.llm_span_context() == nil
+        assert Tracing.agent_span_context() == nil
+      end)
+    end
   end
 
   describe "context across processes" do
@@ -424,6 +444,31 @@ defmodule DeepEvalEx.TracingTest do
       [agent] = trace.root_spans
       assert Enum.sort(names(agent.children)) == ["s1", "s2", "supervised", "task"]
       assert Enum.all?(agent.children, &(&1.parent_uuid == agent.uuid))
+    end
+
+    test "tasks joining a trace as its last span closes never lose a span or crash" do
+      # Regression: a task could join the trace after another's span closed
+      # it, and its span row was then deleted under it, so close_span/2
+      # raised BadMapError. Every span must land in exactly one trace.
+      for _ <- 1..300 do
+        {spans, traces} =
+          capture(fn ->
+            Tracing.trace([name: "fan-out"], fn ->
+              1..8
+              |> Task.async_stream(
+                fn i -> Tracing.span(:tool, [name: "s#{i}"], fn -> i end) end,
+                max_concurrency: 8
+              )
+              |> Enum.map(fn {:ok, i} -> i end)
+            end)
+          end)
+
+        assert spans == Enum.to_list(1..8)
+        recorded = Enum.flat_map(traces, &names(&1.root_spans))
+        assert Enum.sort(recorded) == Enum.sort(Enum.map(1..8, &"s#{&1}"))
+        assert Enum.all?(traces, &(&1.status == :success))
+        assert Enum.flat_map(traces, &rows(&1.uuid)) == []
+      end
     end
 
     test "a child resolves its parent when its first span opens" do
@@ -580,6 +625,24 @@ defmodule DeepEvalEx.TracingTest do
       assert trace.status == :errored
       assert [%Span{name: "stuck", status: :errored, error: "killed"} = span] = trace.root_spans
       assert span.end_us != nil
+    end
+
+    test "a span counted in a trace keeps it open when another span's close races it" do
+      trace_uuid = Store.start_trace(:off)
+      :ok = Store.open_span(trace_uuid)
+      assert Store.close_span(trace_uuid) == 0
+
+      # A span joins between the close's count reaching 0 and its finish.
+      :ok = Store.open_span(trace_uuid)
+      assert Store.finish_trace(trace_uuid) == :ok
+      assert Store.live?(trace_uuid)
+
+      assert Store.close_span(trace_uuid) == 0
+      assert Store.finish_trace(trace_uuid) == :ok
+      refute Store.live?(trace_uuid)
+      # Once closed, a late span is turned away to a trace of its own.
+      assert Store.open_span(trace_uuid) == :closed
+      assert rows(trace_uuid) == []
     end
 
     test "capture/2 exports a trace still open after :await_open as IN_PROGRESS" do

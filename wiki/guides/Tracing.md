@@ -39,7 +39,8 @@ in order and with defaults applied (`retrieve("q")` records
 `{"query": "q", "k": 2}`), and its output is the result. The span types are
 `:base` (the default), `:agent`, `:llm`, `:retriever` and `:tool`; each
 takes its own options (`:available_tools`, `:model`, `:embedder`,
-`:description`, ...). `defptraced` defines a private function.
+`:description`, ...), but not `:input`: the arguments are the input.
+`defptraced` defines a private function.
 
 A function with several clauses keeps one head and lists its clauses in
 the body, so each call is one span:
@@ -50,6 +51,9 @@ deftraced classify(input), type: :tool do
   _other -> :unknown
 end
 ```
+
+Such a body cannot also have `rescue`, `catch`, `else` or `after`; put
+them in a function the clauses call.
 
 `DeepEvalEx.Tracing.span/3` records a block instead, and
 `open_span/2`, `close_span/2` and `record_span/2` are the primitives for
@@ -83,7 +87,11 @@ telemetry event (see the [Telemetry](Telemetry.md) guide) and kept nowhere.
 `DeepEvalEx.Tracing.trace/2` groups spans into a trace and sets its
 attributes (`name`, `tags`, `metadata`, `thread_id`, `user_id`, ...), as
 deepeval's `trace()` context manager. Like deepeval, it ends the trace when
-its first root span closes.
+its first root span closes. Unlike deepeval, a trace that `trace/2` started
+stays open past the block while a span in it is still open (a task's), and
+the last span to close ends it. The `:llm_span_context` and
+`:agent_span_context` options are set for the block when given and cleared
+when it returns, as in deepeval.
 
 ## Across processes
 

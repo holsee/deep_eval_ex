@@ -108,6 +108,18 @@ defmodule DeepEvalEx.Tracing do
     traces, and the trace's attributes go to the first.
   - A span opened under a parent that has since closed joins the nearest
     open ancestor, else the open trace, else a new one.
+  - `trace/2` clears `llm_span_context/0` and `agent_span_context/0` when
+    it returns, even inside an enclosing `trace/2` that set them, as
+    deepeval resets them to empty contexts rather than the previous ones.
+
+  ## Divergences
+
+  - When `trace/2` started the trace and a span is still open in it as
+    `fun` returns (a task's, or one opened with `open_span/2`), the trace
+    stays open and the last span to close ends it. deepeval's `trace()`
+    ends it at once, dropping the spans still to close.
+  - A process that dies with spans open has them marked `:errored`, and
+    their trace closes (see `DeepEvalEx.Tracing.Store`).
   """
 
   alias DeepEvalEx.Schemas.ToolCall
@@ -368,7 +380,8 @@ defmodule DeepEvalEx.Tracing do
 
     case Store.close_span(trace_uuid) do
       0 -> Store.finish_trace(trace_uuid)
-      # The trace closed without this span, racing a span that opened as it closed.
+      # A counted span keeps its trace open (see Store's "Closing"), so this
+      # is only a guard: never leave a row behind a closed trace.
       :closed -> Store.delete_span(trace_uuid, span_uuid)
       _open -> :ok
     end
@@ -481,7 +494,13 @@ defmodule DeepEvalEx.Tracing do
   - `:llm_span_context`, `:agent_span_context` - Keyword lists LLM
     adapters and agent integrations read while `fun` runs (see
     `llm_span_context/0`), deepeval's `LlmSpanContext` and
-    `AgentSpanContext`
+    `AgentSpanContext`. As in deepeval, each is set only when given,
+    so a nested `trace/2` without one keeps the enclosing one, and both
+    are cleared when `fun` returns, also inside an enclosing `trace/2`
+
+  A trace `trace/2` started closes when `fun` returns only if no span is
+  open in it; otherwise the last span to close ends it (see
+  "Divergences").
   """
   @spec trace(keyword(), (-> result)) :: result when result: term()
   def trace(opts, fun) when is_function(fun, 0) do
@@ -499,18 +518,25 @@ defmodule DeepEvalEx.Tracing do
     put_trace_attrs(trace_uuid, opts)
     %Ctx{} = ctx = ctx || %Ctx{}
     previous = Ctx.put(%{ctx | trace_uuid: trace_uuid})
-    llm = Process.put(@llm_span_context, Keyword.get(opts, :llm_span_context))
-    agent = Process.put(@agent_span_context, Keyword.get(opts, :agent_span_context))
+    put_span_context(@llm_span_context, Keyword.get(opts, :llm_span_context))
+    put_span_context(@agent_span_context, Keyword.get(opts, :agent_span_context))
 
     try do
       fun.()
     after
-      if started?, do: Store.finish_if_idle(trace_uuid)
+      if started?, do: Store.finish_trace(trace_uuid)
       Ctx.put(previous)
-      restore(@llm_span_context, llm)
-      restore(@agent_span_context, agent)
+      # deepeval resets both to empty contexts, not to the enclosing ones.
+      Process.delete(@llm_span_context)
+      Process.delete(@agent_span_context)
     end
   end
+
+  # deepeval sets current_llm_context and current_agent_context only when
+  # one is given (a dataclass is always truthy, even empty), so an inner
+  # trace() without one keeps the outer one.
+  defp put_span_context(_key, nil), do: :ok
+  defp put_span_context(key, context), do: Process.put(key, context)
 
   defp put_trace_attrs(trace_uuid, opts) do
     [:metrics, :metric_collection | @trace_fields]
@@ -534,9 +560,6 @@ defmodule DeepEvalEx.Tracing do
       {:error, errors} -> raise ArgumentError, "Invalid tool call: #{inspect(errors)}"
     end
   end
-
-  defp restore(key, nil), do: Process.delete(key)
-  defp restore(key, value), do: Process.put(key, value)
 
   @doc """
   The `:llm_span_context` of the enclosing `trace/2`, or `nil`.
