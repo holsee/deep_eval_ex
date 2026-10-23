@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Date
 
@@ -632,7 +632,11 @@ P8-4 and P8-5 can proceed in parallel. P8-3 needs both. P8-1's row model can sta
 
 `after_suite` callbacks run after every formatter has stopped (`runner.ex:66-71`), so the ordering would be correct, and plain `mix test` could produce runs. It was rejected as the default because deepeval does not wrap up under plain pytest. It remains a possible opt-in (decision 5).
 
-## Decisions Needed From the Maintainer
+## Decisions
+
+The maintainer accepted every recommended option below (2026-10-23).
+
+### Decisions Needed From the Maintainer (resolved)
 
 1. **Cache retention semantics.**
    - (a) deepeval parity: after a run the file holds only that run's entries, and `write_cache: false` deletes both cache files.

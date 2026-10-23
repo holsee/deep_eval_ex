@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Date
 
@@ -586,7 +586,11 @@ This was the base of this ADR.
 - New telemetry events under `[:deep_eval_ex, :span | :trace, ...]`.
 - Confident AI posting, OTLP export, offline evals and Python-framework integrations stay out of scope. `Sink` and `TelemetryBridge` are the seams for them.
 
-## Decisions Needed From the Maintainer
+## Decisions
+
+The maintainer accepted every recommended option below (2026-10-23).
+
+### Decisions Needed From the Maintainer (resolved)
 
 1. **Instrumentation API shape.**
    - (a) A def-level `deftraced`/`defptraced` macro over `span/3`, with the `open/close/record_span` primitive.
