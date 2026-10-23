@@ -181,8 +181,12 @@ defmodule DeepEvalEx.MixProject do
         "docs/adr/0008-peri-schema-validation-replacing-ecto.md",
         "docs/adr/0009-system-one-models-and-eval-modes.md",
         "docs/adr/0010-test-runner-report-cache-classifiers.md",
+        "docs/adr/0011-tracing-span-api-and-agentic-evaluation.md",
         {"docs/adr/template.md", [title: "ADR Template"]}
       ],
+      # ADR-0011 names the internal DeepEvalEx.Scope and, as shorthand,
+      # DeepEvalEx.ExUnit.assert_trace/3.
+      skip_code_autolink_to: ["DeepEvalEx.Scope", "ExUnit.assert_trace/3"],
       groups_for_extras: [
         Guides: ~r/wiki\/guides\/.*/,
         Metrics: ~r/wiki\/metrics\/.*/,

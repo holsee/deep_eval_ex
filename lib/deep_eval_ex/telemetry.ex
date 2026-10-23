@@ -123,7 +123,9 @@ defmodule DeepEvalEx.Telemetry do
   - `[:deep_eval_ex, :trace, :stop]` - A trace closed
     - Measurements: `%{duration: integer()}`, in native time units
     - Metadata: `%{trace: DeepEvalEx.Tracing.Trace.t(), route: :capture |
-      :off}`, `:capture` when a `DeepEvalEx.Tracing.capture/2` collects it
+      :off}`, `:capture` when a `DeepEvalEx.Tracing.capture/2` collects it;
+      an `:off` trace has been handed to the `DeepEvalEx.Tracing.Sink`
+      first
 
   - `[:deep_eval_ex, :trace, :timeout]` - `DeepEvalEx.Tracing.capture/2`
     stopped waiting for a trace still open after its `:await_open`, and

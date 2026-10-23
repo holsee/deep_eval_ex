@@ -176,7 +176,9 @@ shaped like `:telemetry.span/3`'s events.
 
 #### `[:deep_eval_ex, :trace, :stop]`
 
-Emitted when a trace closes.
+Emitted when a trace closes. An `:off` trace has been handed to the
+configured `DeepEvalEx.Tracing.Sink` first (see the [Tracing](Tracing.md)
+guide).
 
 | Measurement | Type | Description |
 |-------------|------|-------------|

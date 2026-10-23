@@ -35,8 +35,9 @@ defmodule DeepEvalEx.Tracing.Store do
 
   A trace closes when its last open span closes. The closing process
   builds it with `DeepEvalEx.Tracing.Tree.build/3`, deletes its rows and
-  routes it: to its capture, or, without one, only to the
-  `[:deep_eval_ex, :trace, :stop]` event.
+  routes it: to its capture, or, without one, to the configured
+  `DeepEvalEx.Tracing.Sink` and the `[:deep_eval_ex, :trace, :stop]`
+  event.
 
   Spans of other processes (tasks that found the trace through
   `$callers`) can join it as it closes. The closer claims the trace by
@@ -61,7 +62,7 @@ defmodule DeepEvalEx.Tracing.Store do
 
   use GenServer
 
-  alias DeepEvalEx.Tracing.{Ctx, Span, Time, Trace, Tree}
+  alias DeepEvalEx.Tracing.{Ctx, Sink, Span, Time, Trace, Tree}
 
   @table __MODULE__
   @watched {__MODULE__, :watched}
@@ -239,11 +240,16 @@ defmodule DeepEvalEx.Tracing.Store do
       :ets.insert(@table, {{:closed, ref, trace_uuid}, trace})
       emit_stop(trace, :capture)
     else
-      emit_stop(trace, :off)
+      deliver_off(trace)
     end
   end
 
-  defp deliver(trace, _meta), do: emit_stop(trace, :off)
+  defp deliver(trace, _meta), do: deliver_off(trace)
+
+  defp deliver_off(trace) do
+    Sink.export(trace)
+    emit_stop(trace, :off)
+  end
 
   defp emit_stop(trace, route) do
     duration = System.convert_time_unit(trace.end_us - trace.start_us, :microsecond, :native)

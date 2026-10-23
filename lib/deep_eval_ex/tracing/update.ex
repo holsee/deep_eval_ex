@@ -96,6 +96,10 @@ defmodule DeepEvalEx.Tracing.Update do
   def validate_span!(opts), do: opts |> validate!(@span_keys) |> build_test_case()
 
   @doc false
+  # The options the typed update_*_span of `type` takes.
+  def typed_keys(type), do: Map.fetch!(@typed_keys, type)
+
+  @doc false
   # The options of the typed update_*_span, validated.
   def validate_typed!(type, opts), do: validate!(opts, Map.fetch!(@typed_keys, type))
 

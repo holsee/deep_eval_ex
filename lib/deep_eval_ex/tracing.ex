@@ -104,8 +104,9 @@ defmodule DeepEvalEx.Tracing do
   ## Collecting traces
 
   `capture/2` runs a function and returns the traces it and its
-  descendants started. Outside a capture a closed trace is only emitted
-  as the `[:deep_eval_ex, :trace, :stop]` telemetry event.
+  descendants started. Outside a capture a closed trace goes to the
+  configured `DeepEvalEx.Tracing.Sink` (by default none keeps it), then
+  is emitted as the `[:deep_eval_ex, :trace, :stop]` telemetry event.
 
       {_answer, [trace]} = DeepEvalEx.Tracing.capture([], fn -> MyApp.Support.answer("hi") end)
 
@@ -114,6 +115,9 @@ defmodule DeepEvalEx.Tracing do
   Calls through `DeepEvalEx.LLM.Adapter` record `:llm` spans inside a
   span (see "Tracing" there), and `DeepEvalEx.Tracing.ReqStep` does the
   same for an app's own `Req` client.
+
+  Libraries that emit `:telemetry.span/3` events can be traced with no
+  change to their code: see `DeepEvalEx.Tracing.TelemetryBridge`.
 
   `suppress/1` records nothing: `DeepEvalEx.Metrics.BaseMetric` measures
   and `DeepEvalEx.Classifier` classifies inside it, so a judge's calls
@@ -900,8 +904,9 @@ defmodule DeepEvalEx.Tracing do
   Spans in `fun` start traces of their own even inside an open span. A
   trace still open when `fun` returns is waited for, up to `:await_open`
   milliseconds (default `5_000`); after that it is returned as it stands,
-  `:in_progress`, and `[:deep_eval_ex, :trace, :timeout]` is emitted. It
-  then goes nowhere when it closes.
+  `:in_progress`, and `[:deep_eval_ex, :trace, :timeout]` is emitted.
+  When it closes, it goes where a trace closed outside a capture goes
+  (see `DeepEvalEx.Tracing.Sink`).
 
   The traces arrive through the tracing store, never the caller's
   mailbox, so a `GenServer` or LiveView can capture.

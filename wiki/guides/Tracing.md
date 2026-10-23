@@ -82,8 +82,10 @@ Enum.map(root.children, & &1.name) #=> ["retrieve", "generate"]
 A trace closes when its last open span closes. Its input and output are
 its root span's, and an errored root span makes the trace `:errored`. Spans
 started in a row, each with no parent, make one trace each. Outside a
-capture, a closed trace is emitted as the `[:deep_eval_ex, :trace, :stop]`
-telemetry event (see the [Telemetry](Telemetry.md) guide) and kept nowhere.
+capture, a closed trace goes to the configured sink (see [Traces outside a
+capture](#traces-outside-a-capture)) and is emitted as the
+`[:deep_eval_ex, :trace, :stop]` telemetry event (see the
+[Telemetry](Telemetry.md) guide).
 
 `DeepEvalEx.Tracing.trace/2` groups spans into a trace and sets its
 attributes (`name`, `tags`, `metadata`, `thread_id`, `user_id`, ...), as
@@ -419,6 +421,57 @@ It reads the model, messages, answer text and token counts from OpenAI,
 Anthropic and Ollama JSON. Each request is one span named
 `"llm_generation"`, retries included.
 
+## Libraries that emit telemetry
+
+`DeepEvalEx.Tracing.TelemetryBridge` records spans from any library that
+wraps its steps in `:telemetry.span/3`, with no change to its code. A
+mapper turns each event into a span:
+
+```elixir
+DeepEvalEx.Tracing.TelemetryBridge.attach(:my_agent, [:my_app, :agent, :step], fn
+  :start, _measurements, %{tool: tool} = meta -> {:tool, name: tool, input: meta.args}
+  :start, _measurements, meta -> {:agent, name: meta.agent}
+  :stop, _measurements, meta -> {:update, output: meta.result}
+  _phase, _measurements, _meta -> :skip
+end)
+```
+
+On `:start`, `{type, opts}` opens a span with `span/3`'s options and
+`{:update, opts}` enriches the current one. On `:stop` and `:exception`,
+`{:update, opts}` gives the span its result (`:output`) and other fields,
+token counts included, before it closes; an `:exception` makes it
+`:errored`. `:skip` does nothing. The handlers run in the emitting process,
+so bridged spans nest under the span open there, also in a `Task`. A mapper
+that raises is logged and skipped, and the bridge stays attached.
+`TelemetryBridge.detach/1` removes it.
+
+## Traces outside a capture
+
+A trace closed outside `capture/2` and evaluation goes to a sink, the seam
+where deepeval posts traces to Confident AI. The default,
+`DeepEvalEx.Tracing.Sinks.Null`, keeps nothing. Implement the
+`DeepEvalEx.Tracing.Sink` behaviour to keep traces somewhere:
+
+```elixir
+defmodule MyApp.TraceFile do
+  @behaviour DeepEvalEx.Tracing.Sink
+
+  @impl true
+  def export(trace, opts) do
+    json = trace |> DeepEvalEx.Tracing.Api.trace_api() |> Jason.encode!()
+    File.write(Keyword.fetch!(opts, :path), [json, ?\n], [:append])
+  end
+end
+
+config :deep_eval_ex, :tracing, sink: {MyApp.TraceFile, path: "traces.jsonl"}
+```
+
+`export/2` runs in the process that closed the trace, so hand slow work to
+a process of your own. A failing sink is logged and never breaks the traced
+code. As in deepeval, a dropped trace is not exported. In tests,
+`DeepEvalEx.Tracing.Sinks.Test` sends each trace to a process as
+`{:trace, trace}`.
+
 ## Metrics are not traced
 
 Metrics and classifiers judge inside `DeepEvalEx.Tracing.suppress/1`, so
@@ -430,7 +483,9 @@ yourself for work you do not want recorded.
 ```elixir
 config :deep_eval_ex, :tracing,
   # Applied to every default input and output, as deepeval's mask
-  mask: {MyApp.Redact, :redact}
+  mask: {MyApp.Redact, :redact},
+  # Where traces closed outside a capture go (default: Sinks.Null)
+  sink: {MyApp.TraceFile, path: "traces.jsonl"}
 ```
 
 `clock:` and `uuid:` replace the time and id sources, for tests.

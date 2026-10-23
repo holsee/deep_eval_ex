@@ -2502,6 +2502,36 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     `:errored` on a status of 400 or above or a transport error. Options:
     `:name`, `:provider`, `:integration`, `:model` and `:metadata`. Tool
     calls in a response are not recorded.
+- **Trace sinks and the telemetry bridge** (ADR-0011, decisions 9 and 10),
+  the seams in place of deepeval 4.3.1's Confident AI posting and its
+  `integrations/*`. The [Tracing](wiki/guides/Tracing.md) guide covers
+  both.
+  - `DeepEvalEx.Tracing.Sink`, a behaviour with one callback,
+    `export(trace, opts)`, gets every trace closed outside a capture,
+    before its `[:deep_eval_ex, :trace, :stop]` event (`route: :off`),
+    where deepeval's `trace_manager` posts it. Set it with
+    `config :deep_eval_ex, :tracing, sink: module | {module, opts}`.
+    `DeepEvalEx.Tracing.Sinks.Null`, the default, keeps nothing, so
+    memory stays bounded; `DeepEvalEx.Tracing.Sinks.Test` sends each trace
+    to a test process as `{:trace, trace}`. As in deepeval, a dropped trace
+    is not exported. A sink that raises or returns `{:error, reason}` is
+    logged, and the traced code carries on. A trace `capture/2` stopped
+    waiting for now goes to the sink when it closes.
+  - `DeepEvalEx.Tracing.TelemetryBridge.attach/3` records spans from any
+    library's `:telemetry.span/3` events through a mapper that turns each
+    `:start` into `{type, opts}` (a span, `span/3`'s options),
+    `{:update, opts}` (fields of the current span) or `:skip`, and each
+    `:stop` or `:exception` into `{:update, opts}` (the span's result as
+    `:output`, and its fields, typed ones such as token counts included)
+    or `:skip`. Starts and stops pair by `telemetry_span_context`, an
+    `:exception` makes the span `:errored`, and the handlers run in the
+    emitting process, so bridged spans nest under the span open there and
+    join a `Task`'s trace through `$callers`. A raising mapper is logged
+    and skipped without detaching the bridge, and a span it opened still
+    closes. `detach/1` removes it. Mappers for particular libraries
+    (Jido, LangChain) are left to separate packages.
+  - ADR-0011 is now part of the HexDocs Architecture pages and linked
+    from the ADR index.
 
 ### Changed
 

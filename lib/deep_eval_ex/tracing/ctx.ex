@@ -8,7 +8,8 @@ defmodule DeepEvalEx.Tracing.Ctx do
   - `:span_uuid` - The current span, the parent of the next one
   - `:route` - Where a trace started under this context goes when it
     closes: a `DeepEvalEx.Tracing.capture/2` reference, `:off` (no
-    capture: only the `[:deep_eval_ex, :trace, :stop]` event) or
+    capture: the `DeepEvalEx.Tracing.Sink` and the
+    `[:deep_eval_ex, :trace, :stop]` event) or
     `:suppressed` (no span is recorded, see
     `DeepEvalEx.Tracing.suppress/1`)
   - `:pending` - The slots `DeepEvalEx.Tracing.next_span/2` and its typed
