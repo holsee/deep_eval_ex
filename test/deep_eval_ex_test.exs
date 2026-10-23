@@ -166,6 +166,17 @@ defmodule DeepEvalExTest do
       end
     end
 
+    test "raises like deepeval on a mix of single- and multi-turn test cases, before evaluating" do
+      conversation =
+        DeepEvalEx.ConversationalTestCase.new!(turns: [%{role: :user, content: "Hi"}])
+
+      assert_raise ArgumentError, ~r/cannot supply a mixture of `LLMTestCase`/, fn ->
+        DeepEvalEx.evaluate_run(test_cases() ++ [conversation], [OptsMetric], test_pid: self())
+      end
+
+      refute_received {:opts, _}
+    end
+
     test "raises like deepeval when every metric with a threshold is flaky" do
       assert_raise ArgumentError, @no_threshold_message, fn ->
         DeepEvalEx.evaluate_run(test_cases(), [ExactMatch, ScoreOnlyMetric], flaky: true)

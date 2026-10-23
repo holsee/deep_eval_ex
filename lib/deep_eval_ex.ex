@@ -311,6 +311,7 @@ defmodule DeepEvalEx do
     {export_opts, eval_opts} = Keyword.split(opts, @export_opts)
     hyperparameters = TestRun.process_hyperparameters(export_opts[:hyperparameters])
 
+    Evaluator.check_valid_test_cases_type!(test_cases)
     if metrics != [], do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, eval_opts)
 
     # Read before evaluating so an invalid DEEPEVAL_FILE_SYSTEM fails fast, as

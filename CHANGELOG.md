@@ -1470,7 +1470,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - **`DeepEvalEx.Evaluator.check_valid_test_cases_type!/1`**, deepeval's
   `check_valid_test_cases_type`: raises `ArgumentError` with deepeval's
   message when a list mixes `DeepEvalEx.TestCase`s and conversational test
-  cases.
+  cases. `DeepEvalEx.evaluate_run/3` (and so `evaluate/3`) calls it before
+  evaluating anything, as deepeval's `evaluate()` does.
 - **Conversational test cases in the test run export**, deepeval 4.3.1's
   `ConversationalApiTestCase` and `TurnApi` with `create_api_test_case` and
   `create_api_turn`, as `DeepEvalEx.TestRun.ConversationalTestCase` and
