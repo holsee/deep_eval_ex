@@ -49,6 +49,11 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "GEval.generate_evaluation_results" => {Prompts.GEval, :generate_evaluation_results},
     "GEval.generate_strict_evaluation_results" =>
       {Prompts.GEval, :generate_strict_evaluation_results},
+    "GEval.generate_trace_evaluation_steps" => {Prompts.GEval, :generate_trace_evaluation_steps},
+    "GEval.generate_trace_evaluation_results" =>
+      {Prompts.GEval, :generate_trace_evaluation_results},
+    "GEval.generate_strict_trace_evaluation_results" =>
+      {Prompts.GEval, :generate_strict_trace_evaluation_results},
     "ConversationalGEval.generate_evaluation_steps" =>
       {Prompts.ConversationalGEval, :generate_evaluation_steps},
     "ConversationalGEval.generate_evaluation_results" =>
@@ -416,6 +421,27 @@ defmodule DeepEvalEx.PromptGoldenTest do
     ]
   end
 
+  # GEval in trace mode prints the nested trace dict in its key order too.
+  defp options(template, inputs, name)
+       when template in [
+              "GEval.generate_trace_evaluation_results",
+              "GEval.generate_strict_trace_evaluation_results"
+            ] do
+    ordered =
+      Path.join([@fixtures, name, "input.json"])
+      |> File.read!()
+      |> Jason.decode!(objects: :ordered_objects)
+
+    rubric = rubric(inputs["rubric"])
+
+    [
+      evaluation_steps: inputs["evaluation_steps"],
+      trace_json: NestedDict.to_json(ordered["inputs"]["trace"]),
+      rubric: Prompts.GEval.format_rubric(rubric),
+      score_range: Rubric.score_range(rubric)
+    ]
+  end
+
   defp options(template, inputs, _name), do: options(template, inputs)
 
   # The options the DeepEvalEx metric passes its prompt function for these
@@ -425,6 +451,10 @@ defmodule DeepEvalEx.PromptGoldenTest do
       criteria: inputs["criteria"],
       parameters: Prompts.GEval.format_params(params(inputs))
     ]
+  end
+
+  defp options("GEval.generate_trace_evaluation_steps", inputs) do
+    [criteria: inputs["criteria"]]
   end
 
   defp options("GEval.generate_evaluation_results", inputs) do

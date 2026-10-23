@@ -3,11 +3,13 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
 
   import ExUnit.CaptureIO
 
+  alias DeepEvalEx.{Evaluator, MissingTestCaseParamsError}
   alias DeepEvalEx.LLM.Adapters.Mock
-  alias DeepEvalEx.Metrics.GEval
+  alias DeepEvalEx.Metrics.{BaseMetric, GEval}
   alias DeepEvalEx.Metrics.GEval.Rubric
   alias DeepEvalEx.Prompts.GEval, as: GEvalPrompts
   alias DeepEvalEx.TestCase
+  alias DeepEvalEx.Tracing.NestedDict
 
   doctest GEval, only: [calculate_weighted_summed_score: 2]
 
@@ -796,6 +798,117 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
       assert {:ok, result} = GEval.evaluate(GEval.new(@steps_metric), test_case, adapter: :mock)
       assert result.score == 0.7
       assert [%{step: "reason,score"}] = Mock.scripted_prompts()
+    end
+  end
+
+  describe "trace mode (no evaluation_params)" do
+    setup do
+      trace_dict =
+        Jason.OrderedObject.new([
+          {"name", "booking_agent"},
+          {"type", "agent"},
+          {"input", Jason.OrderedObject.new([{"query", "Book Café Odéon."}])},
+          {"output", "Booked."},
+          {"children",
+           [
+             Jason.OrderedObject.new([
+               {"name", "book_table"},
+               {"type", "tool"},
+               {"input", Jason.OrderedObject.new([{"restaurant", "Café Odéon"}])},
+               {"output", "Booked for Saturday"},
+               {"children", []}
+             ])
+           ]}
+        ])
+
+      %{test_case: %TestCase{input: "None", trace_dict: trace_dict}}
+    end
+
+    test "new/1 takes no evaluation_params, and then the metric requires the trace" do
+      metric = GEval.new(name: "Trajectory", criteria: "Did the agent book it?")
+
+      assert metric.evaluation_params == nil
+      assert GEval.requires_trace?(metric)
+      assert BaseMetric.requires_trace?(metric)
+
+      with_params = GEval.new(name: "Q", criteria: "c", evaluation_params: [:input])
+      refute GEval.requires_trace?(with_params)
+      refute BaseMetric.requires_trace?(with_params)
+    end
+
+    test "asks for steps and a score with deepeval's trace prompts, printing the trace dict",
+         %{test_case: test_case} do
+      Mock.script(%{
+        "steps" => [%{"steps" => ["Check book_table's arguments."]}],
+        "reason,score" => [%{"reason" => "book_table was called right.", "score" => 8}]
+      })
+
+      metric = GEval.new(name: "Trajectory", criteria: "Did the agent book it?")
+
+      assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
+      assert result.score == 0.8
+      assert result.metric == "Trajectory [GEval]"
+      assert result.metadata.evaluation_steps == ["Check book_table's arguments."]
+
+      assert [%{step: "steps", prompt: steps}, %{step: "reason,score", prompt: results}] =
+               Mock.scripted_prompts()
+
+      assert steps ==
+               GEvalPrompts.generate_trace_evaluation_steps(criteria: "Did the agent book it?")
+
+      assert results ==
+               GEvalPrompts.generate_trace_evaluation_results(
+                 evaluation_steps: ["Check book_table's arguments."],
+                 trace_json: NestedDict.to_json(test_case.trace_dict),
+                 rubric: nil,
+                 score_range: {0, 10}
+               )
+
+      assert results =~ ~s("query": "Book Caf\\u00e9 Od\\u00e9on.")
+    end
+
+    test "in strict mode, uses the strict trace prompt", %{test_case: test_case} do
+      Mock.script(%{"reason,score" => [%{"reason" => "Agrees.", "score" => 1}]})
+
+      metric =
+        GEval.new(name: "Trajectory", evaluation_steps: ["Check the output."], strict_mode: true)
+
+      assert {:ok, %{score: 1, threshold: 1}} = GEval.evaluate(metric, test_case, adapter: :mock)
+      assert [%{prompt: prompt}] = Mock.scripted_prompts()
+      assert prompt =~ ~r/^You are an evaluator judging an AI agent by its execution trace\. /
+      assert prompt =~ "STRICTLY EITHER 1 (the trajectory follows"
+    end
+
+    test "raises deepeval's error for a test case without a trace dict" do
+      metric = GEval.new(name: "Trajectory", criteria: "Did the agent book it?")
+
+      message =
+        "The 'Trajectory [GEval]' metric has no evaluation_params, so it evaluates the " <>
+          "trace, but this test case has none. Run it on a traced component (`@observe` or " <>
+          "`evals_iterator`), or pass evaluation_params to evaluate a plain LLMTestCase."
+
+      assert_raise MissingTestCaseParamsError, message, fn ->
+        GEval.evaluate(metric, TestCase.new!(input: "Q", actual_output: "A"), adapter: :mock)
+      end
+    end
+
+    test "measures through the evaluator, which rebuilds it from its fields",
+         %{test_case: test_case} do
+      Mock.script(%{"reason,score" => [%{"reason" => "Fine.", "score" => 6}]})
+      metric = GEval.new(name: "Trajectory", evaluation_steps: ["Check the output."])
+
+      assert %{score: 0.6, error: nil} =
+               Evaluator.evaluate_metric(test_case, metric, adapter: :mock)
+    end
+
+    test "the evaluator reports the missing trace as the metric's error" do
+      metric = GEval.new(name: "Trajectory", evaluation_steps: ["Check the output."])
+      test_case = TestCase.new!(input: "Q", actual_output: "A")
+
+      assert %{success: false, error: error} =
+               Evaluator.evaluate_metric(test_case, metric, adapter: :mock, ignore_errors: true)
+
+      assert error =~ "The 'Trajectory [GEval]' metric has no evaluation_params"
     end
   end
 end

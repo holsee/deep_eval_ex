@@ -373,7 +373,13 @@ defmodule DeepEvalEx.Test.ScriptedParity do
   # The metric and the evaluation options deepeval's constructor params
   # translate to.
   defp metric(%{"metric" => %{"kind" => "g_eval", "params" => params}}) do
-    opts = params |> options(GEval) |> Keyword.update(:evaluation_params, [], &atoms/1)
+    # Without evaluation_params, GEval judges the trace.
+    opts =
+      params
+      |> options(GEval)
+      |> update_present(:evaluation_params, &atoms/1)
+      |> update_present(:rubric, &Enum.map(&1, fn rubric -> rubric(rubric) end))
+
     {GEval.new(opts), [adapter: :mock]}
   end
 

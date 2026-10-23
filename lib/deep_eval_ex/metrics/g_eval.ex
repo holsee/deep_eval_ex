@@ -99,11 +99,39 @@ defmodule DeepEvalEx.Metrics.GEval do
   range `{score, score}`, with a warning. They will be removed in the next
   release.
 
+  ## Judging the Trace
+
+  Without `:evaluation_params`, a GEval judges the agent's trace rather
+  than test case fields, as deepeval's: it requires the trace
+  (`requires_trace?/1`), and its prompts are deepeval's trace templates
+  (`DeepEvalEx.Prompts.GEval.generate_trace_evaluation_steps/1`,
+  `generate_trace_evaluation_results/1` and
+  `generate_strict_trace_evaluation_results/1`), which print the test
+  case's nested trace dict (`:trace_dict`) as
+  `DeepEvalEx.Tracing.NestedDict.to_json/2` does.
+  `DeepEvalEx.evaluate_traced/3` and `DeepEvalEx.ExUnit.assert_trace/3`
+  give a test case its trace dict, so pass the metric there, on a trace or
+  a span:
+
+  ```elixir
+  metric =
+    DeepEvalEx.Metrics.GEval.new(
+      name: "Trajectory",
+      criteria: "Did the agent answer from what its tools returned, without redundant calls?"
+    )
+
+  DeepEvalEx.evaluate_traced(goldens, &MyApp.Support.answer(&1.input), metrics: [metric])
+  ```
+
+  A test case without a trace dict raises
+  `DeepEvalEx.MissingTestCaseParamsError` with deepeval's message.
+
   ## Options
 
   - `:name` - Name of this metric (required)
   - `:criteria` - Evaluation criteria description (required unless evaluation_steps provided)
-  - `:evaluation_params` - Test case parameters to evaluate (required)
+  - `:evaluation_params` - Test case parameters to evaluate (default: `nil`,
+    the trace, see "Judging the Trace")
   - `:evaluation_steps` - Pre-defined evaluation steps (optional)
   - `:rubric` - Scoring rubric, a list of `DeepEvalEx.Metrics.GEval.Rubric`
     entries; sets the score range (optional)
@@ -136,14 +164,15 @@ defmodule DeepEvalEx.Metrics.GEval do
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Result, TestCase}
+  alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, MissingTestCaseParamsError, Result, TestCase}
   alias DeepEvalEx.Metrics.GEval.Rubric
   alias DeepEvalEx.Metrics.Utils.{Generation, Verbose}
   alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Prompts.GEval, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.GEval, as: Schema
+  alias DeepEvalEx.Tracing.NestedDict
 
-  @enforce_keys [:name, :evaluation_params]
+  @enforce_keys [:name]
   defstruct [
     :name,
     :criteria,
@@ -164,7 +193,7 @@ defmodule DeepEvalEx.Metrics.GEval do
   @type t :: %__MODULE__{
           name: String.t(),
           criteria: String.t() | nil,
-          evaluation_params: [atom()],
+          evaluation_params: [atom()] | nil,
           evaluation_steps: [String.t()] | nil,
           rubric: [Rubric.t()] | nil,
           threshold: number() | nil,
@@ -185,7 +214,8 @@ defmodule DeepEvalEx.Metrics.GEval do
 
   - `:name` - Name of this metric (required)
   - `:criteria` - Evaluation criteria (required unless evaluation_steps provided)
-  - `:evaluation_params` - Parameters to evaluate (required)
+  - `:evaluation_params` - Parameters to evaluate (default: `nil`, the
+    trace, see "Judging the Trace")
   - `:evaluation_steps` - Pre-defined steps (optional)
   - `:rubric` - `DeepEvalEx.Metrics.GEval.Rubric` entries (optional); the
     deprecated `{score, description}` entries are converted with a warning
@@ -208,7 +238,7 @@ defmodule DeepEvalEx.Metrics.GEval do
   @spec new(keyword()) :: t()
   def new(opts) do
     name = Keyword.fetch!(opts, :name)
-    evaluation_params = Keyword.fetch!(opts, :evaluation_params)
+    evaluation_params = Keyword.get(opts, :evaluation_params)
     criteria = Keyword.get(opts, :criteria)
     evaluation_steps = Keyword.get(opts, :evaluation_steps)
 
@@ -329,6 +359,15 @@ defmodule DeepEvalEx.Metrics.GEval do
   def required_params, do: []
 
   @doc """
+  Whether a configured GEval judges the trace, deepeval's
+  `requires_trace`: when it has no `:evaluation_params` (see "Judging the
+  Trace").
+  """
+  @impl true
+  @spec requires_trace?(t()) :: boolean()
+  def requires_trace?(%__MODULE__{evaluation_params: params}), do: params in [nil, []]
+
+  @doc """
   Returns the judge model this metric calls with `opts`, honouring a
   `:model` given as `{provider, model}`.
   """
@@ -417,8 +456,7 @@ defmodule DeepEvalEx.Metrics.GEval do
   defp do_measure_with_config(metric, test_case, opts) do
     start_time = System.monotonic_time(:millisecond)
 
-    # Validate required params from the metric config
-    with :ok <- TestCase.validate_params(test_case, metric.evaluation_params) do
+    with :ok <- validate(metric, test_case) do
       adapter_opts = build_adapter_opts(metric, opts)
 
       result =
@@ -466,6 +504,32 @@ defmodule DeepEvalEx.Metrics.GEval do
     end
   end
 
+  # deepeval's GEval._validate: the evaluation params, or in trace mode the
+  # trace dict, which a test case without one lacks.
+  defp validate(metric, test_case) do
+    cond do
+      not requires_trace?(metric) ->
+        TestCase.validate_params(test_case, metric.evaluation_params)
+
+      trace_dict?(Map.get(test_case, :trace_dict)) ->
+        :ok
+
+      true ->
+        name = metric_name(metric)
+
+        raise MissingTestCaseParamsError,
+          metric: name,
+          message:
+            "The '#{name}' metric has no evaluation_params, so it evaluates the trace, but " <>
+              "this test case has none. Run it on a traced component (`@observe` or " <>
+              "`evals_iterator`), or pass evaluation_params to evaluate a plain LLMTestCase."
+    end
+  end
+
+  # deepeval's isinstance(test_case._trace_dict, Dict).
+  defp trace_dict?(%Jason.OrderedObject{}), do: true
+  defp trace_dict?(trace_dict), do: is_map(trace_dict) and not is_struct(trace_dict)
+
   # deepeval's GEval score: the judge's score normalised over the score
   # range, or in strict mode its int(g_score), the 0 or 1 asked for.
   defp g_eval_score(score, %{strict_mode: true}), do: trunc(score)
@@ -492,13 +556,20 @@ defmodule DeepEvalEx.Metrics.GEval do
   end
 
   defp get_or_generate_steps(metric, opts) do
-    params_string = Template.format_params(metric.evaluation_params)
-
     prompt =
-      EvaluationTemplate.render(template_opts(metric), Template, :generate_evaluation_steps,
-        criteria: metric.criteria,
-        parameters: params_string
-      )
+      if requires_trace?(metric) do
+        EvaluationTemplate.render(
+          template_opts(metric),
+          Template,
+          :generate_trace_evaluation_steps,
+          criteria: metric.criteria
+        )
+      else
+        EvaluationTemplate.render(template_opts(metric), Template, :generate_evaluation_steps,
+          criteria: metric.criteria,
+          parameters: Template.format_params(metric.evaluation_params)
+        )
+      end
 
     case Adapter.generate_with_schema(prompt, Schema.steps_schema(), opts) do
       {:ok, response} -> Schema.parse_steps(response)
@@ -507,30 +578,63 @@ defmodule DeepEvalEx.Metrics.GEval do
   end
 
   defp evaluate(metric, test_case, steps, opts) do
+    prompt = results_prompt(metric, test_case, steps)
+    rubric_score(metric, prompt, opts)
+  end
+
+  # deepeval's _results_prompt: the trace templates in trace mode.
+  defp results_prompt(metric, test_case, steps) do
+    if requires_trace?(metric),
+      do: trace_results_prompt(metric, test_case, steps),
+      else: params_results_prompt(metric, test_case, steps)
+  end
+
+  defp trace_results_prompt(metric, test_case, steps) do
+    trace_json = NestedDict.to_json(test_case.trace_dict)
+
+    if metric.strict_mode do
+      EvaluationTemplate.render(
+        template_opts(metric),
+        Template,
+        :generate_strict_trace_evaluation_results,
+        evaluation_steps: steps,
+        trace_json: trace_json
+      )
+    else
+      EvaluationTemplate.render(
+        template_opts(metric),
+        Template,
+        :generate_trace_evaluation_results,
+        evaluation_steps: steps,
+        trace_json: trace_json,
+        rubric: Template.format_rubric(metric.rubric),
+        score_range: metric.score_range
+      )
+    end
+  end
+
+  defp params_results_prompt(metric, test_case, steps) do
     params_string = Template.format_params(metric.evaluation_params)
     test_case_content = Template.format_test_case_content(test_case, metric.evaluation_params)
 
-    prompt =
-      if metric.strict_mode do
-        EvaluationTemplate.render(
-          template_opts(metric),
-          Template,
-          :generate_strict_evaluation_results,
-          evaluation_steps: steps,
-          test_case_content: test_case_content,
-          parameters: params_string
-        )
-      else
-        EvaluationTemplate.render(template_opts(metric), Template, :generate_evaluation_results,
-          evaluation_steps: steps,
-          test_case_content: test_case_content,
-          parameters: params_string,
-          rubric: Template.format_rubric(metric.rubric),
-          score_range: metric.score_range
-        )
-      end
-
-    rubric_score(metric, prompt, opts)
+    if metric.strict_mode do
+      EvaluationTemplate.render(
+        template_opts(metric),
+        Template,
+        :generate_strict_evaluation_results,
+        evaluation_steps: steps,
+        test_case_content: test_case_content,
+        parameters: params_string
+      )
+    else
+      EvaluationTemplate.render(template_opts(metric), Template, :generate_evaluation_results,
+        evaluation_steps: steps,
+        test_case_content: test_case_content,
+        parameters: params_string,
+        rubric: Template.format_rubric(metric.rubric),
+        score_range: metric.score_range
+      )
+    end
   end
 
   defp rubric_score(metric, prompt, opts) do

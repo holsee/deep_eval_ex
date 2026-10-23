@@ -2443,6 +2443,32 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     byte for byte in both modes. `generate_fixtures.py scripted [scenario
     ...]` regenerates only the scripted scenarios' outputs, and
     `generate_fixtures.py loop_detection` only the new tables.
+- **GEval trace mode**, deepeval 4.3.1's GEval without `evaluation_params`:
+  `DeepEvalEx.Metrics.GEval.new/1` no longer requires `:evaluation_params`,
+  and without them the metric judges the agent's trace against its
+  criteria instead of test case fields.
+  - It requires the trace (`GEval.requires_trace?/1`, deepeval's
+    `requires_trace`), so `DeepEvalEx.evaluate_traced/3`,
+    `DeepEvalEx.ExUnit.assert_trace/3` and span metrics give its test
+    case the nested trace dict (`:trace_dict`).
+  - Its prompts are deepeval's trace templates,
+    `DeepEvalEx.Prompts.GEval.generate_trace_evaluation_steps/1`,
+    `generate_trace_evaluation_results/1` (with rubric and score range) and
+    `generate_strict_trace_evaluation_results/1`, which print the trace
+    dict as `serialize_to_json(indent=2)`
+    (`DeepEvalEx.Tracing.NestedDict.to_json/2`). Scoring, rubrics, strict
+    mode and logprob weighting are unchanged.
+  - A test case without a trace dict raises
+    `DeepEvalEx.MissingTestCaseParamsError` with deepeval's message ("The
+    'Trajectory [GEval]' metric has no evaluation_params, so it evaluates
+    the trace, but this test case has none. ..."), which the evaluator
+    reports as the metric's error under `ignore_errors`.
+  - Parity: 4 prompt goldens (every GEval template now has one, so
+    `UNRENDERED_TEMPLATES` is empty), the `g_eval_trace` and
+    `g_eval_trace_strict` scripted scenarios and the `g_eval_trace` traced
+    scenario, whose `evaluate_traced/3` test runs and judge prompts match
+    deepeval's byte for byte in both modes. `generate_fixtures.py prompts
+    [case ...]` regenerates only the prompt goldens.
 
 ### Changed
 

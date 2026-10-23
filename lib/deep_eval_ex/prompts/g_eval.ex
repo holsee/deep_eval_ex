@@ -22,13 +22,21 @@ defmodule DeepEvalEx.Prompts.GEval do
   The `format_*` helpers build the template arguments as deepeval's
   `number_evaluation_steps`, `construct_g_eval_params_string`,
   `construct_test_case_string` and `format_rubrics` do.
+
+  The `*_trace_*` prompts are those of GEval in trace mode, without
+  evaluation params: they judge the agent's nested trace dict, printed as
+  deepeval's `serialize_to_json(trace_dict, indent=2)`
+  (`DeepEvalEx.Tracing.NestedDict.to_json/2`), instead of test case fields.
   """
 
   use DeepEvalEx.Prompts.EvaluationTemplate,
     templates: [
       generate_evaluation_steps: 1,
       generate_evaluation_results: 1,
-      generate_strict_evaluation_results: 1
+      generate_strict_evaluation_results: 1,
+      generate_trace_evaluation_steps: 1,
+      generate_trace_evaluation_results: 1,
+      generate_strict_trace_evaluation_results: 1
     ]
 
   alias DeepEvalEx.Metrics.GEval.Rubric
@@ -177,6 +185,197 @@ defmodule DeepEvalEx.Prompts.GEval do
     **
 
     JSON:\
+    """
+  end
+
+  @doc """
+  Generates a prompt to create evaluation steps for judging an agent's
+  trace from criteria, deepeval's `generate_trace_evaluation_steps`.
+
+  ## Options
+
+  - `:criteria` - the evaluation criteria (required)
+  """
+  def generate_trace_evaluation_steps(opts) do
+    criteria = Keyword.fetch!(opts, :criteria)
+
+    """
+    You will be judging an AI agent by its execution trace rather than by a single input and output. The trace is a nested JSON tree of spans. Each span has a `name`, a `type` (`agent`, `llm`, `tool`, `retriever`, or `custom`), an `input`, an `output`, and `children` (the spans it invoked, in execution order). Agent spans may also list `available_tools` and `agent_handoffs`; tool spans may carry a `description`; retriever spans may carry a `retrievalContext`. The root span's input is what the agent was asked to do, and its output is what it finally returned.
+
+    Given the evaluation criteria below, generate 3-4 concise evaluation steps for judging the trace. The steps MUST:
+    - Say which parts of the trace are evidence for the criteria (e.g. specific span types, tool arguments, retrieved content, intermediate LLM outputs, the root output).
+    - Say how intermediate steps should be judged in relation to one another and to the final root output, not just the final output on its own.
+    - Stay grounded in what a trace can show; do not ask for information that is not recorded in spans.
+
+
+    Evaluation Criteria:
+    #{criteria}
+
+    **
+    IMPORTANT: Please make sure to only return in JSON format, with the "steps" key as a list of strings. No words or explanation is needed.
+    Example JSON:
+    {
+      "steps": <list_of_strings>
+    }
+    **
+
+    JSON:\
+    """
+  end
+
+  @doc """
+  Generates a prompt to score an agent's trace using the evaluation
+  steps and optional rubric, deepeval's
+  `generate_trace_evaluation_results`.
+
+  ## Options
+
+  - `:evaluation_steps` - the steps, a list or as `format_evaluation_steps/1`
+    (required)
+  - `:trace_json` - the nested trace dict, as
+    `DeepEvalEx.Tracing.NestedDict.to_json/2` prints it (required)
+  - `:rubric` - as `format_rubric/1`, or `nil` (default: `nil`)
+  - `:score_range` - `{min, max}` (default: `{0, 10}`)
+  """
+  def generate_trace_evaluation_results(opts) do
+    evaluation_steps = opts |> Keyword.fetch!(:evaluation_steps) |> format_evaluation_steps()
+    trace_json = Keyword.fetch!(opts, :trace_json)
+    rubric = Keyword.get(opts, :rubric)
+    {score_min, score_max} = Keyword.get(opts, :score_range, {0, 10})
+
+    {dependencies, score_explanation, reasoning_expectation, rubric_section} =
+      if rubric do
+        {"evaluation steps and rubric", "based on the rubric provided",
+         "Be specific and grounded in the evaluation steps and rubric.", "Rubric:\n#{rubric}\n\n"}
+      else
+        {"evaluation steps",
+         "with #{score_max} indicating the trajectory strongly aligns with the evaluation steps and #{score_min} indicating no alignment",
+         "Be specific and grounded in the evaluation steps.", ""}
+      end
+
+    """
+    You are an evaluator judging an AI agent by its execution trace. Given the following #{dependencies}, assess the trace below and return a JSON object with two fields:
+
+    - `"score"`: an integer between #{score_min} and #{score_max}, #{score_explanation}.
+    - `"reason"`: a brief explanation for why the score was given. Do **not** quote the score itself in the explanation.
+
+    #{trace_reading_rules()}
+
+    Your explanation should:
+    - #{reasoning_expectation}
+    - Cite the specific spans, by `name`, that drove the score.
+    - Be concise, clear, and focused on the evaluation logic.
+
+
+    Only return valid JSON. Do **not** include any extra commentary or text.
+
+    ===== EXAMPLE =====
+    Evaluation Steps:
+    1. Check whether the agent called a tool that can answer the user's question.
+    2. Check whether the tool was given arguments that match the user's request.
+    3. Check whether the final output is consistent with what the tool returned.
+
+    Trace:
+    {
+      "name": "support_agent",
+      "type": "agent",
+      "input": {"input": "Where is my order #1234?"},
+      "output": "Your order #1234 was delivered yesterday.",
+      "available_tools": ["order_lookup", "refund_tool"],
+      "children": [
+        {
+          "name": "order_lookup",
+          "type": "tool",
+          "input": {"order_id": "1234"},
+          "output": {"status": "in_transit", "eta": "tomorrow"},
+          "children": []
+        }
+      ]
+    }
+
+    Example JSON:
+    {
+      "reason": "support_agent correctly chose order_lookup and passed the right order_id, but its final output says the order was delivered while order_lookup returned status 'in_transit' with an ETA of tomorrow, so the answer contradicts the tool result.",
+      "score": #{score_min}
+    }
+    ===== END OF EXAMPLE =====
+
+    ---
+
+    Evaluation Steps:
+    #{evaluation_steps}
+
+    #{rubric_section}Trace:
+    #{trace_json}
+
+
+    ---
+    **Example JSON:**
+    {
+      "reason": "your concise and informative reason here, citing span names",
+      "score": #{score_min}
+    }
+
+    JSON:\
+    """
+  end
+
+  @doc """
+  Generates a prompt for strict (binary) evaluation of an agent's trace,
+  deepeval's `generate_strict_trace_evaluation_results`.
+
+  ## Options
+
+  - `:evaluation_steps` - the steps, a list or as `format_evaluation_steps/1`
+    (required)
+  - `:trace_json` - the nested trace dict, as
+    `DeepEvalEx.Tracing.NestedDict.to_json/2` prints it (required)
+  """
+  def generate_strict_trace_evaluation_results(opts) do
+    evaluation_steps = opts |> Keyword.fetch!(:evaluation_steps) |> format_evaluation_steps()
+    trace_json = Keyword.fetch!(opts, :trace_json)
+
+    """
+    You are an evaluator judging an AI agent by its execution trace. Given the evaluation steps, return a JSON with two keys: 1) a `score` key that is STRICTLY EITHER 1 (the trajectory follows the criteria 100% outlined in the evaluation steps), OR 0 (it does not), and 2) a `reason` key, a reason for the given score, but DO NOT QUOTE THE SCORE in your reason.
+
+    #{trace_reading_rules()}
+
+    In your reason, cite the specific spans, by `name`, that decided the score, but be very concise with it!
+
+
+    Evaluation Steps:
+    #{evaluation_steps}
+
+    Trace:
+    #{trace_json}
+
+    **
+    IMPORTANT: Please make sure to only return in JSON format, with the "score" and "reason" key. No words or explanation is needed.
+
+    Example JSON:
+    {
+      "reason": "support_agent's final output contradicts the status returned by order_lookup.",
+      "score": 0
+    }
+    **
+
+    JSON:\
+    """
+  end
+
+  # The "How to read the trace" and "How to judge" sections both trace
+  # results templates share.
+  defp trace_reading_rules do
+    """
+    How to read the trace:
+    - It is a nested JSON tree of spans. Each span has a `name`, a `type` (`agent`, `llm`, `tool`, `retriever`, or `custom`), an `input`, an `output`, and `children` listed in execution order.
+    - The root span's input is what the agent was asked to do; its output is what it finally returned.
+
+    How to judge:
+    - Judge the whole trajectory, not only the root output. Walk the span tree in order.
+    - Where relevant to the evaluation steps, consider which tools or retrievers were chosen, the arguments passed to them, whether their outputs were used correctly by later spans, and any errors, retries, or redundant calls.
+    - Base every judgement only on what the trace shows. Do not assume steps happened if no span records them.
+    - Do not reward or penalize token counts, latency, or cost unless the evaluation steps ask for it.\
     """
   end
 

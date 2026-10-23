@@ -26,7 +26,7 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   """
 
   alias DeepEvalEx.LLM.Adapters.Mock, as: LLMMock
-  alias DeepEvalEx.Metrics.{AgentLoopDetection, ExactMatch}
+  alias DeepEvalEx.Metrics.{AgentLoopDetection, ExactMatch, GEval}
   alias DeepEvalEx.Test.ParityMetrics.Stub
   alias DeepEvalEx.Test.TracedFixtures
   alias DeepEvalEx.Tracing
@@ -48,7 +48,8 @@ defmodule DeepEvalEx.Test.TracingScenarios do
     "task_completion" => DeepEvalEx.Metrics.TaskCompletion,
     "step_efficiency" => DeepEvalEx.Metrics.StepEfficiency,
     "plan_quality" => DeepEvalEx.Metrics.PlanQuality,
-    "plan_adherence" => DeepEvalEx.Metrics.PlanAdherence
+    "plan_adherence" => DeepEvalEx.Metrics.PlanAdherence,
+    "g_eval" => DeepEvalEx.Metrics.GEval
   }
 
   @supported_steps ["call", "raise", "with", "drop_current_span" | Map.keys(@updates)]
@@ -243,8 +244,9 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   `DeepEvalEx.Metrics.ExactMatch`, an `agent_loop_detection`
   `DeepEvalEx.Metrics.AgentLoopDetection` with its params, and a
   `task_completion`, `step_efficiency`, `plan_quality` or `plan_adherence`
-  the metric with its params, judged by `DeepEvalEx.LLM.Adapters.Mock` as
-  `script_judges/1` scripts it. `nil` for a metric DeepEvalEx does not
+  the metric with its params, and a `g_eval` a `DeepEvalEx.Metrics.GEval`
+  struct, judged by `DeepEvalEx.LLM.Adapters.Mock` as `script_judges/1`
+  scripts it. `nil` for a metric DeepEvalEx does not
   have yet.
   """
   @spec metric(OrderedObject.t()) :: DeepEvalEx.Tracing.Span.metric_spec() | nil
@@ -267,6 +269,12 @@ defmodule DeepEvalEx.Test.TracingScenarios do
 
       "agent_loop_detection" ->
         {AgentLoopDetection, params(spec)}
+
+      # A configured GEval: its struct, judged by the Mock under the
+      # ScriptedJudge's name.
+      "g_eval" ->
+        Code.ensure_loaded!(GEval)
+        GEval.new([model: {:mock, spec["judge_model"]}] ++ params(spec))
 
       kind when is_map_key(@judged, kind) ->
         module = Map.fetch!(@judged, kind)

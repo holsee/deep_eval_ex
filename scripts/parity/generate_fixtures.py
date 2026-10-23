@@ -68,6 +68,9 @@ Run it inside the devcontainer, from the repository root:
 With the argument `scripted` it rewrites only the scripted-judge scenarios'
 outputs; scenario names after it rewrite only those scenarios.
 
+With the argument `prompts` it rewrites only the prompt goldens; case names
+after it rewrite only those cases.
+
 With the argument `loop_detection` it writes only
 test/fixtures/deepeval/loop_detection/: vector tables of
 `difflib.SequenceMatcher` (`sequence_matcher.json`) and of
@@ -955,6 +958,29 @@ def _render_g_eval_steps(inputs):
     return metric._steps_prompt(False)
 
 
+def _render_g_eval_trace_steps(inputs):
+    # GEval without evaluation_params (requires_trace): the trace variant of
+    # the steps prompt.
+    metric = GEval(name="Golden", criteria=inputs["criteria"], model=_prompt_judge())
+    return metric._steps_prompt(False)
+
+
+def _render_g_eval_trace_results(inputs, strict_mode):
+    # GEval without evaluation_params on a test case carrying the nested
+    # trace dict as its _trace_dict, as evals_iterator gives it.
+    rubric = inputs.get("rubric")
+    metric = GEval(
+        name="Golden",
+        evaluation_steps=inputs["evaluation_steps"],
+        rubric=[Rubric(**r) for r in rubric] if rubric else None,
+        strict_mode=strict_mode,
+        model=_prompt_judge(),
+    )
+    test_case = LLMTestCase(input="None")
+    test_case._trace_dict = json.loads(json.dumps(inputs["trace"]))
+    return metric._results_prompt(test_case, False, None)
+
+
 def _conversational_g_eval(inputs, **kwargs):
     rubric = inputs.get("rubric")
     return ConversationalGEval(
@@ -1154,6 +1180,10 @@ PROMPT_RENDERERS = {
     "GEval.generate_evaluation_steps": _render_g_eval_steps,
     "GEval.generate_evaluation_results": lambda i: _render_g_eval_results(i, False),
     "GEval.generate_strict_evaluation_results": lambda i: _render_g_eval_results(i, True),
+    "GEval.generate_trace_evaluation_steps": _render_g_eval_trace_steps,
+    "GEval.generate_trace_evaluation_results": lambda i: _render_g_eval_trace_results(i, False),
+    "GEval.generate_strict_trace_evaluation_results":
+        lambda i: _render_g_eval_trace_results(i, True),
     "ConversationalGEval.generate_evaluation_steps": _render_conversational_g_eval_steps,
     "ConversationalGEval.generate_evaluation_results": _render_conversational_g_eval_results,
     "FaithfulnessMetric.generate_claims": lambda i: _prompt(
@@ -1704,17 +1734,11 @@ PROMPT_RENDERERS = {
     ),
 }
 
-# Bundled templates of these metrics that no prompt case renders: GEval's
-# trace variants (`requires_trace`, i.e. GEval without evaluation_params on a
-# traced component), which DeepEvalEx has no counterpart for yet. The System
-# One (`DEEPEVAL_EVAL_MODE`) `_experimental_*` templates are private methods,
-# which `iter_base_template_methods` leaves out; the cases below render those
-# of the metrics DeepEvalEx runs on System One.
-UNRENDERED_TEMPLATES = {
-    "GEval.generate_trace_evaluation_steps",
-    "GEval.generate_trace_evaluation_results",
-    "GEval.generate_strict_trace_evaluation_results",
-}
+# Bundled templates of these metrics that no prompt case renders: none. The
+# System One (`DEEPEVAL_EVAL_MODE`) `_experimental_*` templates are private
+# methods, which `iter_base_template_methods` leaves out; the cases below
+# render those of the metrics DeepEvalEx runs on System One.
+UNRENDERED_TEMPLATES = set()
 
 PARK_TEXT = (
     "The city council approved a new riverside park on Monday. Construction starts in "
@@ -1862,6 +1886,47 @@ PROMPT_CASES = {
                 "input": "What is the capital of France?",
                 "actual_output": "Paris is the capital of France.",
             },
+        },
+    },
+    "g_eval_generate_trace_evaluation_steps": {
+        "template": "GEval.generate_trace_evaluation_steps",
+        "inputs": {
+            "criteria": "Determine whether the agent booked what the user asked for, "
+                        "using the tool results it got.",
+        },
+    },
+    "g_eval_generate_trace_evaluation_results": {
+        "template": "GEval.generate_trace_evaluation_results",
+        "inputs": {
+            "evaluation_steps": [
+                "Check that the agent called book_table with the day and restaurant asked for.",
+                "Check that the root output agrees with what book_table returned.",
+            ],
+            "trace": AGENT_TRACE,
+        },
+    },
+    "g_eval_generate_trace_evaluation_results_rubric": {
+        "template": "GEval.generate_trace_evaluation_results",
+        "inputs": {
+            "evaluation_steps": [
+                "Check that the agent called book_table with the day and restaurant asked for.",
+                "Check that the root output agrees with what book_table returned.",
+            ],
+            "rubric": [
+                {"score_range": [0, 3], "expected_outcome": "Wrong booking or no tool call."},
+                {"score_range": [4, 7], "expected_outcome": "Right booking, output disagrees."},
+                {"score_range": [8, 10], "expected_outcome": "Right booking, faithful output."},
+            ],
+            "trace": AGENT_TRACE,
+        },
+    },
+    "g_eval_generate_strict_trace_evaluation_results": {
+        "template": "GEval.generate_strict_trace_evaluation_results",
+        "inputs": {
+            "evaluation_steps": [
+                "Check that the root output agrees with what book_table returned.",
+            ],
+            "trace": AGENT_TRACE,
         },
     },
     "conversational_g_eval_generate_evaluation_steps": {
@@ -3049,6 +3114,19 @@ def run_prompt_case(name, case):
         f.write(prompt)
 
 
+def generate_prompts(names=None):
+    """Writes the prompt goldens: every case, or only the named ones."""
+    check_prompt_coverage()
+    unknown = sorted(set(names or []) - set(PROMPT_CASES))
+    if unknown:
+        sys.exit(f"unknown prompt cases: {', '.join(unknown)}")
+    for name, case in PROMPT_CASES.items():
+        if names and name not in names:
+            continue
+        run_prompt_case(name, case)
+        print(f"wrote {os.path.relpath(os.path.join(PROMPTS, name), ROOT)}")
+
+
 # The ErrorConfig of a scenario that sets none.
 DEFAULT_ERROR_CONFIG = {"ignore_errors": True, "skip_on_missing_params": False}
 
@@ -3268,6 +3346,25 @@ STEP_EFFICIENCY = {
         "task": [{"task": "Tell the user how to reset their password"}],
         "reason,score": [{"score": 0.75,
                           "reason": "The agent repeated its search once before answering."}],
+    },
+}
+
+# GEval without evaluation_params, judged from the trace: one steps call
+# (from its criteria) and one score per measure.
+G_EVAL_TRACE = {
+    "kind": "g_eval",
+    "judge_model": "mock-model",
+    "params": {
+        "name": "Trajectory",
+        "criteria": "Determine whether the agent answered from what its search returned, "
+                    "without redundant calls.",
+        "threshold": 0.5,
+    },
+    "responses": {
+        "steps": [{"steps": ["Check that generate answers from search's results.",
+                             "Check for repeated search calls."]}],
+        "reason,score": [{"score": 6,
+                          "reason": "agent answered via generate, but called search twice."}],
     },
 }
 
@@ -3756,6 +3853,31 @@ TRACED_SCENARIOS = {
         },
         "app": [{"call": "agent", "args": ["{input}"]}],
     },
+    "g_eval_trace": {
+        "description": "GEval without evaluation_params on the trace, judged by a ScriptedJudge "
+                       "from the nested trace dict with its trace prompts",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [G_EVAL_TRACE],
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "observe": {"available_tools": ["search"]},
+                "body": [
+                    {"call": "search", "args": ["$query"]},
+                    {"call": "search", "args": ["$query"]},
+                    {"call": "generate", "args": ["$query", []], "as": "answer"},
+                    # The sync iterator's trace has no output of its own.
+                    {"update_current_trace": {"output": "$answer"}},
+                ],
+                "returns": "$answer",
+            },
+            "search": {"type": "tool", "params": [["query"]], "returns": ["result for {query}"]},
+            "generate": TRACED_GENERATE,
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    },
     "plan_quality": {
         "description": "PlanQuality on the trace, judged by a ScriptedJudge from the nested "
                        "dict of a trace whose LLM span states a plan",
@@ -3806,7 +3928,8 @@ class TracedRun:
         kind = spec["kind"]
         if kind == "agent_loop_detection":
             return AgentLoopDetectionMetric(**spec.get("params", {}))
-        if kind in ("task_completion", "step_efficiency", "plan_quality", "plan_adherence"):
+        if kind in ("task_completion", "step_efficiency", "plan_quality", "plan_adherence",
+                    "g_eval"):
             judge = ScriptedJudge(spec["judge_model"], spec["responses"])
             self.judges.append(judge)
             return SCRIPTED_METRICS[kind](model=judge, **spec.get("params", {}))
@@ -4291,6 +4414,12 @@ def main():
         finally:
             shutil.rmtree(WORK_DIR, ignore_errors=True)
         return
+    if sys.argv[1:2] == ["prompts"]:
+        try:
+            generate_prompts(sys.argv[2:])
+        finally:
+            shutil.rmtree(WORK_DIR, ignore_errors=True)
+        return
     if sys.argv[1:] == ["loop_detection"]:
         write_loop_detection_tables()
         shutil.rmtree(WORK_DIR, ignore_errors=True)
@@ -4298,7 +4427,8 @@ def main():
         return
     if sys.argv[1:]:
         sys.exit(f"usage: {os.path.basename(__file__)} "
-                 "[traced [scenario ...] | scripted [scenario ...] | loop_detection]")
+                 "[traced [scenario ...] | scripted [scenario ...] | prompts [case ...] | "
+                 "loop_detection]")
     try:
         for name, scenario in SCENARIOS.items():
             run_scenario(name, scenario)
@@ -4308,10 +4438,7 @@ def main():
         generate_scripted()
         write_loop_detection_tables()
         print(f"wrote {os.path.relpath(LOOP_DETECTION_DIR, ROOT)}")
-        check_prompt_coverage()
-        for name, case in PROMPT_CASES.items():
-            run_prompt_case(name, case)
-            print(f"wrote {os.path.relpath(os.path.join(PROMPTS, name), ROOT)}")
+        generate_prompts()
     finally:
         shutil.rmtree(WORK_DIR, ignore_errors=True)
 

@@ -85,7 +85,10 @@ defmodule DeepEvalEx.Prompts.EvaluationTemplateTest do
     Prompts.GEval => [
       generate_evaluation_steps: 1,
       generate_evaluation_results: 1,
-      generate_strict_evaluation_results: 1
+      generate_strict_evaluation_results: 1,
+      generate_trace_evaluation_steps: 1,
+      generate_trace_evaluation_results: 1,
+      generate_strict_trace_evaluation_results: 1
     ],
     Prompts.Hallucination => [
       generate_verdicts: 1,

@@ -32,7 +32,7 @@ defmodule DeepEvalEx.TracedFixturesTest do
 
   # The scenarios of `scripts/parity/generate_fixtures.py traced`.
   @expected ~w(
-    dropped_span errored_trace function_kwargs llm_prompt_fields metrics_without_input
+    dropped_span errored_trace function_kwargs g_eval_trace llm_prompt_fields metrics_without_input
     nested_spans next_span_staging plan_adherence plan_quality provider_normalisation
     raised_caught raised_uncaught
     requires_trace span_test_case trace_metrics two_top_level
@@ -87,7 +87,7 @@ defmodule DeepEvalEx.TracedFixturesTest do
         judged? =
           Enum.any?(
             metric_specs(input),
-            &(&1["kind"] in ~w(task_completion step_efficiency plan_quality plan_adherence))
+            &(&1["kind"] in ~w(task_completion step_efficiency plan_quality plan_adherence g_eval))
           )
 
         expected =

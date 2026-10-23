@@ -257,7 +257,7 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | Metric | Scenarios |
 | --- | --- |
 | ExactMatch | `exact_match_pass`, `exact_match_fail` |
-| GEval | `g_eval_criteria_pass` (steps generated from criteria), `g_eval_steps_fail` (given steps), `g_eval_strict`, `g_eval_logprobs` (a raw response with logprobs: the score weighted by the final score token's top logprobs, the same number earlier in the reason ignored, a 1% and a non-decimal token dropped, `"08"` summed with `"8"`), `g_eval_logprobs_missing` (a raw response without logprobs: the raw score kept), `g_eval_retrieved_context_data` (`retrieval_context` holding a `RetrievedContextData`, printed as its pydantic repr) |
+| GEval | `g_eval_criteria_pass` (steps generated from criteria), `g_eval_steps_fail` (given steps), `g_eval_strict`, `g_eval_logprobs` (a raw response with logprobs: the score weighted by the final score token's top logprobs, the same number earlier in the reason ignored, a 1% and a non-decimal token dropped, `"08"` summed with `"8"`), `g_eval_logprobs_missing` (a raw response without logprobs: the raw score kept), `g_eval_retrieved_context_data` (`retrieval_context` holding a `RetrievedContextData`, printed as its pydantic repr), `g_eval_trace` (no `evaluation_params`: the trace templates, steps generated from criteria, the trace printed by `serialize_to_json(indent=2)` with non-ASCII escaped, a rubric), `g_eval_trace_strict` (no `evaluation_params`, given steps, the strict trace template, the integer `1`) |
 | ConversationalGEval | `conversational_g_eval_criteria_pass` (steps generated from criteria; `:role` appended to `[:content]`), `conversational_g_eval_steps_fail` (given steps, case-level `scenario` and `expected_outcome`, a rubric sorted by range, a fractional `2.5` kept as `0.25`), `conversational_g_eval_strict` (a `7` clamped to the integer `0`, threshold `1`), `conversational_g_eval_logprobs` (per-turn `retrieval_context` and `tools_called`; the score weighted by the *first* token equal to it, in the reason, unlike GEval), `conversational_g_eval_logprobs_missing` (a raw response without logprobs: the raw score kept). deepeval's asynchronous `evaluate()` copies the metric, so the test runs report `"scripted-judge (audio: scripted-judge)"` where `measure()` reports `"scripted-judge"` |
 | TurnRelevancy | `turn_relevancy_pass` (one window per unit interaction, the default `window_size` of 10), `turn_relevancy_fail` (`window_size` 2; a raw-text verdict outside yes and no dropped, so `None` in the verbose logs, while the irrelevant window keeps its message number `2`; turns with `retrieval_context`, `tools_called`, `metadata`, `user_id` and `latency_ms` printed as `Turn.__repr__`), `turn_relevancy_strict` (the integer `0`, no reason), `turn_relevancy_no_verdicts` (no answered user turn: no window, the integer score `1`). The reason prompt prints the score unformatted |
 | ConversationCompleteness | `conversation_completeness_pass`, `conversation_completeness_fail` (an unmet intention, a raw-text verdict outside yes and no dropped; turns with every field, printed as `model_dump()` JSON in the verbose logs; an unused `window_size`), `conversation_completeness_strict` (an unmet intention without a reason, `None` in the reason prompt), `conversation_completeness_no_intentions` (no verdict, the integer score `1`) |
@@ -360,6 +360,9 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.GEval.generate_evaluation_steps/1` | `GEval.generate_evaluation_steps` (`g_eval/templates/generate_evaluation_steps.txt`) | `criteria`, `parameters` | `g_eval_generate_evaluation_steps`, `_three_params` |
 | `Prompts.GEval.generate_evaluation_results/1` | `GEval.generate_evaluation_results` (`g_eval/templates/generate_evaluation_results.txt`) | `evaluation_steps` (numbered), `test_case_content`, `parameters`, `rubric`, `score_range`, `_additional_context` | `g_eval_generate_evaluation_results`, `_rubric` |
 | `Prompts.GEval.generate_strict_evaluation_results/1` | `GEval.generate_strict_evaluation_results` (`g_eval/templates/generate_strict_evaluation_results.txt`) | `evaluation_steps`, `test_case_content`, `parameters`, `_additional_context` | `g_eval_generate_strict_evaluation_results` |
+| `Prompts.GEval.generate_trace_evaluation_steps/1` | `GEval.generate_trace_evaluation_steps` (`g_eval/templates/generate_trace_evaluation_steps.txt`), GEval without `evaluation_params` | `criteria` | `g_eval_generate_trace_evaluation_steps` |
+| `Prompts.GEval.generate_trace_evaluation_results/1` | `GEval.generate_trace_evaluation_results` (`g_eval/templates/generate_trace_evaluation_results.txt`) | `evaluation_steps` (numbered), `trace_json` (`serialize_to_json(_trace_dict, indent=2)`), `rubric`, `score_range` | `g_eval_generate_trace_evaluation_results`, `_rubric` |
+| `Prompts.GEval.generate_strict_trace_evaluation_results/1` | `GEval.generate_strict_trace_evaluation_results` (`g_eval/templates/generate_strict_trace_evaluation_results.txt`) | `evaluation_steps`, `trace_json` | `g_eval_generate_strict_trace_evaluation_results` |
 | `Prompts.ConversationalGEval.generate_evaluation_steps/1` | `ConversationalGEval.generate_evaluation_steps` (`conversational_g_eval/templates/generate_evaluation_steps.txt`) | `criteria`, `parameters` (`:content` and `:role` appended) | `conversational_g_eval_generate_evaluation_steps`, `_case_params` |
 | `Prompts.ConversationalGEval.generate_evaluation_results/1` | `ConversationalGEval.generate_evaluation_results` (`conversational_g_eval/templates/generate_evaluation_results.txt`) | `evaluation_steps` (numbered), `turns` (list of `convert_turn_to_dict`), `test_case_content`, `parameters`, `rubric` | `conversational_g_eval_generate_evaluation_results`, `_rubric` |
 | `Prompts.Faithfulness.generate_claims/1` | `FaithfulnessMetric.generate_claims` (`faithfulness/templates/generate_claims.txt`) | `actual_output`, `multimodal_instruction` | `faithfulness_generate_claims` |
@@ -475,13 +478,7 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.PlanAdherence.system_one_score/0`, `system_one_questions/1` | `PlanAdherenceMetric._experimental_system_one_score`, `_questions` | `has_trace` (the questions) | `plan_adherence_experimental_system_one_score`, `_questions`, `_questions_trace` |
 | `Prompts.ToolCorrectness.system_one_tool_selection_score/0` | `ToolCorrectnessMetric._experimental_system_one_tool_selection_score` (`tool_correctness/templates/_experimental_system_one_tool_selection_score.txt`) | none | `tool_correctness_experimental_system_one_tool_selection_score` |
 
-Templates of these metrics without a DeepEvalEx counterpart, so without a
-case:
-
-- `GEval.generate_trace_evaluation_steps`, `generate_trace_evaluation_results`
-  and `generate_strict_trace_evaluation_results`: GEval on a trace (no
-  `evaluation_params`), which needs tracing (P9)
-
+Every template of these metrics has a DeepEvalEx counterpart and a case.
 The generator cannot find the private `_experimental_system_one_*`
 templates by itself, so each has a case of its own above.
 
@@ -1062,8 +1059,8 @@ current span (`drop_current_span`) or raise (`raise`). A string value
 formatted with them (`str.format`); the generator's comment above
 `TRACED_SCENARIOS` has the details. Metric specs are the export
 scenarios' (`stub`, `exact_match`), `agent_loop_detection` and the
-ScriptedJudge-backed `task_completion`, `step_efficiency`, `plan_quality`
-and `plan_adherence`.
+ScriptedJudge-backed `task_completion`, `step_efficiency`, `plan_quality`,
+`plan_adherence` and `g_eval` (a GEval, here without `evaluation_params`).
 
 Each scenario directory also holds:
 
@@ -1098,6 +1095,7 @@ Each scenario directory also holds:
 | `two_top_level` | Two top-level spans per golden: sync keeps `root_spans[0].children[0]`, async makes a test case of each trace |
 | `requires_trace` | AgentLoopDetection on the trace, a span and a `{}`-input span (the `input="None"` placeholder in async), and TaskCompletion judged from the nested dict |
 | `trace_metrics` | TaskCompletion on the trace and StepEfficiency on the agent span, each judged by its own ScriptedJudge from the nested dict of its trace or span (`prompts_<mode>.json` lists one judge's prompts, then the other's) |
+| `g_eval_trace` | GEval without `evaluation_params` on the trace, judged by a ScriptedJudge from the nested dict with its trace templates (steps from criteria, then the score) |
 | `plan_quality`, `plan_adherence` | A planning agent whose LLM span states a plan before it searches and answers: PlanQuality on the trace, PlanAdherence on the agent span, each judged by a ScriptedJudge (task, plan, then score) from the nested dict |
 | `llm_prompt_fields` | LlmSpan prompt fields from `observe(prompt=...)`, `update_llm_span(prompt=...)` and `next_llm_span(prompt=...)`; `tokenIntervals` |
 | `provider_normalisation` | Providers normalised to deepeval's `Provider` values outside evaluation, exported raw by the walkers |

@@ -234,6 +234,19 @@ The saved run lists the prompts of your LLM spans (`deftraced ..., type:
 nothing declares a metric, and no golden has expectations, raises
 `DeepEvalEx.DeepEvalError`.
 
+A `DeepEvalEx.Metrics.GEval` without `:evaluation_params` judges the
+trace against your own criteria, with deepeval's trace prompts:
+
+```elixir
+trajectory =
+  DeepEvalEx.Metrics.GEval.new(
+    name: "Trajectory",
+    criteria: "Did the agent answer from what its tools returned, without redundant calls?"
+  )
+
+DeepEvalEx.evaluate_traced(goldens, &MyApp.Support.answer(&1.input), metrics: [trajectory])
+```
+
 A `DeepEvalEx.Metrics.JevEval` without `:evaluation_params` asks its
 questions about the compacted trace, so it can judge the whole trajectory:
 
