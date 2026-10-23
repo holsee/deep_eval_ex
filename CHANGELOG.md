@@ -1926,8 +1926,70 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     [Test-Run Cache](wiki/guides/Test-Run-Cache.md) guide covers it.
     deepeval raises reading a cached expectation evaluator back; DeepEvalEx
     reuses it.
+- **Console report** (ADR-0010), a port of deepeval 4.3.1's
+  `evaluate/console_report.py`, `display_results_table` and the wrap-up's
+  output: `DeepEvalEx.evaluate_run/3` prints deepeval's evaluation report
+  and summary after a run.
+  - `DeepEvalEx.Report.Console.build/2` (`EvaluationConsoleReport`) returns
+    the report as data, every string exactly deepeval's, with Rich markup
+    kept as `{:style, style, text}` (`DeepEvalEx.Report`, `Report.Panel`,
+    `Report.Tree`, `Report.Table`): a panel per test case, sorted by index
+    then naturally by name, on one line when passing and truncated, else
+    its data or conversation turns, `Metrics` and `Classifiers` tables
+    (PASS, FAIL, ERROR, NONE; reasons of passing rows cut to 47 characters
+    plus `...`), then the `Aggregate Metrics` (average score, pass rate with
+    flaky sub-counts) and `Aggregate Classifiers` (label distribution, pass
+    rate, errors) tables. `display: :all | :failing | :passing` and
+    `truncate_passing_cases:` are deepeval's `DisplayConfig` options.
+  - `DeepEvalEx.Report.ResultsTable.build/2` (`display_results_table`),
+    the `Test Results` table with success rates, scores and statuses, and
+    conversations' turn tables (`format_turn`, `shorten`).
+  - `DeepEvalEx.Report.Summary`: the all-errored, hyperparameters and
+    prompts warnings and `✓ Evaluation completed 🎉! (time taken: ... |
+    token cost: ...)` with the pass rate.
+  - `DeepEvalEx.Report.Markdown` (`export_to_markdown`), written by
+    `evaluate_run/3` with `file_output_dir:` while printing, as
+    `<identifier>_<YYYYMMDD_HHMMSS>.md`. The HTML export is not ported.
+  - `DeepEvalEx.Report.Terminal` draws all of them with box-drawing
+    characters and ANSI colours, honouring `COLUMNS`, the terminal width,
+    `NO_COLOR` and `IO.ANSI.enabled?/0`, and counting emoji and East Asian
+    wide characters as two columns. Its layout resembles Rich's without
+    being byte-identical. Rows and lines advertising Confident AI are kept
+    in the data but not drawn, and warnings print without their links.
+  - `DeepEvalEx.TestRun.Manager`, deepeval's `TestRunManager`: `new/1` and
+    `add/2` collect evaluated test cases (leaving classifier-only ones
+    out), `to_test_run/1` finalizes them, `valid_scores/1` counts what
+    `construct_metrics_scores` counts, and `wrap_up/2` ports
+    `wrap_up_test_run` (empty-run message, all-errored warning, cache
+    wrap-up, optional `Test Results` table, warnings, local store,
+    summary). `evaluate_run/3` wraps up through it.
+  - The `:print_results` setting (`config :deep_eval_ex, print_results:
+    false` silences every run; no environment variable), and the
+    `evaluate_run/3` and `evaluate/3` options `:print_results`,
+    `:display`, `:truncate_passing_cases` and `:file_output_dir`.
+  - The `[:deep_eval_ex, :test_run, :stop]` telemetry event, deepeval's
+    `on_test_run_end` hook, emitted by `evaluate_run/3` with the run, its
+    pass and fail counts and the file written.
+  - `DeepEvalEx.TestResult` has a conversation's `:turns`, as deepeval's
+    `TestResult`; `DeepEvalEx.TestRun.from_test_cases/2` and
+    `DeepEvalEx.TestRun.Turn.from_turn/2` build a run and its turns.
+  - Parity fixtures from deepeval (`test/fixtures/deepeval/report/`) pin
+    the report's panels, trees and table cells, the `Test Results` table,
+    the Markdown file and the summary text of 15 scenarios, byte for byte.
+    A new [Console Report](wiki/guides/Console-Report.md) guide covers it.
 
 ### Changed
+
+- `DeepEvalEx.evaluate_run/3` now prints deepeval's evaluation report, its
+  warnings and its summary after every run, as deepeval's `evaluate()`
+  does by default; a run without test cases prints `No test cases found,
+  please try again.` Pass `print_results: false`, or set `config
+  :deep_eval_ex, print_results: false`, to keep it silent (DeepEvalEx's own
+  `config/test.exs` does). So does
+  `DeepEvalEx.Dataset.EvaluationDataset.evaluate_run/4`.
+  `DeepEvalEx.evaluate/3` and `EvaluationDataset.evaluate/4` stay silent
+  unless given `print_results: true`. The run's cache is now wrapped up before its
+  snapshots are written, in deepeval's order.
 
 - `DeepEvalEx.evaluate_run/3` and `DeepEvalEx.evaluate/3` now write the
   test-run cache, `.deepeval-cache.json`, in the cache folder on every run

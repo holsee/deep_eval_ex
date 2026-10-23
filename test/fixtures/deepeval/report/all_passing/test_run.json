@@ -1,0 +1,102 @@
+{
+  "testCases": [
+    {
+      "name": "test_case_0",
+      "input": "Question 0?",
+      "actualOutput": "Answer 0.",
+      "expectedOutput": "The policy allows refunds within 30 days.",
+      "flaky": false,
+      "success": true,
+      "metricsData": [
+        {
+          "name": "Answer Relevancy",
+          "threshold": 0.7,
+          "success": true,
+          "score": 0.91,
+          "reason": "The answer states the policy accurately and names every condition the context lists, so it is relevant.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        },
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "No contradictions.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0012
+        }
+      ],
+      "runDuration": 0.0,
+      "evaluationCost": 0.0015209999999999998,
+      "order": 0
+    },
+    {
+      "name": "test_case_1",
+      "input": "Question 1?",
+      "actualOutput": "Answer 1.",
+      "expectedOutput": "N/A",
+      "flaky": false,
+      "success": true,
+      "metricsData": [
+        {
+          "name": "Answer Relevancy",
+          "threshold": 0.7,
+          "success": true,
+          "score": 0.91,
+          "reason": "The answer states the policy accurately and names every condition the context lists, so it is relevant.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        },
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "No contradictions.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0012
+        }
+      ],
+      "runDuration": 0.0,
+      "evaluationCost": 0.0015209999999999998,
+      "order": 1
+    }
+  ],
+  "conversationalTestCases": [],
+  "metricsScores": [
+    {
+      "metric": "Answer Relevancy",
+      "scores": [
+        0.91,
+        0.91
+      ],
+      "passes": 2,
+      "fails": 0,
+      "errors": 0
+    },
+    {
+      "metric": "Faithfulness",
+      "scores": [
+        1.0,
+        1.0
+      ],
+      "passes": 2,
+      "fails": 0,
+      "errors": 0
+    }
+  ],
+  "testPassed": 2,
+  "testFailed": 0,
+  "runDuration": 1.23456,
+  "evaluationCost": 0.0030419999999999996,
+  "official": false
+}

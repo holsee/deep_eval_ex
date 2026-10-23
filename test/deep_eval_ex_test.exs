@@ -283,6 +283,127 @@ defmodule DeepEvalExTest do
     end
   end
 
+  describe "printing the report (deepeval's DisplayConfig)" do
+    test "evaluate_run/3 prints nothing with the :print_results setting off, as in test" do
+      assert capture_io(fn -> DeepEvalEx.evaluate_run(test_cases(), [ExactMatch]) end) == ""
+    end
+
+    test "evaluate_run/3 prints the console report, then the wrap-up's warning and summary" do
+      output =
+        capture_io(fn ->
+          DeepEvalEx.evaluate_run(test_cases(), [ExactMatch], print_results: true)
+        end)
+
+      assert output =~ "🚀 DeepEval Evaluation Results"
+      assert output =~ "✅ test_case_0 (Passed 1 metrics)"
+      assert output =~ "❌ wrong"
+      assert output =~ "Aggregate Metrics"
+      assert output =~ "50.00% | passed=1 | failed=1"
+      assert output =~ "⚠ WARNING: No hyperparameters logged."
+      assert output =~ ~r/✓ Evaluation completed 🎉! \(time taken: [\d.]+s \| token cost: None\)/
+      assert output =~ "» Pass Rate: 50.0% | Passed: 1 | Failed: 1"
+
+      [report, summary] = String.split(output, "⚠ WARNING")
+      assert report =~ "Aggregate Metrics"
+      assert summary =~ "Evaluation completed"
+
+      # Confident AI's advertisements are not printed (ADR-0010 decision 6),
+      # nor is the table deepeval only prints under `deepeval test run`.
+      refute output =~ "deepeval view"
+      refute output =~ "┃ Test case"
+    end
+
+    test "evaluate_run/3 shows the test cases :display selects and :truncate_passing_cases" do
+      failing =
+        capture_io(fn ->
+          DeepEvalEx.evaluate_run(test_cases(), [ExactMatch],
+            print_results: true,
+            display: :failing
+          )
+        end)
+
+      refute failing =~ "test_case_0 (Passed"
+      assert failing =~ "❌ wrong"
+
+      untruncated =
+        capture_io(fn ->
+          DeepEvalEx.evaluate_run(test_cases(), [ExactMatch],
+            print_results: true,
+            truncate_passing_cases: false
+          )
+        end)
+
+      refute untruncated =~ "test_case_0 (Passed"
+      assert untruncated =~ "2 + 2?"
+    end
+
+    test "evaluate_run/3 rejects an unknown :display before evaluating" do
+      assert_raise ArgumentError, ~r/display must be :all, :failing or :passing/, fn ->
+        DeepEvalEx.evaluate_run(test_cases(), [OptsMetric], display: :some, test_pid: self())
+      end
+
+      refute_received {:opts, _}
+    end
+
+    test "evaluate/3 stays silent unless asked, even with the :print_results setting on" do
+      Application.put_env(:deep_eval_ex, :print_results, true)
+      on_exit(fn -> Application.put_env(:deep_eval_ex, :print_results, false) end)
+
+      assert capture_io(fn -> DeepEvalEx.evaluate(test_cases(), [ExactMatch]) end) == ""
+      assert capture_io(fn -> DeepEvalEx.evaluate_run(test_cases(), [ExactMatch]) end) =~ "🚀"
+
+      assert capture_io(fn ->
+               DeepEvalEx.evaluate(test_cases(), [ExactMatch], print_results: true)
+             end) =~ "Evaluation completed"
+    end
+
+    test "evaluate_run/3 writes the Markdown report to :file_output_dir", %{tmp_dir: dir} do
+      output =
+        capture_io(fn ->
+          DeepEvalEx.evaluate_run(test_cases(), [ExactMatch],
+            print_results: true,
+            file_output_dir: dir,
+            identifier: "Nightly Run"
+          )
+        end)
+
+      assert [path] = Path.wildcard(Path.join(dir, "nightly_run_*.md"))
+      assert Path.basename(path) =~ ~r/\Anightly_run_\d{8}_\d{6}\.md\z/
+      assert output =~ "✅ Markdown Dashboard saved to: #{path}"
+
+      markdown = File.read!(path)
+      assert markdown =~ "# 🚀 DeepEval Evaluation Results\n"
+      assert markdown =~ "## ✅ PASS - test_case_0"
+      assert markdown =~ "## ❌ FAIL - wrong"
+    end
+
+    test "evaluate_run/3 exports no Markdown without print_results, as deepeval", %{tmp_dir: dir} do
+      DeepEvalEx.evaluate_run(test_cases(), [ExactMatch], file_output_dir: dir)
+      assert Path.wildcard(Path.join(dir, "*.md")) == []
+    end
+  end
+
+  describe "[:deep_eval_ex, :test_run, :stop]" do
+    test "is emitted by evaluate_run/3 with the run, its counts and its file" do
+      ref = :telemetry_test.attach_event_handlers(self(), [[:deep_eval_ex, :test_run, :stop]])
+      on_exit(fn -> :telemetry.detach(ref) end)
+
+      {_results, test_run, path} =
+        DeepEvalEx.evaluate_run(test_cases(), [ExactMatch], identifier: "nightly")
+
+      assert_received {[:deep_eval_ex, :test_run, :stop], ^ref, measurements, metadata}
+      assert %{test_passed: 1, test_failed: 1, duration: duration} = measurements
+      assert is_integer(duration) and duration >= 0
+
+      assert metadata == %{
+               test_run: test_run,
+               path: path,
+               identifier: "nightly",
+               source: :evaluate_run
+             }
+    end
+  end
+
   describe "latest-run snapshots" do
     setup %{tmp_dir: dir} do
       previous = Application.fetch_env(:deep_eval_ex, :cache_folder)

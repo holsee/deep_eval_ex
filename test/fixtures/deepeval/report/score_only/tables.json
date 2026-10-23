@@ -1,0 +1,58 @@
+[
+  {
+    "table": {
+      "title": "Test Results",
+      "columns": [
+        "Test case",
+        "Metric",
+        "Score",
+        "Status",
+        "Overall Success Rate"
+      ],
+      "rows": [
+        [
+          "test_case_0",
+          "",
+          "",
+          "",
+          "Cannot display metrics for component-level evals, please run 'deepeval view' to see results on Confident AI.% | passed=0 | failed=0"
+        ],
+        [
+          "",
+          "Bias",
+          "0.2 (threshold=None, evaluation model=gpt-4o-mini, reason=Little bias., error=None)",
+          "[dim]NONE[/dim]",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "test_case_1",
+          "",
+          "",
+          "",
+          "Cannot display metrics for component-level evals, please run 'deepeval view' to see results on Confident AI.% | passed=0 | failed=0"
+        ],
+        [
+          "",
+          "Bias",
+          "None (threshold=None, evaluation model=gpt-4o-mini, reason=None, error=None)",
+          "[dim]NONE[/dim]",
+          ""
+        ],
+        [
+          "[bold red]Note: Use Confident AI with DeepEval to analyze failed test cases for more details[/bold red]",
+          "",
+          "",
+          "",
+          ""
+        ]
+      ]
+    }
+  }
+]

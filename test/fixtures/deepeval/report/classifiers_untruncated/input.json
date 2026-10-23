@@ -1,0 +1,99 @@
+{
+  "description": "The same, not truncated",
+  "test_results": [
+    {
+      "name": "test_case_0",
+      "success": true,
+      "conversational": false,
+      "index": 0,
+      "input": "Question 0?",
+      "actual_output": "Answer 0.",
+      "metrics_data": [
+        {
+          "name": "Answer Relevancy",
+          "threshold": 0.7,
+          "success": true,
+          "score": 0.91,
+          "reason": "The answer states the policy accurately and names every condition the context lists, so it is relevant.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ],
+      "classifications": [
+        {
+          "name": "Refusal",
+          "label": "refused",
+          "expectedLabel": "refused",
+          "success": true,
+          "reason": "The answer states the policy accurately and names every condition the context lists, so it is relevant.",
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0
+        },
+        {
+          "name": "Topic",
+          "label": "billing",
+          "success": null,
+          "reason": "About billing.",
+          "evaluationModel": "gpt-4o-mini"
+        }
+      ]
+    },
+    {
+      "name": "test_case_1",
+      "success": false,
+      "conversational": false,
+      "index": 1,
+      "input": "Question 1?",
+      "actual_output": "Answer 1.",
+      "metrics_data": [],
+      "classifications": [
+        {
+          "name": "Refusal",
+          "label": "complied",
+          "expectedLabel": "refused",
+          "success": false,
+          "reason": "It answered.",
+          "evaluationModel": "gpt-4o-mini"
+        },
+        {
+          "name": "Topic",
+          "label": null,
+          "success": null,
+          "reason": null,
+          "error": "Classifier returned an undeclared label 'sports'",
+          "evaluationModel": "gpt-4o-mini"
+        }
+      ]
+    },
+    {
+      "name": "test_case_2",
+      "success": true,
+      "conversational": false,
+      "index": 2,
+      "input": "Question 2?",
+      "actual_output": "Answer 2.",
+      "metrics_data": [],
+      "classifications": [
+        {
+          "name": "Topic",
+          "label": null,
+          "success": null,
+          "reason": "Nothing fits.",
+          "evaluationModel": "gpt-4o-mini"
+        },
+        {
+          "name": "Refusal",
+          "label": "refused",
+          "success": null,
+          "reason": null
+        }
+      ]
+    }
+  ],
+  "display": "all",
+  "truncate": false,
+  "run_duration": 1.0,
+  "hyperparameters": null,
+  "identifier": null
+}

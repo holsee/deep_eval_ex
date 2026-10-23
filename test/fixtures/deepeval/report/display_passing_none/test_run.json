@@ -1,0 +1,44 @@
+{
+  "testCases": [
+    {
+      "name": "test_case_0",
+      "input": "Question 0?",
+      "actualOutput": "Answer 0.",
+      "flaky": false,
+      "success": false,
+      "metricsData": [
+        {
+          "name": "Answer Relevancy",
+          "threshold": 0.7,
+          "success": false,
+          "score": 0.333333,
+          "reason": "Off topic.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ],
+      "runDuration": 0.0,
+      "evaluationCost": 0.000321,
+      "order": 0
+    }
+  ],
+  "conversationalTestCases": [],
+  "metricsScores": [
+    {
+      "metric": "Answer Relevancy",
+      "scores": [
+        0.333333
+      ],
+      "passes": 0,
+      "fails": 1,
+      "errors": 0
+    }
+  ],
+  "testPassed": 0,
+  "testFailed": 1,
+  "runDuration": 2.0,
+  "evaluationCost": 0.000321,
+  "official": false
+}

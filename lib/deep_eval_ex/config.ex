@@ -42,6 +42,12 @@ defmodule DeepEvalEx.Config do
   | `:typesafe_api_key` | `TYPESAFE_API_KEY` | string | `nil` |
   | `:typesafe_model_name` | `TYPESAFE_MODEL_NAME` | string | `nil` |
   | `:typesafe_cost_per_input_token` | `TYPESAFE_COST_PER_INPUT_TOKEN` | float >= 0 | `nil` |
+  | `:print_results` | none | boolean | `true` |
+
+  `:print_results` is DeepEvalEx's own: whether `DeepEvalEx.evaluate_run/3`
+  prints the evaluation report and summary (deepeval's
+  `DisplayConfig.print_results`); set it to `false` to silence every run,
+  in tests for instance. It has no environment variable.
 
   ## Parsing
 
@@ -96,7 +102,8 @@ defmodule DeepEvalEx.Config do
     typesafe_model_name: {"TYPESAFE_MODEL_NAME", :string, nil},
     # deepeval's setting is a PositiveFloat, but its TypeSafeModel accepts a
     # price of 0 (a free Jev); only a negative price is an error there.
-    typesafe_cost_per_input_token: {"TYPESAFE_COST_PER_INPUT_TOKEN", {:float, :>=, 0}, nil}
+    typesafe_cost_per_input_token: {"TYPESAFE_COST_PER_INPUT_TOKEN", {:float, :>=, 0}, nil},
+    print_results: {nil, :boolean, true}
   ]
 
   # deepeval's Settings._normalize_fs aliases.
@@ -125,6 +132,7 @@ defmodule DeepEvalEx.Config do
           | :typesafe_api_key
           | :typesafe_model_name
           | :typesafe_cost_per_input_token
+          | :print_results
 
   @doc """
   Every setting `get/1` resolves.
@@ -133,14 +141,15 @@ defmodule DeepEvalEx.Config do
   def keys, do: Keyword.keys(@settings)
 
   @doc """
-  The environment variable a setting is read from.
+  The environment variable a setting is read from, or `nil` for a setting
+  without one.
 
   ## Examples
 
       iex> DeepEvalEx.Config.env_var(:ignore_errors)
       "IGNORE_DEEPEVAL_ERRORS"
   """
-  @spec env_var(key()) :: String.t()
+  @spec env_var(key()) :: String.t() | nil
   def env_var(key) do
     {var, _type, _default} = setting!(key)
     var
@@ -163,7 +172,7 @@ defmodule DeepEvalEx.Config do
     {var, type, default} = setting!(key)
 
     with nil <- parse(config(key), type, "config :deep_eval_ex, #{inspect(key)}"),
-         nil <- parse(env(var), type, var) do
+         nil <- parse(var && env(var), type, var) do
       default
     end
   end

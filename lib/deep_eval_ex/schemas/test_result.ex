@@ -33,12 +33,17 @@ defmodule DeepEvalEx.TestResult do
     `DeepEvalEx.Dataset.Expectations`), or `nil`. When it has some, the
     result of judging them, `"Expectations"`, is the last of
     `:metrics_data`
+  - `:turns` - A conversational test case's turns as
+    `DeepEvalEx.TestRun.Turn`s, as deepeval's `TurnApi`s (see
+    `DeepEvalEx.TestRun.Turn.from_turn/2`); `nil` for a single-turn test
+    case
 
-  deepeval's `multimodal` and `turns` are not modelled.
+  deepeval's `multimodal` is not modelled.
   """
 
   alias DeepEvalEx.{Classification, ConversationalTestCase, Result, TestCase}
   alias DeepEvalEx.Schemas.RetrievedContextData
+  alias DeepEvalEx.TestRun.Turn, as: ApiTurn
 
   @typedoc """
   A classifier's result: a `DeepEvalEx.Classification`, or any map with a
@@ -61,7 +66,8 @@ defmodule DeepEvalEx.TestResult do
           retrieval_context: [String.t()] | nil,
           metadata: map() | nil,
           classifications: [classification()],
-          expectations: DeepEvalEx.Dataset.Expectations.t() | nil
+          expectations: DeepEvalEx.Dataset.Expectations.t() | nil,
+          turns: [ApiTurn.t()] | nil
         }
 
   @enforce_keys [:name, :success]
@@ -76,6 +82,7 @@ defmodule DeepEvalEx.TestResult do
     :retrieval_context,
     :metadata,
     :expectations,
+    :turns,
     metrics_data: [],
     conversational: false,
     classifications: []
@@ -115,7 +122,11 @@ defmodule DeepEvalEx.TestResult do
       index: index,
       metadata: test_case.metadata,
       classifications: classifications,
-      expectations: test_case.expectations
+      expectations: test_case.expectations,
+      turns:
+        test_case.turns
+        |> Enum.with_index()
+        |> Enum.map(fn {turn, order} -> ApiTurn.from_turn(turn, order) end)
     }
   end
 

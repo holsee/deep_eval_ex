@@ -118,6 +118,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/guides/Classifiers.md",
         "wiki/guides/Expectations.md",
         "wiki/guides/Test-Run-Cache.md",
+        "wiki/guides/Console-Report.md",
         "wiki/guides/Phoenix-Integration.md",
         # Metrics
         {"wiki/metrics/Overview.md", [title: "Metrics Overview", filename: "metrics-overview"]},
@@ -198,6 +199,7 @@ defmodule DeepEvalEx.MixProject do
         "LLM Adapters": ~r/DeepEvalEx\.LLM\..*/,
         "System One": ~r/DeepEvalEx\.SystemOne(\..*)?$/,
         Datasets: ~r/DeepEvalEx\.Dataset(\..*)?$/,
+        Reports: ~r/DeepEvalEx\.Report(\..*)?$/,
         Schemas: ~r/DeepEvalEx\.Schemas\..*/,
         Telemetry: [DeepEvalEx.Telemetry]
       ]

@@ -41,7 +41,8 @@ defmodule DeepEvalEx.EvaluationResultTest do
                context: ["France's capital is Paris."],
                retrieval_context: ["Paris is the capital of France."],
                metadata: %{"source" => "geo"},
-               classifications: []
+               classifications: [],
+               turns: nil
              } = TestResult.new(test_case(), [result], 3)
     end
 
@@ -88,6 +89,28 @@ defmodule DeepEvalEx.EvaluationResultTest do
                input: nil,
                metadata: %{"k" => "v"}
              } = TestResult.new(conversation, [failed()], 2)
+    end
+
+    test "carries a conversation's turns as deepeval's TurnApi, for the console report" do
+      conversation =
+        DeepEvalEx.ConversationalTestCase.new!(
+          turns: [
+            %{role: :user, content: "Hi"},
+            %{role: :assistant, content: "Hello", retrieval_context: []}
+          ]
+        )
+
+      assert %TestResult{
+               turns: [
+                 %DeepEvalEx.TestRun.Turn{role: "user", content: "Hi", order: 0},
+                 %DeepEvalEx.TestRun.Turn{
+                   role: "assistant",
+                   content: "Hello",
+                   order: 1,
+                   retrieval_context: nil
+                 }
+               ]
+             } = TestResult.new(conversation, [passed()], 0)
     end
 
     test "without classifications, a test case no metric ran on is successful" do

@@ -1,0 +1,58 @@
+{
+  "testCases": [
+    {
+      "name": "test_case_0",
+      "input": "Question 0?",
+      "actualOutput": "Answer 0.",
+      "flaky": false,
+      "success": false,
+      "metricsData": [
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": false,
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "error": "ValueError: boom"
+        }
+      ],
+      "runDuration": 0.0,
+      "order": 0
+    },
+    {
+      "name": "test_case_1",
+      "input": "Question 1?",
+      "actualOutput": "Answer 1.",
+      "flaky": false,
+      "success": false,
+      "metricsData": [
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": false,
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "error": "Timed out after 180s"
+        }
+      ],
+      "runDuration": 0.0,
+      "order": 1
+    }
+  ],
+  "conversationalTestCases": [],
+  "metricsScores": [
+    {
+      "metric": "Faithfulness",
+      "scores": [],
+      "passes": 0,
+      "fails": 0,
+      "errors": 2
+    }
+  ],
+  "testPassed": 0,
+  "testFailed": 2,
+  "runDuration": 3.0,
+  "official": false
+}

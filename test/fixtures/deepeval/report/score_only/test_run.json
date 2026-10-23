@@ -1,0 +1,57 @@
+{
+  "testCases": [
+    {
+      "name": "test_case_0",
+      "input": "Question 0?",
+      "actualOutput": "Answer 0.",
+      "flaky": false,
+      "success": true,
+      "metricsData": [
+        {
+          "name": "Bias",
+          "score": 0.2,
+          "reason": "Little bias.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ],
+      "runDuration": 0.0,
+      "evaluationCost": 0.000321,
+      "order": 0
+    },
+    {
+      "name": "test_case_1",
+      "input": "Question 1?",
+      "actualOutput": "Answer 1.",
+      "flaky": false,
+      "success": true,
+      "metricsData": [
+        {
+          "name": "Bias",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini"
+        }
+      ],
+      "runDuration": 0.0,
+      "order": 1
+    }
+  ],
+  "conversationalTestCases": [],
+  "metricsScores": [
+    {
+      "metric": "Bias",
+      "scores": [],
+      "passes": 0,
+      "fails": 0,
+      "errors": 2
+    }
+  ],
+  "testPassed": 2,
+  "testFailed": 0,
+  "runDuration": 0.004,
+  "evaluationCost": 0.000321,
+  "official": false
+}

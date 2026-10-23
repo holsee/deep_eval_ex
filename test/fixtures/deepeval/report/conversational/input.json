@@ -1,0 +1,98 @@
+{
+  "description": "A conversation with turns (tools, retrieval context, comments) and one without, beside a single-turn test case",
+  "test_results": [
+    {
+      "name": "test_case_0",
+      "success": true,
+      "conversational": false,
+      "index": 0,
+      "input": "Question 0?",
+      "actual_output": "Answer 0.",
+      "metrics_data": [
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "No contradictions.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0012
+        }
+      ]
+    },
+    {
+      "name": "conversational_test_case_0",
+      "success": false,
+      "conversational": true,
+      "index": 0,
+      "turns": [
+        {
+          "role": "user",
+          "content": "I want to change my flight.",
+          "order": 0
+        },
+        {
+          "role": "assistant",
+          "content": "Sure, which booking?",
+          "order": 1,
+          "retrievalContext": [
+            "Changes are free up to 24 hours before departure.",
+            "A fare difference may apply.",
+            "Basic fares cannot change."
+          ],
+          "toolsCalled": [
+            {
+              "name": "lookup_booking"
+            },
+            {
+              "name": "list_flights"
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": "ABC123",
+          "order": 2,
+          "comments": "Booking reference."
+        }
+      ],
+      "metrics_data": [
+        {
+          "name": "Turn Relevancy",
+          "threshold": 0.5,
+          "success": false,
+          "score": 0.4,
+          "reason": "One turn is off topic.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ]
+    },
+    {
+      "name": "empty conversation",
+      "success": true,
+      "conversational": true,
+      "index": 1,
+      "turns": [],
+      "metrics_data": [
+        {
+          "name": "Turn Relevancy",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "All relevant.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ]
+    }
+  ],
+  "display": "all",
+  "truncate": false,
+  "run_duration": 6.0,
+  "hyperparameters": null,
+  "identifier": null
+}

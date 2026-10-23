@@ -1,0 +1,52 @@
+{
+  "description": "Every metric errored: ERROR rows, no cost, the all-errored warning",
+  "test_results": [
+    {
+      "name": "test_case_0",
+      "success": false,
+      "conversational": false,
+      "index": 0,
+      "input": "Question 0?",
+      "actual_output": "Answer 0.",
+      "metrics_data": [
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": false,
+          "score": null,
+          "reason": null,
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "error": "ValueError: boom",
+          "evaluationCost": null
+        }
+      ]
+    },
+    {
+      "name": "test_case_1",
+      "success": false,
+      "conversational": false,
+      "index": 1,
+      "input": "Question 1?",
+      "actual_output": "Answer 1.",
+      "metrics_data": [
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": false,
+          "score": null,
+          "reason": null,
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "error": "Timed out after 180s",
+          "evaluationCost": null
+        }
+      ]
+    }
+  ],
+  "display": "all",
+  "truncate": true,
+  "run_duration": 3.0,
+  "hyperparameters": null,
+  "identifier": null
+}

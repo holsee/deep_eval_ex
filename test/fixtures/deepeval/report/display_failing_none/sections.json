@@ -1,0 +1,44 @@
+[
+  {
+    "panel": {
+      "border_style": "none",
+      "content": "[rgb(106,0,255) bold]🚀 DeepEval Evaluation Results[/rgb(106,0,255) bold]"
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(25,227,160)",
+      "content": "[rgb(25,227,160) bold]✅ All 2 test cases passed — no failing test cases to display.[/rgb(25,227,160) bold]"
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(106,0,255)",
+      "content": {
+        "table": {
+          "title": "[bold]Aggregate Metrics[/bold]\n",
+          "columns": [
+            "Metric",
+            "Average Score",
+            "Pass Rate",
+            "Total"
+          ],
+          "rows": [
+            [
+              "Answer Relevancy",
+              "0.91",
+              "100.00% | passed=2 | failed=0",
+              "2"
+            ],
+            [
+              "Faithfulness",
+              "1.00",
+              "100.00% | passed=2 | failed=0",
+              "2"
+            ]
+          ]
+        }
+      }
+    }
+  }
+]

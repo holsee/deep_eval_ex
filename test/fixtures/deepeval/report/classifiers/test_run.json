@@ -1,0 +1,44 @@
+{
+  "testCases": [
+    {
+      "name": "test_case_0",
+      "input": "Question 0?",
+      "actualOutput": "Answer 0.",
+      "flaky": false,
+      "success": true,
+      "metricsData": [
+        {
+          "name": "Answer Relevancy",
+          "threshold": 0.7,
+          "success": true,
+          "score": 0.91,
+          "reason": "The answer states the policy accurately and names every condition the context lists, so it is relevant.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ],
+      "runDuration": 0.0,
+      "evaluationCost": 0.000321,
+      "order": 0
+    }
+  ],
+  "conversationalTestCases": [],
+  "metricsScores": [
+    {
+      "metric": "Answer Relevancy",
+      "scores": [
+        0.91
+      ],
+      "passes": 1,
+      "fails": 0,
+      "errors": 0
+    }
+  ],
+  "testPassed": 1,
+  "testFailed": 0,
+  "runDuration": 1.0,
+  "evaluationCost": 0.000321,
+  "official": false
+}

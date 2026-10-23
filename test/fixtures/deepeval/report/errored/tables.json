@@ -1,0 +1,58 @@
+[
+  {
+    "table": {
+      "title": "Test Results",
+      "columns": [
+        "Test case",
+        "Metric",
+        "Score",
+        "Status",
+        "Overall Success Rate"
+      ],
+      "rows": [
+        [
+          "test_case_0",
+          "",
+          "",
+          "",
+          "0.0% | passed=0 | failed=1"
+        ],
+        [
+          "",
+          "Faithfulness",
+          "None (threshold=0.5, evaluation model=gpt-4o-mini, reason=None, error=ValueError: boom)",
+          "[red]ERRORED[/red]",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "test_case_1",
+          "",
+          "",
+          "",
+          "0.0% | passed=0 | failed=1"
+        ],
+        [
+          "",
+          "Faithfulness",
+          "None (threshold=0.5, evaluation model=gpt-4o-mini, reason=None, error=Timed out after 180s)",
+          "[red]ERRORED[/red]",
+          ""
+        ],
+        [
+          "[bold red]Note: Use Confident AI with DeepEval to analyze failed test cases for more details[/bold red]",
+          "",
+          "",
+          "",
+          ""
+        ]
+      ]
+    }
+  }
+]

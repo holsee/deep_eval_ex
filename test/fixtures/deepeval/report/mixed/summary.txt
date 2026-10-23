@@ -1,0 +1,17 @@
+
+⚠ WARNING: No prompts logged.
+» Log prompts to evaluate and optimize your prompt templates and models.
+
+================================================================================
+
+
+✓ Evaluation completed 🎉! (time taken: 12.35s | token cost: 0.002805 USD)
+» Test Results (3 total tests):
+   » Pass Rate: 33.33% | Passed: 1 | Failed: 2
+
+ ================================================================================ 
+
+» Want to share evals with your team, or a place for your test cases to live? ❤️ 🏡
+  » Run 'deepeval view' to analyze and save testing results on Confident AI.
+
+

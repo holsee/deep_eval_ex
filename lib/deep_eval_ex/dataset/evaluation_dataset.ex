@@ -636,11 +636,15 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
 
   All `DeepEvalEx.evaluate_run/3` options, including `:results_folder`,
   `:identifier` and `:hyperparameters`. `:dataset_alias`, `:dataset_id`
-  and `:dataset_version` are the dataset's, whatever the options say.
+  and `:dataset_version` are the dataset's, whatever the options say. Like
+  `DeepEvalEx.evaluate/3`, `evaluate/4` prints no report unless given
+  `print_results: true`; `evaluate_run/4` prints it as
+  `DeepEvalEx.evaluate_run/3` does.
   """
   @spec evaluate(t(), (Golden.t() -> task_output()), [module() | struct()], keyword()) ::
           {:ok, EvaluationResult.t()}
   def evaluate(%__MODULE__{} = dataset, task, metrics, opts \\ []) do
+    opts = Keyword.put_new(opts, :print_results, false)
     {test_cases, results, classifications, _test_run, _path} = run(dataset, task, metrics, opts)
     {:ok, EvaluationResult.from_results(test_cases, results, classifications)}
   end

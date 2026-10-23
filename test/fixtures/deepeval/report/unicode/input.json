@@ -1,0 +1,40 @@
+{
+  "description": "Emoji and CJK in names and reasons, cut by code point; a multi-line reason in Markdown",
+  "test_results": [
+    {
+      "name": "café ☕ 测试",
+      "success": false,
+      "conversational": false,
+      "index": 0,
+      "input": "Où est le café ?",
+      "actual_output": "Ici 👉 ☕",
+      "metrics_data": [
+        {
+          "name": "Answer Relevancy",
+          "threshold": 0.5,
+          "success": true,
+          "score": 0.875,
+          "reason": "回答完全相关，并且涵盖了所有要点。🎉 The answer is fully relevant and covers every point.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        },
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": false,
+          "score": 0.125,
+          "reason": "Line one.\nLine two.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ]
+    }
+  ],
+  "display": "all",
+  "truncate": false,
+  "run_duration": 0.125,
+  "hyperparameters": null,
+  "identifier": null
+}

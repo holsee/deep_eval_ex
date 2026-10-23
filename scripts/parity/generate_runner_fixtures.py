@@ -1,6 +1,6 @@
 """Generate the golden fixtures of DeepEvalEx's test-runner phase (P8):
-classifiers, expectations and the test-run cache for now; the report and CLI
-sets follow.
+classifiers, expectations, the test-run cache and the console report for now;
+the CLI set follows.
 
 Classifiers (`deepeval.classifiers`) assign exactly one label from a closed
 set to a test case, and only pass or fail when the test case declares the
@@ -86,6 +86,30 @@ its runs and `run<i>/` with what each run left: `run.json` (cache files,
 metrics measured, what `evaluate()` raised or returned, `decide()` calls),
 `cache.json` (the cache file's bytes) and `test_run.json`.
 
+The console report (`evaluate/console_report.py`) and the wrap-up's output
+(`TestRunManager.display_results_table` and `wrap_up_test_run`) are written
+under test/fixtures/deepeval/report/<scenario>/ for every scenario in
+`REPORT_SCENARIOS`. A scenario is a list of test results, built as deepeval's
+`TestResult`s (with `MetricData`, `Classification` and `TurnApi`), and the
+test run `evaluate()` would make of them (`LLMApiTestCase` and
+`ConversationalApiTestCase` filled by `update_metric_data`; a test result
+without metric data is left out, as `update_test_run` leaves it):
+
+- input.json    - the scenario: `test_results`, `display`, `truncate`,
+                  `run_duration`, `hyperparameters` and `identifier`
+- sections.json - `EvaluationConsoleReport._build_display_elements()`: every
+                  renderable as `{"panel": {"border_style", "content"}}`,
+                  `{"tree": {"label", "children"}}`,
+                  `{"table": {"title", "columns", "rows"}}` or a string,
+                  the strings exactly as deepeval hands them to Rich
+- report.md     - `export_to_markdown()`, under a fixed name
+- test_run.json - the test run after `wrap_up_test_run()` (sorted, counted)
+- tables.json   - what `display_results_table()` printed, in order: tables
+                  (as in sections.json) and markup strings
+- summary.txt   - the text `wrap_up_test_run()` printed (`display_table`
+                  off), recorded by a Rich console without colour or
+                  wrapping
+
 Run it inside the devcontainer, from the repository root, with deepeval's
 source checked out at _ref/deepeval (tag v4.3.1):
 
@@ -95,8 +119,10 @@ source checked out at _ref/deepeval (tag v4.3.1):
 See test/fixtures/deepeval/README.md.
 """
 
+import contextlib
 import copy
 import importlib.util
+import io
 import json
 import logging
 import os
@@ -109,6 +135,7 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 CLASSIFIERS = os.path.join(ROOT, "test", "fixtures", "deepeval", "classifiers")
 CACHE = os.path.join(ROOT, "test", "fixtures", "deepeval", "cache")
 EXPECTATIONS = os.path.join(ROOT, "test", "fixtures", "deepeval", "expectations")
+REPORT = os.path.join(ROOT, "test", "fixtures", "deepeval", "report")
 
 # Same fixed hash seed as generate_fixtures.py, which this script imports and
 # which would otherwise re-run itself instead of this script.
@@ -154,7 +181,15 @@ from deepeval.evaluate.configs import (  # noqa: E402
     DisplayConfig,
     ErrorConfig,
 )
-from deepeval.test_case import ConversationalTestCase  # noqa: E402
+from deepeval.evaluate.console_report import EvaluationConsoleReport  # noqa: E402
+from deepeval.evaluate.types import TestResult  # noqa: E402
+from deepeval.test_case import ConversationalTestCase, ToolCall  # noqa: E402
+from deepeval.test_run.api import (  # noqa: E402
+    Classification,
+    ConversationalApiTestCase,
+    LLMApiTestCase,
+    TurnApi,
+)
 from deepeval.test_run.cache import (  # noqa: E402
     Cache,
     CachedTestCase,
@@ -166,6 +201,15 @@ from deepeval.test_run.cache import (  # noqa: E402
 
 # deepeval's package exports an `evaluate` function under the module's name.
 expectations_module = sys.modules["deepeval.evaluate.expectations"]
+# Likewise `deepeval.test_run.test_run` is shadowed by the TestRun it exports.
+test_run_module = sys.modules["deepeval.test_run.test_run"]
+from deepeval.tracing.api import MetricData  # noqa: E402
+from rich.console import Console  # noqa: E402
+from rich.panel import Panel  # noqa: E402
+from rich.table import Table  # noqa: E402
+from rich.tree import Tree  # noqa: E402
+
+TestRunResultDisplay = test_run_module.TestRunResultDisplay
 
 BUILTINS = {
     builtin(model=fakes.ExplodingLLM()).name: builtin
@@ -1489,6 +1533,419 @@ CACHE_SCENARIOS = {
     },
 }
 
+# The console report and the wrap-up's output. Each scenario is a list of
+# test results as deepeval's evaluate() returns them, with its test run.
+
+
+def build_metric_data(spec):
+    return MetricData.model_validate(spec)
+
+
+def build_turn(spec):
+    spec = dict(spec)
+    if spec.get("toolsCalled") is not None:
+        spec["toolsCalled"] = [ToolCall(**t) for t in spec["toolsCalled"]]
+    return TurnApi.model_validate(spec)
+
+
+def build_test_result(spec):
+    turns = [build_turn(t) for t in spec["turns"]] if spec.get("turns") is not None else None
+    return TestResult(
+        name=spec["name"],
+        success=spec["success"],
+        metrics_data=[build_metric_data(m) for m in spec.get("metrics_data", [])] or None,
+        conversational=spec.get("conversational", False),
+        index=spec.get("index"),
+        input=spec.get("input"),
+        actual_output=spec.get("actual_output"),
+        expected_output=spec.get("expected_output"),
+        turns=turns,
+        classifications=[
+            Classification.model_validate(c) for c in spec.get("classifications", [])
+        ] or None,
+    )
+
+
+def build_api_test_case(spec):
+    """The API test case evaluate() records for a test result: its metric
+    data applied with update_metric_data, as execute_test_cases does."""
+    if spec.get("conversational"):
+        api = ConversationalApiTestCase(
+            name=spec["name"],
+            success=True,
+            metricsData=[],
+            runDuration=0.0,
+            turns=[build_turn(t) for t in spec.get("turns", [])],
+            order=spec.get("index"),
+        )
+        api.metrics_data = None
+    else:
+        api = LLMApiTestCase(
+            name=spec["name"],
+            input=spec.get("input"),
+            actualOutput=spec.get("actual_output"),
+            expectedOutput=spec.get("expected_output"),
+            success=True,
+            metricsData=None,
+            runDuration=0,
+            order=spec.get("index"),
+        )
+    for m in spec.get("metrics_data", []):
+        api.update_metric_data(build_metric_data(m))
+    return api
+
+
+def renderable_json(item):
+    """A Rich renderable as JSON, keeping deepeval's strings as they are."""
+    if isinstance(item, str):
+        return item
+    if isinstance(item, Panel):
+        return {
+            "panel": {
+                "border_style": str(item.border_style),
+                "content": renderable_json(item.renderable),
+            }
+        }
+    if isinstance(item, Tree):
+        return {
+            "tree": {
+                "label": renderable_json(item.label),
+                "children": [renderable_json(child) for child in item.children],
+            }
+        }
+    if isinstance(item, Table):
+        return {
+            "table": {
+                "title": item.title,
+                "columns": [str(c.header) for c in item.columns],
+                "rows": [[c._cells[i] for c in item.columns] for i in range(item.row_count)],
+            }
+        }
+    raise TypeError(f"unexpected renderable {type(item).__name__}")
+
+
+class _TableCapture:
+    """Stands in for test_run.py's console and rich print in
+    display_results_table: records what it prints."""
+
+    width = 120
+
+    def __init__(self):
+        self.printed = []
+
+    def print(self, *items, **_kwargs):
+        for item in items:
+            self.printed.append(renderable_json(item))
+
+
+def run_report_scenario(name, scenario):
+    out_dir = os.path.join(REPORT, name)
+    os.makedirs(out_dir, exist_ok=True)
+    gf.write_json(os.path.join(out_dir, "input.json"), scenario)
+    display = TestRunResultDisplay(scenario["display"])
+    test_results = [build_test_result(spec) for spec in scenario["test_results"]]
+
+    report = EvaluationConsoleReport(test_results)
+    group = report._build_display_elements(
+        truncate=scenario["truncate"], display_option=display
+    )
+    gf.write_json(
+        os.path.join(out_dir, "sections.json"),
+        [renderable_json(item) for item in group.renderables],
+    )
+
+    md_dir = tempfile.mkdtemp(prefix=f"report_{name}_", dir=gf.WORK_DIR)
+    with contextlib.redirect_stdout(io.StringIO()):
+        report.export_to_markdown(md_dir, evaluation_name=scenario.get("identifier"))
+    [md] = os.listdir(md_dir)
+    shutil.copyfile(os.path.join(md_dir, md), os.path.join(out_dir, "report.md"))
+
+    # wrap_up_test_run() over the test run evaluate() would have made.
+    work = tempfile.mkdtemp(prefix=f"report_run_{name}_", dir=gf.WORK_DIR)
+    os.chdir(work)
+    manager = test_run_module.global_test_run_manager
+    original_console, original_print = test_run_module.console, test_run_module.print
+    try:
+        reset_cache_manager()
+        manager.reset()
+        manager.create_test_run(identifier=scenario.get("identifier"))
+        test_run = manager.get_test_run()
+        for spec in scenario["test_results"]:
+            if spec.get("metrics_data"):
+                test_run.add_test_case(build_api_test_case(spec))
+        test_run.hyperparameters = scenario.get("hyperparameters")
+        test_run.prompts = [] if scenario.get("hyperparameters") is not None else None
+        recorder = Console(
+            record=True,
+            file=io.StringIO(),
+            width=120,
+            color_system=None,
+            soft_wrap=True,
+        )
+        test_run_module.console = recorder
+        manager.wrap_up_test_run(scenario["run_duration"], display_table=False)
+        with open(os.path.join(out_dir, "summary.txt"), "w", encoding="utf-8") as f:
+            f.write(recorder.export_text())
+        gf.write_json(
+            os.path.join(out_dir, "test_run.json"),
+            test_run.model_dump(by_alias=True, exclude_none=True, mode="json"),
+        )
+
+        capture = _TableCapture()
+        test_run_module.console = capture
+        test_run_module.print = capture.print
+        manager.display_results_table(test_run, display)
+        gf.write_json(os.path.join(out_dir, "tables.json"), capture.printed)
+    finally:
+        test_run_module.console, test_run_module.print = original_console, original_print
+        manager.reset()
+        reset_cache_manager()
+        os.chdir(gf.WORK_DIR)
+
+
+def metric(name, score, threshold=0.5, reason=None, success=None, **extra):
+    """MetricData as evaluate() records it: success from the score unless given."""
+    if success is None and threshold is not None and score is not None:
+        success = score >= threshold
+    return {
+        "name": name,
+        "threshold": threshold,
+        "success": success,
+        "score": score,
+        "reason": reason,
+        "strictMode": False,
+        "evaluationModel": extra.pop("evaluationModel", "gpt-4o-mini"),
+        "evaluationCost": extra.pop("evaluationCost", 0.000321),
+        **extra,
+    }
+
+
+def errored(name, error, threshold=0.5):
+    return {
+        "name": name,
+        "threshold": threshold,
+        "success": False,
+        "score": None,
+        "reason": None,
+        "strictMode": False,
+        "evaluationModel": "gpt-4o-mini",
+        "error": error,
+        "evaluationCost": None,
+    }
+
+
+def result(name, index, metrics_data, success=None, **fields):
+    """A single-turn test result; success as _local_success makes it."""
+    if success is None:
+        success = not any(m["success"] is False and not m.get("flaky") for m in metrics_data)
+    return {
+        "name": name,
+        "success": success,
+        "conversational": False,
+        "index": index,
+        "input": fields.pop("input", f"Question {index}?"),
+        "actual_output": fields.pop("actual_output", f"Answer {index}."),
+        "metrics_data": metrics_data,
+        **fields,
+    }
+
+
+LONG_REASON = (
+    "The answer states the policy accurately and names every condition the "
+    "context lists, so it is relevant."
+)
+PASS_RELEVANCE = metric("Answer Relevancy", 0.91, 0.7, LONG_REASON)
+PASS_FAITHFUL = metric("Faithfulness", 1.0, 0.5, "No contradictions.", evaluationCost=0.0012)
+FAIL_FAITHFUL = metric(
+    "Faithfulness", 0.25, 0.5,
+    "The answer contradicts the retrieval context on the refund window, which is 30 days.",
+)
+FAIL_RELEVANCE = metric("Answer Relevancy", 0.333333, 0.7, "Off topic.")
+
+PASSING = [
+    result("test_case_0", 0, [PASS_RELEVANCE, PASS_FAITHFUL],
+           expected_output="The policy allows refunds within 30 days."),
+    result("test_case_1", 1, [PASS_RELEVANCE, PASS_FAITHFUL], expected_output="N/A"),
+]
+MIXED = [
+    PASSING[0],
+    result("refund question", 1, [FAIL_RELEVANCE, FAIL_FAITHFUL],
+           input="Can I get a refund on a used ticket?",
+           actual_output="Yes, always.\nNo questions asked."),
+    result("test_case_2", 2, [PASS_RELEVANCE, FAIL_FAITHFUL]),
+]
+FAILING = [result("test_case_0", 0, [FAIL_RELEVANCE])]
+
+CLASSIFIED = [
+    {
+        **result("test_case_0", 0, [PASS_RELEVANCE]),
+        "classifications": [
+            {"name": "Refusal", "label": "refused", "expectedLabel": "refused",
+             "success": True, "reason": LONG_REASON, "evaluationModel": "gpt-4o-mini",
+             "evaluationCost": 0.0},
+            {"name": "Topic", "label": "billing", "success": None, "reason": "About billing.",
+             "evaluationModel": "gpt-4o-mini"},
+        ],
+    },
+    {
+        **result("test_case_1", 1, [], success=False),
+        "classifications": [
+            {"name": "Refusal", "label": "complied", "expectedLabel": "refused",
+             "success": False, "reason": "It answered.", "evaluationModel": "gpt-4o-mini"},
+            {"name": "Topic", "label": None, "success": None, "reason": None,
+             "error": "Classifier returned an undeclared label 'sports'",
+             "evaluationModel": "gpt-4o-mini"},
+        ],
+    },
+    {
+        **result("test_case_2", 2, [], success=None),
+        "classifications": [
+            {"name": "Topic", "label": None, "success": None, "reason": "Nothing fits.",
+             "evaluationModel": "gpt-4o-mini"},
+            {"name": "Refusal", "label": "refused", "success": None, "reason": None},
+        ],
+    },
+]
+
+CONVERSATION_TURNS = [
+    {"role": "user", "content": "I want to change my flight.", "order": 0},
+    {"role": "assistant", "content": "Sure, which booking?", "order": 1,
+     "retrievalContext": ["Changes are free up to 24 hours before departure.",
+                          "A fare difference may apply.", "Basic fares cannot change."],
+     "toolsCalled": [{"name": "lookup_booking"}, {"name": "list_flights"}]},
+    {"role": "user", "content": "ABC123", "order": 2, "comments": "Booking reference."},
+]
+
+REPORT_SCENARIOS = {
+    "all_passing": {
+        "description": "Two passing test cases, truncated to one line each; a long reason",
+        "test_results": PASSING,
+        "display": "all", "truncate": True, "run_duration": 1.23456,
+        "hyperparameters": None, "identifier": None,
+    },
+    "all_passing_untruncated": {
+        "description": "The same, not truncated: the data table, the metrics table and the "
+                       "47-character reason cut of a passing metric",
+        "test_results": PASSING,
+        "display": "all", "truncate": False, "run_duration": 0.5,
+        "hyperparameters": None, "identifier": "Nightly Run",
+    },
+    "mixed": {
+        "description": "Passing and failing test cases with hyperparameters logged (no prompts)",
+        "test_results": MIXED,
+        "display": "all", "truncate": True, "run_duration": 12.3456,
+        "hyperparameters": {"model": "gpt-4o", "temperature": "0.7"}, "identifier": None,
+    },
+    "display_failing": {
+        "description": "display=failing leaves out the passing test case",
+        "test_results": MIXED,
+        "display": "failing", "truncate": True, "run_duration": 2.0,
+        "hyperparameters": None, "identifier": None,
+    },
+    "display_passing": {
+        "description": "display=passing leaves out the failing test cases",
+        "test_results": MIXED,
+        "display": "passing", "truncate": True, "run_duration": 2.0,
+        "hyperparameters": None, "identifier": None,
+    },
+    "display_failing_none": {
+        "description": "display=failing when every test case passed",
+        "test_results": PASSING,
+        "display": "failing", "truncate": True, "run_duration": 2.0,
+        "hyperparameters": None, "identifier": None,
+    },
+    "display_passing_none": {
+        "description": "display=passing when the only test case failed",
+        "test_results": FAILING,
+        "display": "passing", "truncate": True, "run_duration": 2.0,
+        "hyperparameters": None, "identifier": None,
+    },
+    "errored": {
+        "description": "Every metric errored: ERROR rows, no cost, the all-errored warning",
+        "test_results": [
+            result("test_case_0", 0, [errored("Faithfulness", "ValueError: boom")]),
+            result("test_case_1", 1, [errored("Faithfulness", "Timed out after 180s")]),
+        ],
+        "display": "all", "truncate": True, "run_duration": 3.0,
+        "hyperparameters": None, "identifier": None,
+    },
+    "score_only": {
+        "description": "Score-only metrics (no threshold) are NONE and count as errors",
+        "test_results": [
+            result("test_case_0", 0, [metric("Bias", 0.2, None, "Little bias.")]),
+            result("test_case_1", 1, [metric("Bias", None, None, None,
+                                             evaluationCost=None)]),
+        ],
+        "display": "all", "truncate": False, "run_duration": 0.004,
+        "hyperparameters": None, "identifier": None,
+    },
+    "flaky": {
+        "description": "Flaky metrics count towards their verdict with a flaky sub-count, and "
+                       "never fail the test case",
+        "test_results": [
+            result("test_case_0", 0, [metric("Tone", 0.9, flaky=True), PASS_FAITHFUL]),
+            result("test_case_1", 1, [metric("Tone", 0.1, flaky=True), PASS_FAITHFUL]),
+            result("test_case_2", 2, [metric("Tone", 0.2), FAIL_FAITHFUL]),
+        ],
+        "display": "all", "truncate": False, "run_duration": 4.5,
+        "hyperparameters": None, "identifier": None,
+    },
+    "conversational": {
+        "description": "A conversation with turns (tools, retrieval context, comments) and one "
+                       "without, beside a single-turn test case",
+        "test_results": [
+            result("test_case_0", 0, [PASS_FAITHFUL]),
+            {"name": "conversational_test_case_0", "success": False, "conversational": True,
+             "index": 0, "turns": CONVERSATION_TURNS,
+             "metrics_data": [metric("Turn Relevancy", 0.4, 0.5, "One turn is off topic.")]},
+            {"name": "empty conversation", "success": True, "conversational": True,
+             "index": 1, "turns": [],
+             "metrics_data": [metric("Turn Relevancy", 1.0, 0.5, "All relevant.")]},
+        ],
+        "display": "all", "truncate": False, "run_duration": 6.0,
+        "hyperparameters": None, "identifier": None,
+    },
+    "classifiers": {
+        "description": "Classifications with and without expected labels, an errored one and a "
+                       "declined one (none), and classifier-only test cases left out of the run",
+        "test_results": CLASSIFIED,
+        "display": "all", "truncate": True, "run_duration": 1.0,
+        "hyperparameters": None, "identifier": None,
+    },
+    "classifiers_untruncated": {
+        "description": "The same, not truncated",
+        "test_results": CLASSIFIED,
+        "display": "all", "truncate": False, "run_duration": 1.0,
+        "hyperparameters": None, "identifier": None,
+    },
+    "natural_sort": {
+        "description": "Test results sorted by index, then by name naturally (case 2 before "
+                       "case 10)",
+        "test_results": [
+            result("Case 10", 1, [PASS_FAITHFUL]),
+            result("case 2", 1, [FAIL_FAITHFUL]),
+            result("case 1", 0, [PASS_FAITHFUL]),
+        ],
+        "display": "all", "truncate": False, "run_duration": 1.0,
+        "hyperparameters": None, "identifier": None,
+    },
+    "unicode": {
+        "description": "Emoji and CJK in names and reasons, cut by code point; a multi-line "
+                       "reason in Markdown",
+        "test_results": [
+            result("café ☕ 测试", 0, [
+                metric("Answer Relevancy", 0.875, 0.5,
+                       "回答完全相关，并且涵盖了所有要点。🎉 The answer is fully relevant and covers "
+                       "every point."),
+                metric("Faithfulness", 0.125, 0.5, "Line one.\nLine two."),
+            ], input="Où est le café ?", actual_output="Ici 👉 ☕"),
+        ],
+        "display": "all", "truncate": False, "run_duration": 0.125,
+        "hyperparameters": None, "identifier": None,
+    },
+}
+
+
 
 def main():
     if gf.deepeval.__version__ != gf.DEEPEVAL_VERSION:
@@ -1517,6 +1974,11 @@ def main():
         for name, scenario in CACHE_SCENARIOS.items():
             run_cache_scenario(name, scenario)
             print(f"wrote {os.path.relpath(os.path.join(CACHE, name), ROOT)}")
+        if os.path.isdir(REPORT):
+            shutil.rmtree(REPORT)
+        for name, scenario in REPORT_SCENARIOS.items():
+            run_report_scenario(name, scenario)
+            print(f"wrote {os.path.relpath(os.path.join(REPORT, name), ROOT)}")
     finally:
         shutil.rmtree(gf.WORK_DIR, ignore_errors=True)
 

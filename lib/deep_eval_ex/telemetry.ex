@@ -39,6 +39,18 @@ defmodule DeepEvalEx.Telemetry do
     - Measurements: `%{duration: integer(), test_case_count: integer()}`
     - Metadata: `%{}`
 
+  ### Test Run Events
+
+  - `[:deep_eval_ex, :test_run, :stop]` - `DeepEvalEx.evaluate_run/3` wrapped
+    up a test run (see `DeepEvalEx.TestRun.Manager.wrap_up/2`); deepeval's
+    `on_test_run_end` hook. Not emitted for a classifier-only run, which has
+    no test run
+    - Measurements: `%{duration: integer(), test_passed: integer(),
+      test_failed: integer()}`, `duration` in native time units
+    - Metadata: `%{test_run: DeepEvalEx.TestRun.t(), path: Path.t() | nil,
+      identifier: String.t() | nil, source: :evaluate_run}`, where `path`
+      is the `test_run_<timestamp>.json` written to the results folder
+
   ### LLM Events
 
   - `[:deep_eval_ex, :llm, :request]` - LLM API request made

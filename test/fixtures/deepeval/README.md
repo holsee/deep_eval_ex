@@ -1,10 +1,10 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in nine sets:
+Fixtures written by **deepeval 4.3.1**, in ten sets:
 
 - export scenarios (the directories below, except `scripted/`, `prompts/`,
-  `round_trip/`, `system_one/`, `datasets/`, `classifiers/` and
-  `expectations/`), used by
+  `round_trip/`, `system_one/`, `datasets/`, `classifiers/`,
+  `expectations/`, `cache/` and `report/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
@@ -41,6 +41,9 @@ Fixtures written by **deepeval 4.3.1**, in nine sets:
   keys, metric configurations and `.deepeval-cache.json` files over runs
   that write and read it, used by
   `test/deep_eval_ex/test_run/cache_parity_test.exs`
+- [report fixtures](#report-fixtures) (`report/`), what deepeval's console
+  report, Markdown export, `Test Results` table and wrap-up print, used by
+  `test/deep_eval_ex/report/report_parity_test.exs`
 
 ## Export scenarios
 
@@ -860,3 +863,49 @@ cache fixtures need committing.
 - **Interrupted runs.** deepeval also files the error-free results of a
   test case whose evaluation raised or was cancelled; DeepEvalEx files a
   test case only once all its metrics and classifiers are done.
+
+## Report fixtures
+
+`scripts/parity/generate_runner_fixtures.py` also records deepeval's
+console output. Each scenario is a list of test results, built as
+deepeval's `TestResult`s (with `MetricData`, `Classification` and
+`TurnApi`), and the test run `evaluate()` makes of them; nothing is
+evaluated. Under `report/<scenario>/`:
+
+- `input.json` - the test results (deepeval's field names, metric data and
+  classifications by alias), `display`, `truncate`, `run_duration`,
+  `hyperparameters` and `identifier`
+- `sections.json` - `EvaluationConsoleReport._build_display_elements()`,
+  each Rich renderable as `{"panel": {"border_style", "content"}}`,
+  `{"tree": {"label", "children"}}` or `{"table": {"title", "columns",
+  "rows"}}`, every string exactly as deepeval hands it to Rich
+- `report.md` - `export_to_markdown()`
+- `test_run.json` - the test run after `wrap_up_test_run()`
+- `tables.json` - what `display_results_table()` printed: the turn tables,
+  `No turns recorded` lines and the `Test Results` table
+- `summary.txt` - what `wrap_up_test_run()` printed (without the table),
+  recorded by a Rich console without colour or wrapping
+
+| Scenario | What it covers |
+| --- | --- |
+| `all_passing` | Two passing test cases, each on one line; the aggregate table |
+| `all_passing_untruncated` | The same in full: data and metrics tables, a passing reason cut to 47 characters plus `...`, Expected Output `N/A` hidden |
+| `mixed` | Passing and failing test cases, a multi-line output, hyperparameters without prompts |
+| `display_failing`, `display_passing` | The display filter |
+| `display_failing_none`, `display_passing_none` | The panel shown when the filter hides every test case |
+| `errored` | ERROR rows, no cost, the all-errored warning, a 0% pass rate |
+| `score_only` | Score-only metrics: NONE, counted as errors, the all-errored warning, a partial cost |
+| `flaky` | Flaky metrics: their verdicts with `(flaky=N)` sub-counts, never failing the test case |
+| `conversational` | A conversation's turns (tools, retrieval context cut to two, a comment), one without turns, separator rows |
+| `classifiers`, `classifiers_untruncated` | Classifications with and without expected labels, errored and declined (`none`), label distributions, classifier-only test cases left out of the run |
+| `natural_sort` | Sorting by index, then naturally by name |
+| `unicode` | Emoji and CJK cut by code point, a multi-line reason as `<br>` in Markdown |
+
+`test/deep_eval_ex/report/report_parity_test.exs` builds the same test
+results and loads the test run, then compares
+`DeepEvalEx.Report.Console.build/2` with `sections.json`,
+`DeepEvalEx.Report.ResultsTable.build/2` with `tables.json` (each string
+as its Rich markup), and `DeepEvalEx.Report.Markdown.render/1` and
+`DeepEvalEx.Report.Summary.wrap_up/3` (with `confident_ai: true`) with
+`report.md` and `summary.txt`, byte for byte. How the terminal draws them
+is DeepEvalEx's own and not compared.

@@ -1,0 +1,51 @@
+[
+  {
+    "table": {
+      "title": "Test Results",
+      "columns": [
+        "Test case",
+        "Metric",
+        "Score",
+        "Status",
+        "Overall Success Rate"
+      ],
+      "rows": [
+        [
+          "test_case_0",
+          "",
+          "",
+          "",
+          "100.0% | passed=2 | failed=0"
+        ],
+        [
+          "",
+          "Answer Relevancy",
+          "0.91 (threshold=0.7, evaluation model=gpt-4o-mini, reason=The answer states the policy accurately and names every condition the context lists, so it is relevant., error=None)",
+          "[green]PASSED[/green]",
+          ""
+        ],
+        [
+          "",
+          "Faithfulness",
+          "1.0 (threshold=0.5, evaluation model=gpt-4o-mini, reason=No contradictions., error=None)",
+          "[green]PASSED[/green]",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "[bold red]Note: Use Confident AI with DeepEval to analyze failed test cases for more details[/bold red]",
+          "",
+          "",
+          "",
+          ""
+        ]
+      ]
+    }
+  }
+]

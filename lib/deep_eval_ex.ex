@@ -101,11 +101,10 @@ defmodule DeepEvalEx do
   `DeepEvalEx.TestRun.load/1` reads them back; see `DeepEvalEx.TestRun`.
   """
 
-  require Logger
-
   alias DeepEvalEx.{Config, EvaluationResult, Evaluator, Result, TestCase, TestRun}
+  alias DeepEvalEx.Report.{Console, Markdown, Terminal}
   alias DeepEvalEx.TestRun.Cache.Store
-  alias DeepEvalEx.TestRun.LocalStore
+  alias DeepEvalEx.TestRun.Manager
 
   @export_opts [
     :results_folder,
@@ -115,7 +114,11 @@ defmodule DeepEvalEx do
     :hyperparameters,
     :dataset_alias,
     :dataset_id,
-    :dataset_version
+    :dataset_version,
+    :print_results,
+    :display,
+    :truncate_passing_cases,
+    :file_output_dir
   ]
 
   @doc """
@@ -181,6 +184,11 @@ defmodule DeepEvalEx do
     `evaluate_run/3`
   - `:use_cache`, `:write_cache`, `:cache_folder` - The test-run cache, see
     "Cache" in `evaluate_run/3`
+  - `:print_results` - Print deepeval's report and summary, see "Report"
+    in `evaluate_run/3` (default: `false`; unlike `evaluate_run/3`,
+    `evaluate/3` stays silent unless asked)
+  - `:display`, `:truncate_passing_cases`, `:file_output_dir` - What the
+    report shows, see "Report" in `evaluate_run/3`
 
   ## Examples
 
@@ -210,6 +218,7 @@ defmodule DeepEvalEx do
   def evaluate(test_cases, metrics, opts \\ [])
 
   def evaluate(test_cases, metrics, opts) when is_list(test_cases) do
+    opts = Keyword.put_new(opts, :print_results, false)
     {results, classifications, _test_run, _path} = run(test_cases, metrics, opts)
     {:ok, EvaluationResult.from_results(test_cases, results, classifications)}
   end
@@ -221,7 +230,9 @@ defmodule DeepEvalEx do
         "{:ok, %DeepEvalEx.EvaluationResult{}}"
     )
 
-    {[results], _test_run, _path} = evaluate_run([test_case], metrics, opts)
+    {[results], _test_run, _path} =
+      evaluate_run([test_case], metrics, Keyword.put_new(opts, :print_results, false))
+
     {:ok, results}
   end
 
@@ -241,7 +252,9 @@ defmodule DeepEvalEx do
         "use DeepEvalEx.evaluate/3, or evaluate_run/3 for the result lists"
     )
 
-    {results, _test_run, _path} = evaluate_run(test_cases, metrics, opts)
+    {results, _test_run, _path} =
+      evaluate_run(test_cases, metrics, Keyword.put_new(opts, :print_results, false))
+
     results
   end
 
@@ -298,8 +311,38 @@ defmodule DeepEvalEx do
   - `:use_cache` - Reuse cached results (default: `false`), see "Cache"
   - `:write_cache` - Write the test-run cache (default: `true`); `false`
     deletes it, see "Cache"
+  - `:print_results` - Print the report and summary, see "Report"
+    (default: the `:print_results` setting, `true`; see `DeepEvalEx.Config`)
+  - `:display` - The test cases the report shows: `:all` (default),
+    `:failing` or `:passing`; anything else raises `ArgumentError` before
+    evaluating
+  - `:truncate_passing_cases` - Show passing test cases on one line
+    (default: `true`)
+  - `:file_output_dir` - Also write the report as Markdown in this folder
+    while printing, see `DeepEvalEx.Report.Markdown.export/3`
 
   These options are not passed on to the metrics.
+
+  ## Report
+
+  As deepeval's `evaluate()` with its default `DisplayConfig`, the run
+  prints deepeval's evaluation report once evaluated
+  (`DeepEvalEx.Report.Console`, drawn by `DeepEvalEx.Report.Terminal`),
+  then wraps up the run as deepeval's `wrap_up_test_run`
+  (`DeepEvalEx.TestRun.Manager.wrap_up/2`): the test-run cache, the
+  hyperparameters warning (and the all-errored one, when no metric
+  recorded a score with a verdict), the snapshots and results folder, and
+  the summary (`✓ Evaluation completed 🎉! (time taken: ... | token cost:
+  ...)` and the pass rate). The strings are deepeval's; Confident AI's
+  advertisements are left out. A run with classifiers only prints the
+  report but has no wrap-up.
+
+  `print_results: false`, or `config :deep_eval_ex, print_results: false`,
+  prints nothing, the wrap-up included (deepeval's wrap-up always prints).
+  See the Console Report guide.
+
+  Each wrapped-up run emits `[:deep_eval_ex, :test_run, :stop]` (see
+  `DeepEvalEx.Telemetry`).
 
   ## Cache
 
@@ -402,6 +445,7 @@ defmodule DeepEvalEx do
       do: Evaluator.validate_expectation_coverage!(test_cases)
 
     Evaluator.check_valid_test_cases_type!(test_cases)
+    Console.display!(Keyword.get(export_opts, :display, :all))
 
     if metrics != [] and not expectations?,
       do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, eval_opts)
@@ -431,10 +475,11 @@ defmodule DeepEvalEx do
 
     started = System.monotonic_time()
     {results, classifications, durations} = Evaluator.run(test_cases, metrics, eval_opts)
+    elapsed = System.monotonic_time() - started
+    run_duration = System.convert_time_unit(elapsed, :native, :microsecond) / 1_000_000
 
-    run_duration =
-      System.convert_time_unit(System.monotonic_time() - started, :native, :microsecond) /
-        1_000_000
+    if print_results?(export_opts),
+      do: print_report(test_cases, results, classifications, export_opts)
 
     if metrics == [] and classifiers != [] and not expectations? do
       # deepeval's classifier-only run: classifications are local only, so
@@ -444,7 +489,48 @@ defmodule DeepEvalEx do
       test_run =
         export(test_cases, results, durations, run_duration, hyperparameters, export_opts)
 
-      {results, classifications, test_run, save_test_run(test_run, export_opts, cache)}
+      {test_run, path} =
+        Manager.wrap_up(
+          test_run,
+          export_opts ++ [cache: cache, display_table: false, print: print_results?(export_opts)]
+        )
+
+      :telemetry.execute(
+        [:deep_eval_ex, :test_run, :stop],
+        %{
+          duration: elapsed,
+          test_passed: test_run.test_passed,
+          test_failed: test_run.test_failed
+        },
+        %{test_run: test_run, path: path, identifier: test_run.identifier, source: :evaluate_run}
+      )
+
+      {results, classifications, test_run, path}
+    end
+  end
+
+  # deepeval's DisplayConfig.print_results, else the :print_results setting.
+  defp print_results?(export_opts) do
+    Keyword.get_lazy(export_opts, :print_results, fn -> Config.get(:print_results) end) == true
+  end
+
+  # deepeval's evaluate(): the console report, then the Markdown export of
+  # every test case, untruncated, with file_output_dir.
+  defp print_report(test_cases, results, classifications, export_opts) do
+    %EvaluationResult{test_results: test_results} =
+      EvaluationResult.from_results(test_cases, results, classifications)
+
+    report =
+      Console.build(test_results,
+        display: Keyword.get(export_opts, :display, :all),
+        truncate_passing_cases: Keyword.get(export_opts, :truncate_passing_cases, true)
+      )
+
+    IO.write(["\n", Terminal.render(report), "\n"])
+
+    if dir = export_opts[:file_output_dir] do
+      path = Markdown.export(test_results, dir, export_opts[:identifier])
+      IO.puts("✅ Markdown Dashboard saved to: #{path}")
     end
   end
 
@@ -465,41 +551,6 @@ defmodule DeepEvalEx do
       dataset_id: export_opts[:dataset_id],
       dataset_version: export_opts[:dataset_version]
     )
-  end
-
-  defp save_test_run(%TestRun{test_cases: [], conversational_test_cases: []}, _opts, _cache),
-    do: nil
-
-  # deepeval's save_test_run_locally (rolling snapshot, then the results
-  # folder), then wrap_up_test_run's cache wrap-up and
-  # LATEST_TEST_RUN_FILE_PATH.
-  defp save_test_run(test_run, opts, cache) do
-    warn_on_error(LocalStore.write_rolling(test_run, opts), "write rolling snapshot to")
-    Store.wrap_up(cache)
-    path = save_to_results_folder(test_run, opts)
-    warn_on_error(LocalStore.write_latest(test_run, opts), "write")
-    path
-  end
-
-  defp warn_on_error({:error, {path, reason}}, action) do
-    Logger.warning("DeepEvalEx failed to #{action} #{path}: #{inspect(reason)}")
-  end
-
-  defp warn_on_error(_ok_or_skip, _action), do: :ok
-
-  defp save_to_results_folder(test_run, opts) do
-    case LocalStore.write(test_run, opts) do
-      {:ok, path} ->
-        Logger.info("Test run saved at #{path}")
-        path
-
-      :skip ->
-        nil
-
-      {:error, reason} ->
-        Logger.warning("DeepEvalEx failed to save test run: #{inspect(reason)}")
-        nil
-    end
   end
 
   @doc """

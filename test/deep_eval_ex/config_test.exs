@@ -29,18 +29,25 @@ defmodule DeepEvalEx.ConfigTest do
     typesafe_cost_per_input_token: "TYPESAFE_COST_PER_INPUT_TOKEN"
   }
 
+  # DeepEvalEx's own settings, without an environment variable.
+  @own_settings [:print_results]
+
   doctest Config
 
   setup do
     previous_env = Map.new(@env_vars, fn {_key, var} -> {var, System.get_env(var)} end)
 
     previous_config =
-      Map.new(@env_vars, fn {key, _var} -> {key, Application.fetch_env(:deep_eval_ex, key)} end)
+      Map.new(Map.keys(@env_vars) ++ @own_settings, fn key ->
+        {key, Application.fetch_env(:deep_eval_ex, key)}
+      end)
 
     Enum.each(@env_vars, fn {key, var} ->
       System.delete_env(var)
       Application.delete_env(:deep_eval_ex, key)
     end)
+
+    Enum.each(@own_settings, &Application.delete_env(:deep_eval_ex, &1))
 
     on_exit(fn ->
       System.delete_env("DEEP_EVAL_EX_DOC_EXAMPLE")
@@ -60,11 +67,15 @@ defmodule DeepEvalEx.ConfigTest do
 
   describe "keys/0 and env_var/1" do
     test "cover deepeval's settings under their 4.3.1 environment variable names" do
-      assert Enum.sort(Config.keys()) == @env_vars |> Map.keys() |> Enum.sort()
+      assert Enum.sort(Config.keys()) == Enum.sort(Map.keys(@env_vars) ++ @own_settings)
 
       for {key, var} <- @env_vars do
         assert Config.env_var(key) == var
       end
+    end
+
+    test "DeepEvalEx's own settings have no environment variable" do
+      for key <- @own_settings, do: assert(Config.env_var(key) == nil)
     end
 
     test "raise on an unknown setting" do
@@ -106,6 +117,20 @@ defmodule DeepEvalEx.ConfigTest do
         assert Config.get(:retry_max_attempts) == 2
         assert Config.get(:results_folder) == nil
       end
+    end
+  end
+
+  describe ":print_results" do
+    test "defaults to true, as deepeval's DisplayConfig.print_results" do
+      assert Config.get(:print_results) == true
+    end
+
+    test "is read from application config only" do
+      Application.put_env(:deep_eval_ex, :print_results, false)
+      assert Config.get(:print_results) == false
+
+      Application.put_env(:deep_eval_ex, :print_results, "no")
+      assert Config.get(:print_results) == false
     end
   end
 

@@ -404,6 +404,22 @@ defmodule DeepEvalEx.TestRun do
     ]
 
     @doc """
+    The evaluated turn of `turn`, at position `order` in its conversation,
+    as deepeval's `create_api_turn`: the role as a string, the retrieval
+    context flattened (see the module documentation) and no `:user_id`.
+    """
+    @spec from_turn(DeepEvalEx.Turn.t(), non_neg_integer()) :: t()
+    def from_turn(%DeepEvalEx.Turn{} = turn, order) do
+      %__MODULE__{
+        role: Atom.to_string(turn.role),
+        content: turn.content,
+        order: order,
+        retrieval_context: DeepEvalEx.TestRun.flat_contexts(turn.retrieval_context),
+        tools_called: turn.tools_called
+      }
+    end
+
+    @doc """
     Converts an evaluated turn back into a `DeepEvalEx.Turn`, keeping its
     role, content, user, retrieval context and tool calls.
 
@@ -600,7 +616,26 @@ defmodule DeepEvalEx.TestRun do
       end)
       |> Enum.split_with(&match?(%ConversationalTestCase{}, &1))
 
-    evaluated = api_test_cases ++ conversational
+    from_test_cases(api_test_cases ++ conversational, opts)
+  end
+
+  @doc """
+  Builds a test run from evaluated test cases, in the order they were
+  evaluated, as deepeval's `wrap_up_test_run` finalizes the test cases its
+  `TestRunManager` collected.
+
+  `DeepEvalEx.TestRun.TestCase`s become the run's `testCases` and
+  `DeepEvalEx.TestRun.ConversationalTestCase`s its
+  `conversationalTestCases`, each sorted as in `from_results/3`;
+  `metricsScores`, `testPassed`, `testFailed` and `evaluationCost` are
+  computed over them in the given order. Takes the options of
+  `from_results/3` except `:run_durations`.
+  """
+  @spec from_test_cases([TestRun.TestCase.t() | ConversationalTestCase.t()], keyword()) :: t()
+  def from_test_cases(evaluated, opts \\ []) do
+    {conversational, api_test_cases} =
+      Enum.split_with(evaluated, &match?(%ConversationalTestCase{}, &1))
+
     {test_passed, test_failed} = count_successes(evaluated)
 
     %__MODULE__{
@@ -894,17 +929,13 @@ defmodule DeepEvalEx.TestRun do
     {Enum.find_value(expectations, & &1.expectations_data), metrics}
   end
 
-  # deepeval's create_api_turn. It passes user_id by field name, which
-  # TurnApi (aliased userId, without populate_by_name) drops.
-  defp api_turn({%DeepEvalEx.Turn{} = turn, order}) do
-    %Turn{
-      role: Atom.to_string(turn.role),
-      content: turn.content,
-      order: order,
-      retrieval_context: turn.retrieval_context |> contexts() |> non_empty(),
-      tools_called: turn.tools_called
-    }
-  end
+  defp api_turn({%DeepEvalEx.Turn{} = turn, order}), do: Turn.from_turn(turn, order)
+
+  @doc false
+  # deepeval's create_api_test_case keeps only a RetrievedContextData's
+  # context, and leaves out an empty list.
+  @spec flat_contexts([String.t() | RetrievedContextData.t()] | nil) :: [String.t()] | nil
+  def flat_contexts(retrieval_context), do: retrieval_context |> contexts() |> non_empty()
 
   # deepeval's async executor records a test case that finished in under a
   # second as 0 ("all metrics were from cache"). It assigns the int without

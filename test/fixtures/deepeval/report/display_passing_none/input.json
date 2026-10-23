@@ -1,0 +1,30 @@
+{
+  "description": "display=passing when the only test case failed",
+  "test_results": [
+    {
+      "name": "test_case_0",
+      "success": false,
+      "conversational": false,
+      "index": 0,
+      "input": "Question 0?",
+      "actual_output": "Answer 0.",
+      "metrics_data": [
+        {
+          "name": "Answer Relevancy",
+          "threshold": 0.7,
+          "success": false,
+          "score": 0.333333,
+          "reason": "Off topic.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ]
+    }
+  ],
+  "display": "passing",
+  "truncate": true,
+  "run_duration": 2.0,
+  "hyperparameters": null,
+  "identifier": null
+}

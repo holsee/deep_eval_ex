@@ -109,6 +109,28 @@ Emitted when batch evaluation completes.
 | `duration` | integer | Total duration in ms |
 | `test_case_count` | integer | Number of test cases |
 
+### Test Run Events
+
+#### `[:deep_eval_ex, :test_run, :stop]`
+
+Emitted when `DeepEvalEx.evaluate_run/3` (or `DeepEvalEx.evaluate/3`) has
+wrapped up its test run, saved and printed it (see the
+[Console Report](Console-Report.md) guide); deepeval's `on_test_run_end`
+hook. A classifier-only run has no test run and emits none.
+
+| Measurement | Type | Description |
+|-------------|------|-------------|
+| `duration` | integer | Duration of the evaluation, in native time units |
+| `test_passed` | integer | Test cases that passed |
+| `test_failed` | integer | Test cases that failed |
+
+| Metadata | Type | Description |
+|----------|------|-------------|
+| `test_run` | `DeepEvalEx.TestRun` | The wrapped-up run |
+| `path` | string \| nil | The `test_run_<timestamp>.json` written to the results folder |
+| `identifier` | string \| nil | The run's identifier |
+| `source` | atom | `:evaluate_run` |
+
 ### LLM Events
 
 #### `[:deep_eval_ex, :llm, :request]`

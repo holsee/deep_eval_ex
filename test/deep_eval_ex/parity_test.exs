@@ -50,11 +50,12 @@ defmodule DeepEvalEx.ParityTest do
   # of SystemOneFixturesTest, round_trip/ test runs TestRun.LoadTest only
   # loads and re-encodes, datasets/ the files of Dataset.LoaderParityTest,
   # classifiers/ the scenarios of ClassifierParityTest, cache/ those of
-  # TestRun.CacheParityTest.
+  # TestRun.CacheParityTest, report/ those of Report.ReportParityTest.
   @scenarios @fixtures
              |> File.ls!()
              |> Enum.reject(
-               &(&1 in ~w(cache classifiers datasets expectations prompts round_trip scripted system_one))
+               &(&1 in ~w(cache classifiers datasets expectations prompts report round_trip scripted
+                        system_one))
              )
              |> Enum.filter(&File.dir?(Path.join(@fixtures, &1)))
              |> Enum.sort()
