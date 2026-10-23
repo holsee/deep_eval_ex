@@ -67,6 +67,7 @@ defmodule DeepEvalEx.CLI.TestArgsTest do
 
       assert args.mix_test_args == ["test/evals" | @default_mix_args]
       assert args.color == true
+      assert args.report_color == nil
 
       assert args.overrides == [
                running: true,
@@ -134,6 +135,10 @@ defmodule DeepEvalEx.CLI.TestArgsTest do
 
     test "--color yes, no and auto" do
       assert TestArgs.parse!(["t", "--color", "no"]).color == false
+      assert TestArgs.parse!(["t", "--color", "no"]).report_color == false
+      assert TestArgs.parse!(["t", "--color", "yes"]).report_color == true
+      assert TestArgs.parse!(["t", "--color=YES"]).report_color == true
+      assert TestArgs.parse!(["t", "--color", "auto"]).report_color == nil
       assert "--no-color" in TestArgs.parse!(["t", "--color", "no"]).mix_test_args
       assert TestArgs.parse!(["t", "--color", "auto"]).color == nil
       assert TestArgs.parse!(["t", "--color", "auto"]).mix_test_args == ["t"]

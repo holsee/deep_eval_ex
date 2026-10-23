@@ -54,7 +54,10 @@ defmodule Mix.Tasks.DeepEval.Test do
   - `-m`, `--mark EXPR` - Run tests tagged `tag`, not tagged (`not tag`),
     or tagged with any of `a or b`
   - `--durations N` - Print the N slowest tests (default: 10; 0 for none)
-  - `--color yes|no|auto` - Colour (default: `yes`)
+  - `--color yes|no|auto` - ExUnit's colour (default: `yes`). Given as
+    `yes` or `no`, it also turns the report's colour on or off; by default
+    the report is coloured only on a terminal, as deepeval's Rich report
+    is (see `DeepEvalEx.Report.Terminal`)
   - `-o`, `--official` - Prints that it needs a Confident AI key, which
     DeepEvalEx never has
   - `--eval-mode llm|hybrid|system_one` - The run's eval mode (DeepEvalEx
@@ -151,7 +154,7 @@ defmodule Mix.Tasks.DeepEval.Test do
       Manager.wrap_up(
         Map.drop(drained, [:skipped, :warnings]),
         [run_duration: run_duration, display_table: true, display: Config.get(:display)] ++
-          [cache: cache] ++ color(args.color)
+          [cache: cache] ++ color(args.report_color)
       )
 
     :telemetry.execute(

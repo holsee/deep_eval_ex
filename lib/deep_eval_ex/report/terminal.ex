@@ -14,18 +14,41 @@ defmodule DeepEvalEx.Report.Terminal do
   column cut with `…` (or folded, for a column with `overflow: :fold`), and
   headers aligned to the bottom of their row. Without colour, the
   `Test Results` table and its turn tables come out byte for byte as
-  deepeval prints them, at any width (see the report fixtures'
-  `table_<width>.txt`). Panels and trees only resemble Rich's (ADR-0010
-  decision 10). Rows tagged `:confident_ai` are not drawn.
+  deepeval prints them; this is checked against Rich's own renders at 60,
+  80, 100, 120 and 160 columns (the report fixtures' `table_<width>.txt`).
+  Panels and trees only resemble Rich's (ADR-0010 decision 10). Rows
+  tagged `:confident_ai` are not drawn.
 
   Emoji and East Asian wide characters count as two columns.
 
+  ## Colour
+
+  Styles are drawn as ANSI escapes the way deepeval's Rich `Console`
+  decides it (`Console.is_terminal`, `is_dumb_terminal`, `no_color`):
+
+  - only when writing to a terminal: `TTY_COMPATIBLE=1` says it is one and
+    `TTY_COMPATIBLE=0` that it is not; else a set `FORCE_COLOR` says it is
+    one when not empty and is not one when empty; else it is one when
+    standard output is a terminal;
+  - not on a dumb terminal, whose `TERM` is `dumb` or `unknown`;
+  - with `NO_COLOR` set and not empty, without colours: bold, dim and
+    italic are still drawn.
+
+  Standard output is a terminal when the `:stdout` option of
+  `:io.getopts(:standard_io)` says so (OTP 26 and later report whether
+  the emulator's standard output is a TTY). On an older OTP, which lacks
+  it, its `:terminal` option, else a width from `:io.columns/0`, stands
+  in. A run under CI, through a pipe, or in `docker exec` or
+  `devcontainer exec` without `-t` therefore prints no escapes, as
+  deepeval does. Rich's colour system (8, 256 or true colour) is not
+  ported: `rgb(...)` styles are drawn as true colour.
+
   ## Options
 
-  - `:width` - Columns to draw in (default: `width/1`: the `COLUMNS`
-    environment variable, else the terminal's width, else 80)
-  - `:color` - Draw styles as ANSI escapes (default: `IO.ANSI.enabled?/0`,
-    unless the `NO_COLOR` environment variable is set)
+  - `:width` - Columns to draw in (default: `width/1`)
+  - `:color` - `true` or `false` to draw styles as ANSI escapes or not,
+    whatever the terminal and environment (default: as Rich decides, see
+    "Colour")
   """
 
   alias DeepEvalEx.Report
@@ -34,13 +57,16 @@ defmodule DeepEvalEx.Report.Terminal do
   # A drawn line: its iodata and its width in columns.
   @typep line :: {iodata(), non_neg_integer()}
 
+  # How styles are drawn: not at all, fully, or without colours (NO_COLOR).
+  @typep color :: boolean() | :no_color
+
   @doc """
   Draws `renderables` (one or a list), one after the other, each line
   ending with a newline.
   """
   @spec render(Report.renderable() | [Report.renderable()], keyword()) :: iodata()
   def render(renderables, opts \\ []) do
-    ctx = %{width: width(opts), color: color?(opts)}
+    ctx = %{width: width(opts), color: color(opts)}
 
     renderables
     |> List.wrap()
@@ -53,7 +79,7 @@ defmodule DeepEvalEx.Report.Terminal do
   """
   @spec render_text(Report.text(), keyword()) :: iodata()
   def render_text(text, opts \\ []) do
-    color = color?(opts)
+    color = color(opts)
 
     text
     |> glyphs([])
@@ -62,38 +88,103 @@ defmodule DeepEvalEx.Report.Terminal do
   end
 
   @doc """
-  The width, in columns, `render/2` draws in: the `:width` option, else
-  the `COLUMNS` environment variable when it is a positive number, else the
-  terminal's width when one is attached, else 80. Rich's `Console` sizes
-  itself the same way, so a run without a terminal (CI, a pipe, `docker
-  exec` without `-t`) and `COLUMNS` unset draws 80 columns wide, as
-  deepeval does.
+  The width, in columns, `render/2` draws in, as Rich's `Console.size`
+  works it out:
+
+  1. the `:width` option;
+  2. 80 on a dumb terminal (see "Colour" in the moduledoc), unless both
+     `COLUMNS` and `LINES` are set;
+  3. the `COLUMNS` environment variable, when it is all digits;
+  4. the terminal's width, when one is attached (`:io.columns/0`);
+  5. 80.
+
+  So a run without a terminal (CI, a pipe, `docker exec` without `-t`)
+  and `COLUMNS` unset draws 80 columns wide, as deepeval does.
+
+  Two edge cases differ from Rich. `COLUMNS=0` gives 80: Rich's `Console`
+  takes it as a width of 0 and draws nothing. And `COLUMNS` must be ASCII
+  digits, where Python's `str.isdigit` also accepts other Unicode digits.
   """
   @spec width(keyword()) :: pos_integer()
   def width(opts \\ []) do
-    with nil <- Keyword.get(opts, :width),
-         nil <- env_columns() do
-      case :io.columns() do
-        {:ok, columns} when columns > 0 -> columns
-        _no_terminal -> 80
-      end
+    columns = env_digits("COLUMNS")
+
+    cond do
+      opts[:width] -> opts[:width]
+      columns != nil and env_digits("LINES") != nil -> positive_or_80(columns)
+      dumb_terminal?() -> 80
+      columns != nil -> positive_or_80(columns)
+      true -> terminal_columns() || 80
     end
   end
 
-  # Rich reads COLUMNS only when it is all digits.
-  defp env_columns do
-    columns = System.get_env("COLUMNS", "")
-
-    if columns =~ ~r/\A[0-9]+\z/ and String.to_integer(columns) > 0,
-      do: String.to_integer(columns)
+  # Rich reads COLUMNS and LINES only when they are all digits.
+  defp env_digits(var) do
+    value = System.get_env(var, "")
+    if value =~ ~r/\A[0-9]+\z/, do: String.to_integer(value)
   end
 
-  defp color?(opts) do
+  defp positive_or_80(0), do: 80
+  defp positive_or_80(columns), do: columns
+
+  defp terminal_columns do
+    case :io.columns() do
+      {:ok, columns} when columns > 0 -> columns
+      _no_terminal -> nil
+    end
+  end
+
+  @spec color(keyword()) :: color()
+  defp color(opts) do
     case Keyword.fetch(opts, :color) do
-      {:ok, color} -> color
-      :error -> System.get_env("NO_COLOR", "") == "" and IO.ANSI.enabled?()
+      {:ok, color} when is_boolean(color) -> color
+      _auto -> auto_color()
     end
   end
+
+  # Console._detect_color_system and Console.no_color.
+  defp auto_color do
+    cond do
+      not terminal?() or dumb_terminal?() -> false
+      System.get_env("NO_COLOR", "") != "" -> :no_color
+      true -> true
+    end
+  end
+
+  # Console.is_terminal: TTY_COMPATIBLE, then FORCE_COLOR, then whether
+  # standard output is a TTY.
+  defp terminal? do
+    case System.get_env("TTY_COMPATIBLE") do
+      "0" ->
+        false
+
+      "1" ->
+        true
+
+      _auto ->
+        case System.get_env("FORCE_COLOR") do
+          nil -> stdout_tty?()
+          force_color -> force_color != ""
+        end
+    end
+  end
+
+  # Console.is_dumb_terminal.
+  defp dumb_terminal? do
+    terminal?() and String.downcase(System.get_env("TERM", "")) in ["dumb", "unknown"]
+  end
+
+  # :io.columns/0 alone cannot tell: a terminal whose size is unknown
+  # (a pseudo-terminal of 0x0, say) answers {:error, :enotsup} too.
+  defp stdout_tty? do
+    case :io.getopts(:standard_io) do
+      opts when is_list(opts) -> Keyword.get_lazy(opts, :stdout, fn -> older_otp_tty?(opts) end)
+      _error -> false
+    end
+  end
+
+  defp older_otp_tty?(opts),
+    do: Keyword.get_lazy(opts, :terminal, fn -> terminal_columns() != nil end)
 
   # -- Renderables ---------------------------------------------------------
 
@@ -659,14 +750,19 @@ defmodule DeepEvalEx.Report.Terminal do
   defp styled(string, _styles, false), do: string
   defp styled(string, [], true), do: string
 
-  defp styled(string, styles, true) do
-    case styles |> Enum.flat_map(&String.split/1) |> Enum.map_join(&ansi/1) do
+  defp styled(string, styles, color) do
+    case styles |> Enum.flat_map(&String.split/1) |> Enum.map_join(&ansi(&1, color)) do
       "" -> string
       codes -> [codes, string, IO.ANSI.reset()]
     end
   end
 
   @colors ~w(black red green yellow blue magenta cyan white)
+  @attributes ~w(bold dim italic)
+
+  # Segment.remove_color: NO_COLOR keeps the attributes only.
+  defp ansi(style, :no_color), do: if(style in @attributes, do: ansi(style), else: "")
+  defp ansi(style, true), do: ansi(style)
 
   defp ansi("bold"), do: IO.ANSI.bright()
   defp ansi("dim"), do: IO.ANSI.faint()

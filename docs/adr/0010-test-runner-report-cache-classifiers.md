@@ -118,7 +118,7 @@ The task requires `MIX_ENV=test`. If `Mix.env()` is not `:test`, it raises with 
 | deepeval | `mix deep_eval.test` | Effect |
 |---|---|---|
 | `test_file_or_directory` (required) | `PATH` (required) | `file::name` becomes `PATH --only test:"name"`; `file:line` passes through; `testFile` = PATH verbatim |
-| `--color yes` | `--color yes\|no\|auto` | `yes` → `--color`, `no` → `--no-color`; also forces or disables colour in the renderer |
+| `--color yes` | `--color yes\|no\|auto` | `yes` → `--color`, `no` → `--no-color`; given explicitly, also forces or disables colour in the renderer, which otherwise colours only on a terminal, as deepeval's Rich report does |
 | `--durations 10` | `--durations N` (default 10) | `--slowest N`, passed by default as deepeval does; `0` omits it |
 | `--pdb` | `--pdb` | raises with a hint: `iex -S mix deep_eval.test ... -- --breakpoints` |
 | `-x/-X`, `--exit-on-first-failure` | same | `--max-failures 1` |
@@ -331,7 +331,7 @@ There are two tiers, and neither ports Rich's layout engine:
 
   `Report.Markdown` ports `export_to_markdown`, which is plain string building, and is reached through `file_output_dir:`.
 
-`Report.Terminal` renders sections with box-drawing characters and IO.ANSI. It honours `IO.ANSI.enabled?/0`, `NO_COLOR`, `--color`, `COLUMNS` and `:io.columns/0` (default 80), and counts wide emoji and CJK as two cells. It looks like deepeval's output but is not byte-identical, and snapshot tests cover it.
+`Report.Terminal` renders sections with box-drawing characters and IO.ANSI. It decides colour and width as Rich's `Console` does: colour only when standard output is a terminal (`:io.getopts/1`), honouring `TTY_COMPATIBLE`, `FORCE_COLOR`, `NO_COLOR` and a dumb `TERM`; width from `COLUMNS`, then `:io.columns/0`, else 80. An explicit `--color` or `:color` option wins. It counts wide emoji and CJK as two cells. It looks like deepeval's output but is not byte-identical, and snapshot tests cover it.
 
 `evaluate_run/3` prints the report and the summary when `print_results` is true. `DeepEvalEx.evaluate/3` never prints unless the caller passes `print_results: true` (decision 3). Further options are `display: :all | :failing | :passing`, `truncate_passing_cases: true` and `file_output_dir: nil`.
 

@@ -1951,9 +1951,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     `evaluate_run/3` with `file_output_dir:` while printing, as
     `<identifier>_<YYYYMMDD_HHMMSS>.md`. The HTML export is not ported.
   - `DeepEvalEx.Report.Terminal` draws all of them with box-drawing
-    characters and ANSI colours, honouring `COLUMNS`, the terminal width,
-    `NO_COLOR` and `IO.ANSI.enabled?/0`, and counting emoji and East Asian
-    wide characters as two columns. Tables take Rich's column widths and
+    characters and ANSI colours, deciding colour and width as Rich's
+    `Console` does (`COLUMNS`, the terminal, `NO_COLOR`, `FORCE_COLOR`,
+    `TTY_COMPATIBLE`, `TERM`), and counting emoji and East Asian wide
+    characters as two columns. Tables take Rich's column widths and
     wrapping; panels and trees resemble Rich's without being
     byte-identical. Rows and lines advertising Confident AI are kept
     in the data but not drawn, and warnings print without their links.
@@ -2416,12 +2417,30 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   its column is cut with `…` (or folded, with the new column option
   `overflow: :fold`), and headers align to the bottom of their row. Without
   colour the `Test Results` table and the turn tables now match deepeval's
-  output byte for byte at any width, checked against Rich's own renders at
-  60, 80, 100, 120 and 160 columns. `ResultsTable.build/3` takes the
+  output byte for byte at 60, 80, 100, 120 and 160 columns, the widths
+  checked against Rich's own renders. `ResultsTable.build/3` takes the
   console width (`:width`, as `Terminal.width/1` reads it) for the turn
   tables' Details and Tools limits, which were fixed at 80 columns, and
   `Terminal.width/1` reads `COLUMNS` only when it is all digits, as Rich
   does.
+- `mix deep_eval.test` printed the report in ANSI colour when no terminal
+  was attached (CI, a pipe, `devcontainer exec` without `-t`): the default
+  `--color yes` forced it, and `IO.ANSI.enabled?/0` is true under Mix.
+  deepeval passes `--color` only to pytest; its report is Rich's, which
+  colours only on a terminal. `DeepEvalEx.Report.Terminal` now decides
+  colour as Rich's `Console` does: only when standard output is a terminal
+  (the `:stdout` option of `:io.getopts/1`), with `TTY_COMPATIBLE=0|1` and
+  `FORCE_COLOR` (empty: off, else on) overriding that, no colour on a
+  `TERM=dumb` or `unknown` terminal, and `NO_COLOR` dropping colours while
+  keeping bold, dim and italic. The `:color` option still wins.
+  `mix deep_eval.test` turns the report's colour on or off only when
+  `--color yes` or `no` is given (the new `TestArgs` field
+  `:report_color`); `--color` still sets ExUnit's colour, as it sets
+  pytest's.
+- `DeepEvalEx.Report.Terminal.width/1` now matches Rich's `Console.size`
+  on its edge cases: a dumb terminal draws 80 columns wide even with
+  `COLUMNS` set (unless `LINES` is set too), and `COLUMNS=0` gives 80
+  rather than the terminal's width (Rich takes it as 0 and draws nothing).
 - `DeepEvalEx.evaluate/3` raised `FunctionClauseError` for
   `DeepEvalEx.ConversationalTestCase`s: `DeepEvalEx.TestResult.new/4` now
   builds a conversational test result (`conversational: true`, named

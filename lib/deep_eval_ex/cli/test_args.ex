@@ -21,8 +21,13 @@ defmodule DeepEvalEx.CLI.TestArgs do
   - `:mix_test_args` - the arguments for `mix test`, as `command.py` builds
     `pytest_args`
   - `:messages` - lines to print before the run (the `--official` warning)
-  - `:color` - `true` or `false` for `--color yes` or `no`, `nil` for
-    `auto`
+  - `:color` - `true` or `false` for `--color yes` (the default) or `no`,
+    `nil` for `auto`: ExUnit's colour, as `command.py` passes `--color` to
+    pytest
+  - `:report_color` - `true` or `false` when `--color yes` or `no` is
+    given, else `nil`: the report's colour. deepeval's report is Rich's,
+    which `--color` does not reach, so by default the report colours only
+    on a terminal (see `DeepEvalEx.Report.Terminal`)
 
   | `deepeval test run` | `mix deep_eval.test` | Effect |
   |---|---|---|
@@ -65,10 +70,16 @@ defmodule DeepEvalEx.CLI.TestArgs do
           overrides: keyword(),
           mix_test_args: [String.t()],
           messages: [String.t()],
-          color: boolean() | nil
+          color: boolean() | nil,
+          report_color: boolean() | nil
         }
 
-  defstruct path: nil, overrides: [], mix_test_args: [], messages: [], color: true
+  defstruct path: nil,
+            overrides: [],
+            mix_test_args: [],
+            messages: [],
+            color: true,
+            report_color: nil
 
   @official_warning "Warning: --official requires a CONFIDENT_API_KEY environment variable " <>
                       "to be set. Skipping."
@@ -124,7 +135,8 @@ defmodule DeepEvalEx.CLI.TestArgs do
 
   # command.py's defaults.
   @defaults %{
-    color: "yes",
+    # command.py's default is "yes"; nil tells it was not given.
+    color: nil,
     # command.py's default is 10, but mix test's --slowest turns on --trace,
     # which runs one test at a time: it is passed only when asked for.
     durations: nil,
@@ -306,7 +318,7 @@ defmodule DeepEvalEx.CLI.TestArgs do
               "Run `iex -S mix deep_eval.test #{path} -- --breakpoints` instead."
     end
 
-    color = color!(opts.color)
+    color = color!(opts.color || "yes")
 
     # command.py raises after building the pytest arguments, before running.
     if opts.repeat != nil and opts.repeat < 1,
@@ -317,7 +329,8 @@ defmodule DeepEvalEx.CLI.TestArgs do
       overrides: overrides(path, opts),
       mix_test_args: mix_test_args(path, opts, color, extras),
       messages: if(opts.official, do: [@official_warning], else: []),
-      color: color
+      color: color,
+      report_color: if(opts.color, do: color)
     }
   end
 

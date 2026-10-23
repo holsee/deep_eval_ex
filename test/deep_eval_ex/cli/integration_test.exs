@@ -71,6 +71,24 @@ defmodule DeepEvalEx.CLI.IntegrationTest do
     end
   end
 
+  # deepeval passes --color=yes to pytest, but its report is Rich's, which
+  # draws 80 columns wide and without colour when no terminal is attached
+  # and COLUMNS is unset (System.cmd's output is a pipe).
+  test "mix deep_eval.test prints the report without colour when no terminal is attached",
+       %{tmp_dir: dir} do
+    {output, _status} =
+      mix(
+        ["deep_eval.test", @test_file, "--", "--seed", "0"],
+        [{"DEEPEVAL_CACHE_FOLDER", dir}] ++
+          Enum.map(~w(COLUMNS LINES FORCE_COLOR TTY_COMPATIBLE NO_COLOR), &{&1, nil})
+      )
+
+    [_exunit, report] = String.split(output, "Test Results", parts: 2)
+    refute report =~ "\e["
+    assert [top | _] = report |> String.split("\n") |> Enum.filter(&String.starts_with?(&1, "┏"))
+    assert String.length(top) == 80
+  end
+
   test "mix deep_eval.test rejects a path that does not exist", %{tmp_dir: dir} do
     {output, status} =
       mix(["deep_eval.test", "test/missing_test.exs"], [{"DEEPEVAL_CACHE_FOLDER", dir}])
