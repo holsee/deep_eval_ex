@@ -113,6 +113,27 @@ defmodule DeepEvalEx.ExUnit.CollectorTest do
     end
   end
 
+  describe "assert_trace/3 in a run" do
+    test "records the test case with its trace, named after the test", context do
+      start_run(context)
+      golden = %DeepEvalEx.Dataset.Golden{input: "2 + 2?", expected_output: "4"}
+
+      assert_trace(golden, [ExactMatch], fn ->
+        DeepEvalEx.Tracing.span(:agent, [name: "calc", input: %{"q" => "2 + 2?"}], fn -> "4" end)
+      end)
+
+      %{cases: [recorded]} = Collector.drain()
+
+      assert recorded.name ==
+               "test assert_trace/3 in a run records the test case with its trace, " <>
+                 "named after the test"
+
+      assert recorded.order == nil
+      assert [%MetricData{name: "Exact Match", success: true}] = recorded.metrics_data
+      assert [%{values: [{"uuid", _}, {"name", "calc"} | _]}] = recorded.trace["agentSpans"]
+    end
+  end
+
   describe "assert_test/3 in a run" do
     test "records the test case, named after the test", context do
       start_run(context)

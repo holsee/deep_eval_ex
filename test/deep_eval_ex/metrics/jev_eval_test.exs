@@ -5,7 +5,7 @@ defmodule DeepEvalEx.Metrics.JevEvalTest do
   use ExUnit.Case, async: true
 
   alias DeepEvalEx.{DeepEvalError, Evaluator, MissingTestCaseParamsError, Result, TestCase}
-  alias DeepEvalEx.Metrics.JevEval
+  alias DeepEvalEx.Metrics.{BaseMetric, JevEval}
   alias DeepEvalEx.SystemOne.Adapters.Mock
   alias DeepEvalEx.SystemOne.{Answers, Error, Scored}
   alias DeepEvalEx.TestRun.JSON
@@ -401,7 +401,56 @@ defmodule DeepEvalEx.Metrics.JevEvalTest do
       assert Mock.calls(mock) == []
     end
 
-    test "without evaluation params needs a trace, which no test case carries yet" do
+    test "without evaluation params asks about the compacted trace dict" do
+      mock = Mock.new(answers: %Answers{nouls: %{"q_0" => %Answers.Noul{probability: 0.9}}})
+
+      metric =
+        JevEval.new(
+          name: "Tool Use",
+          questions: [
+            Scored.Noul.new!(statement: "The agent called order_lookup before answering.")
+          ],
+          system_one_model: mock
+        )
+
+      assert JevEval.requires_trace?(metric)
+      assert BaseMetric.requires_trace?(metric)
+
+      trace_dict =
+        Jason.OrderedObject.new([
+          {"name", "answer"},
+          {"type", "agent"},
+          {"input", Jason.OrderedObject.new([{"query", "hi"}])},
+          {"output", "there"},
+          {"error", ""},
+          {"input_token_count", 42.0},
+          {"children",
+           [
+             Jason.OrderedObject.new([
+               {"name", "order_lookup"},
+               {"type", "tool"},
+               {"children", []}
+             ])
+           ]}
+        ])
+
+      assert {:ok, %Result{score: 0.9}} =
+               JevEval.evaluate(metric, %TestCase{input: "None", trace_dict: trace_dict})
+
+      assert [%{state: state}] = Mock.calls(mock)
+
+      assert JSON.encode!(state) ==
+               ~S({"trace": {"name": "answer", "type": "agent", "input": {"query": "hi"}, ) <>
+                 ~S("output": "there", "children": [{"name": "order_lookup", "type": "tool"}]}})
+    end
+
+    test "with evaluation params does not require the trace" do
+      {metric, _mock} = metric()
+      refute JevEval.requires_trace?(metric)
+      refute BaseMetric.requires_trace?(metric)
+    end
+
+    test "without evaluation params needs a trace dict" do
       mock = Mock.new(answers: %Answers{nouls: %{"q_0" => %Answers.Noul{probability: 0.9}}})
 
       metric =

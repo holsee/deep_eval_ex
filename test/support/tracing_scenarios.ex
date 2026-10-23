@@ -18,7 +18,8 @@ defmodule DeepEvalEx.Test.TracingScenarios do
 
   Keyword arguments become options as the generator's `tracing_kwargs`
   builds them: a `test_case` and tool calls from their fields, a `prompt`
-  as a map, `token_intervals` keys (`perf_counter` seconds) as
+  as a map (its `text_template` `"{input}"` unless given, as the
+  generator's `build_prompt`), `token_intervals` keys (`perf_counter` seconds) as
   microseconds, and `metrics`, like a function's own, as metric specs
   (`metric/1`). A metric DeepEvalEx does not have yet is left out, and
   `supported_metrics?/1` tells whether a scenario has one.
@@ -275,8 +276,12 @@ defmodule DeepEvalEx.Test.TracingScenarios do
 
   defp option(:test_case, fields), do: DeepEvalEx.TestCase.new!(fields)
 
-  defp option(:prompt, fields),
-    do: Map.new(fields, fn {key, value} -> {String.to_existing_atom(key), value} end)
+  # build_prompt: a Prompt's text template is "{input}" unless given.
+  defp option(:prompt, fields) do
+    fields
+    |> Map.new(fn {key, value} -> {String.to_existing_atom(key), value} end)
+    |> Map.put_new(:text_template, "{input}")
+  end
 
   defp option(:token_intervals, intervals) do
     Map.new(intervals, fn {seconds, text} ->

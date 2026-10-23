@@ -101,6 +101,38 @@ defmodule DeepEvalEx.Evaluator.AgenticTest do
     ])
   end
 
+  describe "mode: :trace_scope" do
+    test "measures the spans, then the trace, falling back to the golden and the first root's output" do
+      golden = %Golden{
+        input: nil,
+        expected_output: "golden expected",
+        context: ["golden context"],
+        retrieval_context: ["golden retrieval"]
+      }
+
+      root = span("r1", input: %{"q" => "r1"}, output: "root output", metrics: [probe("r1")])
+
+      outcome =
+        Agentic.evaluate(trace([root], metrics: [probe("trace")], context: []), golden,
+          mode: :trace_scope,
+          index: nil
+        )
+
+      assert_received {:measured, "r1", _test_case}
+      assert_received {:measured, "trace", test_case}
+      assert test_case.input == "None"
+      assert test_case.actual_output == "root output"
+      assert test_case.expected_output == "golden expected"
+      assert test_case.context == ["golden context"]
+      assert test_case.retrieval_context == ["golden retrieval"]
+
+      assert outcome.test_case.name == "test_case_None"
+      assert outcome.test_case.actual_output == "root output"
+      assert outcome.test_case.expected_output == nil
+      assert outcome.test_case.trace["output"] == "root output"
+    end
+  end
+
   describe "walk order" do
     test "async exports every root's spans in breadth-first level order" do
       outcome = Agentic.evaluate(forest(), @golden)

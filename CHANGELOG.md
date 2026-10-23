@@ -495,15 +495,22 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - Before asking, the test case is checked as deepeval does. A multimodal
     test case (one with a `[DEEPEVAL:IMAGE:...]` or `[DEEPEVAL:PDF:...]`
     marker) raises `ArgumentError`. A missing evaluation param returns
-    `{:error, {:missing_params, params}}`. Without `:evaluation_params`,
-    deepeval asks about the agent's trace. DeepEvalEx test cases carry no
-    trace yet, so such a metric raises `DeepEvalEx.MissingTestCaseParamsError`
-    with deepeval's message. The trace state comes later.
+    `{:error, {:missing_params, params}}`.
+  - Without `:evaluation_params` a JevEval asks about the agent's trace, as
+    deepeval's: it requires the trace (`JevEval.requires_trace?/1`), and
+    its state is `{"trace": ...}`, the test case's nested trace dict
+    (`:trace_dict`) compacted by `DeepEvalEx.Tracing.CompactTrace`. A test
+    case without one raises `DeepEvalEx.MissingTestCaseParamsError` with
+    deepeval's message. `DeepEvalEx.evaluate_traced/3` and
+    `DeepEvalEx.ExUnit.assert_trace/3` give test cases their trace dict.
 
-  The System One parity test now also measures the `jev_eval` and
-  `jev_eval_strict_not_applicable` fixtures, which match deepeval byte for
-  byte: the request, the measured state, the verbose logs and the exported
-  test run.
+  The System One parity test now also measures the `jev_eval`,
+  `jev_eval_strict_not_applicable` and `jev_eval_trace` fixtures, which
+  match deepeval byte for byte: the request, the measured state, the
+  verbose logs and the exported test run. `jev_eval_trace` is new: the
+  System One generator gives a scenario's test case a `trace` as its
+  `_trace_dict`, and regenerates only the scenarios named on its command
+  line.
 - **Batched System One requests in `evaluate()`** (ADR-0009), a port of
   deepeval 4.3.1's `system_one_batch.py`. When two or more of a test case's
   metrics run under the `:system_one` eval mode, `DeepEvalEx.Evaluator` now
@@ -2308,6 +2315,51 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `requires_trace?/1` callbacks, deepeval's `requires_trace`, and
   `BaseMetric.requires_trace?/1` to ask a module, `{module, opts}` or
   metric struct (`false` when the metric does not implement them).
+- **`DeepEvalEx.evaluate_traced/3`, a traced task over goldens** (ADR-0011),
+  deepeval 4.3.1's `dataset.evals_iterator()` and the `loop.py` iterators
+  behind it (`DeepEvalEx.Evaluator.Traced`). It calls a task with each
+  golden of a list or `DeepEvalEx.Dataset.EvaluationDataset`, captures the
+  traces its spans make, evaluates each with
+  `DeepEvalEx.Evaluator.Agentic.evaluate/3`, and saves and wraps up the
+  run as `evaluate_run/3` does. It returns a `DeepEvalEx.EvaluationResult`;
+  `Traced.run/3` also returns the `DeepEvalEx.TestRun` and the file's
+  path. The [Tracing](wiki/guides/Tracing.md) guide covers it.
+  - `mode: :async` (the default) runs the goldens concurrently, one task
+    each, in place of deepeval's `EvalSession` routing, and makes every
+    trace a test case of its own, numbered across the run. A task that
+    raises marks its trace and root `ERRORED` with `format_error_text`
+    (`"RuntimeError: agent gave up"`); one still running after `:timeout`
+    (deepeval's per-task timeout by default) is killed and marked
+    `"DeepEvalError: Task was cancelled (likely due to timeout)."`.
+  - `mode: :sync` runs the goldens one after the other inside deepeval's
+    wrapper span, keeps only its first child (a second top-level span is
+    dropped, as in deepeval), numbers the test cases from 1, and raises
+    what the task raises.
+  - The run's `prompts` are the LLM spans' prompts, once per alias, with
+    `hyperparameters` `{}`; `:hyperparameters` replace both, as
+    `evals_iterator` does. A dataset's alias, id and version are the run's.
+  - A run with no metric anywhere and no golden expectations raises
+    `DeepEvalEx.DeepEvalError` with deepeval's `NoMetricsError` message, and
+    no goldens raises `ArgumentError` ("Unable to evaluate dataset with no
+    goldens.").
+  - Every traced scenario but `requires_trace` (its metrics come later)
+    saves deepeval's `test_run_sync.json` and `test_run_async.json` byte
+    for byte, `raised_uncaught`, `prompts` and `hyperparameters` included.
+- **`DeepEvalEx.ExUnit.assert_trace/3,4`**, deepeval 4.3.1's trace-scoped
+  `assert_test(golden=..., metrics=...)` (`evaluate/execute/trace_scope.py`).
+  It runs a function inside deepeval's pytest wrapper span and evaluates
+  the trace against the golden with `DeepEvalEx.Evaluator.Agentic`'s new
+  `mode: :trace_scope`: the wrapper's first child is walked as in sync
+  mode, its spans measured before the trace, whose metrics (the trace's
+  own plus the given ones) see the golden's input (`"None"` without one),
+  the trace's output or else the first span's, and the golden's expected
+  output, context, retrieval context and expected tools where the trace
+  has none. It flunks with `assert_test`'s message, raises deepeval's "No
+  active trace found for this test. ..." when the function makes no span,
+  follows the error and verbose settings as `assert_test/2,3`, and under
+  `mix deep_eval.test` records the test case with its trace.
+  `Agentic.evaluate/3` with `index: nil` now names an unnamed golden's test
+  case `"test_case_None"`, as deepeval's `create_api_test_case`.
 
 ### Changed
 

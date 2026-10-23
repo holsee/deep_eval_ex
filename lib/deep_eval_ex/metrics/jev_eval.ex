@@ -80,10 +80,24 @@ defmodule DeepEvalEx.Metrics.JevEval do
 
   ## The trace
 
-  In deepeval, a JevEval without `:evaluation_params` asks about the
-  agent's trace instead of test case fields. DeepEvalEx test cases carry no
-  trace yet, so such a metric raises `DeepEvalEx.MissingTestCaseParamsError`
-  for every test case, with deepeval's message.
+  Without `:evaluation_params` a JevEval asks about the agent's trace
+  instead of test case fields, as deepeval's: it requires the trace
+  (`requires_trace?/1`), and its System One state is `{"trace": ...}`, the
+  test case's nested trace dict (`:trace_dict`) compacted by
+  `DeepEvalEx.Tracing.CompactTrace`. `DeepEvalEx.evaluate_traced/3` and
+  `DeepEvalEx.ExUnit.assert_trace/3` give a test case its trace dict, so
+  pass the metric there, on a trace or a span:
+
+      metric =
+        JevEval.new(
+          name: "Trajectory",
+          questions: [Scored.Noul.new!(statement: "The agent looked the order up before replying.")]
+        )
+
+      DeepEvalEx.evaluate_traced(goldens, &MyApp.Support.answer(&1.input), metrics: [metric])
+
+  A test case without a trace dict raises
+  `DeepEvalEx.MissingTestCaseParamsError` with deepeval's message.
 
   ## Options
 
@@ -115,6 +129,7 @@ defmodule DeepEvalEx.Metrics.JevEval do
   alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Schemas.RetrievedContextData
   alias DeepEvalEx.SystemOne.{Context, Model, Scored, Scoring, State}
+  alias DeepEvalEx.Tracing.CompactTrace
 
   @enforce_keys [:name, :questions, :system_one_model]
   defstruct [
@@ -237,6 +252,14 @@ defmodule DeepEvalEx.Metrics.JevEval do
   def required_params, do: []
 
   @doc """
+  Whether a configured JevEval asks about the trace, deepeval's
+  `requires_trace`: when it has no `:evaluation_params`.
+  """
+  @impl true
+  @spec requires_trace?(t()) :: boolean()
+  def requires_trace?(%__MODULE__{evaluation_params: params}), do: params in [nil, []]
+
+  @doc """
   The System One model's name, deepeval's `evaluation_model`, reported
   even on an errored result.
   """
@@ -276,7 +299,8 @@ defmodule DeepEvalEx.Metrics.JevEval do
   The test case is checked first, as deepeval's `_check_params`: a
   multimodal one raises `ArgumentError`, one missing an evaluation param
   returns `{:error, {:missing_params, params}}`, and without
-  `:evaluation_params` `DeepEvalEx.MissingTestCaseParamsError` is raised.
+  `:evaluation_params` one without a trace dict raises
+  `DeepEvalEx.MissingTestCaseParamsError`.
   """
   @impl true
   def measure(%TestCase{} = test_case, opts) when is_list(opts) do
@@ -305,8 +329,11 @@ defmodule DeepEvalEx.Metrics.JevEval do
               "Pass a text-only LLMTestCase."
     end
 
-    case metric.evaluation_params do
-      nil ->
+    case {metric.evaluation_params, trace_dict?(test_case.trace_dict)} do
+      {nil, true} ->
+        :ok
+
+      {nil, false} ->
         name = metric_name(metric)
 
         raise MissingTestCaseParamsError,
@@ -316,10 +343,14 @@ defmodule DeepEvalEx.Metrics.JevEval do
               "this test case has none. Run it on a traced component (`@observe` or " <>
               "`evals_iterator`), or pass evaluation_params to evaluate a plain LLMTestCase."
 
-      params ->
+      {params, _trace_dict?} ->
         TestCase.validate_params(test_case, params)
     end
   end
+
+  # deepeval's isinstance(test_case._trace_dict, Dict).
+  defp trace_dict?(%Jason.OrderedObject{}), do: true
+  defp trace_dict?(trace_dict), do: is_map(trace_dict) and not is_struct(trace_dict)
 
   defp multimodal?(%TestCase{} = test_case) do
     texts =
@@ -332,9 +363,16 @@ defmodule DeepEvalEx.Metrics.JevEval do
 
   @doc false
   def do_measure(%TestCase{} = test_case, opts) do
-    state = State.single_turn(Keyword.fetch!(opts, :evaluation_params), test_case)
-    decide(state, name(opts), opts)
+    test_case
+    |> state(Keyword.fetch!(opts, :evaluation_params))
+    |> decide(name(opts), opts)
   end
+
+  # deepeval's _state: the compacted trace, or the evaluation params' fields.
+  defp state(test_case, nil),
+    do: Jason.OrderedObject.new([{"trace", CompactTrace.compact(test_case.trace_dict)}])
+
+  defp state(test_case, params), do: State.single_turn(params, test_case)
 
   @doc false
   # One System One request about `state`, then deepeval's _finalize: the

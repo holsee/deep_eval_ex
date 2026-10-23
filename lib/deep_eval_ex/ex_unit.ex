@@ -31,6 +31,9 @@ defmodule DeepEvalEx.ExUnit do
 
   - `assert_test/2,3` - deepeval's `assert_test`: assert a test case passes
     its metrics, classifiers and expectations
+  - `assert_trace/3,4` - deepeval's `assert_test(golden=..., metrics=...)`:
+    assert that what a traced function did passes its trace and span
+    metrics
   - `assert_passes/2,3` - Assert metric evaluation passes (score >= threshold)
   - `assert_fails/2,3` - Assert metric evaluation fails (score < threshold)
   - `assert_score/3,4` - Assert score is within a range
@@ -87,6 +90,46 @@ defmodule DeepEvalEx.ExUnit do
     `assert_test`'s `warnings.warn`, it prints a warning (`IO.warn/1`)
     reading `"Flaky test case failed (no assertion raised): "` followed by
     that message, and the assertion returns its results.
+
+  ## deepeval's `assert_test(golden=...)`
+
+  `assert_trace(golden, metrics, fun)` is deepeval 4.3.1's trace-scoped
+  `assert_test(golden=golden, metrics=metrics)`
+  (`evaluate/execute/trace_scope.py`): `fun` runs your agent, instrumented
+  with `DeepEvalEx.Tracing`, and what it did is evaluated against the
+  golden.
+
+      test "refund agent completes the task" do
+        golden = %DeepEvalEx.Dataset.Golden{input: "Refund order 42", expected_output: "Refunded"}
+        assert_trace golden, [DeepEvalEx.Metrics.ExactMatch], fn -> MyApp.Refunds.run(golden.input) end
+      end
+
+  - `fun` runs inside deepeval's wrapper span, the scope deepeval's pytest
+    plugin opens around each test (`"__deepeval_internal_pytest_test_wrapper__"`),
+    so every span it makes, in any process that joins its trace (see
+    "Across processes" in `DeepEvalEx.Tracing`), is one trace. A `fun` that
+    makes no span raises `DeepEvalEx.DeepEvalError` with deepeval's `"No
+    active trace found for this test. ..."`; under `deepeval test run`
+    deepeval would evaluate the bare wrapper instead.
+  - The wrapper's first child is walked, as deepeval's sync iterator walks
+    its root, with its metrics (see `DeepEvalEx.Evaluator.Agentic`'s
+    `:trace_scope` mode). The trace errored when any top-level span did.
+  - `metrics` are added to the trace's own
+    (`DeepEvalEx.Tracing.update_current_trace/1`) and measured on the
+    golden's input (`"None"` without one) and the trace's output (else the
+    first span's), the golden filling the expected output, context,
+    retrieval context and expected tools the trace has not set. A golden
+    with expectations is also judged against them.
+  - With no metric on the trace, its spans or the call, the golden must
+    have expectations: otherwise `ArgumentError` is raised with
+    `"1 test case is missing expectations. ..."`.
+  - The test case fails when a non-flaky trace or span metric failed, and
+    the assertion flunks with `assert_test`'s message, listing the failed
+    trace-level metrics (span metrics fail the test case without being
+    listed, as in deepeval). Errors follow the settings, as
+    `assert_test/2,3`'s, and under `mix deep_eval.test` the test case is
+    recorded in the run with its trace, named after the test unless the
+    golden has a name.
 
   `assert_fails/2,3` and `assert_score/3,4` have no deepeval counterpart.
   They evaluate their metric through `DeepEvalEx.Evaluator.evaluate/3` too,
@@ -154,9 +197,12 @@ defmodule DeepEvalEx.ExUnit do
   option wins over both.
   """
 
-  alias DeepEvalEx.{Classification, Config, Evaluator, Result, TestResult, TestRun}
+  alias DeepEvalEx.{Classification, Config, DeepEvalError, Evaluator, Result, TestResult, TestRun}
+  alias DeepEvalEx.Evaluator.{Agentic, Traced}
   alias DeepEvalEx.ExUnit.Collector
   alias DeepEvalEx.Metrics.Utils.Verbose
+  alias DeepEvalEx.Tracing
+  alias DeepEvalEx.Tracing.{Span, Trace}
 
   # Settings the assertions read, as deepeval's assert_test.
   @settings [:verbose_mode, :ignore_errors, :skip_on_missing_params]
@@ -238,6 +284,28 @@ defmodule DeepEvalEx.ExUnit do
   defmacro assert_test(test_case, metrics, opts \\ []) do
     quote bind_quoted: [test_case: test_case, metrics: metrics, opts: opts] do
       DeepEvalEx.ExUnit.__assert_test__(test_case, metrics, opts)
+    end
+  end
+
+  @doc """
+  Asserts that what `fun` did, as traced by `DeepEvalEx.Tracing`, passes
+  `metrics` and the metrics its trace and spans declare, judged against
+  `golden`: deepeval's `assert_test(golden=golden, metrics=metrics)`.
+
+  See "deepeval's `assert_test(golden=...)`" in the module documentation.
+  Takes the options of `assert_test/3` (`:ignore_errors`,
+  `:skip_on_missing_params`, `:verbose_mode`, `:model`, `:timeout`, ...)
+  and returns the trace-level metrics' `DeepEvalEx.Result`s.
+
+  ## Examples
+
+      assert_trace golden, [DeepEvalEx.Metrics.ExactMatch], fn ->
+        MyApp.Support.answer(golden.input)
+      end
+  """
+  defmacro assert_trace(golden, metrics, fun, opts \\ []) do
+    quote bind_quoted: [golden: golden, metrics: metrics, fun: fun, opts: opts] do
+      DeepEvalEx.ExUnit.__assert_trace__(golden, metrics, fun, opts)
     end
   end
 
@@ -427,6 +495,63 @@ defmodule DeepEvalEx.ExUnit do
 
     results
   end
+
+  @no_active_trace "No active trace found for this test. " <>
+                     "`assert_test(golden=..., metrics=...)` must be called inside a " <>
+                     "pytest test run with `deepeval test run`, and the test body must " <>
+                     "invoke at least one `@observe`-decorated function."
+
+  @doc false
+  # trace_scope.py's _assert_test_from_current_trace, with `fun` run inside
+  # the pytest plugin's wrapper span.
+  def __assert_trace__(golden, metrics, fun, opts) when is_function(fun, 0) do
+    opts = opts |> assert_opts() |> Keyword.delete(:metrics)
+    {trace, user_spans} = trace_scope(fun)
+    trace = %{trace | metrics: trace.metrics ++ metrics}
+
+    if trace.metrics == [] and not Evaluator.has_expectations?(golden) and
+         not Enum.any?(user_spans, &span_metrics?/1),
+       do: Evaluator.validate_expectation_coverage!([golden])
+
+    %{test_case: api_test_case, test_results: [test_result | _]} =
+      Agentic.evaluate(trace, golden, [mode: :trace_scope, index: nil] ++ opts)
+
+    if Collector.active?() do
+      name = if is_nil(Map.get(golden, :name)), do: Collector.test_name(), else: golden.name
+      Collector.record(%{api_test_case | name: name || api_test_case.name, order: nil})
+    end
+
+    if test_result.success == false,
+      do: flunk!(assert_test_message(test_result.metrics_data, []))
+
+    test_result.metrics_data
+  end
+
+  # {trace, top-level user spans}: the wrapper's trace as trace_scope reads
+  # it mid-flight, errored when a top-level user span errored, with the
+  # wrapper's first child as its one root. The wrapper's output stays nil,
+  # as it has not exited yet.
+  defp trace_scope(fun) do
+    {nil, traces} =
+      Tracing.capture([], fn ->
+        Tracing.span(:base, [name: Traced.wrapper_name(), input: %{}], fn ->
+          fun.()
+          nil
+        end)
+      end)
+
+    case traces do
+      [%Trace{root_spans: [%Span{children: [first | _] = children}]} = trace | _] ->
+        status = if Enum.any?(children, &(&1.status == :errored)), do: :errored, else: :success
+        {%{trace | status: status, root_spans: [%{first | parent_uuid: nil}]}, children}
+
+      _no_user_span ->
+        raise DeepEvalError, message: @no_active_trace
+    end
+  end
+
+  defp span_metrics?(%Span{metrics: [_ | _]}), do: true
+  defp span_metrics?(%Span{children: children}), do: Enum.any?(children, &span_metrics?/1)
 
   # assert_test's CacheConfig(write_cache=get_is_running_deepeval(),
   # use_cache=should_use_cache()), keyed with the run's hyperparameters.

@@ -1,0 +1,46 @@
+[
+  {
+    "score": 0.92,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.66.\n1. The agent looked the invoice up before replying. -> clearly holds (P(yes)=0.93, confidence=0.86, weight=2)\n2. How directly did the agent get to the answer? -> \"Straight there\" (expected level=0.90 of 1.00, confidence=0.66)\nScore: 0.92 (weighted mean of 2 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Questions:\n1. [noul, weight=2] The agent looked the invoice up before replying.\n   value=0.930 applicable=True probabilities={'true': 0.93, 'false': 0.07} confidence=0.860\n2. [score, weight=1] How directly did the agent get to the answer?\n   value=0.900 applicable=True probabilities={'Wandered': 0.02, 'Some detours': 0.16, 'Straight there': 0.82} confidence=0.660 \n \nScore: 0.92\nConfidence: 0.66",
+    "confidence": 0.66,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "The agent looked the invoice up before replying.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.93,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.93,
+          "false": 0.06999999999999995
+        },
+        "confidence": 0.8600000000000001,
+        "passed": null
+      },
+      {
+        "question": "How directly did the agent get to the answer?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.9,
+        "applicable": true,
+        "probabilities": {
+          "Wandered": 0.02,
+          "Some detours": 0.16,
+          "Straight there": 0.82
+        },
+        "confidence": 0.66,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

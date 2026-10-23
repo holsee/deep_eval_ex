@@ -102,6 +102,7 @@ defmodule DeepEvalEx do
   """
 
   alias DeepEvalEx.{Config, EvaluationResult, Evaluator, Result, TestCase, TestRun}
+  alias DeepEvalEx.Evaluator.Traced
   alias DeepEvalEx.ExUnit.Collector
   alias DeepEvalEx.Report.{Console, Markdown, Terminal}
   alias DeepEvalEx.TestRun.Cache.Store
@@ -611,6 +612,77 @@ defmodule DeepEvalEx do
       dataset_id: export_opts[:dataset_id],
       dataset_version: export_opts[:dataset_version]
     )
+  end
+
+  @doc """
+  Runs a traced task over goldens and evaluates the traces it makes, as
+  deepeval's `dataset.evals_iterator()` (see `DeepEvalEx.Evaluator.Traced`
+  and the Tracing guide).
+
+  `task` is called with each `DeepEvalEx.Dataset.Golden` and runs your
+  agent, instrumented with `DeepEvalEx.Tracing` (`deftraced`, `span/3`).
+  Each trace it makes is evaluated end to end, by the trace-level
+  `:metrics` (the trace's own, `DeepEvalEx.Tracing.update_current_trace/1`,
+  when not given), and per component, by the metrics its spans declare.
+  The run is saved as `evaluate_run/3` saves one, its test cases carrying
+  their `trace`, with the run's `traceMetricsScores`.
+
+  Returns the `DeepEvalEx.EvaluationResult`: each test case's
+  `DeepEvalEx.TestResult`, then one per span with metric data (unless the
+  same as the test case's), as deepeval's `evals_iterator` collects them.
+
+  `:mode` picks deepeval's iterator: `:async` (default) runs the goldens
+  concurrently and makes every trace a test case of its own; `:sync` runs
+  them one by one inside deepeval's wrapper span, one test case per
+  golden. See "Modes" in `DeepEvalEx.Evaluator.Traced`.
+
+  Raises `ArgumentError` for no goldens (`"Unable to evaluate dataset
+  with no goldens."`), and `DeepEvalEx.DeepEvalError` when no metric is
+  declared anywhere and no golden has expectations. A metric error is
+  raised unless `ignore_errors: true`.
+
+  ## Options
+
+  - `:metrics` - The trace-level metrics (deepeval's
+    `evals_iterator(metrics=...)`), replacing the traces' own
+  - `:mode` - `:async` (default) or `:sync`
+  - `:max_concurrent` - Max goldens run, and traces evaluated, at once
+    (default: 20; `:concurrency` is an alias)
+  - `:timeout` - Milliseconds a golden's task may run in `:async` mode
+    before it is stopped (default: deepeval's per-task timeout,
+    `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE` or 180 seconds), also each
+    metric's timeout
+  - `:ignore_errors`, `:skip_on_missing_params`, `:model` - As in
+    `evaluate/3`
+  - `:results_folder`, `:results_subfolder`, `:identifier`,
+    `:hyperparameters`, `:cache_folder` - Save the run, see
+    `evaluate_run/3`; the dataset's alias, id and version are set when
+    `goldens` is a `DeepEvalEx.Dataset.EvaluationDataset`
+  - `:print_results`, `:display`, `:truncate_passing_cases` - Print the
+    report, see "Report" in `evaluate_run/3` (default: `false`, as
+    `evaluate/3`)
+
+  ## Examples
+
+      alias DeepEvalEx.Dataset.EvaluationDataset
+
+      dataset = EvaluationDataset.add_goldens_from_json_file(EvaluationDataset.new(), "goldens.json")
+
+      DeepEvalEx.evaluate_traced(dataset, fn golden -> MyApp.Support.answer(golden.input) end,
+        metrics: [DeepEvalEx.Metrics.ExactMatch],
+        identifier: "support-agent-v3"
+      )
+  """
+  @spec evaluate_traced(
+          [DeepEvalEx.Dataset.Golden.t()] | DeepEvalEx.Dataset.EvaluationDataset.t(),
+          (DeepEvalEx.Dataset.Golden.t() -> term()),
+          keyword()
+        ) :: EvaluationResult.t()
+  def evaluate_traced(goldens, task, opts \\ []) do
+    {evaluation, _test_run, _path} =
+      Traced.run(goldens, task, Keyword.put_new(opts, :print_results, false))
+
+    evaluation
   end
 
   @doc """

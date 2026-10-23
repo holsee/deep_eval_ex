@@ -53,7 +53,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     goal_accuracy_system_one_strict
     hallucination_hybrid hallucination_hybrid_fallback hallucination_system_one
     knowledge_retention_hybrid knowledge_retention_hybrid_fallback knowledge_retention_system_one
-    jev_eval jev_eval_strict_not_applicable
+    jev_eval jev_eval_strict_not_applicable jev_eval_trace
     json_correctness_hybrid json_correctness_system_one
     pii_leakage_hybrid pii_leakage_hybrid_fallback pii_leakage_system_one
     prompt_alignment_hybrid prompt_alignment_hybrid_fallback prompt_alignment_system_one

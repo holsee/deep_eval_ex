@@ -13,7 +13,8 @@ defmodule DeepEvalEx.Evaluator.AgenticParityTest do
   rebuilt with `DeepEvalEx.Tracing.Tree.build/3`'s `mode: :sync` strip,
   as deepeval ends them. The run's `prompts` and `hyperparameters` and
   the iterator itself (one capture per golden, the uncaught error's
-  marking) are `evaluate_traced/3`'s, so `raised_uncaught` is left to it;
+  marking) are `evaluate_traced/3`'s, so `raised_uncaught` is left to
+  `DeepEvalEx.Evaluator.TracedParityTest`;
   `requires_trace` declares metrics ported by later units.
   """
 

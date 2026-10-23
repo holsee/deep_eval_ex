@@ -1,0 +1,108 @@
+{
+  "description": "JevEval without evaluation_params: its state is the test case's trace (compact_trace of _trace_dict) instead of test case fields",
+  "metrics": [
+    {
+      "kind": "jev_eval",
+      "params": {
+        "name": "Trajectory",
+        "questions": [
+          {
+            "type": "noul",
+            "statement": "The agent looked the invoice up before replying.",
+            "weight": 2
+          },
+          {
+            "type": "score",
+            "question": "How directly did the agent get to the answer?",
+            "levels": [
+              "Wandered",
+              "Some detours",
+              "Straight there"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Where is my invoice?",
+    "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+  },
+  "trace": {
+    "name": "answer",
+    "type": "agent",
+    "input": {
+      "query": "Where is my invoice?"
+    },
+    "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+    "tools_called": [
+      {
+        "name": "lookup_invoice",
+        "type": "FUNCTION",
+        "description": "Finds the latest invoice",
+        "reasoning": null,
+        "output": "INV-42",
+        "input_parameters": {
+          "account": "acme"
+        }
+      }
+    ],
+    "available_tools": [
+      "lookup_invoice",
+      "escalate"
+    ],
+    "agent_handoffs": [],
+    "children": [
+      {
+        "name": "lookup_invoice",
+        "type": "tool",
+        "input": {
+          "account": "acme"
+        },
+        "output": "INV-42",
+        "description": "Finds the latest invoice",
+        "children": []
+      },
+      {
+        "name": "reply",
+        "type": "llm",
+        "input": {
+          "query": "Where is my invoice?",
+          "invoice": "INV-42"
+        },
+        "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+        "error": "",
+        "model": "gpt-4o-mini",
+        "input_token_count": 42.0,
+        "output_token_count": 12.0,
+        "children": []
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.93
+        }
+      },
+      "scores": {
+        "q_1": {
+          "score": 1.8,
+          "probabilities": {
+            "0": 0.02,
+            "1": 0.16,
+            "2": 0.82
+          },
+          "confidence": 0.66
+        }
+      }
+    }
+  }
+}

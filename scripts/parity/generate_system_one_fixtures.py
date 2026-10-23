@@ -34,8 +34,9 @@ Scenarios are defined in `SCENARIOS` below. For every scenario this script
 writes, under test/fixtures/deepeval/system_one/<scenario>/:
 
 - input.json    - the scenario: `metrics` (kind, `eval_mode`, constructor
-                  `params`) or `classifier`, one `test_case`, the
-                  `system_one` model (name, cost, the canned `answers` keyed
+                  `params`) or `classifier`, one `test_case` (with a
+                  `trace`, the nested trace dict it carries as
+                  `_trace_dict`), the `system_one` model (name, cost, the canned `answers` keyed
                   by question key, or the error it raises) and, when an LLM
                   is involved, the scripted judge's `judge_model` and
                   `responses`
@@ -60,6 +61,8 @@ source checked out at _ref/deepeval (tag v4.3.1):
     devcontainer exec --workspace-folder . \
       env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_system_one_fixtures.py
 
+Scenario names given as arguments regenerate only those scenarios.
+
 See test/fixtures/deepeval/README.md.
 """
 
@@ -82,7 +85,11 @@ FAKES = os.path.join(ROOT, "_ref", "deepeval", "tests", "test_metrics", "system_
 if sys.flags.hash_randomization:
     env = {k: v for k, v in os.environ.items() if not k.startswith("PYTHON")}
     env["PYTHONHASHSEED"] = "0"
-    os.execve(sys.executable, [sys.executable, "-s", "-P", os.path.abspath(__file__)], env)
+    os.execve(
+        sys.executable,
+        [sys.executable, "-s", "-P", os.path.abspath(__file__), *sys.argv[1:]],
+        env,
+    )
 
 
 def _load(name, path):
@@ -273,7 +280,11 @@ def build_metric(spec, system_one_model, judge):
     kind = spec["kind"]
     params = copy.deepcopy(spec.get("params", {}))
     if kind == "jev_eval":
-        params["evaluation_params"] = [SingleTurnParams(p) for p in params["evaluation_params"]]
+        # Without evaluation_params a JevEval asks about the trace.
+        if "evaluation_params" in params:
+            params["evaluation_params"] = [
+                SingleTurnParams(p) for p in params["evaluation_params"]
+            ]
         params["questions"] = [
             JEV_QUESTIONS[q.pop("type")](**q) for q in params["questions"]
         ]
@@ -366,6 +377,15 @@ def run_evaluate(name, test_case, metrics=None, classifiers=None):
     return (paths[0] if paths else None), result
 
 
+def build_test_case(scenario):
+    """The scenario's test case; with a `trace`, carrying it as the nested
+    trace dict (`_trace_dict`) evals_iterator gives a traced test case."""
+    test_case = gf.build_test_case(scenario["test_case"])
+    if "trace" in scenario:
+        test_case._trace_dict = copy.deepcopy(scenario["trace"])
+    return test_case
+
+
 def run_metric_scenario(name, scenario):
     """measure() each metric alone, then evaluate() them together."""
     system_one = scenario["system_one"]
@@ -379,7 +399,7 @@ def run_metric_scenario(name, scenario):
         # Under system_one nothing falls back: a Jev error surfaces from
         # measure() (evaluate() records it as the metric's error instead).
         try:
-            metric.measure(gf.build_test_case(scenario["test_case"]), _show_indicator=False)
+            metric.measure(build_test_case(scenario), _show_indicator=False)
             raised = None
         except Exception as e:  # noqa: BLE001 - recorded in measure.json
             raised = {"type": type(e).__name__, "message": str(e)}
@@ -396,7 +416,7 @@ def run_metric_scenario(name, scenario):
     model, answers = build_system_one(system_one)
     judges = [build_judge(scenario, spec["kind"]) for spec in scenario["metrics"]]
     metrics = [build_metric(spec, model, judge) for spec, judge in zip(scenario["metrics"], judges)]
-    path, _ = run_evaluate(name, gf.build_test_case(scenario["test_case"]), metrics=metrics)
+    path, _ = run_evaluate(name, build_test_case(scenario), metrics=metrics)
     evaluate_calls = decide_calls(model, answers, cost)
     assert_exhausted(system_one, *canned)
     if answers:
@@ -524,6 +544,48 @@ PARIS = {
     "context": [
         "Paris is the capital and largest city of France.",
         "The Louvre, the world's most-visited museum, opened in 1793.",
+    ],
+}
+
+# A nested trace dict (create_nested_spans_dict's shape, made JSON as
+# serialize_to_json does) for JevEval's trace state: compact_trace keeps the
+# span keys it whitelists, in its order, and drops token counts, empty
+# strings and empty lists.
+INVOICE_TRACE = {
+    "name": "answer",
+    "type": "agent",
+    "input": {"query": "Where is my invoice?"},
+    "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+    "tools_called": [{
+        "name": "lookup_invoice",
+        "type": "FUNCTION",
+        "description": "Finds the latest invoice",
+        "reasoning": None,
+        "output": "INV-42",
+        "input_parameters": {"account": "acme"},
+    }],
+    "available_tools": ["lookup_invoice", "escalate"],
+    "agent_handoffs": [],
+    "children": [
+        {
+            "name": "lookup_invoice",
+            "type": "tool",
+            "input": {"account": "acme"},
+            "output": "INV-42",
+            "description": "Finds the latest invoice",
+            "children": [],
+        },
+        {
+            "name": "reply",
+            "type": "llm",
+            "input": {"query": "Where is my invoice?", "invoice": "INV-42"},
+            "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+            "error": "",
+            "model": "gpt-4o-mini",
+            "input_token_count": 42.0,
+            "output_token_count": 12.0,
+            "children": [],
+        },
     ],
 }
 
@@ -1734,6 +1796,28 @@ SCENARIOS = {
             )},
         }},
     },
+    "jev_eval_trace": {
+        "description": "JevEval without evaluation_params: its state is the test case's trace "
+                       "(compact_trace of _trace_dict) instead of test case fields",
+        "metrics": [{"kind": "jev_eval", "params": {
+            "name": "Trajectory",
+            "questions": [
+                {"type": "noul", "statement": "The agent looked the invoice up before replying.",
+                 "weight": 2},
+                {"type": "score", "question": "How directly did the agent get to the answer?",
+                 "levels": ["Wandered", "Some detours", "Straight there"]},
+            ],
+        }}],
+        "test_case": {
+            "input": "Where is my invoice?",
+            "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+        },
+        "trace": INVOICE_TRACE,
+        "system_one": {"model": JEV, "cost": JEV_COST, "answers": {
+            "nouls": {"q_0": noul(0.93)},
+            "scores": {"q_1": score(1.8, {"0": 0.02, "1": 0.16, "2": 0.82}, 0.66)},
+        }},
+    },
     "conversational_jev_eval": {
         "description": "ConversationalJevEval about the turns and the chatbot_role: a weighted Noul, "
                        "a Score and a Choice",
@@ -2006,7 +2090,13 @@ def main():
     if gf.deepeval.__version__ != gf.DEEPEVAL_VERSION:
         sys.exit(f"expected deepeval {gf.DEEPEVAL_VERSION}, found {gf.deepeval.__version__}")
     try:
-        for name, scenario in SCENARIOS.items():
+        # Scenario names on the command line regenerate only those.
+        names = sys.argv[1:] or list(SCENARIOS)
+        unknown = sorted(set(names) - set(SCENARIOS))
+        if unknown:
+            sys.exit(f"unknown scenarios: {', '.join(unknown)}")
+        for name in names:
+            scenario = SCENARIOS[name]
             if "classifier" in scenario:
                 run_classifier_scenario(name, scenario)
             else:

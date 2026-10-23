@@ -590,6 +590,7 @@ Each `system_one/<scenario>/` holds:
 
 - `input.json` - the scenario: `description`; `metrics` (each with `kind`,
   `eval_mode` and constructor `params`) or `classifier`; one `test_case`;
+  `trace`, when the test case carries a nested trace dict (`_trace_dict`);
   `system_one`, the fake: its `model` name and either the `cost` it reports
   (a float, `null`, or `{value, input_tokens, output_tokens}` for an
   `EvaluationCost`) and its canned `answers` (by type - `nouls`, `scores`,
@@ -635,6 +636,7 @@ Each `system_one/<scenario>/` holds:
 | `<metric>_hybrid_fallback` | `hybrid` with `ExplodingSystemOneModel`: each Jev call fails, the scripted judge takes the decisions, `system_one_fallback_reason` set |
 | `jev_eval` | `JevEval` with a weighted Noul, a Score and a Choice (credits and a not-applicable option) |
 | `jev_eval_strict_not_applicable` | `JevEval` in strict mode without the `[JevEval]` suffix, a Noul with `true` / `false` criteria, a Choice judged not applicable |
+| `jev_eval_trace` | `JevEval` without `evaluation_params`: the test case carries a nested trace dict (`trace` in `input.json`, set as `_trace_dict`), and the state is its `compact_trace` under `trace` (token counts, empty strings and empty lists dropped) |
 | `conversational_jev_eval` | `ConversationalJevEval` with a weighted Noul, a Score and a Choice about the turns (`content` and `role` appended to the evaluation params) and `chatbot_role` under `test_case`; results export under `conversationalTestCases` |
 | `conversational_jev_eval_strict_not_applicable` | `ConversationalJevEval` in strict mode without the suffix, about each turn's `role`, `retrieval_context` and `content` and the `expected_outcome`: a Choice judged not applicable |
 | `conversational_jev_eval_down` | `ConversationalJevEval` with Jev down: `measure()` raises, `evaluate()` records the error |
@@ -680,8 +682,8 @@ ContextualPrecision, ContextualRecall, ContextualRelevancy, Hallucination,
 Bias, Toxicity, PIILeakage, PromptAlignment, ArgumentCorrectness, Summarization and ToolCorrectness: each one's `system_one`, `hybrid` and `hybrid_fallback`
 scenarios, JsonCorrectness's `system_one` and `hybrid`, and
 `faithfulness_system_one_strict`, and
-`DeepEvalEx.Metrics.JevEval` (`jev_eval` and
-`jev_eval_strict_not_applicable`), `DeepEvalEx.Metrics.ConversationalJevEval`
+`DeepEvalEx.Metrics.JevEval` (`jev_eval`,
+`jev_eval_strict_not_applicable` and `jev_eval_trace`), `DeepEvalEx.Metrics.ConversationalJevEval`
 (`conversational_jev_eval`, `conversational_jev_eval_strict_not_applicable`
 and `conversational_jev_eval_down`), and the batched scenarios.
 

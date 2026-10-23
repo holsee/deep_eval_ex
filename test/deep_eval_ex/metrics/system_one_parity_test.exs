@@ -47,7 +47,7 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
     argument_correctness_hybrid_fallback
     tool_correctness_system_one tool_correctness_hybrid tool_correctness_hybrid_fallback
     json_correctness_system_one json_correctness_hybrid
-    jev_eval jev_eval_strict_not_applicable
+    jev_eval jev_eval_strict_not_applicable jev_eval_trace
     conversational_jev_eval conversational_jev_eval_strict_not_applicable
     conversational_jev_eval_down
     turn_relevancy_system_one turn_relevancy_system_one_strict turn_relevancy_hybrid

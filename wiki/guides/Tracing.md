@@ -5,9 +5,9 @@ an LLM, often from several processes. DeepEvalEx records those steps as a
 **trace** of **spans**, as Python deepeval 4.3.1 does with `@observe`, so
 that each step can later be inspected and evaluated.
 
-> Running a whole dataset through a traced agent (deepeval's
-> `evals_iterator`) is not available yet. This guide covers recording,
-> exporting and evaluating traces one at a time.
+This guide covers recording and exporting traces, evaluating a traced
+agent over a dataset (deepeval's `evals_iterator`) and asserting on a
+trace in a test.
 
 ## Traced functions
 
@@ -181,6 +181,93 @@ A span that raised, or every span of a trace whose root raised, has its
 metrics skipped and is exported `ERRORED` with its error. Metrics that
 judge the whole run (`requires_trace?`) get the span's nested trace dict
 as the test case's `:trace_dict`.
+
+## Evaluating a traced agent over goldens
+
+`DeepEvalEx.evaluate_traced/3` is deepeval's `evals_iterator`: it runs
+your agent once per golden, captures the traces it makes and evaluates
+each of them, end to end and span by span, into one test run:
+
+```elixir
+goldens = [
+  %DeepEvalEx.Dataset.Golden{input: "How do I reset my password?", name: "reset"},
+  %DeepEvalEx.Dataset.Golden{input: "Where is my invoice?", name: "invoice"}
+]
+
+%DeepEvalEx.EvaluationResult{test_results: results} =
+  DeepEvalEx.evaluate_traced(goldens, fn golden -> MyApp.Support.answer(golden.input) end,
+    metrics: [DeepEvalEx.Metrics.AnswerRelevancy],
+    identifier: "support-agent-v3",
+    results_folder: "eval_results"
+  )
+```
+
+The metrics given as `:metrics` judge each whole trace (the trace's own,
+from `update_current_trace(metrics: ...)`, when none are given); the
+metrics your spans declare judge each span. A
+`DeepEvalEx.Dataset.EvaluationDataset` works in place of the list, and
+its alias, id and version are saved with the run. Every span the agent
+makes joins the golden's trace, from Tasks and from processes you hand the
+context to (see [Across processes](#across-processes)).
+
+`:mode` picks deepeval's iterator:
+
+- `:async` (the default) runs the goldens concurrently, one task each, and
+  makes every trace a test case of its own: an agent that makes two
+  top-level calls gives two. If the agent raises, its trace and root are
+  marked `ERRORED` (`"RuntimeError: agent gave up"`) and the other goldens
+  carry on; one still running after `:timeout` is stopped and marked
+  `"DeepEvalError: Task was cancelled (likely due to timeout)."`.
+- `:sync` runs the goldens one at a time, each inside deepeval's wrapper
+  span, so each golden is one test case. As in deepeval, only the first
+  top-level span is kept, the test case takes the golden's input, and an
+  error the agent raises stops the run.
+
+The saved run lists the prompts of your LLM spans (`deftraced ..., type:
+:llm, prompt: %{alias: "draft", version: "1"}`) once each. A run in which
+nothing declares a metric, and no golden has expectations, raises
+`DeepEvalEx.DeepEvalError`.
+
+A `DeepEvalEx.Metrics.JevEval` without `:evaluation_params` asks its
+questions about the compacted trace, so it can judge the whole trajectory:
+
+```elixir
+trajectory =
+  DeepEvalEx.Metrics.JevEval.new(
+    name: "Trajectory",
+    questions: [
+      DeepEvalEx.SystemOne.Scored.Noul.new!(statement: "The agent looked the invoice up before replying.")
+    ]
+  )
+
+DeepEvalEx.evaluate_traced(goldens, &MyApp.Support.answer(&1.input), metrics: [trajectory])
+```
+
+## Asserting on a trace in a test
+
+`DeepEvalEx.ExUnit.assert_trace/3` is deepeval's `assert_test(golden=...,
+metrics=...)`: it runs a function, and evaluates the trace it makes
+against the golden.
+
+```elixir
+use DeepEvalEx.ExUnit
+
+test "refund agent answers from the policy" do
+  golden = %DeepEvalEx.Dataset.Golden{input: "Can I get a refund?", expected_output: "Yes, within 30 days."}
+
+  assert_trace golden, [DeepEvalEx.Metrics.ExactMatch], fn ->
+    MyApp.Refunds.answer(golden.input)
+  end
+end
+```
+
+The metrics judge the trace on the golden's input and the agent's output
+(the trace's, else its first span's), with the golden's expected output,
+context and retrieval context where the trace sets none. The spans'
+own metrics run too, and fail the test when they fail. The function must
+make at least one span, or `DeepEvalEx.DeepEvalError` ("No active trace
+found for this test. ...") is raised. Under `mix deep_eval.test` the test
+case is recorded in the run, with its trace.
 
 ## Updating spans and traces
 

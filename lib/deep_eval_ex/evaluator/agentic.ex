@@ -26,6 +26,14 @@ defmodule DeepEvalEx.Evaluator.Agentic do
     `DeepEvalEx.Result.format_error_text/2`'s `"<type>: <message>"`, as
     deepeval's synchronous `_execute_metric` records it. The trace-level
     test case always takes the golden's input.
+  - **`mode: :trace_scope`** ports `evaluate/execute/trace_scope.py`'s
+    `_assert_test_from_current_trace`, deepeval's `assert_test(golden=...)`
+    (`DeepEvalEx.ExUnit.assert_trace/3`). Spans are walked as `:sync` walks
+    them. The trace's output, when unset, is its first root's, and the
+    trace-level test case falls back to the golden for its input (`"None"`
+    without one), expected output, context, retrieval context and expected
+    tools; it is measured after the spans, and never marked for a missing
+    test case.
 
   In both modes the trace-level metrics run first, and then every root is
   walked. A span that errored, or every span of a trace that errored, has
@@ -121,13 +129,14 @@ defmodule DeepEvalEx.Evaluator.Agentic do
 
   ## Options
 
-  - `:mode` - `:async` (default) or `:sync`, the walker to port
+  - `:mode` - `:async` (default), `:sync` or `:trace_scope`, the walker
+    to port
   - `:metrics` - The iterator's trace-level metrics (deepeval's
     `evals_iterator(metrics=...)`); when given, they replace the trace's
     own (`update_current_trace(metrics: ...)`)
   - `:index` - The test case's order, and its name's suffix when the
     golden has no name (default: `0`); `nil` for none, as an
-    `assert_test`'s
+    `assert_test`'s (named `"test_case_None"`)
 
   Any other option is `DeepEvalEx.Evaluator.evaluate_single/3`'s, such as
   `:ignore_errors`, `:skip_on_missing_params`, `:model` or `:timeout`. A
@@ -139,21 +148,20 @@ defmodule DeepEvalEx.Evaluator.Agentic do
     {mode, opts} = Keyword.pop(opts, :mode, :async)
     {iterator_metrics, opts} = Keyword.pop(opts, :metrics)
     {index, opts} = Keyword.pop(opts, :index, 0)
-    mode in [:async, :sync] || raise ArgumentError, "unknown mode #{inspect(mode)}"
+    mode in [:async, :sync, :trace_scope] || raise ArgumentError, "unknown mode #{inspect(mode)}"
 
     trace =
       if iterator_metrics in [nil, []], do: trace, else: %{trace | metrics: iterator_metrics}
 
-    eval_opts = if mode == :sync, do: [run_async: false, error_text: :format_error_text], else: []
+    trace = if mode == :trace_scope, do: with_root_output(trace), else: trace
+
+    eval_opts =
+      if mode == :async, do: [], else: [run_async: false, error_text: :format_error_text]
+
     eval_opts = Keyword.merge(opts, eval_opts)
 
     test_case = golden_test_case(trace, golden)
-    {trace, measured} = evaluate_trace(mode, trace, golden, eval_opts)
-
-    entries =
-      trace.root_spans
-      |> walk(mode, trace)
-      |> measure(mode, eval_opts)
+    {trace, measured, entries} = evaluate_trace_and_spans(mode, trace, golden, eval_opts)
 
     trace_api =
       trace
@@ -179,6 +187,12 @@ defmodule DeepEvalEx.Evaluator.Agentic do
   # The golden's test case (both iterators build the same one): the
   # golden's input, name and metadata, the trace's output and test-case
   # fields.
+  # trace_scope's effective_trace_output: the trace's, else its first root's.
+  defp with_root_output(%Trace{output: nil, root_spans: [root | _]} = trace),
+    do: %{trace | output: root.output}
+
+  defp with_root_output(trace), do: trace
+
   defp golden_test_case(trace, golden) do
     %TestCase{
       input: golden.input,
@@ -193,6 +207,25 @@ defmodule DeepEvalEx.Evaluator.Agentic do
       comments: Map.get(golden, :comments),
       name: Map.get(golden, :name)
     }
+  end
+
+  # trace_scope.py measures the spans first, the iterators the trace (whose
+  # metrics' outcome can mark it).
+  defp evaluate_trace_and_spans(:trace_scope, trace, golden, opts) do
+    entries = evaluate_spans(:trace_scope, trace, opts)
+    {trace, measured} = evaluate_trace(:trace_scope, trace, golden, opts)
+    {trace, measured, entries}
+  end
+
+  defp evaluate_trace_and_spans(mode, trace, golden, opts) do
+    {trace, measured} = evaluate_trace(mode, trace, golden, opts)
+    {trace, measured, evaluate_spans(mode, trace, opts)}
+  end
+
+  defp evaluate_spans(mode, trace, opts) do
+    trace.root_spans
+    |> walk(mode, trace)
+    |> measure(mode, opts)
   end
 
   ## Trace-level metrics
@@ -242,6 +275,21 @@ defmodule DeepEvalEx.Evaluator.Agentic do
     }
   end
 
+  # trace_scope.py: the golden's input ("None" without one), and its
+  # fields where the trace's are falsy.
+  defp trace_test_case(:trace_scope, trace, golden, _requires_trace?) do
+    %TestCase{
+      input: if(Fields.truthy?(golden.input), do: golden.input, else: "None"),
+      expectations: Map.get(golden, :expectations),
+      actual_output: str_or_nil(trace.output),
+      expected_output: trace.expected_output || golden_field(golden, :expected_output),
+      context: or_golden(trace.context, golden, :context),
+      retrieval_context: or_golden(trace.retrieval_context, golden, :retrieval_context),
+      tools_called: trace.tools_called,
+      expected_tools: or_golden(trace.expected_tools, golden, :expected_tools)
+    }
+  end
+
   # _a_execute_trace_test_case: from a truthy trace input or the golden's
   # expectations, else the "None" placeholder of a requires_trace metric.
   defp trace_test_case(:async, trace, golden, requires_trace?) do
@@ -266,6 +314,14 @@ defmodule DeepEvalEx.Evaluator.Agentic do
       true ->
         nil
     end
+  end
+
+  defp or_golden(value, golden, field),
+    do: if(Fields.truthy?(value), do: value, else: golden_field(golden, field))
+
+  defp golden_field(golden, field) do
+    value = Map.get(golden, field)
+    if Fields.truthy?(value), do: value
   end
 
   defp put_trace_dict(test_case, %Trace{root_spans: [root | _]}),
@@ -298,7 +354,8 @@ defmodule DeepEvalEx.Evaluator.Agentic do
 
   # The walked spans in bucket order: pre-order for :sync, breadth-first
   # level order for :async. A skipped span's children are not walked.
-  @spec walk([Span.t()], :async | :sync, Trace.t()) :: [{entry(), non_neg_integer()}]
+  @spec walk([Span.t()], :async | :sync | :trace_scope, Trace.t()) ::
+          [{entry(), non_neg_integer()}]
   defp walk(roots, :sync, trace) do
     {entries, post_order, _count} =
       Enum.reduce(roots, {[], [], 0}, &sync_walk(&1, trace, &2))
@@ -310,6 +367,8 @@ defmodule DeepEvalEx.Evaluator.Agentic do
     |> Enum.with_index()
     |> Enum.map(fn {entry, index} -> {entry, Map.get(positions, index, index)} end)
   end
+
+  defp walk(roots, :trace_scope, trace), do: walk(roots, :sync, trace)
 
   defp walk(roots, :async, trace) do
     roots |> bfs(trace) |> Enum.with_index()
@@ -374,7 +433,7 @@ defmodule DeepEvalEx.Evaluator.Agentic do
 
   # A span test case when its input is not None (sync) or truthy (async).
   defp span_test_case(span, mode) do
-    input? = if mode == :sync, do: not is_nil(span.input), else: Fields.truthy?(span.input)
+    input? = if mode == :async, do: Fields.truthy?(span.input), else: not is_nil(span.input)
 
     if input? do
       %TestCase{
@@ -418,12 +477,6 @@ defmodule DeepEvalEx.Evaluator.Agentic do
     |> Enum.map(fn {{entry, _position}, index} -> finish(entry, Map.get(results, index)) end)
   end
 
-  defp run_jobs(jobs, :sync, opts),
-    do:
-      Enum.map(jobs, fn {index, {test_case, metrics}} ->
-        {index, measure_metrics(test_case, metrics, opts)}
-      end)
-
   defp run_jobs(jobs, :async, opts) do
     jobs
     |> Task.async_stream(
@@ -443,6 +496,12 @@ defmodule DeepEvalEx.Evaluator.Agentic do
       {:ok, {:raise, exception, stacktrace}} -> reraise exception, stacktrace
     end)
   end
+
+  defp run_jobs(jobs, _mode, opts),
+    do:
+      Enum.map(jobs, fn {index, {test_case, metrics}} ->
+        {index, measure_metrics(test_case, metrics, opts)}
+      end)
 
   # The metrics' results, the skipped ones left out.
   defp measure_metrics(test_case, metrics, opts) do
@@ -489,7 +548,7 @@ defmodule DeepEvalEx.Evaluator.Agentic do
 
     %TestRun.TestCase{
       expectations_data: expectations_data,
-      name: test_case.name || "test_case_#{index}",
+      name: test_case.name || "test_case_#{Python.str(index)}",
       input: test_case.input,
       actual_output: test_case.actual_output,
       expected_output: test_case.expected_output,

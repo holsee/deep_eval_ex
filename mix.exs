@@ -194,7 +194,8 @@ defmodule DeepEvalEx.MixProject do
           DeepEvalEx.EvaluationResult,
           DeepEvalEx.TestResult,
           DeepEvalEx.Evaluator,
-          DeepEvalEx.Evaluator.Agentic
+          DeepEvalEx.Evaluator.Agentic,
+          DeepEvalEx.Evaluator.Traced
         ],
         Metrics: ~r/DeepEvalEx\.Metrics\..*/,
         Classifiers: [

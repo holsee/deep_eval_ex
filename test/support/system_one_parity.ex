@@ -9,7 +9,8 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   `eval_mode` and is built as a `DeepEvalEx.Metrics.JevEval` or
   `DeepEvalEx.Metrics.ConversationalJevEval` struct): one, or several for a `batched`
   scenario, whose `evaluate()` asked one batched request (see
-  `DeepEvalEx.SystemOne.Batch`). It also holds one `test_case`, the fake System One model
+  `DeepEvalEx.SystemOne.Batch`). It also holds one `test_case` (with a
+  `trace`, the nested trace dict it carries as `:trace_dict`), the fake System One model
   (`system_one`: canned answers or the error it raises) and, when an LLM is
   involved, the scripted judge's `responses`. Here
   `DeepEvalEx.SystemOne.Adapters.Mock.from_fixture/2` stands in for the
@@ -387,11 +388,13 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   defp type(%DeepEvalEx.SystemOne.Error{type: type}) when is_binary(type), do: type
   defp type(%module{}), do: module |> Module.split() |> List.last()
 
-  # One with turns is a conversational test case.
+  # One with turns is a conversational test case. A `trace` is the nested
+  # trace dict the test case carries (deepeval's `_trace_dict`), its keys in
+  # their order.
   defp test_case(input) do
     case plain(input["test_case"]) do
       %{"turns" => _} = spec -> ConversationalTestCase.new!(spec)
-      spec -> TestCase.new!(spec)
+      spec -> %{TestCase.new!(spec) | trace_dict: input["trace"]}
     end
   end
 
