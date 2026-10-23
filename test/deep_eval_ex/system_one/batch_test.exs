@@ -242,9 +242,13 @@ defmodule DeepEvalEx.SystemOne.BatchTest do
         entry(Judged, :system_one, mock, spec([:input], "S", topics: ["a"]))
       ])
 
-      assert [first, second] = Mock.calls(mock)
-      assert Enum.map(first.questions, &elem(&1, 0)) == ["m0.q_0", "m1.q_0"]
-      assert encode(second.state) =~ ~s("topics": ["b"])
+      # The two requests run concurrently, so the Mock may record either first.
+      calls = Mock.calls(mock)
+      assert length(calls) == 2
+      {[merged], [conflicting]} = Enum.split_with(calls, &(length(&1.questions) == 2))
+      assert Enum.map(merged.questions, &elem(&1, 0)) == ["m0.q_0", "m1.q_0"]
+      assert encode(merged.state) =~ ~s("topics": ["a"])
+      assert encode(conflicting.state) =~ ~s("topics": ["b"])
     end
 
     test "starts a new request when the merged request would exceed the context budget" do
