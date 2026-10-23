@@ -242,6 +242,13 @@ which is what the container loads. Recreate the container after editing it
 default test suite never calls a real LLM (it uses the Mock adapter and
 `Req.Test` stubs); only the opt-in live checks below do.
 
+Test modules run in parallel. The Mock adapter's configured responses
+(`Mock.set_response/2`, `Mock.set_schema_response/2` and the functions that
+clear or read them) are shared by the whole node, so a module that uses them
+must be `async: false`; an `async: true` module scripts its judge with
+`Mock.script/2` instead. `mock_async_guard_test.exs` fails the suite when an
+async module calls the shared API.
+
 ### Live checks
 
 `test/deep_eval_ex/live_test.exs` runs structured output and a full

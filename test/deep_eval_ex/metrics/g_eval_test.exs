@@ -13,11 +13,6 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
 
   doctest GEval, only: [calculate_weighted_summed_score: 2]
 
-  setup do
-    Mock.clear_responses()
-    :ok
-  end
-
   describe "new/1" do
     test "creates GEval metric with criteria" do
       metric =
@@ -262,8 +257,10 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
 
   describe "evaluate/2 with mock adapter" do
     test "renders the :evaluation_template override and the defaults for the rest" do
-      Mock.set_schema_response(~r/generate.*evaluation steps/i, %{"steps" => ["Check accuracy."]})
-      Mock.set_schema_response(~r/evaluator/i, %{"score" => 7, "reason" => "Good."})
+      Mock.script(%{
+        "steps" => [%{"steps" => ["Check accuracy."]}],
+        "reason,score" => [%{"score" => 7, "reason" => "Good."}]
+      })
 
       metric =
         GEval.new(
@@ -280,20 +277,20 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
       assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
       assert result.score == 0.7
 
-      # The Mock records every async test's prompts: keep this test's.
-      prompts = Mock.get_recorded_prompts()
-      assert [steps] = Enum.filter(prompts, &(&1 =~ "Is the arithmetic right?"))
+      assert [%{step: "steps", prompt: steps}, %{step: "reason,score", prompt: results}] =
+               Mock.scripted_prompts()
+
       assert steps =~ ~r/^CUSTOM STEPS\n/
-      assert [results] = Enum.filter(prompts, &(&1 =~ "2 + 2?"))
+      assert steps =~ "Is the arithmetic right?"
+      assert results =~ "2 + 2?"
       refute results =~ "CUSTOM"
     end
 
     test "evaluates test case with pre-defined steps" do
       # Mock the evaluation response
-      Mock.set_schema_response(
-        ~r/evaluator/i,
-        %{"score" => 8, "reason" => "The response is helpful and accurate."}
-      )
+      Mock.script(%{
+        "reason,score" => [%{"score" => 8, "reason" => "The response is helpful and accurate."}]
+      })
 
       metric =
         GEval.new(
@@ -320,17 +317,11 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
     end
 
     test "generates steps when not provided" do
-      # Mock the steps generation
-      Mock.set_schema_response(
-        ~r/generate.*evaluation steps/i,
-        %{"steps" => ["Step 1: Check accuracy", "Step 2: Check completeness"]}
-      )
-
-      # Mock the evaluation response
-      Mock.set_schema_response(
-        ~r/evaluator/i,
-        %{"score" => 7, "reason" => "Good but could be more detailed."}
-      )
+      # Mock the steps generation, then the evaluation response
+      Mock.script(%{
+        "steps" => [%{"steps" => ["Step 1: Check accuracy", "Step 2: Check completeness"]}],
+        "reason,score" => [%{"score" => 7, "reason" => "Good but could be more detailed."}]
+      })
 
       metric =
         GEval.new(
@@ -355,10 +346,7 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
     end
 
     test "normalizes score to 0-1 range" do
-      Mock.set_schema_response(
-        ~r/evaluator/i,
-        %{"score" => 5, "reason" => "Average response."}
-      )
+      Mock.script(%{"reason,score" => [%{"score" => 5, "reason" => "Average response."}]})
 
       metric =
         GEval.new(
@@ -402,7 +390,8 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
     end
 
     test "a nil threshold measures score-only, through the evaluator too" do
-      Mock.set_schema_response(~r/evaluator/i, %{"score" => 5, "reason" => "Average."})
+      # Measured twice: by GEval, then through the evaluator.
+      Mock.script(%{"reason,score" => List.duplicate(%{"score" => 5, "reason" => "Average."}, 2)})
 
       metric =
         GEval.new(
@@ -527,7 +516,7 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
                  adapter: :mock
                )
 
-      Mock.set_schema_response(~r/evaluator/i, %{"score" => 10, "reason" => "Fine."})
+      Mock.script(%{"reason,score" => [%{"score" => 10, "reason" => "Fine."}]})
 
       assert {:ok, %{score: 1.0}} =
                GEval.evaluate(
@@ -552,10 +541,7 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
     end
 
     test "includes metadata in result" do
-      Mock.set_schema_response(
-        ~r/evaluator/i,
-        %{"score" => 9, "reason" => "Excellent."}
-      )
+      Mock.script(%{"reason,score" => [%{"score" => 9, "reason" => "Excellent."}]})
 
       metric =
         GEval.new(
@@ -577,10 +563,7 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
 
   describe "do_measure/2" do
     test "works with inline configuration" do
-      Mock.set_schema_response(
-        ~r/evaluator/i,
-        %{"score" => 8, "reason" => "Good."}
-      )
+      Mock.script(%{"reason,score" => [%{"score" => 8, "reason" => "Good."}]})
 
       test_case = TestCase.new!(input: "Q", actual_output: "A")
 
@@ -598,7 +581,7 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
     end
 
     test "names the result with the bare name when the suffix is disabled" do
-      Mock.set_schema_response(~r/evaluator/i, %{"score" => 8, "reason" => "Good."})
+      Mock.script(%{"reason,score" => [%{"score" => 8, "reason" => "Good."}]})
 
       test_case = TestCase.new!(input: "Q", actual_output: "A")
 

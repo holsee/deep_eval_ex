@@ -473,16 +473,12 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
   end
 
   describe "tool selection score (LLM-based)" do
-    setup do
-      Mock.clear_responses()
-      :ok
-    end
-
     test "calls LLM when available_tools provided" do
-      Mock.set_schema_response(
-        ~r/Tool Selection/,
-        %{"score" => 0.75, "reason" => "Good tool selection with minor issues."}
-      )
+      Mock.script(%{
+        "reason,score" => [
+          %{"score" => 0.75, "reason" => "Good tool selection with minor issues."}
+        ]
+      })
 
       available = [tool("search"), tool("lookup"), tool("delete")]
 
@@ -504,6 +500,8 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
       assert result.score == 0.75
       assert result.metadata.tool_calling_score == 1.0
       assert result.metadata.tool_selection_score == 0.75
+      assert [%{prompt: prompt}] = Mock.scripted_prompts()
+      assert prompt =~ "Find user info"
     end
 
     test "defaults to 1.0 when no available_tools" do
@@ -515,10 +513,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
     end
 
     test "final score is min of calling and selection scores" do
-      Mock.set_schema_response(
-        ~r/Tool Selection/,
-        %{"score" => 0.5, "reason" => "Mixed selection."}
-      )
+      Mock.script(%{"reason,score" => [%{"score" => 0.5, "reason" => "Mixed selection."}]})
 
       tc = case_with(["tool_a", "tool_b"], ["tool_a", "tool_b"])
 
@@ -612,8 +607,6 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
 
   describe "System One" do
     setup do
-      Mock.clear_responses()
-
       test_case = %TestCase{
         input: "What's the weather in Paris?",
         actual_output: "It is 18°C in Paris.",
@@ -649,7 +642,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
 
     test "a multimodal test case skips tool selection, as deepeval does",
          %{test_case: test_case, available: available} do
-      Mock.set_schema_response(~r/Tool Selection/, %{"score" => 0.25, "reason" => "Poor."})
+      Mock.script(%{"reason,score" => [%{"score" => 0.25, "reason" => "Poor."}]})
       system_one = SystemOneMock.new(answer_fn: score_answers(1, 0.9))
 
       for eval_mode <- [:llm, :hybrid] do
@@ -669,6 +662,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
       end
 
       assert SystemOneMock.calls(system_one) == []
+      assert Mock.scripted_prompts() == []
     end
 
     test "hybrid scores tool selection over deepeval's five levels",
@@ -762,10 +756,11 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
 
     test "a failed hybrid request falls back to the LLM",
          %{test_case: test_case, available: available} do
-      Mock.set_schema_response(
-        ~r/Tool Selection/,
-        %{"score" => 0.9, "reason" => "get_weather was the best available tool."}
-      )
+      Mock.script(%{
+        "reason,score" => [
+          %{"score" => 0.9, "reason" => "get_weather was the best available tool."}
+        ]
+      })
 
       system_one =
         SystemOneMock.new(
@@ -783,6 +778,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
       assert result.score == 0.9
       assert result.system_one_fallback_reason == "ConnectionError: Jev is down"
       assert result.metadata.tool_selection_reason == "get_weather was the best available tool."
+      assert [%{step: "reason,score"}] = Mock.scripted_prompts()
     end
   end
 end

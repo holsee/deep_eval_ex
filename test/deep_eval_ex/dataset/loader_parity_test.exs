@@ -49,6 +49,10 @@ defmodule DeepEvalEx.Dataset.LoaderParityTest do
   end
 
   defp run(%{"loader" => loader, "args" => args, "kwargs" => kwargs}, path) do
+    # The loader and option names are atoms only once EvaluationDataset is
+    # loaded, which no other test may have done yet when this one runs first.
+    Code.ensure_loaded!(EvaluationDataset)
+
     opts =
       Enum.map(kwargs, fn {key, value} ->
         {Map.get_lazy(@renamed_kwargs, key, fn -> String.to_existing_atom(key) end), value}

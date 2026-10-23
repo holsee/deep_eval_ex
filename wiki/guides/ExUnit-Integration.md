@@ -447,6 +447,35 @@ defmodule MyApp.RAGTest do
 end
 ```
 
+The responses `Mock.set_schema_response/2` configures are shared by every
+process on the node, so a module using them must be `async: false`, as above:
+in an `async: true` module, another module clearing or setting them changes
+what its metrics are answered. An async module scripts its own judge with
+`Mock.script/2`, keyed by the schema each call asks for, and reads its own
+prompts with `Mock.scripted_prompts/0`:
+
+```elixir
+defmodule MyApp.AsyncRAGTest do
+  use ExUnit.Case, async: true
+  use DeepEvalEx.ExUnit
+
+  alias DeepEvalEx.LLM.Adapters.Mock
+
+  test "scripted evaluation passes" do
+    Mock.script(%{"reason,score" => [%{"score" => 8, "reason" => "Good."}]})
+
+    metric =
+      Metrics.GEval.new(
+        name: "Quality",
+        evaluation_params: [:input, :actual_output],
+        evaluation_steps: ["Check quality"]
+      )
+
+    assert_passes(TestCase.new!(input: "Q", actual_output: "A"), metric, adapter: :mock)
+  end
+end
+```
+
 ## Error Handling
 
 A metric that cannot produce a score is *errored*, not failed. As in

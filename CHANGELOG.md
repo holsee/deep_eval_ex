@@ -3311,6 +3311,21 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   size and overwrote one another; each prompt is now recorded once, in the
   order it was sent. The Mock's moduledoc explains how `async: true` tests
   should keep only their own recorded prompts.
+- The test suite failed at some seeds (for example `mix test --seed 3`) now
+  that test modules run in parallel: the GEval and ToolCorrectness tests,
+  both `async: true`, configured and cleared the Mock adapter's node-wide
+  responses, each clobbering the other's. They now script their judge with
+  `Mock.script/2`, and a new guard test
+  (`test/deep_eval_ex/llm/adapters/mock_async_guard_test.exs`) fails the
+  suite when an `async: true` test module or a test support module calls
+  `Mock.set_response/2`, `set_schema_response/2`, `clear_responses/0`,
+  `get_recorded_prompts/0` or `clear_recorded_prompts/0`. The Mock's
+  moduledoc, the README and the ExUnit guide now say the configured
+  responses are for `async: false` modules only, replacing the advice that
+  async tests could share them with distinct patterns. The dataset loader
+  parity tests also failed at some seeds (for example `--seed 777777`) when
+  they ran before anything had loaded `EvaluationDataset`, whose loader names
+  they resolve with `String.to_existing_atom/1`; they now load it first.
 
 ### Security
 

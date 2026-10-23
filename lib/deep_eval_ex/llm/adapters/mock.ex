@@ -50,12 +50,15 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
 
   Being shared, they are also seen by every other test running at the same
   time, and `clear_responses/0` and `clear_recorded_prompts/0` clear them
-  for all. An `async: true` test should configure patterns only its own
-  prompts match, and keep only its own prompts from `get_recorded_prompts/0`:
-
-      prompts = Enum.filter(Mock.get_recorded_prompts(), &(&1 =~ "2 + 2?"))
-
-  or use scripted mode below, whose script and prompts are its own.
+  for all: one `async: true` module clearing or setting them changes what
+  another's metrics are answered, failing tests only at some seeds. Use
+  them only from `async: false` test modules, which ExUnit runs alone after
+  the async ones; an `async: true` module uses scripted mode below, whose
+  script and prompts are its own. DeepEvalEx's own suite enforces this in
+  `test/deep_eval_ex/llm/adapters/mock_async_guard_test.exs`, which fails
+  when an `async: true` test module, or a test support module, calls
+  `set_response/2`, `set_schema_response/2`, `clear_responses/0`,
+  `get_recorded_prompts/0` or `clear_recorded_prompts/0`.
 
   ## Scripted Mode
 
