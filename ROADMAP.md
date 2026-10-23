@@ -299,8 +299,8 @@ exports. After this phase every core and important capability is done.
 | Unit | Title | Tier |
 |---|---|---|
 | P10.1 | DAGMetric | important |
-| P10.2 | Azure OpenAI and gateway adapters plus capability registry | important |
-| P10.3 | Gemini adapter | important |
+| P10.2 | ReqLLM adapter (`DeepEvalEx.LLM.Adapters.ReqLLM`, optional `req_llm` dependency) for Gemini, Azure, Bedrock, gateways and the other providers ReqLLM supports | important |
+| P10.3 | ~~Gemini adapter~~ superseded by P10.2: no native Gemini, Azure or gateway adapters | — |
 | P10.4 | Multimodal test cases and image input | important |
 | P10.5 | MCP types | important |
 | P10.6 | ArenaTestCase | important |
@@ -354,7 +354,7 @@ Effort is described by what drives the cost of the work, not by calendar time:
 | P7 Multi-turn | 11 | Port + adapt | Fixture + fake | None | 3 |
 | P8 Runner, cache, classifiers | 5 | Adapt | Fixture + judgement | Mix task and CLI UX | 2 |
 | P9 Tracing and agents | 12 | Design + adapt | Fixture + judgement | Span and observe API shape (telemetry/OpenTelemetry) | 2 |
-| P10 Remaining important | 8 | Mixed | Fixture + live | Gemini/Azure access; whether to include synthesizer and simulator | 4 |
+| P10 Remaining important | 8 | Mixed | Fixture + live | A ReqLLM provider for live checks; whether to include synthesizer and simulator | 4 |
 | P11 Optional backlog | 8 | Port | Fixture | Which items, if any | Many |
 
 **Totals:** 102 units, 90 of them in parity scope (P0–P10).

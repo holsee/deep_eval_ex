@@ -75,6 +75,10 @@ defmodule DeepEvalEx.MixProject do
       # Observability
       {:telemetry, "~> 1.0"},
 
+      # Optional: providers beyond the native adapters, through
+      # DeepEvalEx.LLM.Adapters.ReqLLM
+      {:req_llm, "~> 1.26", optional: true},
+
       # Dev/Test
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},

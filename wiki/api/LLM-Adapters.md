@@ -13,6 +13,7 @@ DeepEvalEx uses adapters to abstract away differences between LLM providers. The
 | OpenAI | `DeepEvalEx.LLM.Adapters.OpenAI` | Implemented |
 | Anthropic | `DeepEvalEx.LLM.Adapters.Anthropic` | Implemented |
 | Ollama | `DeepEvalEx.LLM.Adapters.Ollama` | Implemented |
+| ReqLLM (Gemini, Azure, Bedrock, Groq, OpenRouter, ...) | `DeepEvalEx.LLM.Adapters.ReqLLM` | Implemented, optional `req_llm` dependency |
 | Mock | `DeepEvalEx.LLM.Adapters.Mock` | For testing |
 
 ## Using Adapters
@@ -320,6 +321,136 @@ end)
 Token usage (`usage.input_tokens` / `usage.output_tokens`) is recorded and
 priced with deepeval's Anthropic price table.
 
+## ReqLLM Adapter
+
+Reaches every provider [ReqLLM](https://hexdocs.pm/req_llm) supports
+(Gemini, Azure, Bedrock, Groq, OpenRouter, xAI, ...), so DeepEvalEx needs no
+native adapter for them. It stands in for deepeval's native Gemini, Azure
+and gateway models (`GeminiModel`, `AzureOpenAIModel`, `LiteLLMModel`,
+`OpenRouterModel`, ...).
+
+### Installation
+
+ReqLLM is an optional dependency; add it to your own deps:
+
+```elixir
+{:req_llm, "~> 1.26"}
+```
+
+Without it, the adapter's calls raise an error naming the dependency.
+
+### Model Specs
+
+`:model` is a ReqLLM model spec, a `"provider:model"` string:
+
+```elixir
+{:ok, result} = Faithfulness.measure(test_case,
+  adapter: {:req_llm, "google:gemini-2.5-flash"}
+)
+```
+
+or an inline spec map for a model ReqLLM's catalog does not list. An
+OpenAI-compatible gateway is the `:openai` provider with the gateway's base
+URL; name the OpenAI API it serves the model on (`"openai_responses"` or
+`"openai_chat"`), since ReqLLM cannot tell from a gateway's model id:
+
+```elixir
+gateway = %{
+  provider: :openai,
+  id: "openai/gpt-6-luna",
+  base_url: "https://gateway.example.com/v1",
+  extra: %{wire: %{protocol: "openai_responses"}}
+}
+
+{:ok, result} = Faithfulness.measure(test_case, adapter: :req_llm, model: gateway)
+```
+
+The Responses API adapts a request to a reasoning model (no `temperature`,
+`max_output_tokens`); Chat Completions to a model ReqLLM does not know
+sends `temperature` and `max_tokens`, which reasoning models reject. Put
+the base URL in the spec rather than in a `:base_url` option: GEval and
+ConversationalGEval forward only the model to their judge.
+
+`model_name/1`, the result's `evaluation_model`, is the spec string, or
+`"provider:id"` for an inline spec (`"openai:openai/gpt-6-luna"` above).
+
+### Credentials
+
+ReqLLM reads each provider's key itself, e.g. `GOOGLE_API_KEY`,
+`OPENAI_API_KEY` or `config :req_llm, google_api_key: "..."`; `:api_key`
+overrides it.
+
+### Request Parameters
+
+- `temperature` comes from `:temperature` and defaults to `0.0`, as for
+  deepeval's gateway models; ReqLLM drops it for models that reject it,
+  without logging (`on_unsupported: :ignore`).
+- `:max_tokens` is sent when given; otherwise ReqLLM's per-model default.
+- `:base_url` overrides the provider's endpoint, and `:timeout` is ReqLLM's
+  `receive_timeout`.
+- `:req_llm_options` passes any other ReqLLM option, e.g.
+  `[provider_options: [...], max_retries: 0]`. ReqLLM retries transient
+  network errors itself (`max_retries`, default `3`).
+
+Errors are ReqLLM's exceptions, e.g.
+`{:error, %ReqLLM.Error.API.Request{status: 401}}`.
+
+### Structured Outputs
+
+`generate_with_schema/3` makes the JSON schema strict with
+`DeepEvalEx.LLM.StrictSchema`, as the OpenAI adapter does (an optional field
+becomes required but nullable), and asks with ReqLLM's `generate_object/4`,
+which uses each provider's structured output: OpenAI's strict JSON schema,
+Anthropic's `output_format`, Gemini's `responseJsonSchema`, and so on. The
+object is returned as a map with string keys.
+
+### Usage and Cost
+
+The input and output token counts ReqLLM reports are recorded; a side the
+provider did not report is `nil`. The cost is, in order:
+
+1. `DeepEvalEx.LLM.Pricing`'s price for the spec, then for the bare model
+   id (`"openai:gpt-4o"` is priced as `"gpt-4o"`); `:model_pricing` config
+   can price any spec
+2. ReqLLM's own catalog cost (`usage.pricing` when `:priced`)
+3. `nil`
+
+The configured price wins, as deepeval prefers a model's configured
+per-token cost to a gateway-reported one. The adapter is native, like
+deepeval's gateway models, so metrics report its cost.
+
+### Testing
+
+`:req_options` are Req options for ReqLLM's requests (its
+`req_http_options`), so a `Req.Test` plug stubs the provider in the shape
+that provider answers:
+
+```elixir
+Req.Test.stub(MyStub, fn conn ->
+  Req.Test.json(conn, %{
+    "type" => "message",
+    "role" => "assistant",
+    "content" => [%{"type" => "text", "text" => "4"}],
+    "usage" => %{"input_tokens" => 10, "output_tokens" => 1}
+  })
+end)
+
+{:ok, "4"} =
+  DeepEvalEx.LLM.Adapters.ReqLLM.generate("What is 2+2?",
+    model: "anthropic:claude-haiku-4-5",
+    api_key: "test-key",
+    req_options: [plug: {Req.Test, MyStub}]
+  )
+```
+
+### Features
+
+| Feature | Supported |
+|---------|-----------|
+| Structured Outputs | Yes (ReqLLM `generate_object/4`) |
+| Log Probabilities | No |
+| Multimodal | No |
+
 ## Mock Adapter
 
 For testing without API calls:
@@ -409,14 +540,15 @@ Options passed to adapter functions:
 
 | Option | Description |
 |--------|-------------|
-| `:model` | Model name/identifier |
+| `:model` | Model name/identifier; a ReqLLM model spec for `:req_llm` |
 | `:temperature` | Sampling temperature (0.0-2.0); OpenAI and Ollama adapters default to `0.0`, Anthropic omits it unless set |
 | `:max_completion_tokens` | Maximum tokens in response, OpenAI (`:max_tokens` is an alias) |
-| `:max_tokens` | Maximum tokens in response, Anthropic |
+| `:max_tokens` | Maximum tokens in response, Anthropic and ReqLLM |
 | `:api_key` | API key (overrides config; not used by Ollama) |
 | `:options` | Extra model options map, Ollama |
-| `:base_url` | API base URL (OpenAI, Anthropic and Ollama adapters) |
-| `:req_options` | Extra `Req` options (OpenAI, Anthropic and Ollama adapters) |
+| `:base_url` | API base URL (OpenAI, Anthropic, Ollama and ReqLLM adapters) |
+| `:req_options` | Extra `Req` options (OpenAI, Anthropic, Ollama and ReqLLM adapters) |
+| `:req_llm_options` | Further ReqLLM options, ReqLLM |
 
 ```elixir
 {:ok, response} = Adapter.generate(prompt,

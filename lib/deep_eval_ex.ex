@@ -95,6 +95,9 @@ defmodule DeepEvalEx do
     the Messages API
   - `DeepEvalEx.LLM.Adapters.Ollama` (`:ollama`) - local models via
     Ollama's `/api/chat`
+  - `DeepEvalEx.LLM.Adapters.ReqLLM` (`:req_llm`) - Gemini, Azure, Bedrock,
+    Groq, OpenRouter and the other providers of the optional `req_llm`
+    dependency
   - `DeepEvalEx.LLM.Adapters.Mock` (`:mock`) - canned responses for tests
 
   Each records token usage and cost on the results; see

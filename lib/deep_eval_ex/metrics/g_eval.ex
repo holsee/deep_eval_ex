@@ -547,7 +547,8 @@ defmodule DeepEvalEx.Metrics.GEval do
     case model do
       nil -> base_opts
       {provider, model} -> Keyword.merge(base_opts, adapter: provider, model: model)
-      model when is_binary(model) -> Keyword.put(base_opts, :model, model)
+      # A name, or an adapter's own spec such as a ReqLLM inline model spec.
+      model -> Keyword.put(base_opts, :model, model)
     end
   end
 

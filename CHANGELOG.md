@@ -2582,6 +2582,43 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     (`dag_*`: prompts, measure, verbose logs, test run, and the graph as
     `to_dict` writes it, `dag.json`) and three System One scenarios
     (`dag_hybrid`, `dag_hybrid_fallback`, `dag_system_one`).
+- **`DeepEvalEx.LLM.Adapters.ReqLLM`, judges from any provider
+  [ReqLLM](https://hexdocs.pm/req_llm) supports** (Gemini, Azure, Bedrock,
+  Groq, OpenRouter, xAI, ...), so DeepEvalEx reaches them without native
+  adapters of its own beyond OpenAI, Anthropic and Ollama. It takes the
+  place of deepeval's native Gemini, Azure and gateway models.
+  - `req_llm` is an optional dependency (`~> 1.26`): add
+    `{:req_llm, "~> 1.26"}` to your own deps to use the adapter. Without
+    it, its calls raise an error naming the dependency, and DeepEvalEx
+    compiles as before.
+  - Select it with `adapter: :req_llm` (or `{:req_llm, spec}`, also in
+    `default_model`) and a ReqLLM model spec such as
+    `"google:gemini-2.5-flash"`, or an inline spec map for a model
+    ReqLLM's catalog does not list, such as an OpenAI-compatible gateway's
+    with its base URL and wire protocol. `model_name/1`, the reported
+    `evaluationModel`, is the spec (`"provider:id"` for an inline spec).
+    GEval and ConversationalGEval now pass an inline spec to their judge
+    instead of failing on a model that is not a string.
+  - `generate_with_schema/3` makes the schema strict with
+    `DeepEvalEx.LLM.StrictSchema`, as the OpenAI adapter does, and asks
+    with ReqLLM's `generate_object/4`; the object comes back as a map with
+    string keys.
+  - Each call records its token counts with `DeepEvalEx.LLM.Usage`. The
+    cost is `DeepEvalEx.LLM.Pricing`'s for the spec or bare model id when
+    it has one (so `"openai:gpt-4o"` costs what the OpenAI adapter's
+    `"gpt-4o"` does), else ReqLLM's own catalog cost, else `nil`. The
+    adapter is native, as deepeval's gateway models are, so metrics report
+    its cost. Calls are `:llm` spans inside a trace, like every adapter's.
+  - Options: `:temperature` (default `0.0`, as deepeval's `LiteLLMModel`),
+    `:max_tokens`, `:api_key`, `:base_url`, `:timeout`, `:req_options`
+    (ReqLLM's `req_http_options`, e.g. a `Req.Test` plug) and
+    `:req_llm_options` for any other ReqLLM option.
+  - The `:live` suite gains an optional ReqLLM case, run when
+    `DEEP_EVAL_LIVE_REQLLM_MODEL` is set (with
+    `DEEP_EVAL_LIVE_REQLLM_BASE_URL` and `DEEP_EVAL_LIVE_REQLLM_WIRE` for a
+    gateway). CI also compiles DeepEvalEx without optional dependencies.
+    See the [LLM Adapters](wiki/api/LLM-Adapters.md) page and the
+    [Configuration](wiki/guides/Configuration.md) guide.
 
 ### Changed
 

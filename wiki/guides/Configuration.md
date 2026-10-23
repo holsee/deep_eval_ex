@@ -223,6 +223,53 @@ There is no default model, as in deepeval: give one in `default_model`, the
 :deep_eval_ex, ollama_temperature: 0.0`, and defaults to `0.0`. Other model
 options can be passed with `options: %{num_ctx: 8192}`.
 
+### ReqLLM (Gemini, Azure, Bedrock, Groq, OpenRouter, ...)
+
+Providers beyond OpenAI, Anthropic and Ollama are reached through
+[ReqLLM](https://hexdocs.pm/req_llm), an optional dependency. Add it to your
+own deps:
+
+```elixir
+{:req_llm, "~> 1.26"}
+```
+
+Then name a ReqLLM model spec:
+
+```elixir
+config :deep_eval_ex,
+  default_model: {:req_llm, "google:gemini-2.5-flash"}
+```
+
+ReqLLM reads each provider's key itself (`GOOGLE_API_KEY`, `GROQ_API_KEY`,
+`config :req_llm, google_api_key: "..."`, ...); the `api_key:` option
+overrides it. `temperature` defaults to `0.0`, as for deepeval's gateway
+models, and ReqLLM drops it for models that reject it. `base_url:`
+overrides the provider's endpoint, and `req_llm_options:` passes any other
+ReqLLM option.
+
+For an OpenAI-compatible gateway, give an inline spec with the gateway's
+base URL and the OpenAI API it serves the model on (`"openai_responses"` or
+`"openai_chat"`), since ReqLLM's catalog does not know gateway model ids:
+
+```elixir
+config :deep_eval_ex,
+  default_model:
+    {:req_llm,
+     %{
+       provider: :openai,
+       id: "openai/gpt-6-luna",
+       base_url: "https://gateway.example.com/v1",
+       extra: %{wire: %{protocol: "openai_responses"}}
+     }}
+```
+
+ReqLLM warns about a `"provider:id"` string its catalog does not list;
+`config :req_llm, warn_unverified_models: false` turns this off.
+
+Costs come from DeepEvalEx's price table (or `:model_pricing`) for the spec
+or bare model id, else from ReqLLM's catalog. See
+`DeepEvalEx.LLM.Adapters.ReqLLM`.
+
 ## Runtime Options
 
 Override configuration at evaluation time:

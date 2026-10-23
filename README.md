@@ -137,6 +137,9 @@ DeepEvalEx supports multiple LLM providers:
   `OPENAI_BASE_URL`
 - **Anthropic** (`:anthropic`) - Claude Opus, Sonnet and Haiku via the Messages API
 - **Ollama** (`:ollama`) - Local models via Ollama's `/api/chat`
+- **ReqLLM** (`:req_llm`) - Gemini, Azure, Bedrock, Groq, OpenRouter and the
+  other providers [ReqLLM](https://hexdocs.pm/req_llm) supports, with the
+  optional `{:req_llm, "~> 1.26"}` dependency
 - **Mock** (`:mock`) - Canned responses for tests, no network
 
 Every adapter records token usage and cost on the results.

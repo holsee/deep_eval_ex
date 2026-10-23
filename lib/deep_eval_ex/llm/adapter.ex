@@ -68,7 +68,8 @@ defmodule DeepEvalEx.LLM.Adapter do
   ## Native Adapters and Cost
 
   As in deepeval, a metric's cost is only reported for a *native* judge:
-  the OpenAI, Anthropic and Ollama adapters, whose `c:native?/0` is `true`.
+  the OpenAI, Anthropic, Ollama and ReqLLM adapters, whose `c:native?/0`
+  is `true`.
   A measure with a native judge starts from zero cost and token counts;
   one with a custom judge (any adapter whose `c:native?/0` is `false`, the
   default, `DeepEvalEx.LLM.Adapters.Mock` included) starts from `nil`, so
@@ -380,12 +381,16 @@ defmodule DeepEvalEx.LLM.Adapter do
 
       DeepEvalEx.LLM.Adapter.get_adapter(:anthropic)
       #=> DeepEvalEx.LLM.Adapters.Anthropic
+
+      DeepEvalEx.LLM.Adapter.get_adapter(:req_llm)
+      #=> DeepEvalEx.LLM.Adapters.ReqLLM
   """
   @spec get_adapter(atom()) :: module()
   def get_adapter(:openai), do: DeepEvalEx.LLM.Adapters.OpenAI
   def get_adapter(:anthropic), do: DeepEvalEx.LLM.Adapters.Anthropic
   def get_adapter(:ollama), do: DeepEvalEx.LLM.Adapters.Ollama
   def get_adapter(:mock), do: DeepEvalEx.LLM.Adapters.Mock
+  def get_adapter(:req_llm), do: DeepEvalEx.LLM.Adapters.ReqLLM
   def get_adapter(module) when is_atom(module), do: module
 
   @doc """

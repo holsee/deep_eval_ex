@@ -1,3 +1,25 @@
+defmodule DeepEvalEx.LiveTest.ReqLLMSpec do
+  @moduledoc false
+  # The ReqLLM judge of the live suite: DEEP_EVAL_LIVE_REQLLM_MODEL, made an
+  # inline spec when DEEP_EVAL_LIVE_REQLLM_BASE_URL is set.
+
+  alias DeepEvalEx.LLM.Adapter
+
+  def judge do
+    with spec when is_binary(spec) <- Adapter.env("DEEP_EVAL_LIVE_REQLLM_MODEL"),
+         base_url when is_binary(base_url) <- Adapter.env("DEEP_EVAL_LIVE_REQLLM_BASE_URL"),
+         [provider, id] <- String.split(spec, ":", parts: 2) do
+      %{provider: String.to_atom(provider), id: id, base_url: base_url}
+      |> put_wire(Adapter.env("DEEP_EVAL_LIVE_REQLLM_WIRE"))
+    else
+      _ -> nil
+    end
+  end
+
+  defp put_wire(spec, nil), do: spec
+  defp put_wire(spec, wire), do: Map.put(spec, :extra, %{wire: %{protocol: wire}})
+end
+
 defmodule DeepEvalEx.LiveTest do
   @moduledoc """
   End-to-end checks against real LLM providers.
@@ -12,6 +34,22 @@ defmodule DeepEvalEx.LiveTest do
   pick the judge model. Unset, each provider uses its adapter's default model,
   which a gateway may not serve under that name: behind a gateway, set both
   variables to the model IDs it publishes (often provider-prefixed).
+
+  The `DeepEvalEx.LLM.Adapters.ReqLLM` case runs when
+  `DEEP_EVAL_LIVE_REQLLM_MODEL` names a ReqLLM model spec, such as
+  `google:gemini-2.5-flash` (with `GOOGLE_API_KEY` set), and is skipped
+  otherwise. With `DEEP_EVAL_LIVE_REQLLM_BASE_URL` set, the spec becomes an
+  inline one with that base URL, and `DEEP_EVAL_LIVE_REQLLM_WIRE` (for an
+  `openai:` spec, `openai_responses` or `openai_chat`) names the API a
+  model ReqLLM's catalog does not know speaks. An OpenAI-compatible gateway
+  serving the Responses API is reached with, for example:
+
+      DEEP_EVAL_LIVE_REQLLM_MODEL="openai:$DEEP_EVAL_LIVE_OPENAI_MODEL" \
+      DEEP_EVAL_LIVE_REQLLM_BASE_URL="$OPENAI_BASE_URL" \
+      DEEP_EVAL_LIVE_REQLLM_WIRE=openai_responses \
+        mix test --only live
+
+  ReqLLM reads the key from `OPENAI_API_KEY`.
   """
 
   use ExUnit.Case, async: false
@@ -38,6 +76,12 @@ defmodule DeepEvalEx.LiveTest do
       model:
         Adapter.env("DEEP_EVAL_LIVE_ANTHROPIC_MODEL") ||
           DeepEvalEx.LLM.Adapters.Anthropic.model_name([])
+    },
+    %{
+      adapter: :req_llm,
+      key: "DEEP_EVAL_LIVE_REQLLM_MODEL",
+      model: Adapter.env("DEEP_EVAL_LIVE_REQLLM_MODEL"),
+      judge: DeepEvalEx.LiveTest.ReqLLMSpec.judge()
     }
   ]
 
@@ -79,6 +123,8 @@ defmodule DeepEvalEx.LiveTest do
     ]
   end
 
+  defp judge(provider), do: Map.get(provider, :judge) || provider.model
+
   for provider <- @providers do
     @provider provider
     @configured Adapter.env(provider.key) != nil
@@ -87,7 +133,7 @@ defmodule DeepEvalEx.LiveTest do
       @describetag skip: if(@configured, do: false, else: "#{provider.key} not set")
 
       test "returns schema-conforming structured output and records usage" do
-        opts = [adapter: @provider.adapter, model: @provider.model]
+        opts = [adapter: @provider.adapter, model: judge(@provider)]
 
         {result, usages} =
           Usage.track(fn ->
@@ -109,9 +155,11 @@ defmodule DeepEvalEx.LiveTest do
         tmp_dir: dir
       } do
         {results, _run, path} =
-          DeepEvalEx.evaluate_run(test_cases(), metrics(),
+          DeepEvalEx.evaluate_run(
+            test_cases(),
+            metrics(),
             adapter: @provider.adapter,
-            model: @provider.model,
+            model: judge(@provider),
             results_folder: dir,
             identifier: "live-#{@provider.adapter}"
           )
