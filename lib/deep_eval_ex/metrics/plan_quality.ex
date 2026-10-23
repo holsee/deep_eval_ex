@@ -67,8 +67,9 @@ defmodule DeepEvalEx.Metrics.PlanQuality do
     about the `task` and the `plan` over five levels
     (`DeepEvalEx.Prompts.PlanQuality.system_one_score/0`): the chosen
     level over the highest is the score, and the reason is
-    `"Decided by <model>: plan quality 0.75."`. A request that fails
-    falls back to the LLM, and the result's `:system_one_fallback_reason`
+    `"Decided by <model>: plan quality 0.75."`. For a multimodal test
+    case the LLM scores. A request that fails falls back to the LLM, and
+    the result's `:system_one_fallback_reason`
     says why
   - `:system_one` - one request answers the whole metric
     (`DeepEvalEx.Prompts.PlanQuality.system_one_questions/1`, see
@@ -176,7 +177,7 @@ defmodule DeepEvalEx.Metrics.PlanQuality do
 
     with {:ok, task} <- AgentPlan.extract_task(trace_json, opts),
          {:ok, plan} <- AgentPlan.extract_plan(trace_json, opts),
-         {:ok, {score, reason}} <- score_plan(task, plan, threshold, opts) do
+         {:ok, {score, reason}} <- score_plan(task, plan, test_case, threshold, opts) do
       verbose_logs =
         Verbose.construct_verbose_logs(
           metric_name(),
@@ -202,28 +203,22 @@ defmodule DeepEvalEx.Metrics.PlanQuality do
   end
 
   # No plan, nothing to judge: deepeval scores the integer 1.
-  defp score_plan(_task, [], _threshold, _opts), do: {:ok, {1, @no_plan_reason}}
+  defp score_plan(_task, [], _test_case, _threshold, _opts), do: {:ok, {1, @no_plan_reason}}
 
-  defp score_plan(task, plan, threshold, opts) do
-    with {:ok, verdict} <- get_score(task, plan, opts) do
+  defp score_plan(task, plan, test_case, threshold, opts) do
+    with {:ok, verdict} <- get_score(task, plan, test_case, opts) do
       score = BaseMetric.strict_score(verdict.score, Keyword.put(opts, :threshold, threshold))
       {:ok, {score, verdict.reason}}
     end
   end
 
   # Under :hybrid and :system_one the System One model scores the plan;
-  # the LLM does when it is not asked or fails (deepeval's
-  # _get_plan_quality_score).
-  defp get_score(task, plan, opts) do
+  # the LLM does for a multimodal test case, or when it is not asked or
+  # fails (deepeval's _get_plan_quality_score).
+  defp get_score(task, plan, test_case, opts) do
     decision_opts = Keyword.put_new(opts, :metric_name, metric_name())
 
-    spec = %Spec.Score{
-      instructions: EvaluationTemplate.render(opts, Template, :system_one_score),
-      levels: @plan_quality_levels,
-      state: [task: task, plan: plan]
-    }
-
-    case Decision.score(spec, decision_opts) do
+    case Decision.score(score_spec(task, plan, test_case, opts), decision_opts) do
       {:ok, value} ->
         {:ok,
          %{score: value, reason: Decision.format_reason(decision_opts, "plan quality", value)}}
@@ -231,6 +226,17 @@ defmodule DeepEvalEx.Metrics.PlanQuality do
       :llm ->
         llm_score(task, plan, opts)
     end
+  end
+
+  # deepeval's _system_one_score_spec: none for a multimodal test case.
+  defp score_spec(_task, _plan, %{multimodal: true}, _opts), do: nil
+
+  defp score_spec(task, plan, _test_case, opts) do
+    %Spec.Score{
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_score),
+      levels: @plan_quality_levels,
+      state: [task: task, plan: plan]
+    }
   end
 
   # deepeval renders it with an explicit template_class, so no

@@ -37,6 +37,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     `[:input_parameters]`, `[:output]`, or `[:input_parameters, :output]` (default: `[]`)
   - `:available_tools` - List of available ToolCall structs. When provided, an LLM
     evaluates whether the right tools were selected. Final score = min(calling, selection).
+    As in deepeval, a multimodal test case skips tool selection (it scores 1.0).
   - `:strict_mode` - When true, threshold is forced to the integer `1` and any score below
     it becomes the integer `0`, as in deepeval (default: false)
   - `:include_reason` - Whether to include reason in results (default: true)
@@ -154,7 +155,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
       |> apply_strict_mode(config)
 
     {tool_selection_score, tool_selection_reason} =
-      evaluate_tool_selection(test_case.input, called, config.available_tools, opts)
+      evaluate_tool_selection(test_case, called, config.available_tools, opts)
 
     score =
       min(tool_calling_score, tool_selection_score)
@@ -224,16 +225,14 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     )
   end
 
-  defp evaluate_tool_selection(_input, _called, nil, _opts) do
-    {1.0, "No available tools were provided to assess tool selection criteria"}
-  end
-
-  defp evaluate_tool_selection(_input, _called, [], _opts) do
-    {1.0, "No available tools were provided to assess tool selection criteria"}
-  end
-
-  defp evaluate_tool_selection(input, called, available_tools, opts) do
-    get_tool_selection_score(input, called, available_tools, opts)
+  # deepeval's `if self.available_tools and not test_case.multimodal`: a
+  # multimodal test case is not judged on tool selection either.
+  defp evaluate_tool_selection(test_case, called, available_tools, opts) do
+    if available_tools in [nil, []] or Map.get(test_case, :multimodal, false) do
+      {1.0, "No available tools were provided to assess tool selection criteria"}
+    else
+      get_tool_selection_score(test_case.input, called, available_tools, opts)
+    end
   end
 
   defp build_combined_reason(_called, _expected, %{include_reason: false}, _selection_reason),

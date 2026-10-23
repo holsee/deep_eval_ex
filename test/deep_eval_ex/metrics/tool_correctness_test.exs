@@ -647,6 +647,30 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
       assert ToolCorrectness.system_one_eval_spec(%TestCase{}, []) == nil
     end
 
+    test "a multimodal test case skips tool selection, as deepeval does",
+         %{test_case: test_case, available: available} do
+      Mock.set_schema_response(~r/Tool Selection/, %{"score" => 0.25, "reason" => "Poor."})
+      system_one = SystemOneMock.new(answer_fn: score_answers(1, 0.9))
+
+      for eval_mode <- [:llm, :hybrid] do
+        assert {:ok, result} =
+                 ToolCorrectness.measure(%{test_case | multimodal: true},
+                   adapter: :mock,
+                   eval_mode: eval_mode,
+                   system_one_model: system_one,
+                   available_tools: available
+                 )
+
+        assert result.score == 1.0
+        assert result.metadata.tool_selection_score == 1.0
+
+        assert result.metadata.tool_selection_reason ==
+                 "No available tools were provided to assess tool selection criteria"
+      end
+
+      assert SystemOneMock.calls(system_one) == []
+    end
+
     test "hybrid scores tool selection over deepeval's five levels",
          %{test_case: test_case, available: available} do
       system_one = SystemOneMock.new(answer_fn: score_answers(3, 0.25))

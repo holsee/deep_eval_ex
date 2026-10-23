@@ -2626,7 +2626,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     `file://` URL (read into base64 at once), an `http(s)://` URL (never
     downloaded by DeepEvalEx itself), or base64 data and a mime type, with
     deepeval's derived `filename`, `mimeType` and `local`, and its error
-    messages. Interpolating an image gives its placeholder
+    messages (an empty `url` or `dataBase64` counts as missing, as in
+    deepeval). Interpolating an image gives its placeholder
     (`[DEEPEVAL:PDF:<id>]` for a PDF), as deepeval's f-strings do.
   - Where deepeval looks placeholders up in a process-wide image registry,
     a test case carries its images: `DeepEvalEx.TestCase` and
@@ -2662,9 +2663,12 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     ContextualRelevancy, Faithfulness, Hallucination, PIILeakage,
     PlanAdherence, PlanQuality, PromptAlignment, StepEfficiency,
     Summarization, TaskCompletion and Toxicity; ContextualRecall's and
-    ContextualRelevancy's `:hybrid` verdicts, and StepEfficiency's and
-    PlanAdherence's `:hybrid` scores, go to the LLM; and System One
-    batching skips the test case.
+    ContextualRelevancy's `:hybrid` verdicts, and StepEfficiency's,
+    PlanAdherence's and PlanQuality's `:hybrid` scores, go to the LLM; and
+    System One batching skips the test case. ToolCorrectness skips tool
+    selection for a multimodal test case even with `:available_tools`,
+    scoring it `1.0` with deepeval's "No available tools were provided"
+    reason.
   - Parity fixtures written by deepeval: twenty-one multimodal prompt
     goldens, three scripted-judge scenarios
     (`answer_relevancy_multimodal`, `contextual_recall_multimodal`,

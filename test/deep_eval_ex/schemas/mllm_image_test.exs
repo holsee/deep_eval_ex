@@ -69,6 +69,16 @@ defmodule DeepEvalEx.MLLMImageTest do
       assert MLLMImage.new(url: @dot_path, local: false) == {:error, "Local path mismatch"}
     end
 
+    test "treats an empty url or dataBase64 as missing, as deepeval's truthiness check does" do
+      missing =
+        {:error,
+         "You must provide either a 'url' or both 'dataBase64' and 'mimeType' to create an MLLMImage."}
+
+      assert MLLMImage.new(url: "") == missing
+      assert MLLMImage.new(data_base64: "", mime_type: "image/png") == missing
+      assert MLLMImage.new(url: "", data_base64: "") == missing
+    end
+
     test "new!/1 raises ArgumentError" do
       assert_raise ArgumentError, ~r/mimeType must be provided/, fn ->
         MLLMImage.new!(data_base64: "AAAA")

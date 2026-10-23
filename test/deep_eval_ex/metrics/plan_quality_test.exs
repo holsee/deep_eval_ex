@@ -202,6 +202,21 @@ defmodule DeepEvalEx.Metrics.PlanQualityTest do
              }
     end
 
+    test "hybrid leaves a multimodal test case's plan to the LLM, as deepeval does" do
+      system_one = SystemOneMock.new(answers: [])
+
+      assert {:ok, result} =
+               measure(%{traced_test_case() | multimodal: true}, @responses,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one
+               )
+
+      assert result.score === 0.75
+      assert result.reason == "The plan never confirms the booking."
+      assert [_prompt] = prompts("reason,score")
+      assert SystemOneMock.calls(system_one) == []
+    end
+
     test "hybrid asks nothing when the trace holds no plan" do
       system_one = SystemOneMock.new(answers: [])
 

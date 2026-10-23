@@ -100,7 +100,8 @@ defmodule DeepEvalEx.MLLMImage do
     image = struct(__MODULE__, Map.put_new_lazy(attrs, :id, &random_id/0))
 
     cond do
-      is_nil(image.url) and is_nil(image.data_base64) ->
+      # deepeval's `not self.url and not self.dataBase64`: "" is missing too.
+      image.url in [nil, ""] and image.data_base64 in [nil, ""] ->
         {:error,
          "You must provide either a 'url' or both 'dataBase64' and 'mimeType' to create an MLLMImage."}
 
