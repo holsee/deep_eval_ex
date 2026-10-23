@@ -1,0 +1,62 @@
+{
+  "description": "Jev on a conversation: its turns and fields as the observed case",
+  "test_case": {
+    "scenario": "A customer cannot log in after a password reset.",
+    "expected_outcome": "The assistant walks the customer through recovery.",
+    "context": [
+      "Accounts lock after 5 failed attempts."
+    ],
+    "turns": [
+      {
+        "role": "user",
+        "content": "I reset my password but still can't log in."
+      },
+      {
+        "role": "assistant",
+        "content": "Your account is locked; I've sent an unlock link to your email.",
+        "retrieval_context": [
+          "Unlock links expire after 1 hour."
+        ],
+        "tools_called": [
+          {
+            "name": "unlock_account",
+            "input_parameters": {
+              "user": "c-42"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Got it, I'm in. Thanks!"
+      }
+    ],
+    "expectations": {
+      "must": [
+        "Unlocks the account"
+      ],
+      "eval_mode": "system_one"
+    }
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "choices": {
+        "q_0": {
+          "choice": "pass",
+          "probabilities": {
+            "pass": 0.9,
+            "fail": 0.05,
+            "unable_to_evaluate": 0.05
+          },
+          "confidence": 0.85
+        }
+      }
+    }
+  }
+}

@@ -76,6 +76,10 @@ defmodule DeepEvalEx.TestRun do
     `:expectations_data` and `:images_mapping`
   - on each `DeepEvalEx.TestRun.MetricData`: `:expectations_data`
 
+  `from_results/3` writes a test case's `:expectations_data` itself, from
+  its expectations' result (see `DeepEvalEx.TestRun.ExpectationsData`), in
+  the same JSON shape.
+
   Keys deepeval itself does not model (deepeval ignores them on load) are
   kept too, as `{key, value}` pairs in each struct's `:extra`, in the
   file's order, and written back after the modelled keys. deepeval never
@@ -86,7 +90,7 @@ defmodule DeepEvalEx.TestRun do
   alias DeepEvalEx.{Result, TestRun}
   alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
   alias DeepEvalEx.TestCase, as: EvalTestCase
-  alias DeepEvalEx.TestRun.JSON
+  alias DeepEvalEx.TestRun.{ExpectationsData, JSON}
   alias Jason.OrderedObject
 
   @type metric_scores :: %{
@@ -195,7 +199,8 @@ defmodule DeepEvalEx.TestRun do
 
     @doc """
     Converts a result into metric data, with the result's strict mode and
-    flakiness.
+    flakiness. The result's `:expectations_data`, if any, becomes the
+    metric data's, as JSON (`DeepEvalEx.TestRun.ExpectationsData.to_map/1`).
     """
     @spec from_result(Result.t()) :: t()
     def from_result(%Result{} = result) do
@@ -214,7 +219,9 @@ defmodule DeepEvalEx.TestRun do
         evaluation_cost: result.evaluation_cost,
         input_tokens: result.input_tokens,
         output_tokens: result.output_tokens,
-        verbose_logs: result.verbose_logs
+        verbose_logs: result.verbose_logs,
+        expectations_data:
+          result.expectations_data && ExpectationsData.to_map(result.expectations_data)
       }
     end
 
@@ -541,6 +548,14 @@ defmodule DeepEvalEx.TestRun do
   single-turn test cases' in `metricsScores`, and their success counts
   towards `testPassed` and `testFailed`.
 
+  A test case with expectations has an `"Expectations"` result (see
+  `DeepEvalEx.Dataset.Expectations`): as deepeval's `update_metric_data`
+  and `ApiMetricsData` serializer, it becomes the test case's
+  `:expectations_data` (`DeepEvalEx.TestRun.ExpectationsData.to_map/1`)
+  instead of one of its `:metrics_data`, and is left out of
+  `metricsScores`, but it still decides the test case's success and adds
+  to its cost.
+
   A test case succeeds unless a non-flaky metric failed: score-only results
   (`success: nil`) and flaky ones never decide it, as in deepeval's
   `update_status`. In `metricsScores`, results without a score or a success
@@ -815,14 +830,16 @@ defmodule DeepEvalEx.TestRun do
   # deepeval's create_api_test_case for a ConversationalTestCase; its
   # update_run_duration adds the time taken to the initial 0.0.
   defp api_test_case(%EvalConversationalTestCase{} = test_case, results, duration, order) do
-    metrics_data = Enum.map(results, &MetricData.from_result/1)
+    all_data = Enum.map(results, &MetricData.from_result/1)
+    {expectations_data, metrics_data} = split_expectations(all_data)
 
     %ConversationalTestCase{
+      expectations_data: expectations_data,
       name: test_case.name || "conversational_test_case_#{order}",
-      success: case_success(metrics_data),
+      success: case_success(all_data),
       metrics_data: metrics_data,
       run_duration: to_float(duration || 0),
-      evaluation_cost: sum_costs(metrics_data),
+      evaluation_cost: sum_costs(all_data),
       turns: test_case.turns |> Enum.with_index() |> Enum.map(&api_turn/1),
       order: order,
       scenario: test_case.scenario,
@@ -837,9 +854,11 @@ defmodule DeepEvalEx.TestRun do
   end
 
   defp api_test_case(test_case, results, duration, order) do
-    metrics_data = Enum.map(results, &MetricData.from_result/1)
+    all_data = Enum.map(results, &MetricData.from_result/1)
+    {expectations_data, metrics_data} = split_expectations(all_data)
 
     %TestCase{
+      expectations_data: expectations_data,
       name: test_case.name || "test_case_#{order}",
       input: test_case.input,
       actual_output: test_case.actual_output,
@@ -854,14 +873,24 @@ defmodule DeepEvalEx.TestRun do
       completion_time: test_case.completion_time,
       tags: test_case.tags,
       flaky: test_case.flaky || false,
-      success: case_success(metrics_data),
+      success: case_success(all_data),
       metrics_data: metrics_data,
       run_duration: case_duration(duration),
-      evaluation_cost: sum_costs(metrics_data),
+      evaluation_cost: sum_costs(all_data),
       order: order,
       metadata: test_case.metadata,
       comments: test_case.comments
     }
+  end
+
+  # deepeval's update_metric_data and ApiMetricsData serializer: the
+  # expectation evaluator's row gives the test case its expectationsData (a
+  # copy with the row's cost) and is not exported as metric data, nor
+  # counted in metricsScores; it still decides the test case's success and
+  # adds to its cost.
+  defp split_expectations(metrics_data) do
+    {expectations, metrics} = Enum.split_with(metrics_data, & &1.expectations_data)
+    {Enum.find_value(expectations, & &1.expectations_data), metrics}
   end
 
   # deepeval's create_api_turn. It passes user_id by field name, which

@@ -135,8 +135,17 @@ defmodule DeepEvalEx.SystemOne.Batch do
   defp candidate?(_module, %ConversationalTestCase{multimodal: true}, _opts), do: false
 
   defp candidate?(module, test_case, opts) do
-    conversational_metric?(module) == is_struct(test_case, ConversationalTestCase) and
+    accepts?(module, test_case) and
       match?(%Context{mode: :system_one}, Keyword.get(opts, :system_one))
+  end
+
+  # A metric of the test case's kind; the expectations evaluator
+  # (`accepts_test_case?/1`) takes both kinds, as deepeval has one evaluator
+  # class per kind.
+  defp accepts?(module, test_case) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :accepts_test_case?, 1),
+      do: module.accepts_test_case?(test_case),
+      else: conversational_metric?(module) == is_struct(test_case, ConversationalTestCase)
   end
 
   # A BaseConversationalMetric, which alone defines requires_chatbot_role?/0.

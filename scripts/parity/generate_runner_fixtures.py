@@ -1,5 +1,5 @@
 """Generate the golden fixtures of DeepEvalEx's test-runner phase (P8):
-classifiers for now; the cache, report, expectations and CLI sets follow.
+classifiers and expectations for now; the cache, report and CLI sets follow.
 
 Classifiers (`deepeval.classifiers`) assign exactly one label from a closed
 set to a test case, and only pass or fail when the test case declares the
@@ -36,8 +36,40 @@ under test/fixtures/deepeval/classifiers/<scenario>/:
 - assert_test.json - with `assert_test`: what `deepeval.assert_test()`
                   raised (`raised`, type and message) or `null`
 
+Expectations (`dataset/expectations.py`, `evaluate/expectations.py`) are
+must/must_not conditions on a test case, judged by deepeval's private
+`_ExpectationEvaluator` (named "Expectations") that `evaluate()` and
+`assert_test()` add for every test case with expectations. For every
+scenario in `EXPECTATION_SCENARIOS` this script writes, under
+test/fixtures/deepeval/expectations/<scenario>/:
+
+- input.json    - the scenario: one `test_case` with its `expectations`
+                  (`must`, `must_not`, `eval_mode`; the judge is the
+                  expectations' `model`), the scripted judge's `judge_model`
+                  and `responses` or the fake System One model
+                  (`system_one`), and optionally `metrics` evaluated
+                  alongside (stubs, or System One metrics sharing the fake)
+- measure.json  - the evaluator after `measure()`: score, success, reason,
+                  error, evaluation model, cost, tokens, verbose logs,
+                  verdicts, `criteria`, confidence, plus `raised` when
+                  `measure()` raised
+- prompts.json  - every prompt the scripted judge received during
+                  `measure()` (llm scenarios)
+- decide.json   - the System One `decide()` calls of `measure()` and of
+                  `evaluate()` (system_one scenarios)
+- evaluate.json - what `evaluate()` returned with `ignore_errors=True`: the
+                  test result's `success` and its `metricsData` (the
+                  Expectations row with its `expectationsData`), dumped by
+                  alias without `None`s
+- test_run.json - the test run `evaluate()` wrote: the case's
+                  `expectationsData`, and no Expectations row in
+                  `metricsData` or `metricsScores`
+- assert_test.json - what `deepeval.assert_test()` raised, or `null`
+
 It also writes:
 
+- expectations/validation/cases.json - `evaluate()` and `assert_test()`
+  inputs that `validate_expectation_coverage` rejects, with the error
 - classifiers/builtins/builtins.json   - every built-in classifier's name
   and labels, with and without its constructor parameter
 - classifiers/validation/cases.json    - `Classifier(...)`
@@ -64,6 +96,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 CLASSIFIERS = os.path.join(ROOT, "test", "fixtures", "deepeval", "classifiers")
+EXPECTATIONS = os.path.join(ROOT, "test", "fixtures", "deepeval", "expectations")
 
 # Same fixed hash seed as generate_fixtures.py, which this script imports and
 # which would otherwise re-run itself instead of this script.
@@ -88,7 +121,7 @@ so = _load(
 gf = so.gf
 fakes = so.fakes
 
-from deepeval import assert_test  # noqa: E402
+from deepeval import assert_test, evaluate  # noqa: E402
 import deepeval.classifiers as builtins  # noqa: E402
 from deepeval.classifiers import (  # noqa: E402
     Classifier,
@@ -98,6 +131,15 @@ from deepeval.classifiers import (  # noqa: E402
     ToneAdherenceClassifier,
 )
 from deepeval.classifiers.utils import validate_classifiers  # noqa: E402
+from deepeval.dataset import Expectations  # noqa: E402
+from deepeval.evaluate.expectations import (  # noqa: E402
+    _ConversationExpectations,
+    _SingleTurnExpectations,
+)
+from deepeval.test_case import ConversationalTestCase  # noqa: E402
+
+# deepeval's package exports an `evaluate` function under the module's name.
+expectations_module = sys.modules["deepeval.evaluate.expectations"]
 
 BUILTINS = {
     builtin(model=fakes.ExplodingLLM()).name: builtin
@@ -542,6 +584,393 @@ CLASSIFIER_SCENARIOS = {
 }
 
 
+###############################################
+# Expectations
+###############################################
+
+_initialize_system_one_model = expectations_module.initialize_system_one_model
+
+
+class system_one_default:
+    """Within it, the System One model the expectation evaluator builds by
+    default (`initialize_system_one_model(None, mode)`) is `model`: the
+    evaluator takes no System One model argument, so this is how the fake
+    gets in."""
+
+    def __init__(self, model):
+        self.model = model
+
+    def __enter__(self):
+        def initialize(model, eval_mode=None):
+            if self.model is not None and str(eval_mode) == "system_one":
+                return self.model
+            return _initialize_system_one_model(model, eval_mode)
+
+        expectations_module.initialize_system_one_model = initialize
+
+    def __exit__(self, *exc):
+        expectations_module.initialize_system_one_model = _initialize_system_one_model
+
+
+def build_expectations_case(spec, judge):
+    """The scenario's test case, its expectations judged by `judge` (a
+    ScriptedJudge, or None for the default model)."""
+    spec = copy.deepcopy(spec)
+    expectations = spec.pop("expectations", None)
+    test_case = gf.build_test_case(spec)
+    if expectations is not None:
+        test_case.expectations = Expectations(model=judge, **expectations)
+    return test_case
+
+
+def build_expectation_models(scenario, prefix=""):
+    judge = None
+    if "responses" in scenario:
+        judge = gf.ScriptedJudge(scenario["judge_model"], scenario["responses"])
+    model, answers = None, None
+    if "system_one" in scenario:
+        model, answers = so.build_system_one(scenario["system_one"], prefix)
+    return judge, model, answers
+
+
+def build_expectation_metrics(scenario, model):
+    metrics = []
+    for spec in scenario.get("metrics", []):
+        if spec["kind"] in so.METRICS:
+            metrics.append(so.build_metric(spec, model, fakes.ExplodingLLM()))
+        else:
+            metrics.append(gf.build_metric(spec))
+    return metrics
+
+
+def evaluator_state(evaluator):
+    return {
+        "score": evaluator.score,
+        "success": evaluator.success,
+        "reason": evaluator.reason,
+        "threshold": evaluator.threshold,
+        "strict_mode": evaluator.strict_mode,
+        "error": evaluator.error,
+        "evaluation_model": evaluator.evaluation_model,
+        "evaluation_cost": evaluator.evaluation_cost,
+        "input_tokens": evaluator.input_tokens,
+        "output_tokens": evaluator.output_tokens,
+        "verbose_logs": evaluator.verbose_logs,
+        "verdicts": (
+            [v.model_dump() for v in evaluator.verdicts] if evaluator.verdicts is not None else None
+        ),
+        "criteria": evaluator.criteria,
+        "confidence": getattr(evaluator, "confidence", None),
+    }
+
+
+def metric_data_json(metric_data):
+    return metric_data.model_dump(mode="json", by_alias=True, exclude_none=True)
+
+
+def run_expectation_scenario(name, scenario):
+    out_dir = os.path.join(EXPECTATIONS, name)
+    os.makedirs(out_dir, exist_ok=True)
+    gf.write_json(os.path.join(out_dir, "input.json"), scenario)
+    cost = so.build_cost(scenario.get("system_one", {}).get("cost"))
+    # In evaluate(), the evaluator follows the metrics: its questions are
+    # m<j>. when batched with theirs.
+    batched = scenario.get("batched", False)
+    prefix = f"m{len(scenario.get('metrics', []))}." if batched else ""
+
+    # measure(): the evaluator's own state, prompts and decide() calls.
+    judge, model, answers = build_expectation_models(scenario, prefix)
+    test_case = build_expectations_case(scenario["test_case"], judge)
+    cls = (
+        _ConversationExpectations
+        if isinstance(test_case, ConversationalTestCase)
+        else _SingleTurnExpectations
+    )
+    with system_one_default(model):
+        evaluator = cls(test_case.expectations)
+    try:
+        evaluator.measure(test_case)
+        raised = None
+    except Exception as e:  # noqa: BLE001 - recorded in measure.json
+        raised = {"type": type(e).__name__, "message": str(e)}
+    gf.write_json(
+        os.path.join(out_dir, "measure.json"), {**evaluator_state(evaluator), "raised": raised}
+    )
+    if judge is not None:
+        judge.assert_exhausted()
+        gf.write_json(os.path.join(out_dir, "prompts.json"), judge.prompts)
+    measure_calls = so.decide_calls(model, answers, cost) if model is not None else None
+    canned = [answers] if answers is not None else []
+
+    # evaluate(): the test result and test run, from fresh models.
+    judge, model, answers = build_expectation_models(scenario)
+    metrics = build_expectation_metrics(scenario, model)
+    with system_one_default(model):
+        path, result = so.run_evaluate(
+            name,
+            build_expectations_case(scenario["test_case"], judge),
+            metrics=metrics or None,
+        )
+    [test_result] = result.test_results
+    gf.write_json(
+        os.path.join(out_dir, "evaluate.json"),
+        {
+            "success": test_result.success,
+            "metrics_data": [metric_data_json(m) for m in test_result.metrics_data or []],
+        },
+    )
+    if judge is not None and judge.prompts != scenario_prompts(out_dir):
+        raise RuntimeError(f"{name}: evaluate() sent other prompts than measure()")
+    if model is not None:
+        evaluate_calls = so.decide_calls(model, answers, cost)
+        if answers is not None:
+            canned.append(answers)
+            so.assert_exhausted(scenario["system_one"], *canned)
+        if not batched and evaluate_calls != measure_calls:
+            raise RuntimeError(f"{name}: evaluate() sent other decide() calls than measure()")
+        if batched and len(evaluate_calls) != 1:
+            raise RuntimeError(f"{name}: expected one batched decide() call")
+        gf.write_json(
+            os.path.join(out_dir, "decide.json"),
+            {"measure": measure_calls, "evaluate": evaluate_calls},
+        )
+    shutil.copyfile(path, os.path.join(out_dir, "test_run.json"))
+
+    if scenario.get("assert_test"):
+        judge, model, _answers = build_expectation_models(scenario)
+        metrics = build_expectation_metrics(scenario, model)
+        try:
+            with system_one_default(model):
+                assert_test(
+                    build_expectations_case(scenario["test_case"], judge), metrics or None
+                )
+            raised = None
+        except Exception as e:  # noqa: BLE001 - recorded
+            raised = {"type": type(e).__name__, "message": str(e)}
+        gf.write_json(os.path.join(out_dir, "assert_test.json"), {"raised": raised})
+
+
+def run_coverage_case(case):
+    """`evaluate()` or `assert_test()` without metrics or classifiers: what
+    `validate_expectation_coverage` raised."""
+    test_cases = [build_expectations_case(spec, None) for spec in case["test_cases"]]
+    try:
+        if case["kind"] == "evaluate":
+            evaluate(test_cases=test_cases, metrics=None)
+        else:
+            assert_test(test_cases[0], None)
+        raised = None
+    except Exception as e:  # noqa: BLE001 - recorded
+        raised = {"type": type(e).__name__, "message": str(e)}
+    return {**case, "raised": raised}
+
+
+COVERAGE_CASES = [
+    {"description": "evaluate() without test cases", "kind": "evaluate", "test_cases": []},
+    {"description": "evaluate(): one test case of two without expectations", "kind": "evaluate",
+     "test_cases": [{"input": "Q", "actual_output": "A", "expectations": {"must": ["Answers."]}},
+                    {"input": "Q", "actual_output": "A"}]},
+    {"description": "evaluate(): two test cases without (empty) expectations", "kind": "evaluate",
+     "test_cases": [{"input": "Q", "actual_output": "A", "expectations": {}},
+                    {"input": "Q", "actual_output": "A"}]},
+    {"description": "assert_test() of a test case without expectations", "kind": "assert_test",
+     "test_cases": [{"input": "Q", "actual_output": "A"}]},
+]
+
+
+def write_coverage():
+    out_dir = os.path.join(EXPECTATIONS, "validation")
+    os.makedirs(out_dir, exist_ok=True)
+    gf.write_json(
+        os.path.join(out_dir, "cases.json"), [run_coverage_case(c) for c in COVERAGE_CASES]
+    )
+
+
+REFUND_CASE = {
+    "input": "Can I get a refund on a used ticket?",
+    "actual_output": "Used tickets can't be refunded, but you can exchange it within 30 days.",
+    "retrieval_context": [
+        "Used tickets are non-refundable.",
+        {"context": "Exchanges are free within 30 days.", "source": "policy.md"},
+    ],
+    "tools_called": [{"name": "lookup_policy", "input_parameters": {"topic": "refunds"}}],
+    "metadata": {"channel": "chat", "priority": None},
+    "tags": ["refunds"],
+}
+
+REFUND_MUST = ["States the refund policy", "Offers the café exchange"]
+REFUND_MUST_NOT = ["Promises a refund"]
+
+
+def refund(eval_mode="llm", **case):
+    return {
+        **REFUND_CASE,
+        **case,
+        "expectations": {"must": REFUND_MUST, "must_not": REFUND_MUST_NOT, "eval_mode": eval_mode},
+    }
+
+
+VERDICTS_STEP = "verdicts"
+REASON_STEP = "reason"
+
+
+def verdict(id, status, reason, evidence=""):
+    return {"id": id, "status": status, "reason": reason, "evidence": evidence}
+
+
+def judged(verdicts, reason=None):
+    responses = {VERDICTS_STEP: [{"verdicts": verdicts}]}
+    if reason is not None:
+        responses[REASON_STEP] = [{"reason": reason}]
+    return responses
+
+
+ALL_PASS = [
+    verdict("must[0]", "pass", "It says used tickets can't be refunded.", "Used tickets can't be refunded"),
+    verdict("must[1]", "pass", "It offers an exchange.", "exchange it within 30 days"),
+    verdict("must_not[0]", "pass", "No refund is promised."),
+]
+
+ONE_FAILS = [
+    verdict("must_not[0]", "fail", "It promises a refund.", "you'll get a refund"),
+    verdict("must[0]", "pass", "It states the policy.", "can't be refunded"),
+    verdict("must[1]", "fail", "No exchange is offered."),
+]
+
+def judge_choice(label, p_pass, p_fail, p_unable, confidence):
+    return so.choice(label, {"pass": p_pass, "fail": p_fail, "unable_to_evaluate": p_unable}, confidence)
+
+
+EXPECTATION_SCENARIOS = {
+    "llm_all_pass": {
+        "description": "Every condition holds: score 1, the reason call, a test run without metrics",
+        "test_case": refund(),
+        "judge_model": JUDGE,
+        "responses": judged(ALL_PASS, "The score is 1.0 because it states the policy and offers an exchange."),
+        "assert_test": True,
+    },
+    "llm_one_fails": {
+        "description": "Verdicts out of order, two fail: score 0; assert_test names Expectations",
+        "test_case": {**refund(), "name": "refund answer"},
+        "judge_model": JUDGE,
+        "responses": judged(ONE_FAILS, "The score is 0.0 because it promises a refund."),
+        "metrics": [gf.STUB_JUDGE],
+        "assert_test": True,
+    },
+    "llm_unable_to_evaluate": {
+        "description": "unable_to_evaluate: measure() raises, evaluate() records the error and verdicts",
+        "test_case": refund(),
+        "judge_model": JUDGE,
+        "responses": judged([
+            verdict("must[0]", "pass", "It states the policy."),
+            verdict("must[1]", "unable_to_evaluate", "The exchange tool output is missing."),
+            verdict("must_not[0]", "pass", "No refund is promised."),
+        ]),
+        "metrics": [gf.STUB_JUDGE],
+        "assert_test": True,
+    },
+    "llm_unknown_ids": {
+        "description": "A duplicate verdict id: measure() raises before the reason call",
+        "test_case": {"input": "Hi", "actual_output": "Hello!",
+                      "expectations": {"must": ["Greets the user"], "must_not": []}},
+        "judge_model": JUDGE,
+        "responses": judged([
+            verdict("must[0]", "pass", "It greets."),
+            verdict("must[0]", "pass", "It greets again."),
+        ]),
+    },
+    "llm_raw_text": {
+        "description": "A judge without structured outputs: trimAndLoadJson loads both answers",
+        "test_case": {"input": "Hi", "actual_output": "Hello!", "context": ["Be polite."],
+                      "expectations": {"must": ["Greets the user"]}},
+        "judge_model": JUDGE,
+        "responses": {
+            VERDICTS_STEP: ['```json\n{"verdicts": [{"id": "must[0]", "status": "pass", '
+                            '"reason": "It greets.", "evidence": "Hello!"},]}\n```'],
+            REASON_STEP: ['{"reason": "The score is 1.0 because it greets."}'],
+        },
+    },
+    "llm_conversation": {
+        "description": "A conversation: turns, scenario, chatbot role and tags as the observed case",
+        "test_case": {
+            **CONVERSATION,
+            "chatbot_role": "A support agent",
+            "tags": ["login"],
+            "expectations": {"must": ["Unlocks the account"], "must_not": ["Asks for the password"]},
+        },
+        "judge_model": JUDGE,
+        "responses": judged(
+            [verdict("must[0]", "pass", "It sends an unlock link.", "unlock_account"),
+             verdict("must_not[0]", "pass", "No password is asked for.")],
+            "The score is 1.0 because the account was unlocked.",
+        ),
+        "assert_test": True,
+    },
+    "system_one_pass": {
+        "description": "Jev: one Choice per condition with the observed case as state; strict score 1",
+        "test_case": refund("system_one"),
+        "system_one": {"model": JEV, "cost": so.JEV_COST, "answers": {"choices": {
+            "q_0": judge_choice("pass", 0.9, 0.08, 0.02, 0.85),
+            "q_1": judge_choice("pass", 0.7, 0.25, 0.05, 0.55),
+            "q_2": judge_choice("pass", 0.95, 0.04, 0.01, 0.9),
+        }}},
+        "assert_test": True,
+    },
+    "system_one_fails": {
+        "description": "Jev: a must_not condition fails, strict score 0",
+        "test_case": {**refund("system_one"), "name": "refund answer"},
+        "system_one": {"model": JEV, "answers": {"choices": {
+            "q_0": judge_choice("pass", 0.9, 0.08, 0.02, 0.85),
+            "q_1": judge_choice("pass", 0.6, 0.3, 0.1, 0.4),
+            "q_2": judge_choice("fail", 0.2, 0.75, 0.05, 0.6),
+        }}},
+        "metrics": [gf.STUB_JUDGE],
+        "assert_test": True,
+    },
+    "system_one_unable_to_evaluate": {
+        "description": "Jev: unable_to_evaluate wins a Choice, measure() raises with the reason",
+        "test_case": refund("system_one"),
+        "system_one": {"model": JEV, "cost": so.JEV_COST, "answers": {"choices": {
+            "q_0": judge_choice("pass", 0.9, 0.08, 0.02, 0.85),
+            "q_1": judge_choice("unable_to_evaluate", 0.2, 0.1, 0.7, 0.5),
+            "q_2": judge_choice("pass", 0.95, 0.04, 0.01, 0.9),
+        }}},
+        "assert_test": True,
+    },
+    "system_one_conversation": {
+        "description": "Jev on a conversation: its turns and fields as the observed case",
+        "test_case": {
+            **CONVERSATION,
+            "expectations": {"must": ["Unlocks the account"], "eval_mode": "system_one"},
+        },
+        "system_one": {"model": JEV, "cost": so.JEV_COST, "answers": {"choices": {
+            "q_0": judge_choice("pass", 0.9, 0.05, 0.05, 0.85),
+        }}},
+    },
+    "system_one_batched": {
+        "description": "Jev with a system_one Faithfulness: evaluate() asks both in one request",
+        "batched": True,
+        "test_case": refund("system_one"),
+        "metrics": [{"kind": "faithfulness", "eval_mode": "system_one"}],
+        "system_one": {"model": JEV, "cost": {"value": 0.000084, "input_tokens": 2001, "output_tokens": 0},
+                       "answers": {
+                           "nouls": {"m0.q_0": so.noul(0.8), "m0.q_1": so.noul(0.1)},
+                           "scores": {"m0.q_2": so.score(3, so.FOUR_LEVELS_HIGH, 0.7)},
+                           "choices": {
+                               "m1.q_0": judge_choice("pass", 0.9, 0.08, 0.02, 0.85),
+                               "m1.q_1": judge_choice("pass", 0.7, 0.25, 0.05, 0.55),
+                               "m1.q_2": judge_choice("pass", 0.95, 0.04, 0.01, 0.9),
+                           },
+                       }},
+    },
+    "system_one_down": {
+        "description": "Jev down: measure() raises, nothing falls back to the LLM",
+        "test_case": refund("system_one"),
+        "system_one": so.DOWN,
+    },
+}
+
+
 def main():
     if gf.deepeval.__version__ != gf.DEEPEVAL_VERSION:
         sys.exit(f"expected deepeval {gf.DEEPEVAL_VERSION}, found {gf.deepeval.__version__}")
@@ -554,6 +983,13 @@ def main():
         write_builtins()
         write_validation()
         print(f"wrote {os.path.relpath(CLASSIFIERS, ROOT)}/builtins and validation")
+        if os.path.isdir(EXPECTATIONS):
+            shutil.rmtree(EXPECTATIONS)
+        for name, scenario in EXPECTATION_SCENARIOS.items():
+            run_expectation_scenario(name, scenario)
+            print(f"wrote {os.path.relpath(os.path.join(EXPECTATIONS, name), ROOT)}")
+        write_coverage()
+        print(f"wrote {os.path.relpath(EXPECTATIONS, ROOT)}/validation")
     finally:
         shutil.rmtree(gf.WORK_DIR, ignore_errors=True)
 

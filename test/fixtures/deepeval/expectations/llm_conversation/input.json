@@ -1,0 +1,74 @@
+{
+  "description": "A conversation: turns, scenario, chatbot role and tags as the observed case",
+  "test_case": {
+    "scenario": "A customer cannot log in after a password reset.",
+    "expected_outcome": "The assistant walks the customer through recovery.",
+    "context": [
+      "Accounts lock after 5 failed attempts."
+    ],
+    "turns": [
+      {
+        "role": "user",
+        "content": "I reset my password but still can't log in."
+      },
+      {
+        "role": "assistant",
+        "content": "Your account is locked; I've sent an unlock link to your email.",
+        "retrieval_context": [
+          "Unlock links expire after 1 hour."
+        ],
+        "tools_called": [
+          {
+            "name": "unlock_account",
+            "input_parameters": {
+              "user": "c-42"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Got it, I'm in. Thanks!"
+      }
+    ],
+    "chatbot_role": "A support agent",
+    "tags": [
+      "login"
+    ],
+    "expectations": {
+      "must": [
+        "Unlocks the account"
+      ],
+      "must_not": [
+        "Asks for the password"
+      ]
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "verdicts": [
+      {
+        "verdicts": [
+          {
+            "id": "must[0]",
+            "status": "pass",
+            "reason": "It sends an unlock link.",
+            "evidence": "unlock_account"
+          },
+          {
+            "id": "must_not[0]",
+            "status": "pass",
+            "reason": "No password is asked for.",
+            "evidence": ""
+          }
+        ]
+      }
+    ],
+    "reason": [
+      {
+        "reason": "The score is 1.0 because the account was unlocked."
+      }
+    ]
+  },
+  "assert_test": true
+}

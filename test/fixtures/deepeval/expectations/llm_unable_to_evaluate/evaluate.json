@@ -1,0 +1,56 @@
+{
+  "success": false,
+  "metrics_data": [
+    {
+      "name": "Stub Judge",
+      "threshold": 0.7,
+      "success": true,
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "strictMode": false,
+      "flaky": false,
+      "evaluationModel": "gpt-4o-mini",
+      "evaluationCost": 0.000321,
+      "inputTokenCount": 1234,
+      "outputTokenCount": 56
+    },
+    {
+      "name": "Expectations",
+      "threshold": 1.0,
+      "success": false,
+      "strictMode": true,
+      "flaky": false,
+      "evaluationModel": "scripted-judge",
+      "error": "Unable to evaluate expectations:\nmust[0] States the refund policy: pass — It states the policy. Evidence: \nmust[1] Offers the café exchange: unable_to_evaluate — The exchange tool output is missing. Evidence: \nmust_not[0] Promises a refund: pass — No refund is promised. Evidence: ",
+      "verboseLogs": "{\"verdicts\":[{\"id\":\"must[0]\",\"status\":\"pass\",\"reason\":\"It states the policy.\",\"evidence\":\"\"},{\"id\":\"must[1]\",\"status\":\"unable_to_evaluate\",\"reason\":\"The exchange tool output is missing.\",\"evidence\":\"\"},{\"id\":\"must_not[0]\",\"status\":\"pass\",\"reason\":\"No refund is promised.\",\"evidence\":\"\"}]}",
+      "expectationsData": {
+        "success": false,
+        "verdicts": [
+          {
+            "kind": "MUST",
+            "condition": "States the refund policy",
+            "status": "pass",
+            "reason": "It states the policy.",
+            "evidence": ""
+          },
+          {
+            "kind": "MUST",
+            "condition": "Offers the café exchange",
+            "status": "unable_to_evaluate",
+            "reason": "The exchange tool output is missing.",
+            "evidence": ""
+          },
+          {
+            "kind": "MUST_NOT",
+            "condition": "Promises a refund",
+            "status": "pass",
+            "reason": "No refund is promised.",
+            "evidence": ""
+          }
+        ],
+        "evaluationModel": "scripted-judge",
+        "error": "Unable to evaluate expectations:\nmust[0] States the refund policy: pass — It states the policy. Evidence: \nmust[1] Offers the café exchange: unable_to_evaluate — The exchange tool output is missing. Evidence: \nmust_not[0] Promises a refund: pass — No refund is promised. Evidence: "
+      }
+    }
+  ]
+}

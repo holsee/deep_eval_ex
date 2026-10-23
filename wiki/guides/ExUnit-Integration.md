@@ -227,6 +227,18 @@ assert_evaluation(test_case, [Faithfulness],
 Metrics and classifiers: Faithfulness (score: 0.4, ...), refusal (label: complied, expected: refused, error: None, reason: ...) failed.
 ```
 
+### Expectations
+
+A test case with `:expectations` is also judged against them (see the
+[Expectations](Expectations.md) guide), and they fail it as a metric would,
+under the name `Expectations`. They are enough on their own:
+`assert_evaluation(test_case, [])` judges just the expectations, and raises
+`"1 test case is missing expectations. ..."` for a test case without any.
+
+```
+Metrics: Expectations (score: 0.0, threshold: 1.0, strict: True, error: None, reason: The score is 0.0 because it promises a refund.) failed.
+```
+
 ### Flaky Metrics and Test Cases
 
 A failing metric marked `flaky` never fails the test case on its own. A test

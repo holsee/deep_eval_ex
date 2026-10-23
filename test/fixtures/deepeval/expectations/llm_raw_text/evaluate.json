@@ -1,0 +1,31 @@
+{
+  "success": true,
+  "metrics_data": [
+    {
+      "name": "Expectations",
+      "threshold": 1.0,
+      "success": true,
+      "score": 1.0,
+      "reason": "The score is 1.0 because it greets.",
+      "strictMode": true,
+      "flaky": false,
+      "evaluationModel": "scripted-judge",
+      "verboseLogs": "{\"verdicts\":[{\"id\":\"must[0]\",\"status\":\"pass\",\"reason\":\"It greets.\",\"evidence\":\"Hello!\"}]}",
+      "expectationsData": {
+        "success": true,
+        "score": 1.0,
+        "reason": "The score is 1.0 because it greets.",
+        "verdicts": [
+          {
+            "kind": "MUST",
+            "condition": "Greets the user",
+            "status": "pass",
+            "reason": "It greets.",
+            "evidence": "Hello!"
+          }
+        ],
+        "evaluationModel": "scripted-judge"
+      }
+    }
+  ]
+}

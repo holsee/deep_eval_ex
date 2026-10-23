@@ -43,10 +43,15 @@ defmodule DeepEvalEx.ExUnit do
   - Like `assert_test`, they raise `ArgumentError` unless at least one
     metric has a threshold and is not flaky (see
     `DeepEvalEx.Evaluator.check_at_least_one_metric_has_threshold!/2`).
-    With no metrics and no classifiers, `assert_evaluation(test_case, [])` raises
-    `ArgumentError` with the message of the `ValueError` `assert_test`
-    raises for a test case without metrics or expectations:
-    `"1 test case is missing expectations. ..."`.
+    With no metrics and no classifiers, `assert_evaluation(test_case, [])`
+    judges the test case's expectations alone, and raises `ArgumentError`
+    with the message of the `ValueError` `assert_test` raises for a test
+    case without any: `"1 test case is missing expectations. ..."`. A test
+    case with expectations needs no metric with a threshold.
+  - A test case with expectations (see `DeepEvalEx.Dataset.Expectations`)
+    is also judged against them, after its metrics, as `assert_test` adds
+    its expectation evaluator: the `"Expectations"` result fails the test
+    case, and is listed in the message, as a metric would be.
   - The test case is evaluated by `DeepEvalEx.Evaluator.evaluate/3`, so
     its metrics run concurrently, under the Evaluator's timeouts and
     `ErrorConfig` (see "Concurrency", "Timeouts" and "Errors" there).
@@ -301,7 +306,7 @@ defmodule DeepEvalEx.ExUnit do
   # a flaky test case only warns.
   defp assert_test(test_case, metrics, opts) do
     opts = assert_opts(opts)
-    check_metrics!(metrics, Keyword.get(opts, :classifiers, []), opts)
+    check_metrics!(test_case, metrics, Keyword.get(opts, :classifiers, []), opts)
 
     {results, classifications} = evaluate(test_case, metrics, opts)
     # deepeval's assert_test builds its TestResult with index=None; only
@@ -321,19 +326,19 @@ defmodule DeepEvalEx.ExUnit do
   end
 
   # deepeval's validate_assert_test_inputs: with no metrics and no
-  # classifiers it requires the test case to have expectations, which
-  # DeepEvalEx does not evaluate yet, so it raises with deepeval's ValueError
-  # message. Classifiers alone need no threshold.
-  defp check_metrics!([], [], _opts) do
-    raise ArgumentError,
-          "1 test case is missing expectations. Fill in non-empty expectations for " <>
-            "these test cases and/or provide at least one metric and/or classifier."
+  # classifiers the test case must have expectations, which are then all
+  # there is to judge. Classifiers alone, or expectations, need no metric
+  # with a threshold.
+  defp check_metrics!(test_case, [], [], _opts),
+    do: Evaluator.validate_expectation_coverage!([test_case])
+
+  defp check_metrics!(_test_case, [], _classifiers, _opts), do: :ok
+
+  defp check_metrics!(test_case, metrics, _classifiers, opts) do
+    if Evaluator.has_expectations?(test_case),
+      do: :ok,
+      else: Evaluator.check_at_least_one_metric_has_threshold!(metrics, opts)
   end
-
-  defp check_metrics!([], _classifiers, _opts), do: :ok
-
-  defp check_metrics!(metrics, _classifiers, opts),
-    do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, opts)
 
   defp validate_score!(result, score_opts) do
     min_score = Keyword.get(score_opts, :min)

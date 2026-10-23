@@ -1847,6 +1847,46 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     fixture now runs through the real classifier. A new
     [Classifiers](wiki/guides/Classifiers.md) guide covers them.
 
+- **Expectations are judged** (ADR-0010), a port of deepeval 4.3.1's
+  `_ExpectationEvaluator` (`evaluate/expectations.py`) and
+  `expectation_evidence`. A test case's (or golden's) `:expectations`,
+  `must` and `must_not` conditions, were carried but never evaluated.
+  - `DeepEvalEx.evaluate/3`, `evaluate_run/3`,
+    `DeepEvalEx.Dataset.EvaluationDataset.evaluate/4`, `DeepEvalEx.Evaluator`
+    and `assert_evaluation/3` judge the expectations of every test case
+    that has some, after its metrics: one more result, `"Expectations"`,
+    threshold 1, strict and never flaky whatever the run sets, that passes
+    only when every `must` condition holds and no `must_not` one does, and
+    decides the test case's success like a metric. Its eval mode is the
+    `:eval_mode` setting, else the expectations' own, else the run's
+    (`:hybrid` runs as `:llm`); its judge is the expectations' `:model`,
+    else the run's.
+  - Under `:llm`, one verdicts call (one verdict per condition id) and one
+    reason call, with deepeval's prompts; a missing, duplicate or unknown
+    id, or a condition the judge was unable to evaluate, errors the result
+    with deepeval's message (`"Unable to evaluate expectations: ..."`),
+    keeping the verdicts and verbose logs. Under `:system_one`, one Choice
+    per condition (`pass`, `fail`, `unable_to_evaluate`) about the
+    `observed_case`, batched with the test case's other System One metrics,
+    with the deterministic reason; `unable_to_evaluate` winning a Choice
+    errors it.
+  - `DeepEvalEx.TestRun.ExpectationsData` (and its `Verdict`), deepeval's
+    `ExpectationsData`: the result's new `:expectations_data`, exported as
+    the test case's `expectationsData` (each condition's `MUST`/`MUST_NOT`
+    kind, status, reason and evidence), not as metric data or in
+    `metricsScores`.
+  - `DeepEvalEx.Dataset.Expectations.present?/1` (deepeval's
+    `Expectations.__bool__`) and `evidence/1` (`expectation_evidence`, the
+    observed case the judge sees), and
+    `DeepEvalEx.Evaluator.validate_expectation_coverage!/1`
+    (`validate_expectation_coverage`).
+  - `DeepEvalEx.TestResult` has the test case's `:expectations`.
+  - Parity fixtures from deepeval (`test/fixtures/deepeval/expectations/`,
+    `scripts/parity/generate_runner_fixtures.py`) pin the prompts, System
+    One requests, results, `evaluate()` metric data, test runs and
+    `assert_test` messages of 12 scenarios, and the coverage errors. A new
+    [Expectations](wiki/guides/Expectations.md) guide covers them.
+
 ### Changed
 
 - A test case's `:dataset_rank`, when set, is its `order` and default
@@ -2151,6 +2191,14 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - `DeepEvalEx.evaluate_run/3` with classifiers and no metrics returns
   `{results, nil, nil}` and writes no test run, as deepeval's
   classifier-only `evaluate()`; its spec now allows a `nil` test run.
+- Evaluating without metrics or classifiers (`DeepEvalEx.evaluate/3`,
+  `evaluate_run/3`, `assert_evaluation(test_case, [])`) now judges the test
+  cases' expectations, and raises `ArgumentError` with deepeval's message
+  unless every test case has some (`"Provide at least one test case with
+  non-empty expectations ..."`, `"N test case(s) ... missing expectations.
+  ..."`); `evaluate/3` used to evaluate nothing. A run whose test cases
+  have expectations no longer requires a metric with a threshold, and a
+  run with classifiers and expectations but no metrics writes its test run.
 
 ### Deprecated
 

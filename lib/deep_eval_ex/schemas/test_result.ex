@@ -29,8 +29,12 @@ defmodule DeepEvalEx.TestResult do
   - `:classifications` - One `DeepEvalEx.Classification` per classifier
     run (`DeepEvalEx.evaluate/3`'s `:classifiers`), in their order; `[]`
     where deepeval has `None`
+  - `:expectations` - The test case's expectations (see
+    `DeepEvalEx.Dataset.Expectations`), or `nil`. When it has some, the
+    result of judging them, `"Expectations"`, is the last of
+    `:metrics_data`
 
-  deepeval's `multimodal`, `turns` and `expectations` are not modelled.
+  deepeval's `multimodal` and `turns` are not modelled.
   """
 
   alias DeepEvalEx.{Classification, ConversationalTestCase, Result, TestCase}
@@ -56,7 +60,8 @@ defmodule DeepEvalEx.TestResult do
           context: [String.t()] | nil,
           retrieval_context: [String.t()] | nil,
           metadata: map() | nil,
-          classifications: [classification()]
+          classifications: [classification()],
+          expectations: DeepEvalEx.Dataset.Expectations.t() | nil
         }
 
   @enforce_keys [:name, :success]
@@ -70,6 +75,7 @@ defmodule DeepEvalEx.TestResult do
     :context,
     :retrieval_context,
     :metadata,
+    :expectations,
     metrics_data: [],
     conversational: false,
     classifications: []
@@ -108,7 +114,8 @@ defmodule DeepEvalEx.TestResult do
       conversational: true,
       index: index,
       metadata: test_case.metadata,
-      classifications: classifications
+      classifications: classifications,
+      expectations: test_case.expectations
     }
   end
 
@@ -127,7 +134,8 @@ defmodule DeepEvalEx.TestResult do
       context: test_case.context,
       retrieval_context: contexts(test_case.retrieval_context),
       metadata: test_case.metadata,
-      classifications: classifications
+      classifications: classifications,
+      expectations: test_case.expectations
     }
   end
 

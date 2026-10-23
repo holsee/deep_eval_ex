@@ -626,9 +626,11 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
 
   Raises `ArgumentError` with deepeval's message for a dataset without
   goldens (`"Unable to evaluate dataset with no goldens."`). Invalid
-  concurrency options, metrics without a threshold and invalid
-  hyperparameters raise as `DeepEvalEx.evaluate_run/3` raises for them,
-  before the task runs.
+  concurrency options, metrics without a threshold (unless a golden has
+  expectations) and invalid hyperparameters raise as
+  `DeepEvalEx.evaluate_run/3` raises for them, before the task runs. A
+  golden's expectations carry over to its test case and are judged after
+  its metrics (see "Expectations" in `DeepEvalEx.evaluate_run/3`).
 
   ## Options
 
@@ -665,7 +667,10 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
     if goldens == [], do: raise(ArgumentError, "Unable to evaluate dataset with no goldens.")
 
     concurrency = Evaluator.max_concurrency!(opts)
-    if metrics != [], do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, opts)
+    # deepeval skips the check when a golden has expectations.
+    if metrics != [] and not Enum.any?(goldens, &Evaluator.has_expectations?/1),
+      do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, opts)
+
     TestRun.process_hyperparameters(opts[:hyperparameters])
 
     test_cases = run_task(goldens, task, concurrency)

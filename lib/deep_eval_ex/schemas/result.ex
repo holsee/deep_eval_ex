@@ -43,6 +43,11 @@ defmodule DeepEvalEx.Result do
   - `:input_tokens` - Prompt tokens used by the LLM calls (`nil` if unknown)
   - `:output_tokens` - Completion tokens used by the LLM calls (`nil` if unknown)
   - `:latency_ms` - Time taken for the evaluation in milliseconds
+  - `:expectations_data` - On the result of a test case's expectations
+    (the `"Expectations"` result, see `DeepEvalEx.Dataset.Expectations`),
+    how each condition was judged, a `DeepEvalEx.TestRun.ExpectationsData`;
+    `nil` on any other result. The test run exports such a result as its
+    test case's `expectationsData`, not as metric data
 
   ## Examples
 
@@ -114,7 +119,8 @@ defmodule DeepEvalEx.Result do
           evaluation_cost: float() | nil,
           input_tokens: non_neg_integer() | nil,
           output_tokens: non_neg_integer() | nil,
-          latency_ms: non_neg_integer() | nil
+          latency_ms: non_neg_integer() | nil,
+          expectations_data: DeepEvalEx.TestRun.ExpectationsData.t() | nil
         }
 
   @enforce_keys [:metric, :score, :success]
@@ -135,6 +141,7 @@ defmodule DeepEvalEx.Result do
     :score_breakdown,
     :confidence,
     :system_one_fallback_reason,
+    :expectations_data,
     strict_mode: false,
     strict_applied: false,
     flaky: false,

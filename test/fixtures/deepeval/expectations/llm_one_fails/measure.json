@@ -1,0 +1,36 @@
+{
+  "score": 0.0,
+  "success": false,
+  "reason": "The score is 0.0 because it promises a refund.",
+  "threshold": 1.0,
+  "strict_mode": true,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "{\"verdicts\":[{\"id\":\"must_not[0]\",\"status\":\"fail\",\"reason\":\"It promises a refund.\",\"evidence\":\"you'll get a refund\"},{\"id\":\"must[0]\",\"status\":\"pass\",\"reason\":\"It states the policy.\",\"evidence\":\"can't be refunded\"},{\"id\":\"must[1]\",\"status\":\"fail\",\"reason\":\"No exchange is offered.\",\"evidence\":\"\"}]}",
+  "verdicts": [
+    {
+      "id": "must[0]",
+      "status": "pass",
+      "reason": "It states the policy.",
+      "evidence": "can't be refunded"
+    },
+    {
+      "id": "must[1]",
+      "status": "fail",
+      "reason": "No exchange is offered.",
+      "evidence": ""
+    },
+    {
+      "id": "must_not[0]",
+      "status": "fail",
+      "reason": "It promises a refund.",
+      "evidence": "you'll get a refund"
+    }
+  ],
+  "criteria": "{\"eval_mode\": \"llm\", \"system_one_model\": null}",
+  "confidence": null,
+  "raised": null
+}

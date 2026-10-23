@@ -1,0 +1,20 @@
+{
+  "score": null,
+  "success": null,
+  "reason": null,
+  "threshold": 1.0,
+  "strict_mode": true,
+  "error": null,
+  "evaluation_model": "exploding-jev",
+  "evaluation_cost": 0,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": null,
+  "verdicts": null,
+  "criteria": "{\"eval_mode\": \"system_one\", \"system_one_model\": \"exploding-jev\"}",
+  "confidence": null,
+  "raised": {
+    "type": "ConnectionError",
+    "message": "Jev is down"
+  }
+}

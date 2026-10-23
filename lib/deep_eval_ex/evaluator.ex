@@ -104,6 +104,22 @@ defmodule DeepEvalEx.Evaluator do
   `evaluate_with_durations/3` and `evaluate_single/3` run the classifiers
   but return only the metrics' results.
 
+  ## Expectations
+
+  A test case with expectations (`DeepEvalEx.Dataset.Expectations.present?/1`)
+  is also judged against them, as deepeval's `evaluate()` adds its
+  expectation evaluator: one more result, named `"Expectations"`, after
+  its metrics' results (and before its classifications), measured like
+  any metric, under the same timeouts and `:ignore_errors`. It is threshold
+  1 and strict, and never flaky, whatever the run sets; its eval mode and
+  judge are the expectations' (see `DeepEvalEx.Dataset.Expectations`), its
+  System One model the run's `:system_one_model`, resolved with the
+  metrics' before any test case starts. Under `:system_one` it batches with
+  the test case's other System One metrics. Its result carries a
+  `DeepEvalEx.TestRun.ExpectationsData` as `:expectations_data`.
+
+  A test case without expectations gets no such result.
+
   ## Concurrency
 
   `:max_concurrent`, `:throttle_value` and `:run_async` are deepeval's
@@ -228,6 +244,7 @@ defmodule DeepEvalEx.Evaluator do
 
   alias DeepEvalEx.Classifier.Utils, as: ClassifierUtils
   alias DeepEvalEx.Metrics.BaseMetric
+  alias DeepEvalEx.Metrics.Expectations
   alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.SystemOne.{Batch, Context}
 
@@ -304,9 +321,11 @@ defmodule DeepEvalEx.Evaluator do
     {opts, throttle_value} = async_config!(opts)
     ClassifierUtils.validate!(test_cases, Keyword.get(opts, :classifiers, []))
     metrics = copy_metrics(metrics, opts)
-    opts = preflight(metrics, opts)
+    evaluators = expectation_evaluators(test_cases, opts)
+    opts = preflight(metrics ++ evaluators, opts)
     concurrency = Keyword.fetch!(opts, :concurrency)
-    timeout = case_timeout(metrics, opts)
+    # Long enough for the test cases with an expectation evaluator.
+    timeout = case_timeout(metrics ++ Enum.take(evaluators, 1), opts)
 
     :telemetry.execute(
       [:deep_eval_ex, :evaluation, :start],
@@ -342,13 +361,13 @@ defmodule DeepEvalEx.Evaluator do
 
         {test_case, {:exit, :timeout}}, acc ->
           @cancelled_message
-          |> error_outcomes(test_case, metrics, opts)
+          |> error_outcomes(test_case, case_metrics(test_case, metrics, opts), opts)
           |> timed(timeout / 1000)
           |> collect(acc)
 
         {test_case, {:exit, reason}}, acc ->
           "Evaluation failed: #{inspect(reason)}"
-          |> error_outcomes(test_case, metrics, opts)
+          |> error_outcomes(test_case, case_metrics(test_case, metrics, opts), opts)
           |> timed(0.0)
           |> collect(acc)
       end)
@@ -389,9 +408,9 @@ defmodule DeepEvalEx.Evaluator do
   def evaluate_single(test_case, metrics, opts \\ []) do
     {opts, _throttle_value} = async_config!(opts)
     ClassifierUtils.validate!([test_case], Keyword.get(opts, :classifiers, []))
+    opts = preflight(metrics ++ expectation_evaluators([test_case], opts), opts)
 
-    {results, _classifications} =
-      test_case |> run_single(metrics, preflight(metrics, opts)) |> unwrap!()
+    {results, _classifications} = test_case |> run_single(metrics, opts) |> unwrap!()
 
     results
   end
@@ -408,11 +427,30 @@ defmodule DeepEvalEx.Evaluator do
     Keyword.fetch!(opts, :concurrency)
   end
 
+  # The distinct expectation evaluators of `test_cases` (see
+  # "Expectations"), whose contexts preflight/2 resolves.
+  defp expectation_evaluators(test_cases, opts) do
+    test_cases
+    |> Enum.map(&Expectations.for_test_case(&1, opts))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+  end
+
+  # deepeval's metrics_for_expectations: the test case's metrics, followed
+  # by its expectation evaluator when it has expectations.
+  defp case_metrics(test_case, metrics, opts) do
+    case Expectations.for_test_case(test_case, opts) do
+      nil -> metrics
+      evaluator -> metrics ++ [evaluator]
+    end
+  end
+
   # {:ok, results}, or the first metric error to raise in metrics order;
   # halting the stream stops the metrics still running. The test case's
   # deadline starts now: each metric runs until its own :metric_timeout or
   # the deadline, whichever comes first.
   defp run_single(test_case, metrics, opts) do
+    metrics = case_metrics(test_case, metrics, opts)
     deadline = deadline(case_timeout(metrics, opts))
     prefetched = prefetch(test_case, metrics, deadline, opts)
 
@@ -723,7 +761,7 @@ defmodule DeepEvalEx.Evaluator do
     case outcome do
       # Also covers metrics that implement the behaviour without `use`.
       {:ok, result} ->
-        {:ok, BaseMetric.apply_metric_semantics(result, merged_opts)}
+        {:ok, result |> BaseMetric.apply_metric_semantics(merged_opts) |> finish(metric, nil)}
 
       {:error, reason} ->
         error_outcome(reason, metric, opts, usages)
@@ -875,6 +913,45 @@ defmodule DeepEvalEx.Evaluator do
       :ok
     end
   end
+
+  @doc """
+  Raises unless every test case has expectations
+  (`DeepEvalEx.Dataset.Expectations.present?/1`), as deepeval's
+  `validate_expectation_coverage` does before `evaluate()` and
+  `assert_test()` run without metrics or classifiers: the expectations are
+  then all there is to judge.
+
+  Raises `ArgumentError` with deepeval's `ValueError` message, which
+  counts the test cases without expectations, or asks for one when there
+  are no test cases at all.
+  """
+  @spec validate_expectation_coverage!([TestCase.t() | DeepEvalEx.ConversationalTestCase.t()]) ::
+          :ok
+  def validate_expectation_coverage!([]) do
+    raise ArgumentError,
+          "Provide at least one test case with non-empty expectations when evaluating " <>
+            "without metrics or classifiers."
+  end
+
+  def validate_expectation_coverage!(test_cases) do
+    case Enum.count(test_cases, &(not has_expectations?(&1))) do
+      0 ->
+        :ok
+
+      missing ->
+        subject = if missing == 1, do: "test case is", else: "test cases are"
+
+        raise ArgumentError,
+              "#{missing} #{subject} missing expectations. Fill in non-empty expectations " <>
+                "for these test cases and/or provide at least one metric and/or classifier."
+    end
+  end
+
+  @doc false
+  # Whether `test_case` has expectations to judge.
+  @spec has_expectations?(term()) :: boolean()
+  def has_expectations?(test_case),
+    do: DeepEvalEx.Dataset.Expectations.present?(Map.get(test_case, :expectations))
 
   @doc """
   Raises unless at least one metric has a threshold and is not flaky, as
@@ -1052,6 +1129,13 @@ defmodule DeepEvalEx.Evaluator do
     |> Enum.reject(fn {key, value} -> is_nil(value) and key != :threshold end)
   end
 
+  # An expectation evaluator's result carries its expectations data, as
+  # deepeval's create_metric_data adds it; `reason` is its error, if any.
+  defp finish(result, %Expectations{} = evaluator, reason),
+    do: Expectations.finish(result, evaluator, reason)
+
+  defp finish(result, _metric, _reason), do: result
+
   # Errored results carry the metric's judge model (its System One model
   # under :system_one) even when the metric was killed or made no call, and
   # the usage of the calls it made before erroring.
@@ -1060,8 +1144,8 @@ defmodule DeepEvalEx.Evaluator do
     merged_opts = metric |> metric_opts(opts) |> put_context(metric, opts)
     usage_fields = BaseMetric.usage_fields(module, merged_opts, usages)
 
-    Result.error(
-      metric_name(metric),
+    metric_name(metric)
+    |> Result.error(
       reason,
       threshold_opts(module, merged_opts) ++
         [
@@ -1069,6 +1153,7 @@ defmodule DeepEvalEx.Evaluator do
           flaky: Keyword.get(merged_opts, :flaky, false)
         ] ++ Map.to_list(usage_fields)
     )
+    |> finish(metric, reason)
   end
 
   # A configured struct may name its results after its configuration (e.g.

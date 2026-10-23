@@ -53,7 +53,7 @@ defmodule DeepEvalEx.ParityTest do
   @scenarios @fixtures
              |> File.ls!()
              |> Enum.reject(
-               &(&1 in ~w(classifiers datasets prompts round_trip scripted system_one))
+               &(&1 in ~w(classifiers datasets expectations prompts round_trip scripted system_one))
              )
              |> Enum.filter(&File.dir?(Path.join(@fixtures, &1)))
              |> Enum.sort()

@@ -539,9 +539,16 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   # when the metric has no LLM (`:system_one`), else for a metric with a
   # judge (`c:evaluation_model/1`) zero when the judge is native and nil
   # when it is custom. A metric without a judge is not seeded.
+  #
+  # A metric that seeds its measures otherwise exports `usage_seed/1`, which
+  # returns the seed for `opts` (the expectation evaluator's _prepare leaves
+  # its token counts unset).
   @spec seed_usage(module(), keyword()) :: :ok
   def seed_usage(module, opts) do
     cond do
+      Code.ensure_loaded?(module) and function_exported?(module, :usage_seed, 1) ->
+        Usage.record(module.usage_seed(opts))
+
       match?(%Context{llm?: false}, Keyword.get(opts, :system_one)) ->
         Usage.record(Usage.seed(true))
 

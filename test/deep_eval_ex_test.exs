@@ -447,6 +447,8 @@ defmodule DeepEvalExTest do
               :behaviour,
               []
             ),
+            # Nor is the private expectation evaluator, which users never build
+            not match?({:docs_v1, _, _, _, :hidden, _, _}, Code.fetch_docs(module)),
             do: module
 
       assert DeepEvalEx.Metrics.ToolCorrectness in metrics

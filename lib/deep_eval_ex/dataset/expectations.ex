@@ -11,12 +11,37 @@ defmodule DeepEvalEx.Dataset.Expectations do
   - `:eval_mode` - `:llm`, `:system_one` or `nil`
 
   DeepEvalEx carries expectations from goldens to test cases and back, as
-  deepeval does; no metric judges them yet. deepeval also takes a live
-  `DeepEvalBaseLLM` as `model`, but serialises only a model name, so
-  `:model` is a string here.
+  deepeval does. deepeval also takes a live `DeepEvalBaseLLM` as `model`,
+  but serialises only a model name, so `:model` is a string here.
 
   `cast/1` validates as deepeval's pydantic model does (see its doc).
+
+  ## Judging
+
+  `DeepEvalEx.evaluate/3`, `DeepEvalEx.evaluate_run/3` and
+  `DeepEvalEx.ExUnit`'s `assert_evaluation/3` judge the expectations of
+  every test case that has some (`present?/1`) after its metrics, as
+  deepeval's `evaluate()` and `assert_test()` do: a result named
+  `"Expectations"`, threshold 1 and strict, that passes only when every
+  `must` condition holds and no `must_not` one does. The test run exports
+  it as the test case's `expectationsData` rather than as a metric (see
+  `DeepEvalEx.TestRun.ExpectationsData`).
+
+  The judge is the `:model` (else the run's `:model`, then the default
+  model) under `:llm`, and System One under `:system_one`, one Choice per
+  condition. The eval mode is the `:eval_mode` setting (see
+  `DeepEvalEx.Config`) when set, else `:eval_mode`, else the run's
+  `:eval_mode` option, with `:hybrid` running as `:llm`: deepeval lets
+  `DEEPEVAL_EVAL_MODE` win over the expectations' own mode.
+
+  The judge sees the observed test case, `evidence/1`. A condition the
+  judge cannot evaluate (`unable_to_evaluate`) errors the result, as
+  deepeval raises `"Unable to evaluate expectations: ..."`.
   """
+
+  alias DeepEvalEx.{ConversationalTestCase, TestCase}
+  alias DeepEvalEx.SystemOne.State
+  alias Jason.OrderedObject
 
   @typedoc "Expectations, as deepeval's `Expectations` model."
   @type t :: %{
@@ -79,6 +104,78 @@ defmodule DeepEvalEx.Dataset.Expectations do
 
   defp key_string(key) when is_atom(key), do: Atom.to_string(key)
   defp key_string(key), do: key
+
+  @doc """
+  Whether `expectations` hold any condition, deepeval's
+  `Expectations.__bool__`: `false` for `nil` and for expectations whose
+  `:must` and `:must_not` are both empty.
+
+  ## Examples
+
+      iex> DeepEvalEx.Dataset.Expectations.present?(%{model: nil, eval_mode: nil, must: [], must_not: ["Swears"]})
+      true
+
+      iex> DeepEvalEx.Dataset.Expectations.present?(nil)
+      false
+  """
+  @spec present?(t() | nil) :: boolean()
+  def present?(%{must: must, must_not: must_not}), do: must != [] or must_not != []
+  def present?(nil), do: false
+
+  # deepeval's expectation_evidence include set, in the order of the test
+  # case models' fields (DeepEvalEx has no MCP fields).
+  @single_turn_evidence [:input, :actual_output, :context, :retrieval_context, :metadata] ++
+                          [:tools_called, :tags]
+  @multi_turn_evidence [:turns, :scenario, :context, :chatbot_role, :metadata, :tags]
+  @turn_fields [:role, :content, :user_id, :audio, :latency_ms, :interrupted] ++
+                 [:provider_transcript, :retrieval_context, :tools_called, :metadata]
+
+  @doc """
+  The observed test case expectations are judged against, deepeval's
+  `expectation_evidence`: `model_dump(mode="json", exclude_none=True)` over
+  a fixed set of fields, as a `Jason.OrderedObject` in deepeval's field
+  order.
+
+  - a `DeepEvalEx.TestCase`: `input`, `actual_output`, `context`,
+    `retrieval_context`, `metadata`, `tools_called` and `tags`
+  - a `DeepEvalEx.ConversationalTestCase`: `turns` (each turn's fields,
+    without `nil`s), `scenario`, `context`, `chatbot_role`, `metadata` and
+    `tags`
+
+  Unset (`nil`) fields are left out; a value inside `metadata` is kept as it
+  is, `nil` included. A `DeepEvalEx.Schemas.RetrievedContextData` is dumped
+  as `"source: context"` and a tool call as its fields (see
+  `DeepEvalEx.SystemOne.Dumpable`). It is the LLM judge's "Observed case"
+  and System One's `observed_case` state.
+
+  ## Examples
+
+      iex> test_case = %DeepEvalEx.TestCase{input: "Hi", actual_output: "Hello!", tags: ["greeting"]}
+      iex> test_case |> DeepEvalEx.Dataset.Expectations.evidence() |> DeepEvalEx.TestRun.JSON.encode!()
+      ~s({"input": "Hi", "actual_output": "Hello!", "tags": ["greeting"]})
+  """
+  @spec evidence(TestCase.t() | ConversationalTestCase.t()) :: OrderedObject.t()
+  def evidence(%TestCase{} = test_case), do: dump_fields(test_case, @single_turn_evidence)
+
+  def evidence(%ConversationalTestCase{} = test_case) do
+    %OrderedObject{values: values} = dump_fields(test_case, @multi_turn_evidence)
+
+    values =
+      List.keyreplace(values, "turns", 0, {"turns", Enum.map(test_case.turns, &dump_turn/1)})
+
+    OrderedObject.new(values)
+  end
+
+  defp dump_turn(turn), do: dump_fields(turn, @turn_fields)
+
+  defp dump_fields(struct, fields) do
+    OrderedObject.new(
+      for field <- fields,
+          value <- [Map.get(struct, field)],
+          not is_nil(value),
+          do: {Atom.to_string(field), State.dump(value)}
+    )
+  end
 
   # The value of the first key naming the field, or the default when none is
   # given; a given nil stays nil, as pydantic does not default it

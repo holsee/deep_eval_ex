@@ -1,9 +1,10 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in seven sets:
+Fixtures written by **deepeval 4.3.1**, in eight sets:
 
 - export scenarios (the directories below, except `scripted/`, `prompts/`,
-  `round_trip/`, `system_one/`, `datasets/` and `classifiers/`), used by
+  `round_trip/`, `system_one/`, `datasets/`, `classifiers/` and
+  `expectations/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
@@ -32,6 +33,10 @@ Fixtures written by **deepeval 4.3.1**, in seven sets:
   deepeval's classifiers ask, label and report under the `llm` and
   `system_one` eval modes, used by
   `test/deep_eval_ex/classifier_parity_test.exs`
+- [expectation fixtures](#expectation-fixtures) (`expectations/`), what
+  deepeval's expectation evaluator asks, decides and exports as
+  `expectationsData` under the `llm` and `system_one` eval modes, used by
+  `test/deep_eval_ex/expectations_parity_test.exs`
 
 ## Export scenarios
 
@@ -659,8 +664,9 @@ label from a closed set, and pass or fail only against the test case's
 fixtures.
 
 `scripts/parity/generate_runner_fixtures.py` writes them, from the
-scenarios in its `CLASSIFIER_SCENARIOS`, and will also write the other P8
-sets (cache, report, expectations, CLI):
+scenarios in its `CLASSIFIER_SCENARIOS`, along with the
+[expectation fixtures](#expectation-fixtures), and will also write the
+other P8 sets (cache, report, CLI):
 
 ```sh
 devcontainer exec --workspace-folder . \
@@ -718,3 +724,62 @@ by `DeepEvalEx.SystemOne.Adapters.Mock.from_fixture/2`) and compares the
 prompts and `decide()` calls byte for byte, the classification (or the
 error message raised), `DeepEvalEx.evaluate/3`'s test result and
 classifications, the test run, and `assert_evaluation/3`'s failure message.
+
+## Expectation fixtures
+
+deepeval's expectations (`dataset/expectations.py`) are `must` and
+`must_not` conditions on a test case, judged by the private
+`_ExpectationEvaluator` (`evaluate/expectations.py`) that `evaluate()` and
+`assert_test()` add for every test case with expectations. Under `llm` the
+expectations' `model`, here the `ScriptedJudge`, gives one verdict per
+condition id (step `verdicts`) and then a reason (step `reason`); under
+`system_one` the System One model, here `FakeSystemOneModel`, answers one
+Choice per condition (`pass`, `fail`, `unable_to_evaluate`) about the
+`observed_case`. The evaluator takes no System One model argument, so the
+generator patches `initialize_system_one_model` in its module to hand it the
+fake.
+
+`scripts/parity/generate_runner_fixtures.py` writes them, from the scenarios
+in its `EXPECTATION_SCENARIOS`. Each `expectations/<scenario>/` holds:
+
+- `input.json` - one `test_case` with its `expectations`, the judge's
+  `judge_model` and `responses` or the fake's `system_one`, and optionally
+  `metrics` evaluated alongside (stubs, or a `system_one` metric sharing the
+  fake, `batched`)
+- `measure.json` - the evaluator after `measure()`: score, success, reason,
+  error, evaluation model, cost, tokens, verbose logs, verdicts, `criteria`,
+  confidence, and `raised` when `measure()` raised
+- `prompts.json` (`llm`) - every prompt the judge got
+- `decide.json` (`system_one`) - the `decide()` calls of `measure()` and of
+  `evaluate()`
+- `evaluate.json` - `evaluate()`'s test result: `success` and the
+  `metrics_data`, the Expectations row with its `expectationsData`, by alias
+  without `None`s
+- `test_run.json` - the test run, with the test case's `expectationsData`
+  and no Expectations row in `metricsData` or `metricsScores`
+- `assert_test.json` - what `assert_test()` raised, or `null`
+
+| Scenario | What it covers |
+| --- | --- |
+| `llm_all_pass` | Every condition holds: score 1.0, the reason call, the observed case with a `RetrievedContextData`, a tool call and metadata; no metrics |
+| `llm_one_fails` | Verdicts out of order, two fail: score 0.0; `assert_test` names `Expectations`; a stub metric alongside |
+| `llm_unable_to_evaluate` | `unable_to_evaluate`: `measure()` raises; `evaluate()` records the error with the verdicts and verbose logs |
+| `llm_unknown_ids` | A duplicate verdict id: the id error, no verdicts |
+| `llm_raw_text` | A raw text answer loaded by `trimAndLoadJson` |
+| `llm_conversation` | A conversation: turns, scenario, context, chatbot role and tags as the observed case |
+| `system_one_pass` | One Choice per condition, strict score 1.0, priced request |
+| `system_one_fails` | A `must_not` condition fails; an unpriced request |
+| `system_one_unable_to_evaluate` | `unable_to_evaluate` wins a Choice: raises with the deterministic reason |
+| `system_one_conversation` | A conversation's empty turn state and its observed case |
+| `system_one_batched` | With a `system_one` Faithfulness: one batched request, the evaluator's questions `m1.` |
+| `system_one_down` | Jev down: raises, nothing falls back |
+
+`expectations/validation/cases.json` holds `evaluate()` and `assert_test()`
+inputs without metrics or classifiers and the `ValueError`
+`validate_expectation_coverage` raised.
+
+`test/deep_eval_ex/expectations_parity_test.exs` replays each scenario
+through `DeepEvalEx.evaluate/3`'s expectation evaluator and compares the
+prompts and `decide()` calls byte for byte, the evaluator's result (or the
+error it raised), the test result's metric data and `expectationsData`, the
+test run, and `assert_evaluation/3`'s failure message.

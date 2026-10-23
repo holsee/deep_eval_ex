@@ -141,7 +141,8 @@ defmodule DeepEvalEx do
   `evaluate_run/3`, which also returns the `DeepEvalEx.TestRun`.
 
   Raises `ArgumentError` when no metric has a threshold, as deepeval does
-  (see `evaluate_run/3`).
+  (see `evaluate_run/3`). Test cases with expectations are also judged
+  against them (see "Expectations" in `evaluate_run/3`).
 
   ## Options
 
@@ -296,17 +297,34 @@ defmodule DeepEvalEx do
   as deepeval's: `evaluate/3` folds them into each
   `DeepEvalEx.TestResult`'s success, but they are never part of the
   `DeepEvalEx.TestRun`, whose test cases' success comes from the metrics
-  alone. A run with classifiers and no metrics has no test run, as
-  deepeval's classifier-only `evaluate()`: it returns `{results, nil, nil}`
-  (each result list empty) and writes nothing.
+  alone. A run with classifiers, no metrics and no expectations has no test
+  run, as deepeval's classifier-only `evaluate()`: it returns
+  `{results, nil, nil}` (each result list empty) and writes nothing.
+
+  ## Expectations
+
+  A test case with expectations (`:expectations`, see
+  `DeepEvalEx.Dataset.Expectations`) is judged against them after its
+  metrics: its result list ends with an `"Expectations"` result, which
+  decides its success as a metric does (see "Expectations" in
+  `DeepEvalEx.Evaluator`). The test run exports it as the test case's
+  `expectationsData`, not in `metricsData` or `metricsScores` (see
+  `DeepEvalEx.TestRun.ExpectationsData`).
+
+  Expectations alone are enough to evaluate, without metrics or
+  classifiers; every test case then needs some, as deepeval's
+  `validate_expectation_coverage` requires: otherwise `ArgumentError` is
+  raised before evaluating with deepeval's message, `"1 test case is
+  missing expectations. ..."` (see
+  `DeepEvalEx.Evaluator.validate_expectation_coverage!/1`).
 
   ## Thresholds
 
   As deepeval's `evaluate()`, raises `ArgumentError` before evaluating when
   no metric has a threshold or every metric with one is `:flaky`, since no
   test case could then pass or fail (see
-  `DeepEvalEx.Evaluator.check_at_least_one_metric_has_threshold!/2`). So
-  does `evaluate/3`. Metrics with a `nil` threshold are
+  `DeepEvalEx.Evaluator.check_at_least_one_metric_has_threshold!/2`), unless
+  a test case has expectations, which can. So does `evaluate/3`. Metrics with a `nil` threshold are
   score-only: their results have `success: nil` and never decide a test
   case's success, nor do flaky metrics' results.
 
@@ -343,8 +361,18 @@ defmodule DeepEvalEx do
     {export_opts, eval_opts} = Keyword.split(opts, @export_opts)
     hyperparameters = TestRun.process_hyperparameters(export_opts[:hyperparameters])
 
+    classifiers = Keyword.get(eval_opts, :classifiers, [])
+    expectations? = Enum.any?(test_cases, &Evaluator.has_expectations?/1)
+
+    # deepeval's validate_evaluate_inputs, check_valid_test_cases_type, then
+    # the threshold check, which expectations make unnecessary.
+    if metrics == [] and classifiers == [],
+      do: Evaluator.validate_expectation_coverage!(test_cases)
+
     Evaluator.check_valid_test_cases_type!(test_cases)
-    if metrics != [], do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, eval_opts)
+
+    if metrics != [] and not expectations?,
+      do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, eval_opts)
 
     # Read before evaluating so an invalid DEEPEVAL_FILE_SYSTEM fails fast, as
     # deepeval fails to load its settings, rather than after the LLM calls.
@@ -357,7 +385,7 @@ defmodule DeepEvalEx do
       System.convert_time_unit(System.monotonic_time() - started, :native, :microsecond) /
         1_000_000
 
-    if metrics == [] and Keyword.get(eval_opts, :classifiers, []) != [] do
+    if metrics == [] and classifiers != [] and not expectations? do
       # deepeval's classifier-only run: classifications are local only, so
       # there is no test run to finalize or save.
       {results, classifications, nil, nil}
