@@ -11,6 +11,9 @@ defmodule DeepEvalEx.Tracing.Ctx do
     capture: only the `[:deep_eval_ex, :trace, :stop]` event) or
     `:suppressed` (no span is recorded, see
     `DeepEvalEx.Tracing.suppress/1`)
+  - `:pending` - The slots `DeepEvalEx.Tracing.next_span/2` and its typed
+    variants staged for the next span of a type, by type (see
+    `DeepEvalEx.Tracing.Pending`)
 
   ## Resolution
 
@@ -37,10 +40,11 @@ defmodule DeepEvalEx.Tracing.Ctx do
   @type t :: %__MODULE__{
           trace_uuid: String.t() | nil,
           span_uuid: String.t() | nil,
-          route: route()
+          route: route(),
+          pending: %{optional(DeepEvalEx.Tracing.Span.type()) => reference()}
         }
 
-  defstruct trace_uuid: nil, span_uuid: nil, route: :off
+  defstruct trace_uuid: nil, span_uuid: nil, route: :off, pending: %{}
 
   @key {__MODULE__, :ctx}
 

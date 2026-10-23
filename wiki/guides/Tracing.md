@@ -93,6 +93,66 @@ the last span to close ends it. The `:llm_span_context` and
 `:agent_span_context` options are set for the block when given and cleared
 when it returns, as in deepeval.
 
+## Updating spans and traces
+
+Code running in a span can add to it, as deepeval's `update_current_span`
+and friends do:
+
+```elixir
+deftraced retrieve(query), type: :retriever do
+  docs = MyApp.Search.top_k(query, 3)
+  DeepEvalEx.Tracing.update_current_span(retrieval_context: docs, metadata: %{"index" => "faq"})
+  DeepEvalEx.Tracing.update_retriever_span(top_k: 3)
+  docs
+end
+
+deftraced generate(query, docs), type: :llm, model: "gpt-4o-mini" do
+  {:ok, text, usage} = MyApp.LLM.chat(query, docs)
+  DeepEvalEx.Tracing.update_llm_span(input_token_count: usage.input, output_token_count: usage.output)
+  DeepEvalEx.Tracing.update_current_trace(name: "support", user_id: "user-1", output: text)
+  text
+end
+```
+
+- `update_current_span/1` sets the current span's `:input`, `:output`,
+  `:retrieval_context`, `:context`, `:expected_output`, `:tools_called`,
+  `:expected_tools`, `:metadata`, `:name`, `:metrics`, ... An input or
+  output set here wins over the arguments and the result. A `:test_case`
+  (a `DeepEvalEx.TestCase`) sets the span's input, output, expected output,
+  contexts and tool calls in one go.
+- `update_llm_span/1`, `update_agent_span/1`, `update_tool_span/1` and
+  `update_retriever_span/1` set a span type's own fields, and do nothing
+  when the current span has another type.
+- `update_current_trace/1` sets the trace's `:name`, `:tags`, `:metadata`,
+  `:thread_id`, `:user_id`, `:input`, `:output`, test-case fields and
+  metrics, from any process in the trace.
+- `drop_current_span/0` and `drop_current_trace/0` mark the span or trace
+  to be left out of exports.
+
+As in deepeval, a value sets nothing when it is falsy in Python's sense:
+`nil`, `false`, `""`, `[]`, `%{}` and `0`. So `output: 0` is ignored. Token
+counts, costs and the agent and tool fields are the exception: zero and
+empty lists are set there, as deepeval checks those for `None` only.
+
+### Staging the next span
+
+Some spans run code you do not own, such as the LLM call inside a library.
+`next_span/2` and its typed variants stage fields for the next span of a
+type while a function runs. They are deepeval's `next_*_span` context
+managers, written as functions:
+
+```elixir
+DeepEvalEx.Tracing.next_llm_span([model: "gpt-4o", metadata: %{"step" => "plan"}], fn ->
+  MyApp.Agent.run(question)
+end)
+```
+
+The first `:llm` span opened inside the function takes the staged fields
+when it opens, and later spans get nothing. A typed slot's fields win over
+`next_span/2`'s, which any span type takes. `update_current_span/1` can
+still override them. A task the function starts can take the slot too, but
+only one span ever does.
+
 ## Across processes
 
 The trace context lives in the process dictionary, and is found from

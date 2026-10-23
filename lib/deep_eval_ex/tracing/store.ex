@@ -11,14 +11,20 @@ defmodule DeepEvalEx.Tracing.Store do
 
   - `{{:trace, trace_uuid}, meta}` - an open trace: its owner, route,
     start time and start order
-  - `{{:span, trace_uuid, span_uuid}, owner, %Span{}}` - written only by
-    the owner, the process that opened the span
+  - `{{:span, trace_uuid, span_uuid}, owner, %Span{}}` - written by the
+    owner, the process that opened the span, and changed in place by
+    `update_span/3` from any process (`update_current_span` from a task
+    that joined through `$callers`)
   - `{{:trace_attr, trace_uuid, field}, value}` - one row per trace
     field set while the trace is open, so concurrent writers keep each
     other's fields
   - `{{:open, trace_uuid}, count}` - the trace's open spans
   - `{{:pid, pid}, ctx}` - each process's `DeepEvalEx.Tracing.Ctx`, for
     the `$callers` lookup
+  - `{{:pending, ref}, owner, payload}` - a slot staged by
+    `DeepEvalEx.Tracing.next_span/2` and its typed variants, taken by the
+    first span that matches it, in any process (see
+    `DeepEvalEx.Tracing.Pending`)
   - `{{:route_trace, ref, trace_uuid}, seq}` and
     `{{:closed, ref, trace_uuid}, %Trace{}}` - the traces a
     `DeepEvalEx.Tracing.capture/2` waits for, and those it can collect.
@@ -158,6 +164,28 @@ defmodule DeepEvalEx.Tracing.Store do
   end
 
   @doc """
+  Sets fields of an open trace, `update_current_trace`: a `nil` value
+  unsets its field. Returns `:closed`, writing nothing, when the trace has
+  closed; a field written as it closes is removed again, so no row
+  outlives its trace.
+  """
+  @spec update_trace(String.t(), [{atom(), term()}]) :: :ok | :closed
+  def update_trace(trace_uuid, attrs) do
+    if live?(trace_uuid) do
+      Enum.each(attrs, fn
+        {field, nil} -> :ets.delete(@table, {:trace_attr, trace_uuid, field})
+        {field, value} -> put_trace_attr(trace_uuid, field, value)
+      end)
+
+      if live?(trace_uuid),
+        do: :ok,
+        else: Enum.each(attrs, &:ets.delete(@table, {:trace_attr, trace_uuid, elem(&1, 0)}))
+    else
+      :closed
+    end
+  end
+
+  @doc """
   Closes the trace if no span is open in it and no other process already
   closed it: builds it with `status` and routes it (see the moduledoc).
 
@@ -238,6 +266,39 @@ defmodule DeepEvalEx.Tracing.Store do
     :ok
   end
 
+  @doc """
+  Changes a span of an open trace in place with `fun` and returns
+  `{:ok, span}`, the changed span, or `:error` when there is no such span.
+
+  Any process can call it: the row is replaced only if it is still the one
+  `fun` was given (compare and swap), else `fun` runs again on the new
+  one, so neither the owner's close nor another process's update is lost.
+  """
+  @spec update_span(String.t(), String.t(), (Span.t() -> Span.t())) :: {:ok, Span.t()} | :error
+  def update_span(trace_uuid, span_uuid, fun) do
+    key = {:span, trace_uuid, span_uuid}
+
+    case :ets.lookup(@table, key) do
+      [] ->
+        :error
+
+      [{^key, _owner, span}] ->
+        swap(key, span, fun.(span), fn -> update_span(trace_uuid, span_uuid, fun) end)
+    end
+  end
+
+  # Replaces the row only while it still holds `span`, else retries.
+  defp swap(_key, span, span, _retry), do: {:ok, span}
+
+  defp swap(key, span, updated, retry) do
+    match = [
+      {{key, :"$1", :"$2"}, [{:"=:=", :"$2", {:const, span}}],
+       [{{{:const, key}, :"$1", {:const, updated}}}]}
+    ]
+
+    if :ets.select_replace(@table, match) == 1, do: {:ok, updated}, else: retry.()
+  end
+
   @doc "A span of an open trace, or `nil`."
   @spec fetch_span(String.t(), String.t()) :: Span.t() | nil
   def fetch_span(trace_uuid, span_uuid) do
@@ -303,6 +364,34 @@ defmodule DeepEvalEx.Tracing.Store do
     end
   end
 
+  ## Pending slots
+
+  @doc false
+  # Stages a next_* slot, owned by the calling process.
+  @spec put_pending(reference(), keyword()) :: :ok
+  def put_pending(ref, payload) do
+    :ets.insert(@table, {{:pending, ref}, self(), payload})
+    watch()
+    :ok
+  end
+
+  @doc false
+  # Takes a slot's payload, once: `nil` when it is gone or already taken.
+  @spec take_pending(reference()) :: keyword() | nil
+  def take_pending(ref) do
+    case :ets.take(@table, {:pending, ref}) do
+      [{_key, _owner, payload}] -> payload
+      [] -> nil
+    end
+  end
+
+  @doc false
+  @spec delete_pending(reference()) :: :ok
+  def delete_pending(ref) do
+    :ets.delete(@table, {:pending, ref})
+    :ok
+  end
+
   ## Capture
 
   @doc false
@@ -352,6 +441,7 @@ defmodule DeepEvalEx.Tracing.Store do
 
   defp reap(pid, reason) do
     :ets.delete(@table, {:pid, pid})
+    :ets.match_delete(@table, {{:pending, :_}, pid, :_})
     error = Exception.format_exit(reason)
     now = Time.now_us()
 

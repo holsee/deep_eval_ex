@@ -59,6 +59,29 @@ defmodule DeepEvalEx.Tracing do
   (`DeepEvalEx.Tracing.JSON.mask/1`). When a root span closes, its default
   input and output become the trace's, unless they are already set.
 
+  ## Updating spans and traces
+
+  Code running in a span enriches it, deepeval's `tracing/context.py`:
+
+  - `update_current_span/1` sets the current span's input, output,
+    test-case fields, metadata, name or metrics, and
+    `update_llm_span/1`, `update_agent_span/1`, `update_tool_span/1` and
+    `update_retriever_span/1` its type's own fields;
+  - `update_current_trace/1` sets the trace's name, tags, ids, input,
+    output, test-case fields or metrics;
+  - `drop_current_span/0` and `drop_current_trace/0` mark them to be left
+    out of exports.
+
+  For a span whose code you do not run (a library's LLM call),
+  `next_span/2` and its typed variants (`next_llm_span/2`, ...) stage
+  fields for the next span of a type while a function runs: deepeval's
+  `next_*_span` context managers, as functions taking a fun (see
+  `DeepEvalEx.Tracing.Pending`).
+
+      DeepEvalEx.Tracing.next_llm_span([metadata: %{"step" => "plan"}], fn ->
+        MyApp.Agent.run(question)
+      end)
+
   ## Across processes
 
   The trace context lives in the process dictionary (see
@@ -103,6 +126,11 @@ defmodule DeepEvalEx.Tracing do
 
   ## Python quirks kept
 
+  - The `update_*` functions set a field only when its value is truthy
+    in Python's sense, so `output: 0`, `name: ""` or `metadata: %{}` set
+    nothing, except where deepeval checks `is not None` (token counts,
+    costs, `:integration`, `:provider` and the agent and tool fields). A
+    `:test_case` sets all its fields, its unset ones as `nil`.
   - deepeval ends a trace when its first root span exits with no other
     span open, so two calls in a row inside one `trace/2` make two
     traces, and the trace's attributes go to the first.
@@ -122,9 +150,8 @@ defmodule DeepEvalEx.Tracing do
     their trace closes (see `DeepEvalEx.Tracing.Store`).
   """
 
-  alias DeepEvalEx.Schemas.ToolCall
   alias DeepEvalEx.Scope
-  alias DeepEvalEx.Tracing.{Ctx, Fields, JSON, Span, Store, Time, Trace}
+  alias DeepEvalEx.Tracing.{Ctx, Fields, JSON, Pending, Span, Store, Time, Trace, Update}
 
   @typedoc "A span type."
   @type span_type :: Span.type()
@@ -241,8 +268,9 @@ defmodule DeepEvalEx.Tracing do
   end
 
   defp open(type, opts, ctx, {parent, trace_uuid}) do
-    # Validated before a trace is started for it.
-    span = build_span(type, opts)
+    # Validated before a trace is started for it; the next_* slots are
+    # applied before the span is current, as Observer.__enter__.
+    span = type |> build_span(opts) |> Pending.apply_to_span(Pending.pop(ctx, type))
     route = route(ctx)
     {parent, trace_uuid} = join(parent, trace_uuid, route)
 
@@ -255,7 +283,13 @@ defmodule DeepEvalEx.Tracing do
 
     Store.put_span(span)
 
-    span_ctx = %Ctx{trace_uuid: trace_uuid, span_uuid: span.uuid, route: route}
+    span_ctx = %Ctx{
+      trace_uuid: trace_uuid,
+      span_uuid: span.uuid,
+      route: route,
+      pending: pending(ctx)
+    }
+
     previous = Ctx.put(span_ctx)
     telemetry_ref = make_ref()
 
@@ -338,6 +372,9 @@ defmodule DeepEvalEx.Tracing do
   defp route(%Ctx{route: route}), do: route
   defp route(nil), do: :off
 
+  defp pending(%Ctx{pending: pending}), do: pending
+  defp pending(nil), do: %{}
+
   @doc """
   Closes a span opened with `open_span/2` in this process, deepeval's
   `Observer.__exit__`, and restores the context it was opened in. When it
@@ -361,19 +398,18 @@ defmodule DeepEvalEx.Tracing do
     input = default(frame.input)
     output = default(Keyword.get(opts, :output))
 
-    span =
-      trace_uuid
-      |> Store.fetch_span(span_uuid)
-      |> Map.merge(%{
-        status: status,
-        error: error,
-        end_us: Keyword.get(opts, :end_us) || Time.now_us()
-      })
-      |> put_default(:input, input)
-      |> put_default(:output, output)
-      |> put_prompt(frame.prompt)
+    end_us = Keyword.get(opts, :end_us) || Time.now_us()
 
-    Store.put_span(span)
+    # In place, so an update from a task that joined the span is kept.
+    {:ok, span} =
+      Store.update_span(trace_uuid, span_uuid, fn span ->
+        span
+        |> Map.merge(%{status: status, error: error, end_us: end_us})
+        |> put_default(:input, input)
+        |> put_default(:output, output)
+        |> put_prompt(frame.prompt)
+      end)
+
     if is_nil(span.parent_uuid), do: put_trace_defaults(trace_uuid, input, output)
     Ctx.put(frame.previous)
     emit_close(span, frame, Keyword.get(opts, :exception))
@@ -548,18 +584,9 @@ defmodule DeepEvalEx.Tracing do
   end
 
   defp trace_value(field, tools) when field in [:tools_called, :expected_tools],
-    do: Enum.map(tools, &tool_call/1)
+    do: Enum.map(tools, &Update.tool_call/1)
 
   defp trace_value(_field, value), do: value
-
-  defp tool_call(%ToolCall{} = tool), do: tool
-
-  defp tool_call(attrs) do
-    case ToolCall.new(attrs) do
-      {:ok, tool} -> tool
-      {:error, errors} -> raise ArgumentError, "Invalid tool call: #{inspect(errors)}"
-    end
-  end
 
   @doc """
   The `:llm_span_context` of the enclosing `trace/2`, or `nil`.
@@ -572,6 +599,248 @@ defmodule DeepEvalEx.Tracing do
   """
   @spec agent_span_context() :: keyword() | nil
   def agent_span_context, do: Process.get(@agent_span_context)
+
+  ## Updating spans and traces
+
+  @doc """
+  Sets fields of the current span, deepeval's `update_current_span`.
+  Does nothing without a current span (outside any span, or in a
+  `trace/2` with no span open).
+
+  A field is set only when its value is truthy in Python's sense (`nil`,
+  `false`, `""`, `[]`, `%{}` and `0` set nothing), except `:integration`,
+  and `:provider` on an `:llm` span, which are set unless `nil`. An input
+  or output set here wins over the span's default (the arguments and the
+  result).
+
+  ## Options
+
+  - `:input`, `:output`, `:retrieval_context`, `:context`,
+    `:expected_output`, `:metadata`, `:name`, `:metric_collection`
+  - `:tools_called`, `:expected_tools` - `DeepEvalEx.Schemas.ToolCall`s,
+    or keyword lists or maps of their fields
+  - `:metrics` - Metric specs, as `span/3`'s
+  - `:integration`, `:provider` - `:provider` is ignored on spans other
+    than `:llm`, which have none
+  - `:test_case` - A `DeepEvalEx.TestCase` (or its fields): its input,
+    actual output, expected output, contexts and tool calls become the
+    span's, those it leaves unset too, and the other options are set over
+    them. As in deepeval, the span's `:llm_test_case` is not set
+
+  Raises `ArgumentError` on any other option.
+
+  ## Examples
+
+      deftraced retrieve(query), type: :retriever do
+        docs = MyApp.Search.top_k(query, 3)
+        DeepEvalEx.Tracing.update_current_span(retrieval_context: docs)
+        docs
+      end
+  """
+  @spec update_current_span(keyword()) :: :ok
+  def update_current_span(opts) do
+    opts = Update.validate_span!(opts)
+    update_span(&Update.span(&1, opts))
+  end
+
+  @doc """
+  Sets fields of an `:llm` current span, deepeval's `update_llm_span`;
+  does nothing when the current span has another type.
+
+  `:model` and `:token_intervals` are set when truthy, the token counts
+  and costs unless `nil` (zero is a count), as floats. A `:prompt` (a map
+  with `:alias`, `:version`, `:label` and `:hash`, atom or string keys)
+  sets the span's prompt and its `:prompt_alias`, `:prompt_version`,
+  `:prompt_label` and `:prompt_commit_hash`.
+
+  ## Options
+
+  `:model`, `:input_token_count`, `:output_token_count`,
+  `:cost_per_input_token`, `:cost_per_output_token`, `:token_intervals`
+  (a map of epoch microseconds to the text streamed then) and `:prompt`.
+  Raises `ArgumentError` on any other option.
+  """
+  @spec update_llm_span(keyword()) :: :ok
+  def update_llm_span(opts), do: update_typed(:llm, opts)
+
+  @doc """
+  Sets `:available_tools` and `:agent_handoffs` of an `:agent` current
+  span unless `nil`, deepeval's `update_agent_span`; does nothing when the
+  current span has another type. Raises `ArgumentError` on any other
+  option.
+  """
+  @spec update_agent_span(keyword()) :: :ok
+  def update_agent_span(opts), do: update_typed(:agent, opts)
+
+  @doc """
+  Sets the `:description` of a `:tool` current span unless `nil`,
+  deepeval's `update_tool_span`; does nothing when the current span has
+  another type. Rename a tool span with `update_current_span/1`. Raises
+  `ArgumentError` on any other option.
+  """
+  @spec update_tool_span(keyword()) :: :ok
+  def update_tool_span(opts), do: update_typed(:tool, opts)
+
+  @doc """
+  Sets `:embedder`, `:top_k` and `:chunk_size` of a `:retriever` current
+  span when truthy, deepeval's `update_retriever_span`; does nothing when
+  the current span has another type. Raises `ArgumentError` on any other
+  option.
+  """
+  @spec update_retriever_span(keyword()) :: :ok
+  def update_retriever_span(opts), do: update_typed(:retriever, opts)
+
+  defp update_typed(type, opts) do
+    opts = Update.validate_typed!(type, opts)
+    update_span(&Update.typed(&1, type, opts))
+  end
+
+  @doc """
+  Marks the current span dropped, deepeval's `current_span_context.drop()`:
+  a trace export leaves it out and gives its children its parent. Does
+  nothing without a current span.
+  """
+  @spec drop_current_span() :: :ok
+  def drop_current_span, do: update_span(&%{&1 | drop: true})
+
+  # Runs `update` on the current span in place, from any process.
+  defp update_span(update) do
+    case Ctx.current() do
+      %Ctx{trace_uuid: trace_uuid, span_uuid: span_uuid}
+      when is_binary(trace_uuid) and is_binary(span_uuid) ->
+        Store.update_span(trace_uuid, span_uuid, update)
+
+      _none ->
+        :error
+    end
+
+    :ok
+  end
+
+  @doc """
+  Sets fields of the current trace, deepeval's `update_current_trace`, from
+  any process in it. Does nothing outside a trace. Fields set by
+  concurrent calls are all kept; for the same field, the last write wins.
+
+  A field is set only when its value is truthy in Python's sense (`nil`,
+  `false`, `""`, `[]`, `%{}` and `0` set nothing). An input or output set
+  here wins over the root span's.
+
+  ## Options
+
+  - `:name`, `:tags`, `:metadata`, `:thread_id`, `:user_id`, `:input`,
+    `:output`, `:retrieval_context`, `:context`, `:expected_output`,
+    `:metric_collection`, `:metrics`
+  - `:tools_called`, `:expected_tools` - As in `update_current_span/1`
+  - `:test_case_id`, `:test_run_id`, `:turn_id` - Confident AI ids
+  - `:test_case` - A `DeepEvalEx.TestCase` (or its fields): its input,
+    actual output, expected output, contexts and tool calls become the
+    trace's, those it leaves unset too, and the other options are set
+    over them. An input or output it leaves unset is then the root span's
+
+  Raises `ArgumentError` on any other option.
+  """
+  @spec update_current_trace(keyword()) :: :ok
+  def update_current_trace(opts) do
+    attrs = Update.trace_attrs(opts)
+
+    case Ctx.current() do
+      %Ctx{trace_uuid: trace_uuid} when is_binary(trace_uuid) ->
+        Store.update_trace(trace_uuid, attrs)
+
+      _none ->
+        :ok
+    end
+
+    :ok
+  end
+
+  @doc """
+  Marks the current trace dropped, deepeval's
+  `current_trace_context.drop()`: it is not exported. Does nothing
+  outside a trace.
+  """
+  @spec drop_current_trace() :: :ok
+  def drop_current_trace do
+    case Ctx.current() do
+      %Ctx{trace_uuid: trace_uuid} when is_binary(trace_uuid) ->
+        Store.update_trace(trace_uuid, drop: true)
+
+      _none ->
+        :ok
+    end
+
+    :ok
+  end
+
+  ## Staging the next span
+
+  @doc """
+  Runs `fun` with `opts` staged for the next span of any type, and returns
+  its result: deepeval's `next_span` context manager, as a function.
+
+  The first span opened while `fun` runs, in this process or a task that
+  joins its trace, takes the staged fields as its baseline: they are set
+  when it opens, over its options, and `update_current_span/1` can still
+  override them. Later spans get nothing. A slot nobody took is
+  discarded when `fun` returns or raises. An inner `next_span/2` replaces
+  the slot until it returns.
+
+  It is for spans whose code you do not run, such as the LLM call of a
+  library: stage what `update_current_span/1` would have set. A typed
+  slot (`next_llm_span/2`, ...) is taken only by a span of its type, and
+  its fields win over the base slot's.
+
+  Takes the options of `update_current_span/1` but `:integration` and
+  `:provider`; `nil` values are left out. Raises `ArgumentError` on any
+  other option.
+
+  ## Examples
+
+      DeepEvalEx.Tracing.next_span([metadata: %{"source" => "planner"}], fn ->
+        MyApp.Planner.plan(goal)
+      end)
+  """
+  @spec next_span(keyword(), (-> result)) :: result when result: term()
+  def next_span(opts, fun), do: Pending.stage(:base, opts, fun)
+
+  @doc """
+  As `next_span/2`, for the next `:agent` span: also takes
+  `:available_tools` and `:agent_handoffs`. deepeval's `next_agent_span`.
+  """
+  @spec next_agent_span(keyword(), (-> result)) :: result when result: term()
+  def next_agent_span(opts, fun), do: Pending.stage(:agent, opts, fun)
+
+  @doc """
+  As `next_span/2`, for the next `:llm` span: also takes the options of
+  `update_llm_span/1`. deepeval's `next_llm_span`.
+
+  A staged `:prompt` sets the span's prompt only, as deepeval's
+  `setattr`, not the `:prompt_alias` fields `update_llm_span/1` sets.
+
+  ## Examples
+
+      DeepEvalEx.Tracing.next_llm_span([model: "gpt-4o", metrics: [MyApp.Tone]], fn ->
+        MyApp.Agent.run(question)
+      end)
+  """
+  @spec next_llm_span(keyword(), (-> result)) :: result when result: term()
+  def next_llm_span(opts, fun), do: Pending.stage(:llm, opts, fun)
+
+  @doc """
+  As `next_span/2`, for the next `:tool` span: also takes `:description`.
+  deepeval's `next_tool_span`.
+  """
+  @spec next_tool_span(keyword(), (-> result)) :: result when result: term()
+  def next_tool_span(opts, fun), do: Pending.stage(:tool, opts, fun)
+
+  @doc """
+  As `next_span/2`, for the next `:retriever` span: also takes
+  `:embedder`, `:top_k` and `:chunk_size`. deepeval's
+  `next_retriever_span`.
+  """
+  @spec next_retriever_span(keyword(), (-> result)) :: result when result: term()
+  def next_retriever_span(opts, fun), do: Pending.stage(:retriever, opts, fun)
 
   @doc """
   Runs `fun` without recording any span or trace, in this process or the

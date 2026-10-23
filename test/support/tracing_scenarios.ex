@@ -10,17 +10,35 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   steps with `run/3`, and `run_app/2` runs the app's steps for each golden,
   one `DeepEvalEx.Tracing.capture/2` per golden.
 
-  Only the steps capture supports are interpreted: `call` (with `args`,
-  `kwargs`, `as` and `catch`) and `raise`. A value is resolved as the
+  The steps are the generator's: `call` (with `args`, `kwargs`, `as` and
+  `catch`), `raise`, the `update_*` functions, `with` a `next_*` function
+  around a body, and `drop_current_span`. A value is resolved as the
   generator does: `"$name"` is a bound value, and a string with `{name}`
   is formatted with the bound values.
+
+  Keyword arguments become options as the generator's `tracing_kwargs`
+  builds them: a `test_case` and tool calls from their fields, a `prompt`
+  as a map, `token_intervals` keys (`perf_counter` seconds) as
+  microseconds. Staged `metrics` are left out: the span metrics run with
+  the evaluator.
   """
 
   alias DeepEvalEx.Test.TracedFixtures
   alias DeepEvalEx.Tracing
   alias Jason.OrderedObject
 
-  @supported_steps ["call", "raise"]
+  @updates %{
+    "update_current_span" => :update_current_span,
+    "update_current_trace" => :update_current_trace,
+    "update_llm_span" => :update_llm_span,
+    "update_agent_span" => :update_agent_span,
+    "update_tool_span" => :update_tool_span,
+    "update_retriever_span" => :update_retriever_span
+  }
+
+  @next ~w(next_span next_agent_span next_llm_span next_tool_span next_retriever_span)
+
+  @supported_steps ["call", "raise", "with", "drop_current_span" | Map.keys(@updates)]
 
   @doc """
   The module of a scenario's functions, compiled on first use.
@@ -61,14 +79,11 @@ defmodule DeepEvalEx.Test.TracingScenarios do
     env = {:%{}, [], Enum.map(params, fn [param | _] -> {param, var(param)} end)}
     head = {String.to_atom(name), [], args}
 
-    observe =
-      for {key, value} <- (spec["observe"] || OrderedObject.new([])).values,
-          do: {String.to_atom(key), value}
-
+    observe = options(spec["observe"] || OrderedObject.new([]))
     opts = [type: span_type(spec["type"])] ++ observe
 
     quote do
-      deftraced unquote(head), unquote(opts) do
+      deftraced unquote(head), unquote(Macro.escape(opts)) do
         unquote(__MODULE__).run(
           __MODULE__,
           unquote(Macro.escape(spec)),
@@ -132,7 +147,28 @@ defmodule DeepEvalEx.Test.TracingScenarios do
 
       nil ->
         raise ArgumentError, "unsupported step #{inspect(step)}"
+
+      tracing ->
+        run_tracing_step(module, tracing, step, env, uncaught)
     end
+  end
+
+  # The steps that call the update, next and drop functions.
+  defp run_tracing_step(_module, "drop_current_span", _step, env, _uncaught) do
+    Tracing.drop_current_span()
+    env
+  end
+
+  defp run_tracing_step(module, "with", step, env, uncaught) do
+    true = step["with"] in @next
+    opts = step["kwargs"] |> resolve(env) |> options()
+    fun = String.to_existing_atom(step["with"])
+    apply(Tracing, fun, [opts, fn -> run_steps(module, step["body"], env, uncaught) end])
+  end
+
+  defp run_tracing_step(_module, update, step, env, _uncaught) do
+    apply(Tracing, Map.fetch!(@updates, update), [step[update] |> resolve(env) |> options()])
+    env
   end
 
   # Python binds keyword arguments by name; Elixir calls by position, so
@@ -159,6 +195,32 @@ defmodule DeepEvalEx.Test.TracingScenarios do
 
     apply(module, String.to_atom(name), args ++ rest)
   end
+
+  # tracing_kwargs: the script's keyword arguments as options.
+  defp options(%OrderedObject{values: values}) do
+    for {key, value} <- values, key != "metrics" do
+      key = String.to_existing_atom(key)
+      {key, option(key, plain(value))}
+    end
+  end
+
+  defp option(:test_case, fields), do: DeepEvalEx.TestCase.new!(fields)
+
+  defp option(:prompt, fields),
+    do: Map.new(fields, fn {key, value} -> {String.to_existing_atom(key), value} end)
+
+  defp option(:token_intervals, intervals) do
+    Map.new(intervals, fn {seconds, text} ->
+      {seconds, ""} = Float.parse(seconds)
+      {round(seconds * 1_000_000), text}
+    end)
+  end
+
+  defp option(_key, value), do: value
+
+  defp plain(%OrderedObject{values: values}), do: Map.new(values, fn {k, v} -> {k, plain(v)} end)
+  defp plain(list) when is_list(list), do: Enum.map(list, &plain/1)
+  defp plain(value), do: value
 
   @doc """
   Resolves a script value against bound values, as the generator's

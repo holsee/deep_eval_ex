@@ -2160,6 +2160,49 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - `.formatter.exs` exports `deftraced` and `defptraced` as
     `locals_without_parens`, for projects that import its formatter
     configuration.
+- **Updating spans and traces, and staging the next span** (ADR-0011),
+  ports of deepeval 4.3.1's `tracing/context.py`. The
+  [Tracing](wiki/guides/Tracing.md) guide covers them.
+  - `DeepEvalEx.Tracing.update_current_span/1` sets the current span's
+    input, output, test-case fields, metadata, name, integration, provider
+    (`:llm` spans only) or metrics, and `update_llm_span/1`,
+    `update_agent_span/1`, `update_tool_span/1` and
+    `update_retriever_span/1` its type's own fields; each does nothing
+    when the current span has another type. An `update_llm_span/1`
+    `:prompt` also sets the span's `:prompt_alias`, `:prompt_version`,
+    `:prompt_label` and `:prompt_commit_hash`.
+  - `DeepEvalEx.Tracing.update_current_trace/1` sets the current trace's
+    name, tags, metadata, thread and user ids, input, output, test-case
+    fields, Confident AI ids or metrics. Concurrent updates from several
+    processes keep every field.
+  - As in deepeval, a value sets nothing when it is falsy in Python's
+    sense (`nil`, `false`, `""`, `[]`, `%{}`, `0`), except token counts,
+    costs, `:integration`, `:provider` and the agent and tool fields,
+    which are set unless `nil`. A `:test_case` (a `DeepEvalEx.TestCase`
+    or its fields) sets the input, output, expected output, contexts and
+    tool calls, including the ones it leaves unset, and the other options
+    are set over them. Tool calls may be given as maps or keyword lists,
+    and integer token counts and costs become floats. An unknown option
+    raises `ArgumentError`.
+  - `DeepEvalEx.Tracing.drop_current_span/0` and `drop_current_trace/0`
+    mark the current span or trace to be left out of exports.
+  - `DeepEvalEx.Tracing.next_span/2`, `next_agent_span/2`,
+    `next_llm_span/2`, `next_tool_span/2` and `next_retriever_span/2` are
+    deepeval's `next_*_span` context managers as functions taking a fun:
+    they stage fields for the next span of the type while the fun runs.
+    The first matching span takes them when it opens, under
+    `update_current_span/1`, and later spans get nothing; typed fields
+    win over `next_span/2`'s. A task joining the trace can take the slot,
+    once. `DeepEvalEx.Tracing.Pending` holds the slots, and its `pop/2`
+    and `apply_to_span/2` are for integrations that build spans
+    themselves.
+  - A task with no span of its own updates its caller's span, as deepeval
+    does. Span rows are now changed in place with a compare-and-swap
+    (`DeepEvalEx.Tracing.Store.update_span/3`), so neither that update
+    nor the span's own close is lost.
+  - The capture parity check now runs all thirteen traced scenarios. It
+    also compares the test-case fields, the fields of each span type, and
+    the trace's name, tags, metadata and ids that the updates set.
 
 ### Changed
 
