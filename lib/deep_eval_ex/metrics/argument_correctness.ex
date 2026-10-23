@@ -115,8 +115,13 @@ defmodule DeepEvalEx.Metrics.ArgumentCorrectness do
   mode, deepeval's `_system_one_eval_spec`: its questions about the test
   case's `input` and structured `tools_called` (the metric's required
   params).
+
+  A multimodal test case has none (`nil`), as in deepeval: System One
+  reads text only.
   """
   @impl true
+  def system_one_eval_spec(%{multimodal: true}, _opts), do: nil
+
   def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: required_params(),
@@ -161,6 +166,8 @@ defmodule DeepEvalEx.Metrics.ArgumentCorrectness do
   end
 
   defp measure_with_llm(test_case, opts) do
+    # deepeval passes the test case's multimodal flag to its templates.
+    opts = Keyword.put(opts, :multimodal, Map.get(test_case, :multimodal, false))
     threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
@@ -214,7 +221,8 @@ defmodule DeepEvalEx.Metrics.ArgumentCorrectness do
     prompt =
       EvaluationTemplate.render(opts, Template, :generate_verdicts,
         input: test_case.input,
-        tools_called: test_case.tools_called
+        tools_called: test_case.tools_called,
+        multimodal: opts[:multimodal]
       )
 
     case Adapter.generate_with_schema(prompt, Schema.verdicts_schema(), opts) do
@@ -243,7 +251,8 @@ defmodule DeepEvalEx.Metrics.ArgumentCorrectness do
       EvaluationTemplate.render(opts, Template, :generate_reason,
         incorrect_tool_calls_reasons: incorrect_tool_calls_reasons,
         input: test_case.input,
-        score: score
+        score: score,
+        multimodal: opts[:multimodal]
       )
 
     case Adapter.generate_with_schema(prompt, Schema.reason_schema(), opts) do

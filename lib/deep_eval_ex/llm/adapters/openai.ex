@@ -45,6 +45,10 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
     likely tokens returned at each position (default `5`)
   - `:req_options` - extra `Req` options merged into the request, e.g.
     `[plug: {Req.Test, DeepEvalEx.LLM.Adapters.OpenAI}]` in tests
+  - `:images` - the test case's images, a map of id to
+    `DeepEvalEx.MLLMImage`, which the metrics pass: a prompt holding their
+    placeholders is sent as `text` and `image_url` content parts (see
+    `DeepEvalEx.LLM.Multimodal.openai_content/2`)
 
   ## Retries
 
@@ -69,7 +73,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
 
   use DeepEvalEx.LLM.Adapter
 
-  alias DeepEvalEx.LLM.{Adapter, Retry, StrictSchema, Usage}
+  alias DeepEvalEx.LLM.{Adapter, Multimodal, Retry, StrictSchema, Usage}
 
   @default_base_url "https://api.openai.com/v1"
   @default_model "gpt-4o-mini"
@@ -217,7 +221,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
 
     body = %{
       model: model,
-      messages: [%{role: "user", content: prompt}],
+      messages: [%{role: "user", content: Multimodal.openai_content(prompt, opts[:images])}],
       max_completion_tokens: max_completion_tokens
     }
 

@@ -1,0 +1,43 @@
+{
+  "description": "TurnRelevancy: a multimodal conversation, its images exported as imagesMapping",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "turn_relevancy",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "What is in [DEEPEVAL:IMAGE:red-dot]?"
+      },
+      {
+        "role": "assistant",
+        "content": "A red dot."
+      }
+    ],
+    "images": [
+      {
+        "dataBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+        "mimeType": "image/png",
+        "_id": "red-dot"
+      }
+    ]
+  },
+  "responses": {
+    "turn_relevancy": {
+      "reason,verdict": [
+        {
+          "verdict": "yes"
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1 because the assistant describes the image."
+        }
+      ]
+    }
+  }
+}

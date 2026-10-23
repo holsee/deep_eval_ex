@@ -16,10 +16,11 @@ defmodule DeepEvalEx.Prompts.ArgumentCorrectness do
   parameters that correctly address the input.
 
   Each function renders deepeval 4.3.1's `ArgumentCorrectnessMetric`
-  template of the same name byte for byte, as deepeval renders it for a
-  text-only test case: its `generate_verdicts` and `generate_reason`
-  templates include the multimodal input rules only for multimodal test
-  cases, so these prompts leave them out. The tool calls are printed as
+  template of the same name byte for byte. Its `generate_verdicts` and
+  `generate_reason` templates include the multimodal input rules
+  (`DeepEvalEx.Prompts.Fragments`) only when the `:multimodal` option is
+  `true`, as for a multimodal `DeepEvalEx.TestCase`, and keep the blank
+  lines around them otherwise. The tool calls are printed as
   Python prints a list of deepeval `ToolCall`s, each its `__repr__`, the
   reasons as a Python list and the score as `format(score, ".2f")` (see
   `DeepEvalEx.Prompts.Python`). `system_one_verdict/0` and
@@ -36,7 +37,7 @@ defmodule DeepEvalEx.Prompts.ArgumentCorrectness do
       system_one_questions: 0
     ]
 
-  alias DeepEvalEx.Prompts.Python
+  alias DeepEvalEx.Prompts.{Fragments, Python}
 
   @doc """
   Generates a prompt to judge whether the input parameters of each tool
@@ -51,6 +52,7 @@ defmodule DeepEvalEx.Prompts.ArgumentCorrectness do
   - `:input` - the input the agent responded to (required)
   - `:tools_called` - the `DeepEvalEx.Schemas.ToolCall`s to judge, printed
     as deepeval's `ToolCall.__repr__` (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_verdicts(opts) do
     input = Keyword.fetch!(opts, :input)
@@ -66,7 +68,7 @@ defmodule DeepEvalEx.Prompts.ArgumentCorrectness do
     Provide a 'reason' ONLY if the answer is 'no'. 
     If there is no input parameter, answer 'no' for the verdict and provide the reason as "No input parameter provided".
 
-
+    #{Fragments.multimodal_input_rules(opts)}
 
     **
     IMPORTANT: Please make sure to only return in valid and parseable JSON format, with the 'verdicts' key mapping to a list of JSON objects. Ensure all strings are closed appropriately. Repair any invalid JSON before you output it.
@@ -148,6 +150,7 @@ defmodule DeepEvalEx.Prompts.ArgumentCorrectness do
     `nil` where the judge gave none (required)
   - `:input` - the input (required)
   - `:score` - the argument correctness score (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_reason(opts) do
     incorrect_tool_calls_reasons =
@@ -160,7 +163,7 @@ defmodule DeepEvalEx.Prompts.ArgumentCorrectness do
     Given the argument correctness score, the list of reasons of incorrect tool calls, and the input, provide a CONCISE reason for the score. Explain why it is not higher, but also why it is at its current score. You can mention tool calls or input, but do not mention an output or a response.
     If there is nothing incorrect, just say something positive with an upbeat encouraging tone (but don't overdo it otherwise it gets annoying).
 
-
+    #{Fragments.multimodal_input_rules(opts)}
 
     **
     IMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason. Ensure all strings are closed appropriately. Repair any invalid JSON before you output it.

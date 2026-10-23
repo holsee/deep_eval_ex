@@ -43,6 +43,10 @@ defmodule DeepEvalEx.TestCase do
     `order`, and so its `"test_case_<order>"` name, in place of the test
     case's position in the evaluated list. `nil` (the default) outside a
     dataset; `new/1` never sets it
+  - `:multimodal` - Whether the test case holds images (see "Images"
+    below)
+  - `:images` - The images the test case's placeholders name, a map of id
+    to `DeepEvalEx.MLLMImage` (see "Images" below)
   - `:trace_dict` - The nested trace dict of the trace the test case was
     built from (`DeepEvalEx.Tracing.NestedDict`), deepeval's private
     `_trace_dict`, which the trace metrics read. `nil` (the default) for a
@@ -56,6 +60,33 @@ defmodule DeepEvalEx.TestCase do
   carries them to and from test cases); deepeval does not export them in a
   test run, and neither does DeepEvalEx.
 
+  ## Images
+
+  An image goes into a text field as its placeholder,
+  `[DEEPEVAL:IMAGE:<id>]` (what interpolating a `DeepEvalEx.MLLMImage`
+  gives), and into `:images`, which `new/1` takes as a list (or a map) of
+  images, or of the attributes `DeepEvalEx.MLLMImage.new/1` takes, and
+  keeps as a map of id to image. deepeval looks placeholders up in a
+  process-wide registry of every image created; DeepEvalEx looks them up
+  in `:images`, which the metrics pass to the judge with each prompt.
+
+  As deepeval's `set_is_multimodal` validator, `new/1` sets `:multimodal`
+  when a placeholder appears in the `:input`, `:actual_output`,
+  `:expected_output`, `:context` or `:retrieval_context` (a
+  `DeepEvalEx.Schemas.RetrievedContextData`'s `:context` included);
+  `multimodal: true` given is kept. A multimodal test case is judged with
+  deepeval's multimodal prompts, and has no `:system_one` form. Its export
+  holds the images its placeholders name as `imagesMapping` (see
+  `images_mapping/1`).
+
+      image = DeepEvalEx.MLLMImage.new!(url: "https://example.com/chart.png")
+
+      DeepEvalEx.TestCase.new!(
+        input: "What does \#{image} show?",
+        actual_output: "Sales doubled in 2024.",
+        images: [image]
+      )
+
   ## deepeval keys
 
   `new/1` accepts the keys deepeval's `LLMTestCase` accepts, as atoms or
@@ -63,7 +94,8 @@ defmodule DeepEvalEx.TestCase do
   (`actualOutput`, `expectedOutput`, `retrievalContext`, `toolsCalled`,
   `expectedTools`, `tokenCost`, `inputTokenCount`, `outputTokenCount`,
   `completionTime`, `customColumnKeyValues`, `expectedLabels`), plus
-  `additionalMetadata` and `additional_metadata` for `:metadata`. When
+  `additionalMetadata` and `additional_metadata` for `:metadata`, and
+  `images` or an export's `imagesMapping` for `:images`. When
   several keys name one field, the one deepeval lists first wins (the
   camelCase alias, or `metadata`). As deepeval's `extra="ignore"`, any other
   key is dropped, so a test case exported by deepeval loads as it is.
@@ -103,6 +135,7 @@ defmodule DeepEvalEx.TestCase do
   import Peri
 
   alias DeepEvalEx.Dataset.Expectations
+  alias DeepEvalEx.MLLMImage
   alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
 
   @type t :: %__MODULE__{
@@ -125,6 +158,8 @@ defmodule DeepEvalEx.TestCase do
           custom_column_key_values: %{optional(String.t()) => String.t()} | nil,
           expected_labels: %{optional(String.t()) => String.t()} | nil,
           expectations: Expectations.t() | nil,
+          multimodal: boolean(),
+          images: %{optional(String.t()) => MLLMImage.t()} | nil,
           dataset_rank: non_neg_integer() | nil,
           trace_dict: DeepEvalEx.Tracing.NestedDict.t() | nil
         }
@@ -148,9 +183,11 @@ defmodule DeepEvalEx.TestCase do
     :expectations,
     :tools_called,
     :expected_tools,
+    :images,
     :dataset_rank,
     :trace_dict,
-    flaky: false
+    flaky: false,
+    multimodal: false
   ]
 
   @tool_call_schema ToolCall.schema()
@@ -176,11 +213,13 @@ defmodule DeepEvalEx.TestCase do
     output_token_count: ["outputTokenCount", "output_token_count"],
     completion_time: ["completionTime", "completion_time"],
     flaky: ["flaky"],
+    multimodal: ["multimodal"],
     name: ["name"],
     tags: ["tags"],
     custom_column_key_values: ["customColumnKeyValues", "custom_column_key_values"],
     expected_labels: ["expectedLabels", "expected_labels"],
-    expectations: ["expectations"]
+    expectations: ["expectations"],
+    images: ["images", "imagesMapping"]
   ]
 
   defschema(:test_case_schema, %{
@@ -200,9 +239,11 @@ defmodule DeepEvalEx.TestCase do
     output_token_count: :integer,
     completion_time: :float,
     flaky: {:boolean, {:default, false}},
+    multimodal: {:boolean, {:default, false}},
     custom_column_key_values: {:map, :string, :string},
     expected_labels: {:map, :string, :string},
-    expectations: {:custom, {Expectations, :cast}}
+    expectations: {:custom, {Expectations, :cast}},
+    images: {:custom, {MLLMImage, :cast_images}}
   })
 
   @doc """
@@ -232,6 +273,11 @@ defmodule DeepEvalEx.TestCase do
   - `:expected_labels` - Map of string classifier names to string labels
   - `:expectations` - Map of deepeval's `Expectations` fields, validated by
     `DeepEvalEx.Dataset.Expectations.cast/1`
+  - `:images` - List (or map) of `DeepEvalEx.MLLMImage`s, or of the
+    attributes `DeepEvalEx.MLLMImage.new/1` takes, kept as a map of id to
+    image (see "Images" above)
+  - `:multimodal` - Whether the test case holds images; set when a
+    placeholder appears (see "Images" above)
 
   Keys may be atoms or strings, and may be deepeval's camelCase aliases;
   unknown keys are dropped (see "deepeval keys" above). Tool calls may be `DeepEvalEx.Schemas.ToolCall`
@@ -247,7 +293,7 @@ defmodule DeepEvalEx.TestCase do
     case test_case_schema(attrs) do
       {:ok, validated} ->
         validated = convert_tool_calls(validated)
-        {:ok, struct(__MODULE__, validated)}
+        {:ok, __MODULE__ |> struct(validated) |> set_multimodal()}
 
       {:error, _} = err ->
         err
@@ -348,6 +394,63 @@ defmodule DeepEvalEx.TestCase do
       true ->
         :ok
     end
+  end
+
+  @doc """
+  The images the test case's placeholders name, deepeval's
+  `_get_images_mapping`: a map of id to `DeepEvalEx.MLLMImage` of the
+  `:images` named in the `:input`, `:actual_output`, `:expected_output`,
+  `:context` or `:retrieval_context` (strings only, as deepeval's), or
+  `nil` when there are none. The test run export writes it as the test
+  case's `imagesMapping`.
+
+  ## Examples
+
+      iex> image = DeepEvalEx.MLLMImage.new!(data_base64: "AAAA", mime_type: "image/png", id: "dot")
+      iex> test_case = DeepEvalEx.TestCase.new!(input: "What is \#{image}?", images: [image])
+      iex> DeepEvalEx.TestCase.images_mapping(test_case)
+      %{"dot" => image}
+  """
+  @spec images_mapping(t()) :: %{optional(String.t()) => MLLMImage.t()} | nil
+  def images_mapping(%__MODULE__{} = test_case) do
+    case test_case |> image_texts() |> MLLMImage.mapping(test_case.images) do
+      nil -> nil
+      pairs -> Map.new(pairs)
+    end
+  end
+
+  @doc false
+  # The test case's images mapping as a test run exports it: each image's
+  # dump, in the order the placeholders first appear, or nil.
+  @spec images_mapping_dump(t()) :: Jason.OrderedObject.t() | nil
+  def images_mapping_dump(%__MODULE__{} = test_case) do
+    case test_case |> image_texts() |> MLLMImage.mapping(test_case.images) do
+      nil ->
+        nil
+
+      pairs ->
+        Jason.OrderedObject.new(for {id, image} <- pairs, do: {id, MLLMImage.to_dump(image)})
+    end
+  end
+
+  # deepeval's _get_images_mapping searches these, in this order.
+  defp image_texts(%__MODULE__{} = test_case) do
+    [test_case.input, test_case.actual_output, test_case.expected_output] ++
+      List.wrap(test_case.context) ++ List.wrap(test_case.retrieval_context)
+  end
+
+  # deepeval's set_is_multimodal: a placeholder in the input, the outputs,
+  # the retrieval context (a RetrievedContextData's context included) or
+  # the context.
+  defp set_multimodal(%__MODULE__{multimodal: true} = test_case), do: test_case
+
+  defp set_multimodal(%__MODULE__{} = test_case) do
+    texts =
+      [test_case.input, test_case.actual_output, test_case.expected_output] ++
+        Enum.map(test_case.retrieval_context || [], &RetrievedContextData.context/1) ++
+        List.wrap(test_case.context)
+
+    %{test_case | multimodal: Enum.any?(texts, &MLLMImage.multimodal?/1)}
   end
 
   # Maps deepeval's keys (atoms or strings, field names or aliases) to

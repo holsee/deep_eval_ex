@@ -139,7 +139,7 @@ defmodule DeepEvalEx.SystemOne.Batch do
   # metrics for a conversational test case) whose effective eval mode is
   # :system_one (and, checked by prefetch/3, with no cached result). A
   # multimodal test case's metrics all decline it, so it is not batched.
-  defp candidate?(_module, %ConversationalTestCase{multimodal: true}, _opts), do: false
+  defp candidate?(_module, %{multimodal: true}, _opts), do: false
 
   defp candidate?(module, test_case, opts) do
     accepts?(module, test_case) and

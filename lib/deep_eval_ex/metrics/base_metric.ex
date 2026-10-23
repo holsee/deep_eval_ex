@@ -418,6 +418,7 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
       |> with_default_opts(module)
       |> strict_opts(module.default_threshold())
       |> system_one_opts(module)
+      |> images_opts(test_case)
 
     metadata = %{
       metric: module.metric_name(),
@@ -542,6 +543,17 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   @spec system_one_opts(keyword(), module()) :: keyword()
   def system_one_opts(opts, module),
     do: Keyword.put(opts, :system_one, Context.resolve!(module, opts))
+
+  @doc false
+  # The options `do_measure/2` gets: `:images` is the test case's images
+  # (`DeepEvalEx.MLLMImage`s by id), which the judge adapters send in place
+  # of their placeholders in a prompt (`DeepEvalEx.LLM.Multimodal`), as
+  # deepeval's models look them up in its image registry.
+  @spec images_opts(keyword(), term()) :: keyword()
+  def images_opts(opts, %{images: images}) when is_map(images) and map_size(images) > 0,
+    do: Keyword.put(opts, :images, images)
+
+  def images_opts(opts, _test_case), do: opts
 
   @doc false
   # Applies strict mode to a measured result and records the metric's strict

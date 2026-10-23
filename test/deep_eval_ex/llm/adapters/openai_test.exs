@@ -138,6 +138,29 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
       assert content_type =~ "application/json"
     end
 
+    test "sends a prompt holding image placeholders as text and image_url parts" do
+      stub_completion("hi")
+      image = DeepEvalEx.MLLMImage.new!(data_base64: "AAAA", mime_type: "image/png", id: "dot")
+      opts = [{:images, %{"dot" => image}} | @base_opts]
+
+      assert {:ok, "hi"} = OpenAI.generate("What is #{image}?", opts)
+      assert_received {:request, _conn, body}
+
+      assert body["messages"] == [
+               %{
+                 "role" => "user",
+                 "content" => [
+                   %{"type" => "text", "text" => "What is "},
+                   %{
+                     "type" => "image_url",
+                     "image_url" => %{"url" => "data:image/png;base64,AAAA"}
+                   },
+                   %{"type" => "text", "text" => "?"}
+                 ]
+               }
+             ]
+    end
+
     test "sends model, messages and max_completion_tokens, not max_tokens" do
       stub_completion("hi")
 

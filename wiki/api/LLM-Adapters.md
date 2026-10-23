@@ -62,6 +62,25 @@ All adapters implement the `DeepEvalEx.LLM.Adapter` behaviour:
 @callback generate_raw_response(prompt, opts) :: {:ok, map()} | {:error, term()}
 ```
 
+## Multimodal Prompts
+
+A metric judging a multimodal `DeepEvalEx.TestCase` (one whose text holds
+`DeepEvalEx.MLLMImage` placeholders, `[DEEPEVAL:IMAGE:<id>]`) passes the
+test case's images to the adapter as the `:images` option, a map of id to
+image. As deepeval 4.3.1's models, the OpenAI, Anthropic and Ollama
+adapters split such a prompt at its placeholders and send the text and the
+images in their API's shape (`DeepEvalEx.LLM.Multimodal`):
+
+| Adapter | Base64 or local image | Remote image |
+|---------|-----------------------|--------------|
+| OpenAI | `image_url` part with a `data:` URI | `image_url` part with the URL |
+| Anthropic | `image` block with a `base64` source | `image` block with a `url` source |
+| Ollama | user message with base64 `images` | downloaded, then sent as base64 `images` |
+
+A prompt without placeholders is sent as the plain string it always was.
+The ReqLLM adapter sends prompts as text only. A custom adapter can read
+`opts[:images]` and `DeepEvalEx.LLM.Multimodal.parts/2` to do the same.
+
 ## Tracing
 
 Inside a trace, every call through `DeepEvalEx.LLM.Adapter` is an `:llm`
@@ -139,7 +158,7 @@ end)
 |---------|-----------|
 | Structured Outputs | Yes |
 | Log Probabilities | Yes, for the models deepeval lists with them (not reasoning models) |
-| Multimodal | Yes |
+| Multimodal | Yes: image placeholders are sent as `image_url` parts (see "Multimodal Prompts") |
 
 ### Usage
 
@@ -222,7 +241,7 @@ end)
 |---------|-----------|
 | Structured Outputs | Yes (forced tool use) |
 | Log Probabilities | No |
-| Multimodal | No |
+| Multimodal | Yes: image placeholders are sent as `image` blocks (see "Multimodal Prompts") |
 
 ### Usage
 
@@ -307,7 +326,7 @@ end)
 |---------|-----------|
 | Structured Outputs | Yes (`format` JSON schema) |
 | Log Probabilities | No |
-| Multimodal | No |
+| Multimodal | Images in prompts are sent as message `images` (see "Multimodal Prompts"); the model must take them |
 
 ### Usage
 

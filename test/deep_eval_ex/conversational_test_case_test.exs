@@ -178,6 +178,25 @@ defmodule DeepEvalEx.ConversationalTestCaseTest do
     end
   end
 
+  describe "images" do
+    test "images_mapping/1 is the images the conversation's placeholders name" do
+      dot = DeepEvalEx.MLLMImage.new!(data_base64: "AAAA", mime_type: "image/png", id: "dot")
+      chart = DeepEvalEx.MLLMImage.new!(url: "https://example.com/chart.png", id: "chart")
+
+      test_case =
+        ConversationalTestCase.new!(
+          turns: [%{role: "user", content: "What is #{dot}?"}],
+          images: [dot, chart]
+        )
+
+      assert test_case.images == %{"dot" => dot, "chart" => chart}
+      assert ConversationalTestCase.images_mapping(test_case) == %{"dot" => dot}
+
+      assert ConversationalTestCase.images_mapping(ConversationalTestCase.new!(turns: @turns)) ==
+               nil
+    end
+  end
+
   describe "validate_params/3" do
     # deepeval's check_conversational_test_case_params, in its order.
     defp conversation(attrs \\ []),

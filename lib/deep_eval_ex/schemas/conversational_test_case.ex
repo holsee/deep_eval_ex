@@ -29,6 +29,9 @@ defmodule DeepEvalEx.ConversationalTestCase do
   - `:call_recording_path` - Path of the conversation's recording, for a
     voice conversation. deepeval excludes it from serialisation
   - `:multimodal` - Whether the conversation holds images (see below)
+  - `:images` - The images the conversation's placeholders name, a map of
+    id to `DeepEvalEx.MLLMImage`; `new/1` takes a list (or a map) of
+    images or of their attributes, as `DeepEvalEx.TestCase` does
   - `:voice` - Whether the conversation holds audio (see below)
   - `:dataset_rank` - The test case's position in the dataset it was added
     to, deepeval's private `_dataset_rank`; `nil` outside a dataset, and
@@ -44,6 +47,10 @@ defmodule DeepEvalEx.ConversationalTestCase do
   the `:scenario`, `:expected_outcome`, `:user_description`, a turn's
   `:content` or a turn's `:retrieval_context`. Either flag given as `true`
   is kept. Like deepeval, `:context` and `:chatbot_role` are not searched.
+
+  The images a placeholder names are looked up in `:images` (deepeval's
+  process-wide image registry), and exported as the test case's
+  `imagesMapping` (see `images_mapping/1`).
 
   ## deepeval keys
 
@@ -72,6 +79,7 @@ defmodule DeepEvalEx.ConversationalTestCase do
   import Peri
 
   alias DeepEvalEx.Dataset.Expectations
+  alias DeepEvalEx.MLLMImage
   alias DeepEvalEx.Schemas.RetrievedContextData
   alias DeepEvalEx.Turn
 
@@ -91,6 +99,7 @@ defmodule DeepEvalEx.ConversationalTestCase do
           expected_labels: %{optional(String.t()) => String.t()} | nil,
           call_recording_path: String.t() | nil,
           multimodal: boolean(),
+          images: %{optional(String.t()) => MLLMImage.t()} | nil,
           voice: boolean(),
           dataset_rank: non_neg_integer() | nil
         }
@@ -109,6 +118,7 @@ defmodule DeepEvalEx.ConversationalTestCase do
     :expectations,
     :expected_labels,
     :call_recording_path,
+    :images,
     :dataset_rank,
     flaky: false,
     multimodal: false,
@@ -137,7 +147,8 @@ defmodule DeepEvalEx.ConversationalTestCase do
     expectations: ["expectations"],
     expected_labels: ["expectedLabels", "expected_labels"],
     multimodal: ["multimodal"],
-    voice: ["voice"]
+    voice: ["voice"],
+    images: ["images", "imagesMapping"]
   ]
 
   defschema(:conversational_test_case_schema, %{
@@ -156,7 +167,8 @@ defmodule DeepEvalEx.ConversationalTestCase do
     expectations: {:custom, {Expectations, :cast}},
     expected_labels: {:map, :string, :string},
     multimodal: {:boolean, {:default, false}},
-    voice: {:boolean, {:default, false}}
+    voice: {:boolean, {:default, false}},
+    images: {:custom, {MLLMImage, :cast_images}}
   })
 
   @doc """
@@ -294,6 +306,43 @@ defmodule DeepEvalEx.ConversationalTestCase do
 
   def cast_turns(other),
     do: {:error, "'turns' must be a list of Turn or dict, got %{turns}", [turns: inspect(other)]}
+
+  @doc """
+  The images the conversation's placeholders name, deepeval's
+  `_get_images_mapping`: a map of id to `DeepEvalEx.MLLMImage` of the
+  `:images` named in the `:scenario`, `:expected_outcome`, `:context`,
+  `:user_description`, or a turn's `:content` or `:retrieval_context`
+  (strings only), or `nil` when there are none.
+  """
+  @spec images_mapping(t()) :: %{optional(String.t()) => MLLMImage.t()} | nil
+  def images_mapping(%__MODULE__{} = test_case) do
+    case test_case |> image_texts() |> MLLMImage.mapping(test_case.images) do
+      nil -> nil
+      pairs -> Map.new(pairs)
+    end
+  end
+
+  @doc false
+  # The images mapping as a test run exports it: each image's dump, in the
+  # order the placeholders first appear, or nil.
+  @spec images_mapping_dump(t()) :: Jason.OrderedObject.t() | nil
+  def images_mapping_dump(%__MODULE__{} = test_case) do
+    case test_case |> image_texts() |> MLLMImage.mapping(test_case.images) do
+      nil ->
+        nil
+
+      pairs ->
+        Jason.OrderedObject.new(for {id, image} <- pairs, do: {id, MLLMImage.to_dump(image)})
+    end
+  end
+
+  # deepeval's _get_images_mapping searches these, in this order.
+  defp image_texts(%__MODULE__{} = test_case) do
+    [test_case.scenario, test_case.expected_outcome] ++
+      List.wrap(test_case.context) ++
+      [test_case.user_description] ++
+      Enum.flat_map(test_case.turns, &[&1.content | List.wrap(&1.retrieval_context)])
+  end
 
   defp set_voice(%__MODULE__{voice: true} = test_case), do: test_case
 

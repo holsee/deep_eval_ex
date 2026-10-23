@@ -1,0 +1,26 @@
+Based on the given excerpt (text and images), please generate a comprehensive list of FACTUAL, undisputed truths, that can inferred from the provided excerpt. The excerpt may contain both text and images.
+These truths, MUST BE COHERENT. They must NOT be taken out of context.
+
+Example:
+Example Text: 
+"Albert Einstein, the genius often associated with wild hair and mind-bending theories, famously won the Nobel Prize in Physics—though not for his groundbreaking work on relativity, as many assume. Instead, in 1968, he was honored for his discovery of the photoelectric effect, a phenomenon that laid the foundation for quantum mechanics."
+
+Example JSON: 
+{
+  "truths": [
+    "Einstein won the noble prize for his discovery of the photoelectric effect in 1968.",
+    "The photoelectric effect is a phenomenon that laid the foundation for quantum mechanics."
+  ]  
+}
+===== END OF EXAMPLE ======
+**
+IMPORTANT: Please make sure to only return in JSON format, with the "truths" key as a list of strings. No words or explanation is needed.
+Only include truths that are factual, BUT IT DOESN'T MATTER IF THEY ARE FACTUALLY CORRECT.
+**
+
+Excerpt:
+Sales doubled in 2024. [DEEPEVAL:IMAGE:sales-chart]
+
+There was a cat.
+
+JSON:

@@ -16,9 +16,10 @@ defmodule DeepEvalEx.Prompts.AnswerRelevancy do
   are relevant to addressing the input question.
 
   Each function renders deepeval 4.3.1's `AnswerRelevancyMetric` template
-  of the same name byte for byte, as deepeval renders it for a text-only
-  test case (`multimodal=False`): the multimodal input rules fragment is
-  left out, as DeepEvalEx has no multimodal test cases. Lists are printed
+  of the same name byte for byte. Each includes the multimodal input rules
+  (`DeepEvalEx.Prompts.Fragments`) only when the `:multimodal` option is
+  `true`, as for a multimodal `DeepEvalEx.TestCase`, and keeps the blank
+  lines around them otherwise. Lists are printed
   as Python lists and scores as `format(score, ".2f")` (see
   `DeepEvalEx.Prompts.Python`). `system_one_verdict/0` and
   `system_one_questions/0` are its System One templates,
@@ -35,7 +36,7 @@ defmodule DeepEvalEx.Prompts.AnswerRelevancy do
       system_one_questions: 0
     ]
 
-  alias DeepEvalEx.Prompts.Python
+  alias DeepEvalEx.Prompts.{Fragments, Python}
 
   @doc """
   Generates a prompt to extract statements from the actual output.
@@ -46,6 +47,7 @@ defmodule DeepEvalEx.Prompts.AnswerRelevancy do
   ## Options
 
   - `:actual_output` - the text to break into statements (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_statements(opts) do
     actual_output = Keyword.fetch!(opts, :actual_output)
@@ -57,7 +59,7 @@ defmodule DeepEvalEx.Prompts.AnswerRelevancy do
     Example text: 
     Our new laptop model features a high-resolution Retina display for crystal-clear visuals. It also includes a fast-charging battery, giving you up to 12 hours of usage on a single charge. For security, we’ve added fingerprint authentication and an encrypted SSD. Plus, every purchase comes with a one-year warranty and 24/7 customer support.
 
-
+    #{Fragments.multimodal_input_rules(opts)}
 
     {
       "statements": [
@@ -93,6 +95,7 @@ defmodule DeepEvalEx.Prompts.AnswerRelevancy do
 
   - `:input` - the test case input (required)
   - `:statements` - the statements, a list of strings (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_verdicts(opts) do
     input = Keyword.fetch!(opts, :input)
@@ -105,7 +108,7 @@ defmodule DeepEvalEx.Prompts.AnswerRelevancy do
     Provide 'reason' ONLY for 'no' or 'borderline' verdicts.
     The statements are from an AI's actual output.
 
-
+    #{Fragments.multimodal_input_rules(opts)}
 
     **
     IMPORTANT: Please make sure to only return in valid and parseable JSON format, with the 'verdicts' key mapping to a list of JSON objects. Ensure all strings are closed appropriately. Repair any invalid JSON before you output it.
@@ -154,6 +157,7 @@ defmodule DeepEvalEx.Prompts.AnswerRelevancy do
   - `:input` - the test case input (required)
   - `:irrelevant_statements` - the reasons of the `"no"` verdicts
     (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_reason(opts) do
     score = opts |> Keyword.fetch!(:score) |> Python.format_fixed(2)
@@ -165,7 +169,7 @@ defmodule DeepEvalEx.Prompts.AnswerRelevancy do
     The irrelevant statements represent things in the actual output that is irrelevant to addressing whatever is asked/talked about in the input.
     If there is nothing irrelevant, just say something positive with an upbeat encouraging tone (but don't overdo it otherwise it gets annoying).
 
-
+    #{Fragments.multimodal_input_rules(opts)}
 
     **
     IMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason. Ensure all strings are closed appropriately. Repair any invalid JSON before you output it.

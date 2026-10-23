@@ -216,6 +216,33 @@ defmodule DeepEvalEx.LLM.Adapters.AnthropicTest do
       assert content_type =~ "application/json"
     end
 
+    test "sends a prompt holding image placeholders as text and image blocks" do
+      stub_text("hi")
+      image = DeepEvalEx.MLLMImage.new!(url: "https://example.com/cat.png", id: "cat")
+      opts = [{:images, %{"cat" => image}} | @base_opts]
+
+      assert {:ok, "hi"} = Anthropic.generate("What is #{image}?", opts)
+      assert_received {:request, _conn, body}
+
+      assert body["messages"] == [
+               %{
+                 "role" => "user",
+                 "content" => [
+                   %{"type" => "text", "text" => "What is "},
+                   %{
+                     "type" => "image",
+                     "source" => %{"type" => "url", "url" => "https://example.com/cat.png"}
+                   },
+                   %{"type" => "text", "text" => "?"}
+                 ]
+               }
+             ]
+    end
+
+    test "is multimodal, as deepeval's Claude models" do
+      assert Anthropic.supports_multimodal?()
+    end
+
     test "defaults to deepeval's model and max_tokens" do
       stub_text("hi")
 

@@ -1,0 +1,26 @@
+{
+  "template": "ArgumentCorrectnessMetric.generate_verdicts",
+  "inputs": {
+    "multimodal": true,
+    "images": [
+      {
+        "dataBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+        "mimeType": "image/png",
+        "_id": "red-dot"
+      },
+      {
+        "url": "https://example.com/charts/sales.png",
+        "_id": "sales-chart"
+      }
+    ],
+    "input": "Find a restaurant like the one in [DEEPEVAL:IMAGE:red-dot].",
+    "tools_called": [
+      {
+        "name": "restaurant_search",
+        "input_parameters": {
+          "query": "red dot"
+        }
+      }
+    ]
+  }
+}

@@ -97,8 +97,13 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   The whole metric as one System One request under the `:system_one` eval
   mode, deepeval's `_system_one_eval_spec`: its questions about the test
   case's `input` and `actual_output` (the metric's required params).
+
+  A multimodal test case has none (`nil`), as in deepeval: System One
+  reads text only.
   """
   @impl true
+  def system_one_eval_spec(%{multimodal: true}, _opts), do: nil
+
   def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: required_params(),
@@ -124,6 +129,8 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   end
 
   defp measure_with_llm(test_case, opts) do
+    # deepeval passes the test case's multimodal flag to its templates.
+    opts = Keyword.put(opts, :multimodal, Map.get(test_case, :multimodal, false))
     threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
@@ -164,7 +171,8 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
   defp generate_statements(actual_output, opts) do
     prompt =
       EvaluationTemplate.render(opts, Template, :generate_statements,
-        actual_output: actual_output
+        actual_output: actual_output,
+        multimodal: opts[:multimodal]
       )
 
     case Adapter.generate_with_schema(prompt, Schema.statements_schema(), opts) do
@@ -200,7 +208,8 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
     prompt =
       EvaluationTemplate.render(opts, Template, :generate_verdicts,
         input: input,
-        statements: statements
+        statements: statements,
+        multimodal: opts[:multimodal]
       )
 
     case Adapter.generate_with_schema(prompt, Schema.verdicts_schema(), opts) do
@@ -232,7 +241,8 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancy do
       EvaluationTemplate.render(opts, Template, :generate_reason,
         score: score,
         input: input,
-        irrelevant_statements: irrelevant_statements
+        irrelevant_statements: irrelevant_statements,
+        multimodal: opts[:multimodal]
       )
 
     case Adapter.generate_with_schema(prompt, Schema.reason_schema(), opts) do

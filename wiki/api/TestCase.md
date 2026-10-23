@@ -20,6 +20,8 @@ A test case contains the input prompt, the LLM's actual output, and optional con
 | `metadata` | `map()` | Additional metadata |
 | `name` | `String.t()` | Optional name/identifier for the test case |
 | `tags` | `[String.t()]` | Tags for filtering/grouping |
+| `images` | `%{String.t() => MLLMImage.t()}` | The images the test case's placeholders name (see "Images") |
+| `multimodal` | `boolean()` | Whether the test case holds images; `new/1` sets it when a placeholder appears |
 
 ## Creating Test Cases
 
@@ -51,6 +53,35 @@ test_case = TestCase.new!(
   ]
 )
 ```
+
+### Images
+
+An image goes into a text field as its placeholder, which interpolating a
+`DeepEvalEx.MLLMImage` gives, and into `:images`. The judge then sees the
+image itself (see "Multimodal Prompts" in the LLM Adapters page), the
+metrics use deepeval's multimodal prompts, and the test run exports the
+images as `imagesMapping`:
+
+```elixir
+alias DeepEvalEx.{MLLMImage, TestCase}
+
+chart = MLLMImage.new!(url: "https://example.com/charts/sales.png")
+photo = MLLMImage.new!(url: "priv/photos/receipt.jpg")
+logo = MLLMImage.new!(data_base64: base64_png, mime_type: "image/png")
+
+test_case = TestCase.new!(
+  input: "What does #{chart} show?",
+  actual_output: "Sales doubled in 2024.",
+  images: [chart, photo, logo]
+)
+
+test_case.multimodal
+#=> true
+```
+
+A remote image is sent to the judge by URL (Ollama downloads it); a local
+file is read when the image is created. A multimodal test case has no
+`:system_one` form, as in deepeval: System One reads text only.
 
 ### Using `new/1` (with error handling)
 

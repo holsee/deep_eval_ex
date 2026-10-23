@@ -1,0 +1,22 @@
+{
+  "template": "ArgumentCorrectnessMetric.generate_reason",
+  "inputs": {
+    "multimodal": true,
+    "images": [
+      {
+        "dataBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+        "mimeType": "image/png",
+        "_id": "red-dot"
+      },
+      {
+        "url": "https://example.com/charts/sales.png",
+        "_id": "sales-chart"
+      }
+    ],
+    "score": 0.0,
+    "incorrect_tool_calls_reasons": [
+      "The query ignores the image."
+    ],
+    "input": "Find a restaurant like the one in [DEEPEVAL:IMAGE:red-dot]."
+  }
+}

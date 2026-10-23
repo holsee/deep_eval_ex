@@ -134,8 +134,13 @@ defmodule DeepEvalEx.Metrics.PlanQuality do
   mode, deepeval's `_system_one_eval_spec`: its questions about the
   compacted trace (the state's `"trace"`), or without a trace about the
   test case's `input`, `actual_output` and `tools_called`.
+
+  A multimodal test case has none (`nil`), as in deepeval: System One
+  reads text only.
   """
   @impl true
+  def system_one_eval_spec(%{multimodal: true}, _opts), do: nil
+
   def system_one_eval_spec(test_case, opts) do
     has_trace = AgentPlan.trace_dict?(test_case.trace_dict)
 

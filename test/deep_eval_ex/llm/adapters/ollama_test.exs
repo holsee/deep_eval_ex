@@ -190,6 +190,58 @@ defmodule DeepEvalEx.LLM.Adapters.OllamaTest do
              }
     end
 
+    test "sends a prompt holding image placeholders as one message per text and image" do
+      stub_chat("hi")
+      image = DeepEvalEx.MLLMImage.new!(data_base64: "AAAA", mime_type: "image/png", id: "dot")
+      opts = [{:images, %{"dot" => image}} | @base_opts]
+
+      assert {:ok, "hi"} = Ollama.generate("#{image} shows", opts)
+
+      assert_received {:request, _conn, body}
+
+      assert body["messages"] == [
+               %{"role" => "user", "images" => ["AAAA"]},
+               %{"role" => "user", "content" => " shows"}
+             ]
+    end
+
+    test "downloads a remote image and sends its bytes" do
+      test_pid = self()
+
+      Req.Test.stub(@stub, fn
+        %{method: "GET"} = conn ->
+          conn
+          |> Plug.Conn.put_resp_content_type("image/png")
+          |> Plug.Conn.send_resp(200, "PNGBYTES")
+
+        conn ->
+          {:ok, raw, conn} = Plug.Conn.read_body(conn)
+          send(test_pid, {:request, conn, Jason.decode!(raw)})
+
+          Req.Test.json(conn, %{
+            "model" => "llama3.2",
+            "message" => %{"role" => "assistant", "content" => "hi"},
+            "done" => true
+          })
+      end)
+
+      image = DeepEvalEx.MLLMImage.new!(url: "https://example.com/cat.png", id: "cat")
+
+      assert {:ok, "hi"} =
+               Ollama.generate("#{image}", [{:images, %{"cat" => image}} | @base_opts])
+
+      assert_received {:request, _conn, body}
+      assert body["messages"] == [%{"role" => "user", "images" => [Base.encode64("PNGBYTES")]}]
+    end
+
+    test "returns an error when a remote image cannot be downloaded" do
+      Req.Test.stub(@stub, &Plug.Conn.send_resp(&1, 404, "missing"))
+      image = DeepEvalEx.MLLMImage.new!(url: "https://example.com/gone.png", id: "gone")
+
+      assert {:error, {:image_fetch_failed, "https://example.com/gone.png", {:http_status, 404}}} =
+               Ollama.generate("#{image}", [{:images, %{"gone" => image}} | @base_opts])
+    end
+
     test "sends temperature given via opts over :ollama_temperature config" do
       stub_chat("hi")
       Application.put_env(:deep_eval_ex, :ollama_temperature, 0.3)

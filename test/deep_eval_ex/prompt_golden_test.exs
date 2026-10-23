@@ -20,7 +20,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
 
   use ExUnit.Case, async: true
 
-  alias DeepEvalEx.{ConversationalTestCase, TestCase}
+  alias DeepEvalEx.{ConversationalTestCase, MLLMImage, TestCase}
   alias DeepEvalEx.Metrics.ConversationalGEval
   alias DeepEvalEx.Metrics.GEval.Rubric
   alias DeepEvalEx.Metrics.Utils.Turns
@@ -347,12 +347,36 @@ defmodule DeepEvalEx.PromptGoldenTest do
       args =
         if function_exported?(module, fun, 0),
           do: [],
-          else: [options(template, inputs, unquote(name))]
+          else: [options(template, inputs, unquote(name)) ++ multimodal_options(template, inputs)]
 
       assert apply(module, fun, args) ==
                File.read!(Path.join([@fixtures, unquote(name), "prompt.txt"]))
     end
   end
+
+  # The templates of the single-turn metrics that pass deepeval's
+  # `multimodal` flag, the test case's: the metric puts it, and the test
+  # case's images, in the options of each.
+  @multimodal_templates ~w(
+    AnswerRelevancyMetric.generate_statements AnswerRelevancyMetric.generate_verdicts
+    AnswerRelevancyMetric.generate_reason ArgumentCorrectnessMetric.generate_verdicts
+    ArgumentCorrectnessMetric.generate_reason BiasMetric.generate_opinions
+    BiasMetric.generate_verdicts ContextualPrecisionMetric.generate_verdicts
+    ContextualPrecisionMetric.generate_reason ContextualRecallMetric.generate_verdicts
+    ContextualRecallMetric.generate_reason ContextualRelevancyMetric.generate_verdicts
+    FaithfulnessMetric.generate_claims FaithfulnessMetric.generate_truths
+    FaithfulnessMetric.generate_verdicts GEval.generate_evaluation_steps
+    GEval.generate_evaluation_results GEval.generate_strict_evaluation_results
+    GEval.generate_trace_evaluation_steps GEval.generate_trace_evaluation_results
+    GEval.generate_strict_trace_evaluation_results
+  )
+
+  defp multimodal_options(template, inputs) when template in @multimodal_templates do
+    {:ok, images} = MLLMImage.cast_images(Map.get(inputs, "images", []))
+    [multimodal: Map.get(inputs, "multimodal", false), images: images]
+  end
+
+  defp multimodal_options(_template, _inputs), do: []
 
   defp input(name),
     do: Path.join([@fixtures, name, "input.json"]) |> File.read!() |> Jason.decode!()

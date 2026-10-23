@@ -1,11 +1,11 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in thirteen sets:
+Fixtures written by **deepeval 4.3.1**, in fourteen sets:
 
 - export scenarios (the directories below, except `scripted/`, `prompts/`,
   `round_trip/`, `system_one/`, `datasets/`, `classifiers/`,
-  `expectations/`, `cache/`, `report/`, `cli/`, `traced/` and
-  `loop_detection/`), used by
+  `expectations/`, `cache/`, `report/`, `cli/`, `traced/`,
+  `loop_detection/` and `multimodal/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
@@ -59,6 +59,10 @@ Fixtures written by **deepeval 4.3.1**, in thirteen sets:
   `_input_hash` make of fixed inputs, used by
   `test/deep_eval_ex/metrics/utils/sequence_matcher_test.exs` and
   `test/deep_eval_ex/metrics/agent_loop_detection_test.exs`
+- [multimodal content parts](#multimodal-content-parts) (`multimodal/`),
+  the message content deepeval's OpenAI, Anthropic and Ollama models build
+  from a prompt holding image placeholders, used by
+  `test/deep_eval_ex/llm/multimodal_test.exs`
 
 ## Export scenarios
 
@@ -126,11 +130,13 @@ the parity test's "covers every scenario" assertion.
 It also rewrites the [round-trip test runs](#round-trip-test-runs) and the
 outputs of every scripted scenario that has a
 `script.json`, and every [prompt golden](#prompt-goldens) (defined in
-`PROMPT_CASES`), and the [loop detection tables](#loop-detection-tables).
+`PROMPT_CASES`), the [loop detection tables](#loop-detection-tables) and the
+[multimodal content parts](#multimodal-content-parts).
 With the argument `traced` it rewrites the [traced fixtures](#traced-fixtures)
 instead, and nothing else; with `scripted` (and optionally scenario names)
 only the scripted scenarios' outputs; with `loop_detection` only the loop
-detection tables. Runs are
+detection tables; with `multimodal` only the multimodal content parts. Runs
+are
 deterministic: no network, a fixed string hash seed (deepeval orders some
 reasons by iterating sets), and only the `runDuration` values change between
 runs (and the round-trip and traced runs' uuids and timestamps).
@@ -179,9 +185,10 @@ its own. Its uuids and timestamps change with every regeneration.
 | --- | --- |
 | `traced_dataset` | `EvaluationDataset.evals_iterator()` over two goldens of a dataset with an alias, id and version (set as `pull()` sets them, without Confident AI), running an `@observe`d agent, retriever and LLM span: each test case's `trace` (with span `metricsData`), the run's `traceMetricsScores`, `prompts` from a text and a messages `Prompt` hyperparameter, `identifier`, `hyperparameters`, `datasetAlias`, `datasetId` and `datasetVersion` |
 
-deepeval 4.3.1 never sets `testFile`, and no local run writes
-`conversationalTestCases`, `expectationsData` or `imagesMapping`; those are
-covered by hand-written JSON in the load test.
+deepeval 4.3.1 never sets `testFile`, and no round-trip run writes
+`conversationalTestCases`, `expectationsData` or `imagesMapping` (the
+multimodal scripted scenarios export `imagesMapping`); those are covered by
+hand-written JSON in the load test.
 
 ## Scripted-judge scenarios
 
@@ -265,7 +272,7 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | ExactMatch | `exact_match_pass`, `exact_match_fail` |
 | GEval | `g_eval_criteria_pass` (steps generated from criteria), `g_eval_steps_fail` (given steps), `g_eval_strict`, `g_eval_logprobs` (a raw response with logprobs: the score weighted by the final score token's top logprobs, the same number earlier in the reason ignored, a 1% and a non-decimal token dropped, `"08"` summed with `"8"`), `g_eval_logprobs_missing` (a raw response without logprobs: the raw score kept), `g_eval_retrieved_context_data` (`retrieval_context` holding a `RetrievedContextData`, printed as its pydantic repr), `g_eval_trace` (no `evaluation_params`: the trace templates, steps generated from criteria, the trace printed by `serialize_to_json(indent=2)` with non-ASCII escaped, a rubric), `g_eval_trace_strict` (no `evaluation_params`, given steps, the strict trace template, the integer `1`) |
 | ConversationalGEval | `conversational_g_eval_criteria_pass` (steps generated from criteria; `:role` appended to `[:content]`), `conversational_g_eval_steps_fail` (given steps, case-level `scenario` and `expected_outcome`, a rubric sorted by range, a fractional `2.5` kept as `0.25`), `conversational_g_eval_strict` (a `7` clamped to the integer `0`, threshold `1`), `conversational_g_eval_logprobs` (per-turn `retrieval_context` and `tools_called`; the score weighted by the *first* token equal to it, in the reason, unlike GEval), `conversational_g_eval_logprobs_missing` (a raw response without logprobs: the raw score kept). deepeval's asynchronous `evaluate()` copies the metric, so the test runs report `"scripted-judge (audio: scripted-judge)"` where `measure()` reports `"scripted-judge"` |
-| TurnRelevancy | `turn_relevancy_pass` (one window per unit interaction, the default `window_size` of 10), `turn_relevancy_fail` (`window_size` 2; a raw-text verdict outside yes and no dropped, so `None` in the verbose logs, while the irrelevant window keeps its message number `2`; turns with `retrieval_context`, `tools_called`, `metadata`, `user_id` and `latency_ms` printed as `Turn.__repr__`), `turn_relevancy_strict` (the integer `0`, no reason), `turn_relevancy_no_verdicts` (no answered user turn: no window, the integer score `1`). The reason prompt prints the score unformatted |
+| TurnRelevancy | `turn_relevancy_pass` (one window per unit interaction, the default `window_size` of 10), `turn_relevancy_fail` (`window_size` 2; a raw-text verdict outside yes and no dropped, so `None` in the verbose logs, while the irrelevant window keeps its message number `2`; turns with `retrieval_context`, `tools_called`, `metadata`, `user_id` and `latency_ms` printed as `Turn.__repr__`), `turn_relevancy_strict` (the integer `0`, no reason), `turn_relevancy_no_verdicts` (no answered user turn: no window, the integer score `1`). The reason prompt prints the score unformatted, `turn_relevancy_multimodal` (an image in a turn: the conversation's `imagesMapping`) |
 | ConversationCompleteness | `conversation_completeness_pass`, `conversation_completeness_fail` (an unmet intention, a raw-text verdict outside yes and no dropped; turns with every field, printed as `model_dump()` JSON in the verbose logs; an unused `window_size`), `conversation_completeness_strict` (an unmet intention without a reason, `None` in the reason prompt), `conversation_completeness_no_intentions` (no verdict, the integer score `1`) |
 | KnowledgeRetention | `knowledge_retention_pass`, `knowledge_retention_fail` (an opening assistant turn, and one after a user turn whose facts are `{}`, get no verdict; a forgotten destination fails; a raw-text verdict in a code fence; a dict of several facts, its keys in sorted order), `knowledge_retention_strict` (a forgotten fact without a reason, `None` in the reason prompt, the integer `0`), `knowledge_retention_no_verdicts` (facts `null`: no verdict, the integer score `1`). The reason prompt prints the score to two decimals |
 | RoleAdherence | `role_adherence_pass` (turns with `retrieval_context` and `tools_called`, of which the prompt shows `content` and `role`), `role_adherence_fail` (one turn out of character, and a verdict whose index names no turn keeps the judge's `ai_message`: 1 of 3), `role_adherence_strict` (index `-1` counts from the end, `(turn #0)`; non-ASCII escaped in the verbose logs; the integer `0`), `role_adherence_no_assistant_turns` (the integer score `1`). The reason prompt prints the score unformatted |
@@ -282,9 +289,9 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | TurnContextualRelevancy | `turn_contextual_relevancy_pass` (one request per node), `turn_contextual_relevancy_fail` (`window_size` 1; an irrelevant statement without a reason, `: None` in the reason prompt; a raw-text verdict out of vocabulary dropped), `turn_contextual_relevancy_strict`, `turn_contextual_relevancy_no_windows`. deepeval 4.3.1 raises on a `RetrievedContextData` node, so no scenario has one |
 | Faithfulness | `faithfulness_pass`, `faithfulness_fail`, `faithfulness_borderline`, `faithfulness_penalize_ambiguous` (`penalize_ambiguous_claims`: the borderline verdict fails and is an `(Ambiguous)` contradiction), `faithfulness_no_claims` (empty list), `faithfulness_strict` |
 | Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_no_verdicts` (empty list), `hallucination_strict`, `hallucination_messy_json` (raw-text answers: prose, a code fence and trailing commas around the verdicts, a reason missing its closing brace), `hallucination_invalid_json` (a raw-text answer with no JSON: the metric errors) |
-| AnswerRelevancy | `answer_relevancy_pass`, `answer_relevancy_fail`, `answer_relevancy_no_statements` (empty list), `answer_relevancy_strict` |
+| AnswerRelevancy | `answer_relevancy_pass`, `answer_relevancy_fail`, `answer_relevancy_no_statements` (empty list), `answer_relevancy_strict`, `answer_relevancy_multimodal` (an image placeholder in the input: the multimodal input rules in every prompt, and only the named image of the two exported as `imagesMapping`) |
 | ContextualPrecision | `contextual_precision_pass`, `contextual_precision_fail`, `contextual_precision_strict`, `contextual_precision_retrieved_context_data` (`RetrievedContextData` of one source grouped into one `Source: ...` document at the source's first position, a string between them; the export keeps only each `context`) |
-| ContextualRecall | `contextual_recall_pass`, `contextual_recall_fail`, `contextual_recall_strict`, `contextual_recall_retrieved_context_data` (`RetrievedContextData` printed as its pydantic repr in the retrieval context list) |
+| ContextualRecall | `contextual_recall_pass`, `contextual_recall_fail`, `contextual_recall_strict`, `contextual_recall_retrieved_context_data` (`RetrievedContextData` printed as its pydantic repr in the retrieval context list), `contextual_recall_multimodal` (images in the expected output and retrieval context: "sentences and images", the retrieval context as numbered text and image nodes, and both images in `imagesMapping`, in order of first appearance) |
 | ContextualRelevancy | `contextual_relevancy_pass`, `contextual_relevancy_fail` (a `no` verdict without a reason, listed as `None` in the reason prompt), `contextual_relevancy_no_statements` (an empty list for every node: the integer `0`), `contextual_relevancy_strict`; one `verdicts` call per retrieval context node, in order |
 | Bias | `bias_pass`, `bias_fail` (a `yes` verdict without a reason, listed as `None` in the reason prompt), `bias_no_opinions` (no opinions: no `verdicts` call, the integer `1`), `bias_strict` |
 | Toxicity | `toxicity_pass`, `toxicity_fail` (a `yes` verdict without a reason, listed as `None` in the reason prompt), `toxicity_no_opinions` (no opinions: no `verdicts` call, the integer `1`), `toxicity_strict` |
@@ -339,8 +346,9 @@ thirty LLM-judged metrics, for fixed inputs:
   added
 
 Cases are defined in `PROMPT_CASES` in the generator, which renders each the
-way the metric does: the metric's own `_get_prompt` (strict Jinja,
-`multimodal=False`) with the arguments its helpers derive from the inputs
+way the metric does: the metric's own `_get_prompt` (strict Jinja, and
+the case's `multimodal` input, `False` unless given) with the arguments its
+helpers derive from the inputs
 (`"\n\n".join` of truths, `format(score, ".2f")`,
 `_contextual_precision_verdict_fields`, `print_tools_called`, ...); GEval's
 cases call the metric's `_steps_prompt` and `_results_prompt`, and
@@ -348,8 +356,15 @@ ConversationalGEval's its `_evaluation_prompt`. The generator
 fails if a bundled template of these metrics is neither rendered by a case
 nor listed in `UNRENDERED_TEMPLATES`.
 
+A `*_multimodal` case renders a single-turn template for a multimodal test
+case: its inputs hold `multimodal: true`, image placeholders, and the
+`images` (MLLMImage keyword arguments) the generator creates first, so
+that deepeval's image registry resolves them (`_mm`).
+
 The Elixir test turns the same inputs into the options the DeepEvalEx
-metric passes its prompt function (`options/2` in the test), calls the
+metric passes its prompt function (`options/2` in the test, plus the
+`:multimodal` flag and `:images` for the single-turn templates that take
+them), calls the
 function and compares the strings exactly. It also checks that the cases
 render every template in the table below, and that the table names every
 public prompt function of `DeepEvalEx.Prompts` (the `format_*` helpers
@@ -1143,3 +1158,28 @@ DeepEvalEx's traces, exports and test runs with them.
   (combining characters counted as code points), dicts dumped with sorted
   keys and non-ASCII escaped, cut at 64 characters, and lists, numbers and
   booleans as their `str()`
+
+## Multimodal content parts
+
+`generate_fixtures.py multimodal` writes `multimodal/content_parts.json`
+(`write_content_parts`): for each case, a prompt holding image
+placeholders, its `images` (MLLMImage keyword arguments: a base64 PNG, a
+remote URL that is never fetched, and `red_dot.png`, a local file whose
+path is relative to the repository root), and the message content
+deepeval's models build from them: `to_openai_content` (`openai`),
+`AnthropicModel._prompt_content` (`anthropic`) and
+`OllamaModel._prompt_messages` (`ollama`, `null` for the case with a remote
+image, which Ollama downloads). `test/deep_eval_ex/llm/multimodal_test.exs`
+builds the same content with `DeepEvalEx.LLM.Multimodal` and compares the
+JSON.
+
+A prompt without placeholders is not a case: DeepEvalEx sends it as the
+plain string it always sent, where deepeval's OpenAI and Anthropic models
+send a one-part list.
+
+The scripted scenarios `answer_relevancy_multimodal`,
+`contextual_recall_multimodal` and `turn_relevancy_multimodal` run whole
+metrics on multimodal test cases (whose `test_case` has `images` the
+generator creates), checking their prompts and the test run's
+`imagesMapping`. The scripted judge reports `supports_multimodal()` so
+deepeval asks it.

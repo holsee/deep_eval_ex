@@ -28,6 +28,7 @@ defmodule DeepEvalEx.Prompts.Python do
   decimal, so `repr/1` of the result prints what Python prints.
   """
 
+  alias DeepEvalEx.MLLMImage
   alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
   alias DeepEvalEx.TestRun.JSON
   alias DeepEvalEx.Turn
@@ -99,6 +100,8 @@ defmodule DeepEvalEx.Prompts.Python do
   - `DeepEvalEx.Schemas.RetrievedContextData` as pydantic's `__repr__`,
     `RetrievedContextData(context='...', source='...')`
   - `DeepEvalEx.Prompts.Python.EnumMember`s as `<Class.NAME: value>`
+  - `DeepEvalEx.MLLMImage`s as their placeholder, unquoted, as
+    `MLLMImage.__repr__`
 
   ## Examples
 
@@ -485,6 +488,7 @@ defmodule DeepEvalEx.Prompts.Python do
   defp do_repr(list) when is_list(list), do: [?[, list |> Enum.map(&do_repr/1) |> join(), ?]]
   defp do_repr(%ToolCall{} = tool_call), do: tool_call(tool_call)
   defp do_repr(%Turn{} = turn), do: turn(turn)
+  defp do_repr(%MLLMImage{} = image), do: MLLMImage.placeholder(image)
 
   defp do_repr(%RetrievedContextData{context: context, source: source}),
     do: ["RetrievedContextData(context=", string(context), ", source=", string(source), ?)]

@@ -107,8 +107,13 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
   The whole metric as one System One request under the `:system_one` eval
   mode, deepeval's `_system_one_eval_spec`: its questions about the test
   case's `actual_output` and `retrieval_context`.
+
+  A multimodal test case has none (`nil`), as in deepeval: System One
+  reads text only.
   """
   @impl true
+  def system_one_eval_spec(%{multimodal: true}, _opts), do: nil
+
   def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: [:actual_output, :retrieval_context],
@@ -137,6 +142,8 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
   end
 
   defp measure_with_llm(test_case, opts) do
+    # deepeval passes the test case's multimodal flag to its templates.
+    opts = Keyword.put(opts, :multimodal, Map.get(test_case, :multimodal, false))
     threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
     truths_limit = Keyword.get(opts, :truths_extraction_limit)
@@ -198,7 +205,8 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
     prompt =
       EvaluationTemplate.render(opts, Template, :generate_truths,
         retrieval_context: context_text,
-        extraction_limit: limit
+        extraction_limit: limit,
+        multimodal: opts[:multimodal]
       )
 
     case Adapter.generate_with_schema(prompt, Schema.truths_schema(), opts) do
@@ -209,7 +217,10 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
 
   defp generate_claims(actual_output, opts) do
     prompt =
-      EvaluationTemplate.render(opts, Template, :generate_claims, actual_output: actual_output)
+      EvaluationTemplate.render(opts, Template, :generate_claims,
+        actual_output: actual_output,
+        multimodal: opts[:multimodal]
+      )
 
     case Adapter.generate_with_schema(prompt, Schema.claims_schema(), opts) do
       {:ok, response} -> Schema.parse_claims(response)
@@ -246,7 +257,8 @@ defmodule DeepEvalEx.Metrics.Faithfulness do
     prompt =
       EvaluationTemplate.render(opts, Template, :generate_verdicts,
         claims: claims,
-        retrieval_context: truths_text
+        retrieval_context: truths_text,
+        multimodal: opts[:multimodal]
       )
 
     case Adapter.generate_with_schema(prompt, Schema.verdicts_schema(), opts) do

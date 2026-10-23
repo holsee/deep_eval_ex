@@ -50,6 +50,10 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
   - `:timeout` - receive timeout in milliseconds (default `60_000`)
   - `:req_options` - extra `Req` options merged into the request, e.g.
     `[plug: {Req.Test, DeepEvalEx.LLM.Adapters.Anthropic}]` in tests
+  - `:images` - the test case's images, a map of id to
+    `DeepEvalEx.MLLMImage`, which the metrics pass: a prompt holding their
+    placeholders is sent as `text` and `image` content blocks (see
+    `DeepEvalEx.LLM.Multimodal.anthropic_content/2`)
 
   Models that support extended thinking are sent `thinking: %{type:
   "disabled"}`, as deepeval does when thinking is not switched on; forcing a
@@ -87,7 +91,7 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
 
   use DeepEvalEx.LLM.Adapter
 
-  alias DeepEvalEx.LLM.{Adapter, Retry, Usage}
+  alias DeepEvalEx.LLM.{Adapter, Multimodal, Retry, Usage}
 
   @default_base_url "https://api.anthropic.com"
   @api_version "2023-06-01"
@@ -168,6 +172,10 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
   def supports_temperature?(opts),
     do: not MapSet.member?(@temperature_rejecting_models, model_name(opts))
 
+  # Every Claude model of deepeval's ANTHROPIC_MODELS_DATA takes images.
+  @impl true
+  def supports_multimodal?, do: true
+
   # A native model, as deepeval's `AnthropicModel`: its cost is reported.
   @impl true
   def native?, do: true
@@ -183,7 +191,7 @@ defmodule DeepEvalEx.LLM.Adapters.Anthropic do
 
     %{
       model: model,
-      messages: [%{role: "user", content: prompt}],
+      messages: [%{role: "user", content: Multimodal.anthropic_content(prompt, opts[:images])}],
       max_tokens: Keyword.get_lazy(opts, :max_tokens, fn -> default_max_tokens(model) end)
     }
     |> put_temperature(model, opts)

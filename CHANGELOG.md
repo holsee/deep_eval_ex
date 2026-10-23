@@ -2619,8 +2619,64 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     gateway). CI also compiles DeepEvalEx without optional dependencies.
     See the [LLM Adapters](wiki/api/LLM-Adapters.md) page and the
     [Configuration](wiki/guides/Configuration.md) guide.
+- **Multimodal test cases: `DeepEvalEx.MLLMImage` and image input to the
+  judge**, ports of deepeval 4.3.1's `MLLMImage`, its
+  `[DEEPEVAL:IMAGE:<id>]` placeholders and `models/llms/multimodal.py`.
+  - `DeepEvalEx.MLLMImage.new/1` builds an image from a local path or
+    `file://` URL (read into base64 at once), an `http(s)://` URL (never
+    downloaded by DeepEvalEx itself), or base64 data and a mime type, with
+    deepeval's derived `filename`, `mimeType` and `local`, and its error
+    messages. Interpolating an image gives its placeholder
+    (`[DEEPEVAL:PDF:<id>]` for a PDF), as deepeval's f-strings do.
+  - Where deepeval looks placeholders up in a process-wide image registry,
+    a test case carries its images: `DeepEvalEx.TestCase` and
+    `DeepEvalEx.ConversationalTestCase` take `images:` (a list or map of
+    images, or of their attributes, or an export's `imagesMapping`) and
+    keep them as a map of id to image. `TestCase.new/1` now takes
+    deepeval's `multimodal` flag and sets it, as `set_is_multimodal`, when
+    a placeholder appears in the input, outputs, context or retrieval
+    context. `images_mapping/1` gives the images the placeholders name.
+  - A test run exports them as each test case's (and conversational test
+    case's) `imagesMapping`, deepeval's dump of each image, in the order
+    the placeholders first appear.
+  - Metrics pass the test case's images to the judge as the `:images`
+    option; the OpenAI, Anthropic and Ollama adapters split a prompt at
+    its placeholders and send `image_url` parts, `image` blocks, or
+    per-piece messages with base64 `images`
+    (`DeepEvalEx.LLM.Multimodal`). Ollama downloads a remote image and
+    sends its bytes as they are, where deepeval re-encodes them as JPEG. A
+    prompt without placeholders is sent as before.
+  - The single-turn metrics render deepeval's multimodal prompts for a
+    multimodal test case: the multimodal input rules
+    (`DeepEvalEx.Prompts.Fragments.multimodal_input_rules/1`) in
+    AnswerRelevancy, ArgumentCorrectness, Bias and GEval (trace mode
+    included); Faithfulness's "excerpt" wording, multimodal example and
+    guidelines; ContextualPrecision's and ContextualRecall's wording and
+    their retrieval context as numbered text and image nodes
+    (`DeepEvalEx.Metrics.Utils.RetrievalContextDisplay`); and
+    ContextualRelevancy's image-aware instructions. The prompt functions
+    take the `:multimodal` option.
+  - As in deepeval, a multimodal test case has no System One form:
+    `system_one_eval_spec/2` is `nil` for AnswerRelevancy,
+    ArgumentCorrectness, Bias, ContextualPrecision, ContextualRecall,
+    ContextualRelevancy, Faithfulness, Hallucination, PIILeakage,
+    PlanAdherence, PlanQuality, PromptAlignment, StepEfficiency,
+    Summarization, TaskCompletion and Toxicity; ContextualRecall's and
+    ContextualRelevancy's `:hybrid` verdicts, and StepEfficiency's and
+    PlanAdherence's `:hybrid` scores, go to the LLM; and System One
+    batching skips the test case.
+  - Parity fixtures written by deepeval: twenty-one multimodal prompt
+    goldens, three scripted-judge scenarios
+    (`answer_relevancy_multimodal`, `contextual_recall_multimodal`,
+    `turn_relevancy_multimodal`, whose test runs carry `imagesMapping`),
+    and the adapters' content parts (`multimodal/content_parts.json`).
+    See the [TestCase](wiki/api/TestCase.md) and
+    [LLM Adapters](wiki/api/LLM-Adapters.md) pages.
 
 ### Changed
+
+- The Anthropic adapter's `supports_multimodal?/0` is now `true`, as for
+  every Claude model deepeval lists.
 
 - `DeepEvalEx.TestRun.from_test_cases/2` (and so `from_results/3`) now
   computes `traceMetricsScores` from the test cases' traces instead of

@@ -457,7 +457,11 @@ defmodule DeepEvalEx.Metrics.GEval do
     start_time = System.monotonic_time(:millisecond)
 
     with :ok <- validate(metric, test_case) do
-      adapter_opts = build_adapter_opts(metric, opts)
+      # deepeval passes the test case's multimodal flag to its templates.
+      adapter_opts =
+        metric
+        |> build_adapter_opts(opts)
+        |> Keyword.put(:multimodal, Map.get(test_case, :multimodal, false))
 
       result =
         with {:ok, steps} <- get_or_generate_steps(metric, adapter_opts),
@@ -542,7 +546,7 @@ defmodule DeepEvalEx.Metrics.GEval do
   defp build_adapter_opts(metric, opts), do: adapter_opts(metric.model, opts)
 
   defp adapter_opts(model, opts) do
-    base_opts = Keyword.take(opts, [:adapter, :api_key, :timeout])
+    base_opts = Keyword.take(opts, [:adapter, :api_key, :timeout, :images])
 
     case model do
       nil -> base_opts
@@ -563,12 +567,14 @@ defmodule DeepEvalEx.Metrics.GEval do
           template_opts(metric),
           Template,
           :generate_trace_evaluation_steps,
-          criteria: metric.criteria
+          criteria: metric.criteria,
+          multimodal: opts[:multimodal]
         )
       else
         EvaluationTemplate.render(template_opts(metric), Template, :generate_evaluation_steps,
           criteria: metric.criteria,
-          parameters: Template.format_params(metric.evaluation_params)
+          parameters: Template.format_params(metric.evaluation_params),
+          multimodal: opts[:multimodal]
         )
       end
 
@@ -599,7 +605,8 @@ defmodule DeepEvalEx.Metrics.GEval do
         Template,
         :generate_strict_trace_evaluation_results,
         evaluation_steps: steps,
-        trace_json: trace_json
+        trace_json: trace_json,
+        multimodal: multimodal?(test_case)
       )
     else
       EvaluationTemplate.render(
@@ -609,7 +616,8 @@ defmodule DeepEvalEx.Metrics.GEval do
         evaluation_steps: steps,
         trace_json: trace_json,
         rubric: Template.format_rubric(metric.rubric),
-        score_range: metric.score_range
+        score_range: metric.score_range,
+        multimodal: multimodal?(test_case)
       )
     end
   end
@@ -625,7 +633,8 @@ defmodule DeepEvalEx.Metrics.GEval do
         :generate_strict_evaluation_results,
         evaluation_steps: steps,
         test_case_content: test_case_content,
-        parameters: params_string
+        parameters: params_string,
+        multimodal: multimodal?(test_case)
       )
     else
       EvaluationTemplate.render(template_opts(metric), Template, :generate_evaluation_results,
@@ -633,10 +642,13 @@ defmodule DeepEvalEx.Metrics.GEval do
         test_case_content: test_case_content,
         parameters: params_string,
         rubric: Template.format_rubric(metric.rubric),
-        score_range: metric.score_range
+        score_range: metric.score_range,
+        multimodal: multimodal?(test_case)
       )
     end
   end
+
+  defp multimodal?(test_case), do: Map.get(test_case, :multimodal, false)
 
   defp rubric_score(metric, prompt, opts) do
     generate_rubric_score(prompt, opts,

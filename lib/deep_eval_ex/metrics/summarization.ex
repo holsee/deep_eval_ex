@@ -213,8 +213,13 @@ defmodule DeepEvalEx.Metrics.Summarization do
   mode, deepeval's `_system_one_eval_spec`: its questions about the
   original text (`input`) and the summary (`actual_output`), the metric's
   required params, with one Noul per given assessment question.
+
+  A multimodal test case has none (`nil`), as in deepeval: System One
+  reads text only.
   """
   @impl true
+  def system_one_eval_spec(%{multimodal: true}, _opts), do: nil
+
   def system_one_eval_spec(_test_case, opts) do
     questions = assessment_questions(opts) || []
 

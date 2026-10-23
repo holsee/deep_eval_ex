@@ -16,9 +16,10 @@ defmodule DeepEvalEx.Prompts.GEval do
   Based on the G-Eval framework: https://arxiv.org/pdf/2303.16634.pdf
 
   Each prompt function renders deepeval 4.3.1's `GEval` template of the
-  same name byte for byte, as deepeval renders it for a test case
-  (`multimodal=False`, no `_additional_context`): the multimodal input
-  rules fragment is left out, as DeepEvalEx has no multimodal test cases.
+  same name byte for byte, as deepeval renders it without
+  `_additional_context`. Each includes the multimodal input rules
+  (`DeepEvalEx.Prompts.Fragments`) only when the `:multimodal` option is
+  `true`, as for a multimodal `DeepEvalEx.TestCase`.
   The `format_*` helpers build the template arguments as deepeval's
   `number_evaluation_steps`, `construct_g_eval_params_string`,
   `construct_test_case_string` and `format_rubrics` do.
@@ -41,7 +42,7 @@ defmodule DeepEvalEx.Prompts.GEval do
 
   alias DeepEvalEx.Metrics.GEval.Rubric
   alias DeepEvalEx.Params.SingleTurn
-  alias DeepEvalEx.Prompts.Python
+  alias DeepEvalEx.Prompts.{Fragments, Python}
 
   @doc """
   Generates a prompt to create evaluation steps from criteria.
@@ -53,6 +54,7 @@ defmodule DeepEvalEx.Prompts.GEval do
 
   - `:criteria` - the evaluation criteria (required)
   - `:parameters` - the evaluated params, as `format_params/1` (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_evaluation_steps(opts) do
     criteria = Keyword.fetch!(opts, :criteria)
@@ -61,7 +63,7 @@ defmodule DeepEvalEx.Prompts.GEval do
     """
     Given an evaluation criteria which outlines how you should judge the #{parameters}, generate 3-4 concise evaluation steps based on the criteria below. You MUST make it clear how to evaluate #{parameters} in relation to one another.
 
-
+    #{Fragments.multimodal_input_rules(opts)}
 
     Evaluation Criteria:
     #{criteria}
@@ -92,6 +94,7 @@ defmodule DeepEvalEx.Prompts.GEval do
   - `:parameters` - as `format_params/1` (required)
   - `:rubric` - as `format_rubric/1`, or `nil` (default: `nil`)
   - `:score_range` - `{min, max}` (default: `{0, 10}`)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_evaluation_results(opts) do
     evaluation_steps = opts |> Keyword.fetch!(:evaluation_steps) |> format_evaluation_steps()
@@ -120,7 +123,7 @@ defmodule DeepEvalEx.Prompts.GEval do
     - #{reasoning_expectation}
     - Mention key details from the test case parameters.
     - Be concise, clear, and focused on the evaluation logic.
-
+    #{Fragments.multimodal_input_rules(opts)}
 
     Only return valid JSON. Do **not** include any extra commentary or text.
 
@@ -158,6 +161,7 @@ defmodule DeepEvalEx.Prompts.GEval do
     (required)
   - `:test_case_content` - as `format_test_case_content/2` (required)
   - `:parameters` - as `format_params/1` (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_strict_evaluation_results(opts) do
     evaluation_steps = opts |> Keyword.fetch!(:evaluation_steps) |> format_evaluation_steps()
@@ -167,7 +171,7 @@ defmodule DeepEvalEx.Prompts.GEval do
     """
     Given the evaluation steps, return a JSON with two keys: 1) a `score` key that is STRICTLY EITHER 1 (follows the criteria 100% outlined in the evaluation steps), OR 0 (does not follow the criteria), and 2) a `reason` key, a reason for the given score, but DO NOT QUOTE THE SCORE in your reason. Please mention specific information from #{parameters} in your reason, but be very concise with it!
 
-
+    #{Fragments.multimodal_input_rules(opts)}
 
     Evaluation Steps:
     #{evaluation_steps}
@@ -195,6 +199,7 @@ defmodule DeepEvalEx.Prompts.GEval do
   ## Options
 
   - `:criteria` - the evaluation criteria (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_trace_evaluation_steps(opts) do
     criteria = Keyword.fetch!(opts, :criteria)
@@ -206,7 +211,7 @@ defmodule DeepEvalEx.Prompts.GEval do
     - Say which parts of the trace are evidence for the criteria (e.g. specific span types, tool arguments, retrieved content, intermediate LLM outputs, the root output).
     - Say how intermediate steps should be judged in relation to one another and to the final root output, not just the final output on its own.
     - Stay grounded in what a trace can show; do not ask for information that is not recorded in spans.
-
+    #{Fragments.multimodal_input_rules(opts)}
 
     Evaluation Criteria:
     #{criteria}
@@ -236,6 +241,7 @@ defmodule DeepEvalEx.Prompts.GEval do
     `DeepEvalEx.Tracing.NestedDict.to_json/2` prints it (required)
   - `:rubric` - as `format_rubric/1`, or `nil` (default: `nil`)
   - `:score_range` - `{min, max}` (default: `{0, 10}`)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_trace_evaluation_results(opts) do
     evaluation_steps = opts |> Keyword.fetch!(:evaluation_steps) |> format_evaluation_steps()
@@ -265,7 +271,7 @@ defmodule DeepEvalEx.Prompts.GEval do
     - #{reasoning_expectation}
     - Cite the specific spans, by `name`, that drove the score.
     - Be concise, clear, and focused on the evaluation logic.
-
+    #{Fragments.multimodal_input_rules(opts)}
 
     Only return valid JSON. Do **not** include any extra commentary or text.
 
@@ -330,6 +336,7 @@ defmodule DeepEvalEx.Prompts.GEval do
     (required)
   - `:trace_json` - the nested trace dict, as
     `DeepEvalEx.Tracing.NestedDict.to_json/2` prints it (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_strict_trace_evaluation_results(opts) do
     evaluation_steps = opts |> Keyword.fetch!(:evaluation_steps) |> format_evaluation_steps()
@@ -341,7 +348,7 @@ defmodule DeepEvalEx.Prompts.GEval do
     #{trace_reading_rules()}
 
     In your reason, cite the specific spans, by `name`, that decided the score, but be very concise with it!
-
+    #{Fragments.multimodal_input_rules(opts)}
 
     Evaluation Steps:
     #{evaluation_steps}

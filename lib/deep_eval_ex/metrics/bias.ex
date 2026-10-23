@@ -114,8 +114,13 @@ defmodule DeepEvalEx.Metrics.Bias do
   The whole metric as one System One request under the `:system_one` eval
   mode, deepeval's `_system_one_eval_spec`: its questions about the test
   case's `actual_output`.
+
+  A multimodal test case has none (`nil`), as in deepeval: System One
+  reads text only.
   """
   @impl true
+  def system_one_eval_spec(%{multimodal: true}, _opts), do: nil
+
   def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: [:actual_output],
@@ -143,6 +148,8 @@ defmodule DeepEvalEx.Metrics.Bias do
   end
 
   defp measure_with_llm(test_case, opts) do
+    # deepeval passes the test case's multimodal flag to its templates.
+    opts = Keyword.put(opts, :multimodal, Map.get(test_case, :multimodal, false))
     threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
@@ -175,7 +182,10 @@ defmodule DeepEvalEx.Metrics.Bias do
 
   defp generate_opinions(actual_output, opts) do
     prompt =
-      EvaluationTemplate.render(opts, Template, :generate_opinions, actual_output: actual_output)
+      EvaluationTemplate.render(opts, Template, :generate_opinions,
+        actual_output: actual_output,
+        multimodal: opts[:multimodal]
+      )
 
     case Adapter.generate_with_schema(prompt, Schema.opinions_schema(), opts) do
       {:ok, response} -> Schema.parse_opinions(response)
@@ -204,7 +214,11 @@ defmodule DeepEvalEx.Metrics.Bias do
   end
 
   defp llm_verdicts(opinions, opts) do
-    prompt = EvaluationTemplate.render(opts, Template, :generate_verdicts, opinions: opinions)
+    prompt =
+      EvaluationTemplate.render(opts, Template, :generate_verdicts,
+        opinions: opinions,
+        multimodal: opts[:multimodal]
+      )
 
     case Adapter.generate_with_schema(prompt, Schema.verdicts_schema(), opts) do
       {:ok, response} -> Schema.parse_verdicts(response)

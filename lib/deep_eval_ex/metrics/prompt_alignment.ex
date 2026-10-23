@@ -175,8 +175,13 @@ defmodule DeepEvalEx.Metrics.PromptAlignment do
   mode, deepeval's `_system_one_eval_spec`: one Noul per prompt instruction
   about the test case's `input` and `actual_output` (the metric's required
   params).
+
+  A multimodal test case has none (`nil`), as in deepeval: System One
+  reads text only.
   """
   @impl true
+  def system_one_eval_spec(%{multimodal: true}, _opts), do: nil
+
   def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: required_params(),

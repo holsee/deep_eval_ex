@@ -134,8 +134,13 @@ defmodule DeepEvalEx.Metrics.PlanAdherence do
   mode, deepeval's `_system_one_eval_spec`: its questions about the
   compacted trace (the state's `"trace"`), or without a trace about the
   test case's `input`, `actual_output` and `tools_called`.
+
+  A multimodal test case has none (`nil`), as in deepeval: System One
+  reads text only.
   """
   @impl true
+  def system_one_eval_spec(%{multimodal: true}, _opts), do: nil
+
   def system_one_eval_spec(test_case, opts) do
     has_trace = AgentPlan.trace_dict?(test_case.trace_dict)
 
@@ -222,9 +227,10 @@ defmodule DeepEvalEx.Metrics.PlanAdherence do
     end
   end
 
-  # deepeval's _system_one_score_spec: none without a trace.
+  # deepeval's _system_one_score_spec: none for a multimodal test case or
+  # without a trace.
   defp score_spec(task, plan, test_case, opts) do
-    if AgentPlan.trace_dict?(test_case.trace_dict) do
+    if not Map.get(test_case, :multimodal, false) and AgentPlan.trace_dict?(test_case.trace_dict) do
       %Spec.Score{
         instructions: EvaluationTemplate.render(opts, Template, :system_one_score),
         levels: @plan_adherence_levels,

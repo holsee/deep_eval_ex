@@ -1,0 +1,53 @@
+{
+  "description": "ContextualRecall: a multimodal test case, its retrieval context shown as text and image nodes",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "contextual_recall",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "How did sales change?",
+    "actual_output": "Sales doubled.",
+    "expected_output": "Sales doubled in 2024. [DEEPEVAL:IMAGE:red-dot]",
+    "retrieval_context": [
+      "The 2024 report: [DEEPEVAL:IMAGE:sales-chart]",
+      "There was a cat."
+    ],
+    "images": [
+      {
+        "url": "https://example.com/charts/sales.png",
+        "_id": "sales-chart"
+      },
+      {
+        "dataBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+        "mimeType": "image/png",
+        "_id": "red-dot"
+      }
+    ]
+  },
+  "responses": {
+    "contextual_recall": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes",
+              "reason": "Node 2, the chart, shows sales doubling."
+            },
+            {
+              "verdict": "no",
+              "reason": "No node shows the red dot."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.50 because the red dot is not in the retrieval context."
+        }
+      ]
+    }
+  }
+}

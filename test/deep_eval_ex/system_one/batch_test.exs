@@ -135,6 +135,18 @@ defmodule DeepEvalEx.SystemOne.BatchTest do
       assert Mock.calls(mock) == []
     end
 
+    test "batches nothing on a multimodal single-turn test case" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.8))
+      test_case = DeepEvalEx.TestCase.new!(input: "What is this? [DEEPEVAL:IMAGE:img-1]")
+
+      assert Batch.prefetch(test_case, [
+               entry(Judged, :system_one, mock, spec([:input], "S")),
+               entry(Judged, :system_one, mock, spec([:input], "S"))
+             ]) == [nil, nil]
+
+      assert Mock.calls(mock) == []
+    end
+
     test "batches no conversational metric on a single-turn test case" do
       mock = Mock.new(answer_fn: Mock.noul_answers(0.8))
 

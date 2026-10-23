@@ -358,8 +358,8 @@ defmodule DeepEvalEx.Test.ScriptedParity do
 
   defp fields(%OrderedObject{values: pairs}) do
     Map.new(pairs, fn
-      {key, tool_calls} when key in ["tools_called", "expected_tools"] ->
-        {key, Enum.map(tool_calls, &Map.new(&1.values))}
+      {key, objects} when key in ["tools_called", "expected_tools", "images"] ->
+        {key, Enum.map(objects, &Map.new(&1.values))}
 
       # {"context", "source"} objects are RetrievedContextData
       {"retrieval_context", items} ->

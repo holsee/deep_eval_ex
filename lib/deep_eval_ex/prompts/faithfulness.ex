@@ -17,9 +17,12 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
   supported by the retrieval context (for RAG applications).
 
   Each function renders deepeval 4.3.1's `FaithfulnessMetric` template of
-  the same name byte for byte, as deepeval renders it for a text-only test
-  case (`multimodal=False`): the multimodal fragments and instructions are
-  left out, as DeepEvalEx has no multimodal test cases. Lists are printed
+  the same name byte for byte. The claims, truths and verdicts templates
+  take deepeval's `multimodal` flag as the `:multimodal` option (default
+  `false`), which a multimodal `DeepEvalEx.TestCase` sets: the text is
+  then an "excerpt" that may hold images, and the verdicts template has
+  the multimodal example and guidelines (`DeepEvalEx.Prompts.Fragments`)
+  in place of the text-only guidelines. Lists are printed
   as Python lists and scores as `format(score, ".2f")` (see
   `DeepEvalEx.Prompts.Python`). `system_one_verdict/0` and
   `system_one_questions/0` are its System One templates,
@@ -37,7 +40,7 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
       system_one_questions: 0
     ]
 
-  alias DeepEvalEx.Prompts.Python
+  alias DeepEvalEx.Prompts.{Fragments, Python}
 
   @doc """
   Generates a prompt to extract claims from the actual output.
@@ -48,12 +51,22 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
   ## Options
 
   - `:actual_output` - the text to extract claims from (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_claims(opts) do
     actual_output = Keyword.fetch!(opts, :actual_output)
+    multimodal = Keyword.get(opts, :multimodal, false)
+    text = if multimodal, do: "excerpt", else: "text"
+    label = if multimodal, do: "Excerpt", else: "AI Output"
+
+    instruction =
+      if multimodal,
+        do:
+          " The excerpt may contain both text and images, so extract claims from all provided content.",
+        else: ""
 
     """
-    Based on the given text, please extract a comprehensive list of FACTUAL, undisputed truths, that can inferred from the provided actual AI output. 
+    Based on the given #{text}, please extract a comprehensive list of FACTUAL, undisputed truths, that can inferred from the provided actual AI output. #{instruction}
     These truths, MUST BE COHERENT, and CANNOT be taken out of context.
 
     Example:
@@ -76,7 +89,7 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
     You should be aware that it is an AI that is outputting these claims.
     **
 
-    AI Output:
+    #{label}:
     #{actual_output}
 
     JSON:\
@@ -95,13 +108,19 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
     blank lines (required)
   - `:extraction_limit` - how many truths to extract per document; `nil`
     for no limit (default: `nil`)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_truths(opts) do
     retrieval_context = Keyword.fetch!(opts, :retrieval_context)
     limit = opts |> Keyword.get(:extraction_limit) |> limit_phrase()
+    multimodal = Keyword.get(opts, :multimodal, false)
+    given = if multimodal, do: "excerpt (text and images)", else: "text"
+    provided = if multimodal, do: "excerpt", else: "text"
+    label = if multimodal, do: "Excerpt", else: "Text"
+    instruction = if multimodal, do: " The excerpt may contain both text and images.", else: ""
 
     """
-    Based on the given text, please generate a comprehensive list of#{limit}, that can inferred from the provided text.
+    Based on the given #{given}, please generate a comprehensive list of#{limit}, that can inferred from the provided #{provided}.#{instruction}
     These truths, MUST BE COHERENT. They must NOT be taken out of context.
 
     Example:
@@ -121,7 +140,7 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
     Only include truths that are factual, BUT IT DOESN'T MATTER IF THEY ARE FACTUALLY CORRECT.
     **
 
-    Text:
+    #{label}:
     #{retrieval_context}
 
     JSON:\
@@ -140,6 +159,7 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
 
   - `:claims` - the claims, a list of strings (required)
   - `:retrieval_context` - the truths, joined with blank lines (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_verdicts(opts) do
     claims = opts |> Keyword.fetch!(:claims) |> Python.repr()
@@ -169,16 +189,10 @@ defmodule DeepEvalEx.Prompts.Faithfulness do
     ]  
     }
 
-
+    #{Fragments.faithfulness_verdicts_example_multimodal(opts)}
     **
     IMPORTANT: Please make sure to only return in JSON format, with the 'verdicts' key as a list of JSON objects.
-
-    Generate ONE verdict per claim - length of 'verdicts' MUST equal number of claims.
-    No 'reason' needed for 'yes' verdicts.
-    Only use 'no' if retrieval context DIRECTLY CONTRADICTS the claim - never use prior knowledge.
-    Use 'borderline' for claims not backed up by context OR factually incorrect but non-contradictory - do not assume your knowledge.
-    Vague/speculative language in claims (e.g. 'may have', 'possibility') does NOT count as contradiction.
-
+    #{Fragments.faithfulness_verdicts_guidelines(opts)}
     **
 
     Retrieval Contexts:

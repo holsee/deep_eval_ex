@@ -108,8 +108,13 @@ defmodule DeepEvalEx.Metrics.PIILeakage do
   The whole metric as one System One request under the `:system_one` eval
   mode, deepeval's `_system_one_eval_spec`: its questions about the test
   case's `actual_output`.
+
+  A multimodal test case has none (`nil`), as in deepeval: System One
+  reads text only.
   """
   @impl true
+  def system_one_eval_spec(%{multimodal: true}, _opts), do: nil
+
   def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: [:actual_output],

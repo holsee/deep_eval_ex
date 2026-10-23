@@ -384,7 +384,7 @@ defmodule DeepEvalEx.Metrics.ConversationalGEval do
   defp template_opts(metric), do: [evaluation_template: metric.evaluation_template]
 
   defp adapter_opts(model, opts) do
-    base_opts = Keyword.take(opts, [:adapter, :api_key, :timeout])
+    base_opts = Keyword.take(opts, [:adapter, :api_key, :timeout, :images])
 
     case model do
       nil -> base_opts

@@ -82,6 +82,11 @@ test/fixtures/deepeval/loop_detection/: vector tables of
 AgentLoopDetectionMetric's `_input_hash` (`input_hash.json`), see
 `write_loop_detection_tables`.
 
+With the argument `multimodal` it writes only
+test/fixtures/deepeval/multimodal/content_parts.json: the message content
+deepeval's OpenAI, Anthropic and Ollama models build from a prompt holding
+image placeholders, see `write_content_parts`.
+
 With the argument `traced` it writes only the traced fixtures,
 test/fixtures/deepeval/traced/: agent scripts (`TRACED_SCENARIOS`) run
 through deepeval's @observe tracing outside evaluation and under the sync
@@ -223,6 +228,7 @@ from deepeval.templates import iter_base_template_methods  # noqa: E402
 from deepeval.test_case import (  # noqa: E402
     ConversationalTestCase,
     LLMTestCase,
+    MLLMImage,
     MultiTurnParams,
     RetrievedContextData,
     SingleTurnParams,
@@ -417,12 +423,20 @@ def build_expected_schema(schema):
 
 def build_test_case(spec):
     """An LLMTestCase from its keyword arguments, or a ConversationalTestCase
-    when they have `turns`, each turn built as one."""
+    when they have `turns`, each turn built as one. Its `images` (MLLMImage
+    keyword arguments, as an imagesMapping entry holds them) are created
+    first, so deepeval's image registry resolves their placeholders."""
     spec = dict(spec)
+    register_images(spec.pop("images", []))
     if "turns" in spec:
         spec["turns"] = [build_turn(turn) for turn in spec["turns"]]
         return ConversationalTestCase(**spec)
     return LLMTestCase(**build_tools_and_contexts(spec))
+
+
+def register_images(images):
+    """Creates each MLLMImage, which adds it to deepeval's image registry."""
+    return [MLLMImage(**image) for image in images]
 
 
 def build_turn(spec):
@@ -740,6 +754,12 @@ class ScriptedJudge(DeepEvalBaseLLM):
     def get_model_name(self):
         return self.model_name
 
+    def supports_multimodal(self):
+        # The prompts of a multimodal test case hold image placeholders,
+        # which are recorded as they are; deepeval checks the judge takes
+        # images before it asks.
+        return True
+
     def generate(self, prompt, schema=None):
         response = self._next(step_key(schema), prompt)
         if schema is None or isinstance(response, str):
@@ -965,9 +985,9 @@ def run_scripted_scenario(name):
 
 
 # Prompt goldens. Each renderer builds a prompt the way deepeval's metric does
-# for a single-turn, text-only test case: the metric's own `_get_prompt` (so
-# a strict Jinja environment and `multimodal=False`), with the arguments its
-# helpers derive from the metric-level `inputs`. GEval's renderers call the
+# for a single-turn test case: the metric's own `_get_prompt` (so a strict
+# Jinja environment, and the case's `multimodal` input, False unless given),
+# with the arguments its helpers derive from the metric-level `inputs`. GEval's renderers call the
 # metric's `_steps_prompt` / `_results_prompt` directly.
 
 
@@ -990,7 +1010,7 @@ def _render_g_eval_results(inputs, strict_mode):
         strict_mode=strict_mode,
         model=_prompt_judge(),
     )
-    return metric._results_prompt(build_test_case(inputs["test_case"]), False, None)
+    return metric._results_prompt(build_test_case(inputs["test_case"]), _mm(inputs), None)
 
 
 def _render_g_eval_steps(inputs):
@@ -1000,14 +1020,14 @@ def _render_g_eval_steps(inputs):
         criteria=inputs["criteria"],
         model=_prompt_judge(),
     )
-    return metric._steps_prompt(False)
+    return metric._steps_prompt(_mm(inputs))
 
 
 def _render_g_eval_trace_steps(inputs):
     # GEval without evaluation_params (requires_trace): the trace variant of
     # the steps prompt.
     metric = GEval(name="Golden", criteria=inputs["criteria"], model=_prompt_judge())
-    return metric._steps_prompt(False)
+    return metric._steps_prompt(_mm(inputs))
 
 
 def _render_g_eval_trace_results(inputs, strict_mode):
@@ -1023,7 +1043,7 @@ def _render_g_eval_trace_results(inputs, strict_mode):
     )
     test_case = LLMTestCase(input="None")
     test_case._trace_dict = json.loads(json.dumps(inputs["trace"]))
-    return metric._results_prompt(test_case, False, None)
+    return metric._results_prompt(test_case, _mm(inputs), None)
 
 
 def _conversational_g_eval(inputs, **kwargs):
@@ -1055,8 +1075,15 @@ def _render_conversational_g_eval_results(inputs):
     return prompt
 
 
-def _prompt(metric_cls, method, **kwargs):
-    return metric_cls(model=_prompt_judge())._get_prompt(method, multimodal=False, **kwargs)
+def _prompt(metric_cls, method, multimodal=False, **kwargs):
+    return metric_cls(model=_prompt_judge())._get_prompt(method, multimodal=multimodal, **kwargs)
+
+
+def _mm(inputs):
+    """The case's multimodal flag, the test case's `multimodal`, after
+    creating its `images` so their placeholders resolve."""
+    register_images(inputs.get("images", []))
+    return inputs.get("multimodal", False)
 
 
 def _step_efficiency(method, inputs, **kwargs):
@@ -1233,17 +1260,20 @@ PROMPT_RENDERERS = {
     "ConversationalGEval.generate_evaluation_results": _render_conversational_g_eval_results,
     "FaithfulnessMetric.generate_claims": lambda i: _prompt(
         FaithfulnessMetric, "generate_claims",
+        multimodal=_mm(i),
         actual_output=i["actual_output"],
-        multimodal_instruction=_faithfulness_claims_multimodal_instruction(False),
+        multimodal_instruction=_faithfulness_claims_multimodal_instruction(_mm(i)),
     ),
     "FaithfulnessMetric.generate_truths": lambda i: _prompt(
         FaithfulnessMetric, "generate_truths",
+        multimodal=_mm(i),
         retrieval_context="\n\n".join(i["retrieval_context"]),
         limit=_faithfulness_truths_limit_phrase(i["truths_extraction_limit"]),
-        multimodal_instruction=_faithfulness_truths_multimodal_instruction(False),
+        multimodal_instruction=_faithfulness_truths_multimodal_instruction(_mm(i)),
     ),
     "FaithfulnessMetric.generate_verdicts": lambda i: _prompt(
         FaithfulnessMetric, "generate_verdicts",
+        multimodal=_mm(i),
         claims=i["claims"],
         retrieval_context="\n\n".join(i["truths"]),
     ),
@@ -1266,53 +1296,61 @@ PROMPT_RENDERERS = {
     ),
     "AnswerRelevancyMetric.generate_statements": lambda i: _prompt(
         AnswerRelevancyMetric, "generate_statements",
+        multimodal=_mm(i),
         actual_output=i["actual_output"],
     ),
     "AnswerRelevancyMetric.generate_verdicts": lambda i: _prompt(
         AnswerRelevancyMetric, "generate_verdicts",
+        multimodal=_mm(i),
         input=i["input"],
         statements=i["statements"],
     ),
     "AnswerRelevancyMetric.generate_reason": lambda i: _prompt(
         AnswerRelevancyMetric, "generate_reason",
+        multimodal=_mm(i),
         irrelevant_statements=i["irrelevant_statements"],
         input=i["input"],
         score=_score(i),
     ),
     "ContextualPrecisionMetric.generate_verdicts": lambda i: _prompt(
         ContextualPrecisionMetric, "generate_verdicts",
+        multimodal=_mm(i),
         input=i["input"],
         expected_output=i["expected_output"],
         **dict(zip(
             ("document_count_str", "context_to_display", "multimodal_note"),
-            _contextual_precision_verdict_fields(i["retrieval_context"], False),
+            _contextual_precision_verdict_fields(i["retrieval_context"], _mm(i)),
         )),
     ),
     "ContextualPrecisionMetric.generate_reason": lambda i: _prompt(
         ContextualPrecisionMetric, "generate_reason",
+        multimodal=_mm(i),
         input=i["input"],
         verdicts=[{"verdict": v["verdict"], "reason": v["reason"]} for v in i["verdicts"]],
         score=_score(i),
     ),
     "ContextualRecallMetric.generate_verdicts": lambda i: _prompt(
         ContextualRecallMetric, "generate_verdicts",
+        multimodal=_mm(i),
         expected_output=i["expected_output"],
-        **_contextual_recall_verdict_kwargs(i["retrieval_context"], False),
+        **_contextual_recall_verdict_kwargs(i["retrieval_context"], _mm(i)),
     ),
     "ContextualRecallMetric.generate_reason": lambda i: _prompt(
         ContextualRecallMetric, "generate_reason",
+        multimodal=_mm(i),
         expected_output=i["expected_output"],
         supportive_reasons=i["supportive_reasons"],
         unsupportive_reasons=i["unsupportive_reasons"],
         score=_score(i),
-        content_type="sentence",
+        content_type="sentence or image" if _mm(i) else "sentence",
     ),
     # One prompt per retrieval context node, as the metric judges each alone.
     "ContextualRelevancyMetric.generate_verdicts": lambda i: _prompt(
         ContextualRelevancyMetric, "generate_verdicts",
+        multimodal=_mm(i),
         input=i["input"],
         context=i["context"],
-        **_contextual_relevancy_verdict_kwargs(False),
+        **_contextual_relevancy_verdict_kwargs(_mm(i)),
     ),
     "ContextualRelevancyMetric.generate_reason": lambda i: _prompt(
         ContextualRelevancyMetric, "generate_reason",
@@ -1323,10 +1361,12 @@ PROMPT_RENDERERS = {
     ),
     "BiasMetric.generate_opinions": lambda i: _prompt(
         BiasMetric, "generate_opinions",
+        multimodal=_mm(i),
         actual_output=i["actual_output"],
     ),
     "BiasMetric.generate_verdicts": lambda i: _prompt(
         BiasMetric, "generate_verdicts",
+        multimodal=_mm(i),
         opinions=i["opinions"],
     ),
     "BiasMetric.generate_reason": lambda i: _prompt(
@@ -1377,11 +1417,13 @@ PROMPT_RENDERERS = {
     # the list, each its ToolCall.__repr__.
     "ArgumentCorrectnessMetric.generate_verdicts": lambda i: _prompt(
         ArgumentCorrectnessMetric, "generate_verdicts",
+        multimodal=_mm(i),
         input=i["input"],
         stringified_tools_called=[ToolCall(**t) for t in i["tools_called"]],
     ),
     "ArgumentCorrectnessMetric.generate_reason": lambda i: _prompt(
         ArgumentCorrectnessMetric, "generate_reason",
+        multimodal=_mm(i),
         incorrect_tool_calls_reasons=i["incorrect_tool_calls_reasons"],
         input=i["input"],
         score=_score(i),
@@ -1872,6 +1914,18 @@ AGENT_TRACE = {
         },
     ],
 }
+
+# The images of the multimodal fixtures, as MLLMImage keyword arguments: a
+# base64 PNG and a remote URL, which is never fetched, so no file is read.
+RED_DOT_IMAGE = {
+    "dataBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+    "mimeType": "image/png",
+    "_id": "red-dot",
+}
+CHART_IMAGE = {"url": "https://example.com/charts/sales.png", "_id": "sales-chart"}
+RED_DOT = "[DEEPEVAL:IMAGE:red-dot]"
+CHART = "[DEEPEVAL:IMAGE:sales-chart]"
+MULTIMODAL = {"multimodal": True, "images": [RED_DOT_IMAGE, CHART_IMAGE]}
 
 PROMPT_CASES = {
     "g_eval_generate_evaluation_steps": {
@@ -2958,6 +3012,174 @@ PROMPT_CASES = {
             "actual_output": '{"name": "José", "age": "forty-one", "tags": ["a", 2]}',
             "expected_schema": PERSON_SCHEMA,
             "is_valid_json": False,
+        },
+    },
+    # Multimodal test cases: the templates' `multimodal` branches, with
+    # image placeholders in the inputs.
+    "answer_relevancy_generate_statements_multimodal": {
+        "template": "AnswerRelevancyMetric.generate_statements",
+        "inputs": {**MULTIMODAL, "actual_output": f"The chart {CHART} shows sales doubling."},
+    },
+    "answer_relevancy_generate_verdicts_multimodal": {
+        "template": "AnswerRelevancyMetric.generate_verdicts",
+        "inputs": {
+            **MULTIMODAL,
+            "input": f"What does {CHART} show?",
+            "statements": ["Sales doubled.", "The chart is blue."],
+        },
+    },
+    "answer_relevancy_generate_reason_multimodal": {
+        "template": "AnswerRelevancyMetric.generate_reason",
+        "inputs": {
+            **MULTIMODAL,
+            "score": 0.5,
+            "input": f"What does {CHART} show?",
+            "irrelevant_statements": ["The colour of the chart does not answer the question."],
+        },
+    },
+    "argument_correctness_generate_verdicts_multimodal": {
+        "template": "ArgumentCorrectnessMetric.generate_verdicts",
+        "inputs": {
+            **MULTIMODAL,
+            "input": f"Find a restaurant like the one in {RED_DOT}.",
+            "tools_called": [
+                {"name": "restaurant_search", "input_parameters": {"query": "red dot"}},
+            ],
+        },
+    },
+    "argument_correctness_generate_reason_multimodal": {
+        "template": "ArgumentCorrectnessMetric.generate_reason",
+        "inputs": {
+            **MULTIMODAL,
+            "score": 0.0,
+            "incorrect_tool_calls_reasons": ["The query ignores the image."],
+            "input": f"Find a restaurant like the one in {RED_DOT}.",
+        },
+    },
+    "bias_generate_opinions_multimodal": {
+        "template": "BiasMetric.generate_opinions",
+        "inputs": {**MULTIMODAL, "actual_output": f"I think {RED_DOT} is ugly."},
+    },
+    "bias_generate_verdicts_multimodal": {
+        "template": "BiasMetric.generate_verdicts",
+        "inputs": {**MULTIMODAL, "opinions": ["I think the dot is ugly."]},
+    },
+    "contextual_precision_generate_verdicts_multimodal": {
+        "template": "ContextualPrecisionMetric.generate_verdicts",
+        "inputs": {
+            **MULTIMODAL,
+            "input": "How did sales change?",
+            "expected_output": "Sales doubled.",
+            "retrieval_context": [f"Sales doubled in 2024. {CHART}", RED_DOT, "There was a cat."],
+        },
+    },
+    "contextual_precision_generate_reason_multimodal": {
+        "template": "ContextualPrecisionMetric.generate_reason",
+        "inputs": {
+            **MULTIMODAL,
+            "score": 1.0,
+            "input": "How did sales change?",
+            "verdicts": [{"verdict": "yes", "reason": "The chart shows sales doubling."}],
+        },
+    },
+    "contextual_recall_generate_verdicts_multimodal": {
+        "template": "ContextualRecallMetric.generate_verdicts",
+        "inputs": {
+            **MULTIMODAL,
+            "expected_output": f"Sales doubled. {CHART}",
+            "retrieval_context": [f"Sales doubled in 2024. {CHART}", "There was a cat."],
+        },
+    },
+    "contextual_recall_generate_reason_multimodal": {
+        "template": "ContextualRecallMetric.generate_reason",
+        "inputs": {
+            **MULTIMODAL,
+            "score": 1.0,
+            "expected_output": f"Sales doubled. {CHART}",
+            "supportive_reasons": ["The 1st node says sales doubled."],
+            "unsupportive_reasons": [],
+        },
+    },
+    "contextual_relevancy_generate_verdicts_multimodal": {
+        "template": "ContextualRelevancyMetric.generate_verdicts",
+        "inputs": {
+            **MULTIMODAL,
+            "input": "How did sales change?",
+            "context": f"Sales doubled in 2024. {CHART}",
+        },
+    },
+    "faithfulness_generate_claims_multimodal": {
+        "template": "FaithfulnessMetric.generate_claims",
+        "inputs": {**MULTIMODAL, "actual_output": f"Sales doubled, as {CHART} shows."},
+    },
+    "faithfulness_generate_truths_multimodal": {
+        "template": "FaithfulnessMetric.generate_truths",
+        "inputs": {
+            **MULTIMODAL,
+            "retrieval_context": [f"Sales doubled in 2024. {CHART}", "There was a cat."],
+            "truths_extraction_limit": None,
+        },
+    },
+    "faithfulness_generate_verdicts_multimodal": {
+        "template": "FaithfulnessMetric.generate_verdicts",
+        "inputs": {
+            **MULTIMODAL,
+            "claims": ["Sales doubled."],
+            "truths": ["Sales doubled in 2024."],
+        },
+    },
+    "g_eval_generate_evaluation_steps_multimodal": {
+        "template": "GEval.generate_evaluation_steps",
+        "inputs": {
+            **MULTIMODAL,
+            "criteria": "Determine whether the actual output describes the image in the input.",
+            "evaluation_params": ["input", "actual_output"],
+        },
+    },
+    "g_eval_generate_evaluation_results_multimodal": {
+        "template": "GEval.generate_evaluation_results",
+        "inputs": {
+            **MULTIMODAL,
+            "evaluation_steps": ["Check that the actual output describes the image."],
+            "evaluation_params": ["input", "actual_output"],
+            "test_case": {
+                "input": f"Describe {RED_DOT}",
+                "actual_output": "A red dot.",
+                "images": [RED_DOT_IMAGE],
+            },
+        },
+    },
+    "g_eval_generate_strict_evaluation_results_multimodal": {
+        "template": "GEval.generate_strict_evaluation_results",
+        "inputs": {
+            **MULTIMODAL,
+            "evaluation_steps": ["Check that the actual output describes the image."],
+            "evaluation_params": ["input", "actual_output"],
+            "test_case": {
+                "input": f"Describe {RED_DOT}",
+                "actual_output": "A red dot.",
+                "images": [RED_DOT_IMAGE],
+            },
+        },
+    },
+    "g_eval_generate_trace_evaluation_steps_multimodal": {
+        "template": "GEval.generate_trace_evaluation_steps",
+        "inputs": {**MULTIMODAL, "criteria": "Determine whether the agent booked the right table."},
+    },
+    "g_eval_generate_trace_evaluation_results_multimodal": {
+        "template": "GEval.generate_trace_evaluation_results",
+        "inputs": {
+            **MULTIMODAL,
+            "evaluation_steps": ["Check that the agent called book_table."],
+            "trace": AGENT_TRACE,
+        },
+    },
+    "g_eval_generate_strict_trace_evaluation_results_multimodal": {
+        "template": "GEval.generate_strict_trace_evaluation_results",
+        "inputs": {
+            **MULTIMODAL,
+            "evaluation_steps": ["Check that the agent called book_table."],
+            "trace": AGENT_TRACE,
         },
     },
     "faithfulness_experimental_system_one_questions": {
@@ -4444,6 +4666,56 @@ def generate_scripted(names=None):
             print(f"wrote {os.path.relpath(os.path.join(SCRIPTED, name), ROOT)}")
 
 
+# Multimodal content parts: how deepeval's OpenAI, Anthropic and Ollama
+# models turn a prompt holding image placeholders into their messages'
+# content (to_openai_content, AnthropicModel._prompt_content and
+# OllamaModel._prompt_messages), for base64, remote and local images. A
+# remote image is left out of the Ollama case, which downloads it. A prompt
+# without placeholders is not a case: DeepEvalEx sends it as the plain
+# string it sent before, where deepeval's OpenAI and Anthropic models send
+# a one-part list.
+MULTIMODAL_DIR = os.path.join(FIXTURES, "multimodal")
+LOCAL_DOT_IMAGE = {"url": "test/fixtures/deepeval/multimodal/red_dot.png", "_id": "local-dot"}
+CONTENT_PART_CASES = {
+    "base64_and_remote": {
+        "prompt": f"Compare {RED_DOT} with {CHART}.",
+        "images": [RED_DOT_IMAGE, CHART_IMAGE],
+        "remote": True,
+    },
+    "local_file": {
+        "prompt": "[DEEPEVAL:IMAGE:local-dot] is a dot",
+        "images": [LOCAL_DOT_IMAGE],
+    },
+}
+
+
+def write_content_parts():
+    """Writes multimodal/content_parts.json: for each case its prompt and
+    images, and the content each model builds from them. The local image's
+    path is relative to the repository root, as for the tests."""
+    from deepeval.models.llms.anthropic_model import AnthropicModel
+    from deepeval.models.llms.multimodal import to_openai_content
+    from deepeval.models.llms.ollama_model import OllamaModel
+
+    os.chdir(ROOT)
+    # The content builders use no model state, so no client is created.
+    anthropic = AnthropicModel.__new__(AnthropicModel)
+    ollama = OllamaModel.__new__(OllamaModel)
+    cases = {}
+    for name, case in CONTENT_PART_CASES.items():
+        register_images(case["images"])
+        prompt = case["prompt"]
+        cases[name] = {
+            "prompt": prompt,
+            "images": case["images"],
+            "openai": to_openai_content(prompt),
+            "anthropic": anthropic._prompt_content(prompt),
+            "ollama": None if case.get("remote") else ollama._prompt_messages(prompt),
+        }
+    os.makedirs(MULTIMODAL_DIR, exist_ok=True)
+    write_json(os.path.join(MULTIMODAL_DIR, "content_parts.json"), cases)
+
+
 def main():
     if deepeval.__version__ != DEEPEVAL_VERSION:
         sys.exit(f"expected deepeval {DEEPEVAL_VERSION}, found {deepeval.__version__}")
@@ -4465,6 +4737,11 @@ def main():
         finally:
             shutil.rmtree(WORK_DIR, ignore_errors=True)
         return
+    if sys.argv[1:] == ["multimodal"]:
+        write_content_parts()
+        shutil.rmtree(WORK_DIR, ignore_errors=True)
+        print(f"wrote {os.path.relpath(MULTIMODAL_DIR, ROOT)}")
+        return
     if sys.argv[1:] == ["loop_detection"]:
         write_loop_detection_tables()
         shutil.rmtree(WORK_DIR, ignore_errors=True)
@@ -4473,7 +4750,7 @@ def main():
     if sys.argv[1:]:
         sys.exit(f"usage: {os.path.basename(__file__)} "
                  "[traced [scenario ...] | scripted [scenario ...] | prompts [case ...] | "
-                 "loop_detection]")
+                 "loop_detection | multimodal]")
     try:
         for name, scenario in SCENARIOS.items():
             run_scenario(name, scenario)
@@ -4483,6 +4760,8 @@ def main():
         generate_scripted()
         write_loop_detection_tables()
         print(f"wrote {os.path.relpath(LOOP_DETECTION_DIR, ROOT)}")
+        write_content_parts()
+        print(f"wrote {os.path.relpath(MULTIMODAL_DIR, ROOT)}")
         generate_prompts()
     finally:
         shutil.rmtree(WORK_DIR, ignore_errors=True)

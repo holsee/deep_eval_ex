@@ -16,11 +16,13 @@ defmodule DeepEvalEx.Prompts.ContextualRelevancy do
   relevant to the input.
 
   Each function renders deepeval 4.3.1's `ContextualRelevancyMetric`
-  template of the same name byte for byte, as deepeval renders it for a
-  text-only test case (`multimodal=False`, with the arguments of its
-  `_contextual_relevancy_verdict_kwargs`): statements rather than "statement
-  or image", and the empty-context instruction, as DeepEvalEx has no
-  multimodal test cases. Lists are printed as Python lists and scores as
+  template of the same name byte for byte, with the arguments of its
+  `_contextual_relevancy_verdict_kwargs`. The verdicts template takes
+  deepeval's `multimodal` flag as the `:multimodal` option (default
+  `false`), which a multimodal `DeepEvalEx.TestCase` sets: it then judges
+  the "context (image or string)" as a whole, with deepeval's multimodal
+  extraction instructions and no empty-context instruction. Lists are
+  printed as Python lists and scores as
   `format(score, ".2f")` (see `DeepEvalEx.Prompts.Python`).
   `system_one_verdict/0` and `system_one_questions/0` are its System One
   templates, `_experimental_system_one_verdict` and
@@ -47,18 +49,14 @@ defmodule DeepEvalEx.Prompts.ContextualRelevancy do
 
   - `:input` - the test case input (required)
   - `:context` - one retrieval context node, a string (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_verdicts(opts) do
     input = Keyword.fetch!(opts, :input)
     context = Keyword.fetch!(opts, :context)
 
     """
-    Based on the input and context, please generate a JSON object to indicate whether each statement found in the context is relevant to the provided input. The JSON will be a list of 'verdicts', with 2 mandatory fields: 'verdict' and 'statement', and 1 optional field: 'reason'.
-    You should first extract statements found in the context, which are high level information found in the context, before deciding on a verdict and optionally a reason for each statement.
-    The 'verdict' key should STRICTLY be either 'yes' or 'no', and states whether the statement is relevant to the input.
-    Provide a 'reason' ONLY IF verdict is no. You MUST quote the irrelevant parts of the statement to back up your reason.
-    If provided context contains no actual content or statements then: give "no" as a "verdict",
-    put context into "statement", and "No statements found in provided context." into "reason".
+    #{verdicts_instructions(Keyword.get(opts, :multimodal, false))}
     **
     IMPORTANT: Please make sure to only return in JSON format.
     Example Context: "Einstein won the Nobel Prize for his discovery of the photoelectric effect. He won the Nobel Prize in 1968. There was a cat."
@@ -87,6 +85,29 @@ defmodule DeepEvalEx.Prompts.ContextualRelevancy do
     #{context}
 
     JSON:\
+    """
+  end
+
+  # The template's opening, with the arguments of deepeval's
+  # _contextual_relevancy_verdict_kwargs.
+  defp verdicts_instructions(true) do
+    """
+    Based on the input and context (image or string), please generate a JSON object to indicate whether the context is relevant to the provided input. The JSON will be a list of 'verdicts', with 2 mandatory fields: 'verdict' and 'statement', and 1 optional field: 'reason'.
+    If the context is textual, you should first extract the statements found in the context if the context, which are high level information found in the context, before deciding on a verdict and optionally a reason for each statement.
+    If the context is an image, `statement` should be a description of the image. Do not assume any information not visibly available.
+    The 'verdict' key should STRICTLY be either 'yes' or 'no', and states whether the statement or image is relevant to the input.
+    Provide a 'reason' ONLY IF verdict is no. You MUST quote the irrelevant parts of the statement or image to back up your reason.\
+    """
+  end
+
+  defp verdicts_instructions(false) do
+    """
+    Based on the input and context, please generate a JSON object to indicate whether each statement found in the context is relevant to the provided input. The JSON will be a list of 'verdicts', with 2 mandatory fields: 'verdict' and 'statement', and 1 optional field: 'reason'.
+    You should first extract statements found in the context, which are high level information found in the context, before deciding on a verdict and optionally a reason for each statement.
+    The 'verdict' key should STRICTLY be either 'yes' or 'no', and states whether the statement is relevant to the input.
+    Provide a 'reason' ONLY IF verdict is no. You MUST quote the irrelevant parts of the statement to back up your reason.
+    If provided context contains no actual content or statements then: give "no" as a "verdict",
+    put context into "statement", and "No statements found in provided context." into "reason".\
     """
   end
 

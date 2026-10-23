@@ -48,7 +48,12 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
   - `:timeout` - receive timeout in milliseconds (default `120_000`, as local
     models can be slow)
   - `:req_options` - extra `Req` options merged into the request, e.g.
-    `[plug: {Req.Test, DeepEvalEx.LLM.Adapters.Ollama}]` in tests
+    `[plug: {Req.Test, DeepEvalEx.LLM.Adapters.Ollama}]` in tests; also
+    used to download a remote image
+  - `:images` - the test case's images, a map of id to
+    `DeepEvalEx.MLLMImage`, which the metrics pass: a prompt holding their
+    placeholders is sent as one user message per text and image (see
+    `DeepEvalEx.LLM.Multimodal.ollama_messages/3`)
 
   ## Retries
 
@@ -74,7 +79,7 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
 
   use DeepEvalEx.LLM.Adapter
 
-  alias DeepEvalEx.LLM.{Adapter, Retry, Usage}
+  alias DeepEvalEx.LLM.{Adapter, Multimodal, Retry, Usage}
 
   @default_base_url "http://localhost:11434"
   @default_port 11_434
@@ -82,7 +87,8 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
 
   @impl true
   def generate(prompt, opts \\ []) do
-    with {:ok, response} <- chat(base_body(prompt, opts), opts) do
+    with {:ok, body} <- base_body(prompt, opts),
+         {:ok, response} <- chat(body, opts) do
       case content(response) do
         nil -> {:error, {:unexpected_response, response}}
         content -> {:ok, content}
@@ -92,12 +98,8 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
 
   @impl true
   def generate_with_schema(prompt, schema, opts \\ []) do
-    body =
-      prompt
-      |> base_body(opts)
-      |> Map.put(:format, schema_to_json_schema(schema))
-
-    with {:ok, response} <- chat(body, opts) do
+    with {:ok, body} <- base_body(prompt, opts),
+         {:ok, response} <- chat(Map.put(body, :format, schema_to_json_schema(schema)), opts) do
       case content(response) do
         nil -> {:error, {:unexpected_response, response}}
         content -> parse_json_response(content)
@@ -130,12 +132,12 @@ defmodule DeepEvalEx.LLM.Adapters.Ollama do
   # Private functions
 
   defp base_body(prompt, opts) do
-    %{
-      model: model_name(opts),
-      messages: [%{role: "user", content: prompt}],
-      stream: false,
-      options: model_options(opts)
-    }
+    model = model_name(opts)
+    req_options = Keyword.get(opts, :req_options, [])
+
+    with {:ok, messages} <- Multimodal.ollama_messages(prompt, opts[:images], req_options) do
+      {:ok, %{model: model, messages: messages, stream: false, options: model_options(opts)}}
+    end
   end
 
   # deepeval sends `{"temperature": temperature, **generation_kwargs}` after

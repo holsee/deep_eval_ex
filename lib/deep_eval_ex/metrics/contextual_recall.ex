@@ -105,8 +105,13 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
   The whole metric as one System One request under the `:system_one` eval
   mode, deepeval's `_system_one_eval_spec`: its questions about the test
   case's `expected_output` and `retrieval_context`.
+
+  A multimodal test case has none (`nil`), as in deepeval: System One
+  reads text only.
   """
   @impl true
+  def system_one_eval_spec(%{multimodal: true}, _opts), do: nil
+
   def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: [:expected_output, :retrieval_context],
@@ -132,6 +137,8 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
   end
 
   defp measure_with_llm(test_case, opts) do
+    # deepeval passes the test case's multimodal flag to its templates.
+    opts = Keyword.put(opts, :multimodal, Map.get(test_case, :multimodal, false))
     threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
@@ -178,16 +185,19 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
 
   # Under :hybrid the System One model judges each sentence of the expected
   # output; the LLM does when it is not asked or fails (deepeval's
-  # generate_qag_verdicts).
+  # generate_qag_verdicts). A multimodal test case has no System One spec.
   defp generate_verdicts(expected_output, retrieval_context, opts) do
-    spec = %Spec.Verdicts{
-      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
-      items: Decision.split_sentences(expected_output),
-      item_key: "sentence",
-      # deepeval's _jsonable sends each item as str(item), so a
-      # RetrievedContextData as pydantic's str, not its serialised form
-      state: [retrieval_context: Enum.map(retrieval_context, &Python.str/1)]
-    }
+    spec =
+      unless opts[:multimodal] do
+        %Spec.Verdicts{
+          instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
+          items: Decision.split_sentences(expected_output),
+          item_key: "sentence",
+          # deepeval's _jsonable sends each item as str(item), so a
+          # RetrievedContextData as pydantic's str, not its serialised form
+          state: [retrieval_context: Enum.map(retrieval_context, &Python.str/1)]
+        }
+      end
 
     decision_opts = Keyword.put_new(opts, :metric_name, metric_name())
 
@@ -201,7 +211,9 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
     prompt =
       EvaluationTemplate.render(opts, Template, :generate_verdicts,
         expected_output: expected_output,
-        retrieval_context: retrieval_context
+        retrieval_context: retrieval_context,
+        multimodal: opts[:multimodal],
+        images: opts[:images]
       )
 
     case Adapter.generate_with_schema(prompt, Schema.verdicts_schema(), opts) do
@@ -241,7 +253,8 @@ defmodule DeepEvalEx.Metrics.ContextualRecall do
         score: score,
         expected_output: expected_output,
         supportive_reasons: supportive_reasons,
-        unsupportive_reasons: unsupportive_reasons
+        unsupportive_reasons: unsupportive_reasons,
+        multimodal: opts[:multimodal]
       )
 
     case Adapter.generate_with_schema(prompt, Schema.reason_schema(), opts) do

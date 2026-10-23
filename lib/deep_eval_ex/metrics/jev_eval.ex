@@ -352,6 +352,9 @@ defmodule DeepEvalEx.Metrics.JevEval do
   defp trace_dict?(%Jason.OrderedObject{}), do: true
   defp trace_dict?(trace_dict), do: is_map(trace_dict) and not is_struct(trace_dict)
 
+  defp multimodal?(%TestCase{multimodal: true}), do: true
+
+  # A test case built as a struct, not with TestCase.new/1, is searched.
   defp multimodal?(%TestCase{} = test_case) do
     texts =
       [test_case.input, test_case.actual_output, test_case.expected_output] ++

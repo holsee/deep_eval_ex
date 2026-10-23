@@ -110,8 +110,13 @@ defmodule DeepEvalEx.Metrics.ContextualRelevancy do
   The whole metric as one System One request under the `:system_one` eval
   mode, deepeval's `_system_one_eval_spec`: its questions about the test
   case's `input` and `retrieval_context` (the metric's required params).
+
+  A multimodal test case has none (`nil`), as in deepeval: System One
+  reads text only.
   """
   @impl true
+  def system_one_eval_spec(%{multimodal: true}, _opts), do: nil
+
   def system_one_eval_spec(_test_case, opts) do
     %EvalSpec{
       evaluation_params: required_params(),
@@ -137,6 +142,8 @@ defmodule DeepEvalEx.Metrics.ContextualRelevancy do
   end
 
   defp measure_with_llm(test_case, opts) do
+    # deepeval passes the test case's multimodal flag to its templates.
+    opts = Keyword.put(opts, :multimodal, Map.get(test_case, :multimodal, false))
     threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
@@ -193,14 +200,18 @@ defmodule DeepEvalEx.Metrics.ContextualRelevancy do
 
   # Under :hybrid the System One model judges each sentence of the node; the
   # LLM does when it is not asked or fails (deepeval's generate_qag_verdicts).
+  # A multimodal test case has no System One spec.
   defp generate_verdicts(input, context, opts) do
-    spec = %Spec.Verdicts{
-      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
-      items: Decision.split_sentences(context),
-      item_key: "statement",
-      state: [input: input],
-      build_verdict: &system_one_verdict/3
-    }
+    spec =
+      unless opts[:multimodal] do
+        %Spec.Verdicts{
+          instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
+          items: Decision.split_sentences(context),
+          item_key: "statement",
+          state: [input: input],
+          build_verdict: &system_one_verdict/3
+        }
+      end
 
     decision_opts = Keyword.put_new(opts, :metric_name, metric_name())
 
@@ -227,7 +238,8 @@ defmodule DeepEvalEx.Metrics.ContextualRelevancy do
     prompt =
       EvaluationTemplate.render(opts, Template, :generate_verdicts,
         input: input,
-        context: context
+        context: context,
+        multimodal: opts[:multimodal]
       )
 
     case Adapter.generate_with_schema(prompt, Schema.verdicts_schema(), opts) do

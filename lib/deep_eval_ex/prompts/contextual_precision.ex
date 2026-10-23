@@ -16,9 +16,11 @@ defmodule DeepEvalEx.Prompts.ContextualPrecision do
   relevant context nodes higher than irrelevant ones.
 
   Each function renders deepeval 4.3.1's `ContextualPrecisionMetric`
-  template of the same name byte for byte, as deepeval renders it for a
-  text-only test case (`multimodal=False`): the multimodal wording and note
-  are left out, as DeepEvalEx has no multimodal test cases. Lists are
+  template of the same name byte for byte. Both take deepeval's
+  `multimodal` flag as the `:multimodal` option (default `false`), which a
+  multimodal `DeepEvalEx.TestCase` sets: its wording and note change, and
+  the retrieval context is shown as numbered text and image nodes
+  (`DeepEvalEx.Metrics.Utils.RetrievalContextDisplay`). Lists are
   printed as Python lists and scores as `format(score, ".2f")` (see
   `DeepEvalEx.Prompts.Python`). `system_one_verdict/0` and
   `system_one_questions/0` are its System One templates,
@@ -34,6 +36,7 @@ defmodule DeepEvalEx.Prompts.ContextualPrecision do
       system_one_questions: 0
     ]
 
+  alias DeepEvalEx.Metrics.Utils.RetrievalContextDisplay
   alias DeepEvalEx.Prompts.Python
 
   @doc """
@@ -48,19 +51,29 @@ defmodule DeepEvalEx.Prompts.ContextualPrecision do
   - `:expected_output` - the test case expected output (required)
   - `:retrieval_context` - the retrieval context, a list of strings
     (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
+  - `:images` - the test case's images, by id, whose placeholders the
+    multimodal retrieval context shows (default: none)
   """
   def generate_verdicts(opts) do
     input = Keyword.fetch!(opts, :input)
     expected_output = Keyword.fetch!(opts, :expected_output)
     contexts = Keyword.fetch!(opts, :retrieval_context)
-    retrieval_context = Python.repr(contexts)
+    multimodal = Keyword.get(opts, :multimodal, false)
     document_count = document_count(length(contexts))
+    note = if multimodal, do: " (which can be text or an image)", else: ""
+
+    retrieval_context =
+      if multimodal,
+        do:
+          contexts |> RetrievalContextDisplay.id_retrieval_context(opts[:images]) |> Python.repr(),
+        else: Python.repr(contexts)
 
     """
     Given the input, expected output, and retrieval context, please generate a list of JSON objects to determine whether each node in the retrieval context was remotely useful in arriving at the expected output.
 
     **
-    IMPORTANT: Please make sure to only return in JSON format, with the 'verdicts' key as a list of JSON. These JSON only contain the `verdict` key that outputs only 'yes' or 'no', and a `reason` key to justify the verdict. In your reason, you should aim to quote parts of the context .
+    IMPORTANT: Please make sure to only return in JSON format, with the 'verdicts' key as a list of JSON. These JSON only contain the `verdict` key that outputs only 'yes' or 'no', and a `reason` key to justify the verdict. In your reason, you should aim to quote parts of the context #{note}.
     Example Retrieval Context: ["Einstein won the Nobel Prize for his discovery of the photoelectric effect", "He won the Nobel Prize in 1968.", "There was a cat."]
     Example Input: "Who won the Nobel Prize in 1968 and for what?"
     Example Expected Output: "Einstein won the Nobel Prize in 1968 for his discovery of the photoelectric effect."
@@ -109,14 +122,17 @@ defmodule DeepEvalEx.Prompts.ContextualPrecision do
     and `:reason` (required). A verdict atom (`:yes`) prints as deepeval's
     `Verdict` enum member (`<Verdict.YES: 'yes'>`), as the verdicts of
     deepeval's metric do; a string prints as a string (`'yes'`)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_reason(opts) do
+    multimodal = Keyword.get(opts, :multimodal, false)
+    pick = fn multimodal_text, text -> if multimodal, do: multimodal_text, else: text end
     score = opts |> Keyword.fetch!(:score) |> Python.format_fixed(2)
     input = Keyword.fetch!(opts, :input)
     verdicts = opts |> Keyword.fetch!(:verdicts) |> Enum.map(&verdict_dict/1) |> Python.repr()
 
     """
-    Given the input, retrieval contexts, and contextual precision score, provide a CONCISE summary for the score. Explain why it is not higher, but also why it is at its current score.
+    Given the input, retrieval contexts, and contextual precision score, provide a CONCISE #{pick.("summarize", "summary")} for the score. Explain why it is not higher, but also why it is at its current score.
     The retrieval contexts is a list of JSON with three keys: `verdict`, `reason` (reason for the verdict) and `node`. `verdict` will be either 'yes' or 'no', which represents whether the corresponding 'node' in the retrieval context is relevant to the input. 
     Contextual precision represents if the relevant nodes are ranked higher than irrelevant nodes. Also note that retrieval contexts is given IN THE ORDER OF THEIR RANKINGS.
 
@@ -128,11 +144,11 @@ defmodule DeepEvalEx.Prompts.ContextualPrecision do
     }
 
 
-    DO NOT mention 'verdict' in your reason, but instead phrase it as irrelevant nodes. The term 'verdict' is just here for you to understand the broader scope of things.
+    DO NOT mention 'verdict' in your reason, but instead phrase it as irrelevant nodes. The term 'verdict' #{pick.("are", "is")} just here for you to understand the broader scope of things.
     Also DO NOT mention there are `reason` fields in the retrieval contexts you are presented with, instead just use the information in the `reason` field.
     In your reason, you MUST USE the `reason`, QUOTES in the 'reason', and the node RANK (starting from 1, eg. first node) to explain why the 'no' verdicts should be ranked lower than the 'yes' verdicts.
-    When addressing nodes, make it explicit that they are nodes in retrieval contexts.
-    If the score is 1, keep it short and say something positive with an upbeat tone (but don't overdo it otherwise it gets annoying).
+    When addressing nodes, make it explicit that #{pick.("it is", "they are")} nodes in #{pick.("retrieval context", "retrieval contexts")}.
+    If the score is 1, keep it short and say something positive with an upbeat tone (but don't overdo it#{pick.(",", "")} otherwise it gets annoying).
     **
 
     Contextual Precision Score:

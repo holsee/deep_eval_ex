@@ -271,6 +271,10 @@ defmodule DeepEvalEx.TestRun do
     it unset (`None`) until a metric decides it, and such a test case
     neither passes nor fails.
 
+    `:images_mapping` is the images the test case's placeholders name, as
+    `DeepEvalEx.TestCase.images_mapping/1` finds them, each dumped by
+    `DeepEvalEx.MLLMImage.to_dump/1`, or `nil` when there are none.
+
     `:expectations_data`, `:images_mapping`, `:trace` and `:extra` hold
     loaded JSON DeepEvalEx does not interpret (see "Raw JSON" in
     `DeepEvalEx.TestRun`).
@@ -467,6 +471,10 @@ defmodule DeepEvalEx.TestRun do
 
     `:success` is `nil` for a test case loaded without one, which neither
     passes nor fails.
+
+    `:images_mapping` is the images the conversation's placeholders name
+    (`DeepEvalEx.ConversationalTestCase.images_mapping/1`), dumped by
+    `DeepEvalEx.MLLMImage.to_dump/1`, or `nil` when there are none.
 
     `:expectations_data`, `:images_mapping` and `:extra` hold loaded JSON
     DeepEvalEx does not interpret (see "Raw JSON" in `DeepEvalEx.TestRun`).
@@ -906,6 +914,7 @@ defmodule DeepEvalEx.TestRun do
       context: test_case.context,
       comments: test_case.comments,
       metadata: test_case.metadata,
+      images_mapping: EvalConversationalTestCase.images_mapping_dump(test_case),
       tags: test_case.tags,
       flaky: test_case.flaky || false
     }
@@ -931,6 +940,7 @@ defmodule DeepEvalEx.TestRun do
       completion_time: test_case.completion_time,
       tags: test_case.tags,
       flaky: test_case.flaky || false,
+      images_mapping: images_mapping_dump(test_case),
       success: case_success(all_data),
       metrics_data: metrics_data,
       run_duration: case_duration(duration),
@@ -940,6 +950,11 @@ defmodule DeepEvalEx.TestRun do
       comments: test_case.comments
     }
   end
+
+  defp images_mapping_dump(%EvalTestCase{} = test_case),
+    do: EvalTestCase.images_mapping_dump(test_case)
+
+  defp images_mapping_dump(_test_case), do: nil
 
   @doc false
   # deepeval's update_metric_data and ApiMetricsData serializer: the

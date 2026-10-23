@@ -53,12 +53,13 @@ defmodule DeepEvalEx.ParityTest do
   # TestRun.CacheParityTest, report/ those of Report.ReportParityTest, cli/
   # those of CLI.TestArgsTest and CLI.IntegrationTest, traced/ those of
   # TracedFixturesTest, loop_detection/ the tables of
-  # Metrics.Utils.SequenceMatcherTest and Metrics.AgentLoopDetectionTest.
+  # Metrics.Utils.SequenceMatcherTest and Metrics.AgentLoopDetectionTest,
+  # multimodal/ the content parts of LLM.MultimodalTest.
   @scenarios @fixtures
              |> File.ls!()
              |> Enum.reject(
-               &(&1 in ~w(cache classifiers cli datasets expectations loop_detection prompts report
-                        round_trip scripted system_one traced))
+               &(&1 in ~w(cache classifiers cli datasets expectations loop_detection multimodal
+                        prompts report round_trip scripted system_one traced))
              )
              |> Enum.filter(&File.dir?(Path.join(@fixtures, &1)))
              |> Enum.sort()

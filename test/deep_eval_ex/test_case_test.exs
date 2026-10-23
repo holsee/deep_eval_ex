@@ -432,14 +432,14 @@ defmodule DeepEvalEx.TestCaseTest do
       assert {:ok, test_case} =
                TestCase.new(%{
                  "input" => "Q",
-                 "multimodal" => true,
                  "mcpServers" => [],
                  "success" => true,
                  :bogus => 1
                })
 
       refute Map.has_key?(test_case, :bogus)
-      refute Map.has_key?(test_case, :multimodal)
+      refute Map.has_key?(test_case, :mcp_servers)
+      refute Map.has_key?(test_case, :success)
     end
 
     test "does not take a dataset rank, deepeval's private _dataset_rank" do
@@ -490,6 +490,79 @@ defmodule DeepEvalEx.TestCaseTest do
              }
 
       assert props["tools_called"]["items"]["properties"]["type"]["enum"] == ["function", "mcp"]
+    end
+  end
+
+  describe "images and multimodal" do
+    setup do
+      %{
+        chart: DeepEvalEx.MLLMImage.new!(url: "https://example.com/chart.png", id: "chart"),
+        dot: DeepEvalEx.MLLMImage.new!(data_base64: "AAAA", mime_type: "image/png", id: "dot")
+      }
+    end
+
+    test "is set by a placeholder in the input, outputs, context or retrieval context" do
+      for attrs <- [
+            [input: "see [DEEPEVAL:IMAGE:a]"],
+            [actual_output: "[DEEPEVAL:PDF:doc]"],
+            [expected_output: "[DEEPEVAL:IMAGE:a]"],
+            [context: ["[DEEPEVAL:IMAGE:a]"]],
+            [retrieval_context: ["[DEEPEVAL:IMAGE:a]"]],
+            [retrieval_context: [%{context: "[DEEPEVAL:IMAGE:a]", source: "s"}]]
+          ] do
+        attrs = Keyword.put_new(attrs, :input, "Q")
+        assert TestCase.new!(attrs).multimodal, inspect(attrs)
+      end
+
+      refute TestCase.new!(input: "Q", actual_output: "A").multimodal
+    end
+
+    test "is kept when given" do
+      assert TestCase.new!(input: "Q", multimodal: true).multimodal
+    end
+
+    test "keeps the images as a map of id to image", %{chart: chart, dot: dot} do
+      test_case = TestCase.new!(input: "What is #{chart}?", images: [chart, dot])
+
+      assert test_case.images == %{"chart" => chart, "dot" => dot}
+    end
+
+    test "builds images from their attributes, as an export's imagesMapping holds them",
+         %{dot: dot} do
+      test_case =
+        TestCase.new!(%{
+          "input" => "What is #{dot}?",
+          "imagesMapping" => %{
+            "dot" => %{"dataBase64" => "AAAA", "mimeType" => "image/png", "_id" => "dot"}
+          }
+        })
+
+      assert test_case.images == %{"dot" => dot}
+    end
+
+    test "rejects an invalid image" do
+      assert {:error, _} = TestCase.new(input: "Q", images: [%{data_base64: "AAAA"}])
+    end
+
+    test "images_mapping/1 is the images the placeholders name", %{chart: chart, dot: dot} do
+      test_case =
+        TestCase.new!(
+          input: "Q",
+          actual_output: "It is #{chart}.",
+          retrieval_context: ["#{dot}", %{context: "unnamed", source: "s"}],
+          images: [chart, dot]
+        )
+
+      assert TestCase.images_mapping(test_case) == %{"chart" => chart, "dot" => dot}
+      assert TestCase.images_mapping(TestCase.new!(input: "Q", images: [chart])) == nil
+    end
+
+    test "images_mapping_dump/1 orders the images by first appearance", %{chart: chart, dot: dot} do
+      test_case =
+        TestCase.new!(input: "#{dot}", actual_output: "#{chart} #{dot}", images: [chart, dot])
+
+      assert test_case |> TestCase.images_mapping_dump() |> Jason.encode!() =~
+               ~r/\A\{"dot":\{.*\},"chart":\{.*\}\}\z/
     end
   end
 end

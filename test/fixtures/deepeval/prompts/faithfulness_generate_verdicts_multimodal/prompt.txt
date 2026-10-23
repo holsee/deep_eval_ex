@@ -1,0 +1,72 @@
+Based on the given claims, which is a list of strings, generate a list of JSON objects to indicate whether EACH claim contradicts any facts in the retrieval context. The JSON will have 2 fields: 'verdict' and 'reason'.
+The 'verdict' key should STRICTLY be either 'yes', 'no', or 'borderline', which states whether the given claim agrees with the context. 
+Provide a 'reason' ONLY if the answer is 'no' or 'borderline'. 
+The provided claim is drawn from the actual output. Try to provide a correction in the reason using the facts in the retrieval context.
+
+
+Expected JSON format:
+{
+"verdicts": [
+{
+"verdict": "yes"
+},
+{
+"reason": <explanation_for_contradiction>,
+"verdict": "no"
+},
+{
+"reason": <explanation_for_uncertainty>,
+"verdict": "borderline"
+}
+]  
+}
+
+
+Example retrieval contexts: "Einstein won the Nobel Prize for his discovery of the photoelectric effect. Einstein won the Nobel Prize in 1968. Einstein is a German Scientist."
+Example claims: ["Barack Obama is a caucasian male.", "Zurich is a city in London", "Einstein won the Nobel Prize for the discovery of the photoelectric effect which may have contributed to his fame.", "Einstein won the Nobel Prize in 1969 for his discovery of the photoelectric effect.", "Einstein was a German chef."]
+
+Example:
+{
+"verdicts": [
+{
+"reason": "The claim about Barack Obama is not directly addressed in the retrieval context, and so poses no contradiction.",
+"verdict": "borderline"
+},
+{
+"reason": "The claim about Zurich being a city in London is incorrect but does not pose a contradiction to the retrieval context.",
+"verdict": "borderline"
+},
+{
+"verdict": "yes"
+},
+{
+"reason": "The actual output claims Einstein won the Nobel Prize in 1969, which is untrue as the retrieval context states it is 1968 instead.",
+"verdict": "no"
+},
+{
+"reason": "The actual output claims Einstein is a German chef, which is not correct as the retrieval context states he was a German scientist instead.",
+"verdict": "no"
+}
+]  
+}
+===== END OF EXAMPLE ======
+
+**
+IMPORTANT: Please make sure to only return in JSON format, with the 'verdicts' key as a list of JSON objects.
+
+The length of 'verdicts' SHOULD BE STRICTLY EQUAL to that of claims.
+You DON'T have to provide a reason if the answer is 'yes'.
+ONLY provide a 'no' answer if the retrieval context DIRECTLY CONTRADICTS the claims. YOU SHOULD NEVER USE YOUR PRIOR KNOWLEDGE IN YOUR JUDGEMENT.
+Claims made using vague, suggestive, speculative language such as 'may have', 'possibility due to', does NOT count as a contradiction.
+Claims that is not backed up due to a lack of information/is not mentioned in the retrieval contexts MUST be answered 'borderline'.
+If there are clear contradictions or any data or images that's not mentioned in the retrieval context, just provide 'no'.
+
+**
+
+Retrieval Contexts:
+Sales doubled in 2024.
+
+Claims:
+['Sales doubled.']
+
+JSON:

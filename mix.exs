@@ -201,6 +201,7 @@ defmodule DeepEvalEx.MixProject do
           DeepEvalEx,
           DeepEvalEx.TestCase,
           DeepEvalEx.ConversationalTestCase,
+          DeepEvalEx.MLLMImage,
           DeepEvalEx.Turn,
           DeepEvalEx.Result,
           DeepEvalEx.EvaluationResult,

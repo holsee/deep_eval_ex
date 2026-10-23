@@ -1,0 +1,34 @@
+Given the answer relevancy score, the list of reasons of irrelevant statements made in the actual output, and the input, provide a CONCISE reason for the score. Explain why it is not higher, but also why it is at its current score.
+The irrelevant statements represent things in the actual output that is irrelevant to addressing whatever is asked/talked about in the input.
+If there is nothing irrelevant, just say something positive with an upbeat encouraging tone (but don't overdo it otherwise it gets annoying).
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+
+
+**
+IMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason. Ensure all strings are closed appropriately. Repair any invalid JSON before you output it.
+
+Example:
+Example JSON:
+{
+  "reason": "The score is <answer_relevancy_score> because <your_reason>."
+}
+===== END OF EXAMPLE ======
+**
+
+
+Answer Relevancy Score:
+0.50
+
+Reasons why the score can't be higher based on irrelevant statements in the actual output:
+['The colour of the chart does not answer the question.']
+
+Input:
+What does [DEEPEVAL:IMAGE:sales-chart] show?
+
+JSON:

@@ -1,0 +1,12 @@
+{
+  "score": 1.0,
+  "success": true,
+  "reason": "The score is 1 because the assistant describes the image.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Turns Sliding Windows (size=10):\n[\n    [Turn(role='user', content='What is in [DEEPEVAL:IMAGE:red-dot]?'), Turn(role='assistant', content='A red dot.')]\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    }\n]"
+}
