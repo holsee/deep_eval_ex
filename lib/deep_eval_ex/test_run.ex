@@ -27,9 +27,12 @@ defmodule DeepEvalEx.TestRun do
   - `:conversational_test_cases` - One `DeepEvalEx.TestRun.ConversationalTestCase`
     per evaluated `DeepEvalEx.ConversationalTestCase`
   - `:metrics_scores` - Per metric: every score, plus pass, fail and error
-    counts, in the order metrics first appear
-  - `:trace_metrics_scores` - deepeval's per-span metric scores, as raw
-    JSON, or `nil`
+    counts, in the order metrics first appear. The metric data of a test
+    case's traced spans counts after the test case's own, as deepeval's
+    `calculate_metrics_scores` folds it in
+  - `:trace_metrics_scores` - The per-span metric scores, as the JSON
+    `DeepEvalEx.TestRun.TraceMetricScores.compute/1` builds, or `nil` when
+    no traced span has metric data
   - `:identifier` - Optional name for the run
   - `:hyperparameters` - `{name, value}` pairs with values stringified as
     deepeval does (see `process_hyperparameters/1`), or `nil`
@@ -69,7 +72,8 @@ defmodule DeepEvalEx.TestRun do
   decoded JSON they were loaded from, and written back unchanged in the
   position deepeval's models declare them:
 
-  - on the run: `:trace_metrics_scores` and `:prompts`
+  - on the run: `:trace_metrics_scores` (computed by `from_test_cases/2`,
+    kept as it is on load) and `:prompts`
   - on each `DeepEvalEx.TestRun.TestCase`: `:expectations_data`,
     `:images_mapping` and `:trace`
   - on each `DeepEvalEx.TestRun.ConversationalTestCase`:
@@ -90,7 +94,7 @@ defmodule DeepEvalEx.TestRun do
   alias DeepEvalEx.{Result, TestRun}
   alias DeepEvalEx.Schemas.{RetrievedContextData, ToolCall}
   alias DeepEvalEx.TestCase, as: EvalTestCase
-  alias DeepEvalEx.TestRun.{ExpectationsData, JSON}
+  alias DeepEvalEx.TestRun.{ExpectationsData, JSON, TraceMetricScores}
   alias Jason.OrderedObject
 
   @type metric_scores :: %{
@@ -636,9 +640,10 @@ defmodule DeepEvalEx.TestRun do
   `DeepEvalEx.TestRun.TestCase`s become the run's `testCases` and
   `DeepEvalEx.TestRun.ConversationalTestCase`s its
   `conversationalTestCases`, each sorted as in `from_results/3`;
-  `metricsScores`, `testPassed`, `testFailed` and `evaluationCost` are
-  computed over them in the given order. Takes the options of
-  `from_results/3` except `:run_durations`.
+  `metricsScores`, `traceMetricsScores` (from the test cases' `trace`s,
+  see `DeepEvalEx.TestRun.TraceMetricScores`), `testPassed`, `testFailed`
+  and `evaluationCost` are computed over them in the given order. Takes
+  the options of `from_results/3` except `:run_durations`.
   """
   @spec from_test_cases([TestRun.TestCase.t() | ConversationalTestCase.t()], keyword()) :: t()
   def from_test_cases(evaluated, opts \\ []) do
@@ -652,6 +657,7 @@ defmodule DeepEvalEx.TestRun do
       test_cases: sort_test_cases(api_test_cases),
       conversational_test_cases: sort_test_cases(conversational),
       metrics_scores: metrics_scores(evaluated),
+      trace_metrics_scores: TraceMetricScores.compute(evaluated),
       identifier: Keyword.get(opts, :identifier),
       hyperparameters: process_hyperparameters(Keyword.get(opts, :hyperparameters)),
       prompts: Keyword.get(opts, :prompts, []),
@@ -998,10 +1004,12 @@ defmodule DeepEvalEx.TestRun do
     end)
   end
 
+  # deepeval's calculate_metrics_scores: a test case's own metric data, then
+  # its traced spans'.
   defp metrics_scores(test_cases) do
     {order, scores} =
-      for %{metrics_data: metrics_data} <- test_cases,
-          data <- metrics_data,
+      for %{metrics_data: metrics_data} = test_case <- test_cases,
+          data <- metrics_data ++ TraceMetricScores.span_metrics_data(test_case),
           reduce: {[], %{}} do
         {order, scores} ->
           order = if Map.has_key?(scores, data.name), do: order, else: [data.name | order]
@@ -1167,8 +1175,13 @@ defmodule DeepEvalEx.TestRun do
   end
 
   defp tool_calls_map(nil), do: nil
+  defp tool_calls_map(tool_calls), do: tool_calls_to_maps(tool_calls)
 
-  defp tool_calls_map(tool_calls) do
+  @doc false
+  # deepeval's ToolCall dump, by alias without None values; also the tool
+  # calls of DeepEvalEx.Tracing.Api's exports.
+  @spec tool_calls_to_maps([ToolCall.t()]) :: [OrderedObject.t()]
+  def tool_calls_to_maps(tool_calls) do
     Enum.map(tool_calls, fn tool_call ->
       ordered(
         name: tool_call.name,

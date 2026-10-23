@@ -19,10 +19,13 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   Keyword arguments become options as the generator's `tracing_kwargs`
   builds them: a `test_case` and tool calls from their fields, a `prompt`
   as a map, `token_intervals` keys (`perf_counter` seconds) as
-  microseconds. Staged `metrics` are left out: the span metrics run with
-  the evaluator.
+  microseconds, and `metrics`, like a function's own, as metric specs
+  (`metric/1`). A metric DeepEvalEx does not have yet is left out, and
+  `supported_metrics?/1` tells whether a scenario has one.
   """
 
+  alias DeepEvalEx.Metrics.ExactMatch
+  alias DeepEvalEx.Test.ParityMetrics.Stub
   alias DeepEvalEx.Test.TracedFixtures
   alias DeepEvalEx.Tracing
   alias Jason.OrderedObject
@@ -46,6 +49,11 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   @spec compile(String.t()) :: module()
   def compile(scenario) do
     module = Module.concat(__MODULE__, Macro.camelize(scenario))
+
+    # The script's span types and option names become existing atoms once
+    # the modules defining them are loaded, which a test that has not used
+    # them yet may not have done.
+    Enum.each([Tracing.Span, Tracing.Update, Tracing], &Code.ensure_loaded!/1)
 
     unless Code.ensure_loaded?(module) do
       functions = TracedFixtures.load!(scenario, "input.json")["functions"]
@@ -80,7 +88,7 @@ defmodule DeepEvalEx.Test.TracingScenarios do
     head = {String.to_atom(name), [], args}
 
     observe = options(spec["observe"] || OrderedObject.new([]))
-    opts = [type: span_type(spec["type"])] ++ observe
+    opts = [type: span_type(spec["type"])] ++ observe ++ metrics_option(spec["metrics"])
 
     quote do
       deftraced unquote(head), unquote(Macro.escape(opts)) do
@@ -198,11 +206,66 @@ defmodule DeepEvalEx.Test.TracingScenarios do
 
   # tracing_kwargs: the script's keyword arguments as options.
   defp options(%OrderedObject{values: values}) do
-    for {key, value} <- values, key != "metrics" do
-      key = String.to_existing_atom(key)
-      {key, option(key, plain(value))}
+    Enum.flat_map(values, fn
+      {"metrics", specs} ->
+        metrics_option(specs)
+
+      {key, value} ->
+        key = String.to_existing_atom(key)
+        [{key, option(key, plain(value))}]
+    end)
+  end
+
+  defp metrics_option(nil), do: []
+
+  defp metrics_option(specs),
+    do: [metrics: specs |> Enum.map(&metric/1) |> Enum.reject(&is_nil/1)]
+
+  @doc """
+  The metric spec of a script metric, as the generator's `build_metric`:
+  a `stub` is a `DeepEvalEx.Test.ParityMetrics.Stub`, an `exact_match`
+  `DeepEvalEx.Metrics.ExactMatch`. `nil` for a metric DeepEvalEx does not
+  have yet.
+  """
+  @spec metric(OrderedObject.t()) :: DeepEvalEx.Tracing.Span.metric_spec() | nil
+  def metric(spec) do
+    case spec["kind"] do
+      "stub" ->
+        %Stub{
+          name: spec["name"],
+          score: spec["score"],
+          reason: spec["reason"],
+          threshold: spec["threshold"],
+          evaluation_model: spec["evaluation_model"],
+          evaluation_cost: spec["evaluation_cost"],
+          input_tokens: spec["input_tokens"],
+          output_tokens: spec["output_tokens"]
+        }
+
+      "exact_match" ->
+        ExactMatch
+
+      _not_yet_ported ->
+        nil
     end
   end
+
+  @doc """
+  Whether `metric/1` builds every metric of a scenario's `input.json`:
+  the trace-level ones and those of its functions and staged spans.
+  """
+  @spec supported_metrics?(OrderedObject.t()) :: boolean()
+  def supported_metrics?(input), do: input |> metric_specs() |> Enum.all?(&metric/1)
+
+  defp metric_specs(%OrderedObject{values: values}) do
+    Enum.flat_map(values, fn
+      {"metrics", specs} when is_list(specs) -> specs
+      {_key, value} -> metric_specs(value)
+    end)
+  end
+
+  defp metric_specs(list) when is_list(list), do: Enum.flat_map(list, &metric_specs/1)
+  defp metric_specs(_value), do: []
 
   defp option(:test_case, fields), do: DeepEvalEx.TestCase.new!(fields)
 

@@ -2203,8 +2203,50 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - The capture parity check now runs all thirteen traced scenarios. It
     also compares the test-case fields, the fields of each span type, and
     the trace's name, tags, metadata and ids that the updates set.
+- **Exporting traces** (ADR-0011), ports of deepeval 4.3.1's
+  `create_trace_api`, `evaluate/utils.create_api_trace` and
+  `TraceMetricScores`. The [Tracing](wiki/guides/Tracing.md) guide covers
+  them.
+  - `DeepEvalEx.Tracing.Api.trace_api/2` exports a captured trace as
+    deepeval's `TraceApi`, a `Jason.OrderedObject` in pydantic's key order
+    without `nil` values. Spans are bucketed by type (`baseSpans`,
+    `agentSpans`, `llmSpans`, `retrieverSpans`, `toolSpans`) in deepeval's
+    LIFO `span_stack` order, and a dropped span is left out, its children
+    getting its parent. Times are UTC ISO 8601 truncated to milliseconds
+    (`tokenIntervals` keys to microseconds) and end in `Z`. An LLM span's
+    prompt fields come from its `:prompt`, overridden by its own
+    `:prompt_*` fields, and its provider is normalised (`"openai"` becomes
+    `"OpenAI"`). A span with metrics gets their `metricsData`: the
+    `:metrics_data` option's measured rows for the span, else the
+    unmeasured rows deepeval writes outside evaluation (name, threshold,
+    strict mode, judge model, `success: false`). `:environment` defaults to
+    `"development"`.
+  - `DeepEvalEx.Tracing.Api.eval_trace_api/2` starts an evaluated test
+    case's trace as `create_api_trace`: empty buckets, the golden's input
+    when the trace's is falsy, no `environment`, and only the fields
+    deepeval actually sets (it drops the expected output, retrieval
+    context and tool calls it passes by field name). `span_api/2`,
+    `add_span/2` and `put_metrics_data/2` (which leaves out an expectation
+    evaluator's row) build the rest.
+  - `DeepEvalEx.TestRun.TraceMetricScores.compute/1` computes a run's
+    `traceMetricsScores` from its test cases' traces: per span type (all
+    five, in deepeval's order), span name and metric, every score and the
+    pass, fail and error counts; `nil` when no span has metric data.
+  - The traces the thirteen traced scenarios capture are exported byte for
+    byte as deepeval's `trace_api.json` (bar `requires_trace`, whose
+    metrics come later) and start as the async iterator's test-run traces,
+    and every traced fixture run's `metricsScores` and
+    `traceMetricsScores` are recomputed exactly.
 
 ### Changed
+
+- `DeepEvalEx.TestRun.from_test_cases/2` (and so `from_results/3`) now
+  computes `traceMetricsScores` from the test cases' traces instead of
+  leaving it `nil`, and counts each traced span's metric data in
+  `metricsScores` after the test case's own, as deepeval's
+  `calculate_metrics_scores` does. A run loaded with `DeepEvalEx.TestRun.load/1`
+  keeps the `traceMetricsScores` it was saved with. Runs without traces are
+  unchanged.
 
 - `DeepEvalEx.Metrics.BaseMetric`'s `measure/2` runs inside
   `DeepEvalEx.Tracing.suppress/1`, so the LLM calls of a metric's judge

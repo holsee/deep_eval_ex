@@ -93,6 +93,32 @@ the last span to close ends it. The `:llm_span_context` and
 `:agent_span_context` options are set for the block when given and cleared
 when it returns, as in deepeval.
 
+## Exporting traces
+
+`DeepEvalEx.Tracing.Api.trace_api/2` turns a captured trace into
+deepeval's `TraceApi`, the JSON deepeval posts for a trace and writes as a
+test case's `trace` in `test_run_<timestamp>.json`:
+
+```elixir
+{_answer, [trace]} = DeepEvalEx.Tracing.capture([], fn -> MyApp.Support.answer("hi") end)
+
+trace
+|> DeepEvalEx.Tracing.Api.trace_api()
+|> DeepEvalEx.TestRun.JSON.encode!(indent: 2)
+```
+
+Spans are grouped by type into `baseSpans`, `agentSpans`, `llmSpans`,
+`retrieverSpans` and `toolSpans`, in deepeval's order, with UTC times
+truncated to milliseconds. A dropped span is left out and its children
+take its parent. A span's metrics appear as `metricsData`: pass measured
+results per span uuid with `metrics_data: %{uuid => [metric_data]}`;
+without them each metric is written unmeasured (`success: false`), as
+deepeval exports a trace outside evaluation.
+
+In a test run, `traceMetricsScores` sums the span metric results per span
+type, span name and metric (`DeepEvalEx.TestRun.TraceMetricScores`), and
+the same results count in `metricsScores`.
+
 ## Updating spans and traces
 
 Code running in a span can add to it, as deepeval's `update_current_span`
