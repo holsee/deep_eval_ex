@@ -253,7 +253,19 @@ defmodule DeepEvalEx.PromptGoldenTest do
     "StepEfficiencyMetric._experimental_system_one_score" =>
       {Prompts.StepEfficiency, :system_one_score},
     "StepEfficiencyMetric._experimental_system_one_questions" =>
-      {Prompts.StepEfficiency, :system_one_questions}
+      {Prompts.StepEfficiency, :system_one_questions},
+    "PlanQualityMetric.evaluate_plan_quality" => {Prompts.PlanQuality, :evaluate_plan_quality},
+    "PlanQualityMetric._experimental_system_one_score" =>
+      {Prompts.PlanQuality, :system_one_score},
+    "PlanQualityMetric._experimental_system_one_questions" =>
+      {Prompts.PlanQuality, :system_one_questions},
+    "PlanAdherenceMetric.extract_plan_from_trace" =>
+      {Prompts.PlanAdherence, :extract_plan_from_trace},
+    "PlanAdherenceMetric.evaluate_adherence" => {Prompts.PlanAdherence, :evaluate_adherence},
+    "PlanAdherenceMetric._experimental_system_one_score" =>
+      {Prompts.PlanAdherence, :system_one_score},
+    "PlanAdherenceMetric._experimental_system_one_questions" =>
+      {Prompts.PlanAdherence, :system_one_questions}
   }
 
   # {the ROADMAP unit that removes the tag, cases}. The fixtures' README
@@ -270,7 +282,7 @@ defmodule DeepEvalEx.PromptGoldenTest do
     end
   end
 
-  test "covers every template of the twenty-eight LLM metrics" do
+  test "covers every template of the thirty LLM metrics" do
     templates = @cases |> Enum.map(&input(&1)["template"]) |> Enum.uniq() |> Enum.sort()
 
     assert templates == @templates |> Map.keys() |> Enum.sort()
@@ -294,6 +306,8 @@ defmodule DeepEvalEx.PromptGoldenTest do
             Prompts.JsonCorrectness,
             Prompts.KnowledgeRetention,
             Prompts.PIILeakage,
+            Prompts.PlanAdherence,
+            Prompts.PlanQuality,
             Prompts.PromptAlignment,
             Prompts.RoleAdherence,
             Prompts.StepEfficiency,
@@ -380,7 +394,9 @@ defmodule DeepEvalEx.PromptGoldenTest do
        when template in [
               "TaskCompletionMetric.extract_task_and_outcome_from_trace",
               "StepEfficiencyMetric.extract_task_from_trace",
-              "StepEfficiencyMetric.get_execution_efficiency"
+              "StepEfficiencyMetric.get_execution_efficiency",
+              "PlanAdherenceMetric.extract_plan_from_trace",
+              "PlanAdherenceMetric.evaluate_adherence"
             ] do
     ordered =
       Path.join([@fixtures, name, "input.json"])
@@ -392,7 +408,10 @@ defmodule DeepEvalEx.PromptGoldenTest do
     [
       trace_json: trace_json,
       trace_json_str: trace_json,
+      execution_trace_json: trace_json,
       task: inputs["task"],
+      user_task: inputs["task"],
+      agent_plan: Enum.join(inputs["plan"] || [], "\n"),
       multimodal: Map.get(inputs, "multimodal", false)
     ]
   end
@@ -810,6 +829,16 @@ defmodule DeepEvalEx.PromptGoldenTest do
     do: [has_trace: inputs["has_trace"], has_task: inputs["has_task"]]
 
   defp options("StepEfficiencyMetric._experimental_system_one_questions", inputs),
+    do: [has_trace: inputs["has_trace"]]
+
+  # The plan metrics print the plan one step per line.
+  defp options("PlanQualityMetric.evaluate_plan_quality", inputs),
+    do: [user_task: inputs["task"], agent_plan: Enum.join(inputs["plan"], "\n")]
+
+  defp options("PlanQualityMetric._experimental_system_one_questions", inputs),
+    do: [has_trace: inputs["has_trace"]]
+
+  defp options("PlanAdherenceMetric._experimental_system_one_questions", inputs),
     do: [has_trace: inputs["has_trace"]]
 
   # GoalAccuracy joins a unit's steps with newlines and builds its

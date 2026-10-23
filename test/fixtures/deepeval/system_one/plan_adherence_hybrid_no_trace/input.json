@@ -1,0 +1,49 @@
+{
+  "description": "PlanAdherence in hybrid mode without a trace: Jev is not asked, the LLM scores the adherence",
+  "metrics": [
+    {
+      "kind": "plan_adherence",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Where is my invoice?",
+    "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {}
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "plan_adherence": {
+      "task": [
+        {
+          "task": "Find my latest invoice."
+        }
+      ],
+      "plan": [
+        {
+          "plan": [
+            "Look up the latest invoice",
+            "Tell the user where to find it"
+          ]
+        }
+      ],
+      "reason,score": [
+        {
+          "score": 0.75,
+          "reason": "The plan does not say which account to search."
+        }
+      ]
+    }
+  }
+}

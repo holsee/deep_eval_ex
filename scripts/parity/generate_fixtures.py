@@ -47,7 +47,7 @@ test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
 Prompt goldens (`PROMPT_CASES` below) render every prompt template deepeval
-uses for the twenty-eight LLM-judged metrics, the way the metric itself renders it
+uses for the thirty LLM-judged metrics, the way the metric itself renders it
 (its `_get_prompt`, with the arguments its own helpers build), for fixed
 inputs. For every case this script writes, under
 test/fixtures/deepeval/prompts/<case>/:
@@ -146,6 +146,8 @@ from deepeval.metrics import (  # noqa: E402
     JsonCorrectnessMetric,
     PatternMatchMetric,
     PIILeakageMetric,
+    PlanAdherenceMetric,
+    PlanQualityMetric,
     PromptAlignmentMetric,
     RoleAdherenceMetric,
     StepEfficiencyMetric,
@@ -795,6 +797,8 @@ SCRIPTED_METRICS = {
     "tool_use": ToolUseMetric,
     "task_completion": TaskCompletionMetric,
     "step_efficiency": StepEfficiencyMetric,
+    "plan_quality": PlanQualityMetric,
+    "plan_adherence": PlanAdherenceMetric,
 }
 
 # Metrics that call no LLM and take no `model`.
@@ -1655,6 +1659,37 @@ PROMPT_RENDERERS = {
         StepEfficiencyMetric, "_experimental_system_one_questions",
         has_trace=i["has_trace"],
     ),
+    # PlanQuality and PlanAdherence print the plan one step per line and the
+    # nested trace dict with serialize_to_json(indent=2). PlanQuality
+    # borrows PlanAdherence's extract_plan_from_trace (and StepEfficiency's
+    # extract_task_from_trace) with an explicit template_class.
+    "PlanQualityMetric.evaluate_plan_quality": lambda i: _prompt(
+        PlanQualityMetric, "evaluate_plan_quality",
+        user_task=i["task"], agent_plan="\n".join(i["plan"]),
+    ),
+    "PlanQualityMetric._experimental_system_one_score": lambda i: _prompt(
+        PlanQualityMetric, "_experimental_system_one_score",
+    ),
+    "PlanQualityMetric._experimental_system_one_questions": lambda i: _prompt(
+        PlanQualityMetric, "_experimental_system_one_questions",
+        has_trace=i["has_trace"],
+    ),
+    "PlanAdherenceMetric.extract_plan_from_trace": lambda i: _prompt(
+        PlanAdherenceMetric, "extract_plan_from_trace",
+        trace_json_str=serialize_to_json(i["trace"], indent=2),
+    ),
+    "PlanAdherenceMetric.evaluate_adherence": lambda i: _prompt(
+        PlanAdherenceMetric, "evaluate_adherence",
+        user_task=i["task"], agent_plan="\n".join(i["plan"]),
+        execution_trace_json=serialize_to_json(i["trace"], indent=2),
+    ),
+    "PlanAdherenceMetric._experimental_system_one_score": lambda i: _prompt(
+        PlanAdherenceMetric, "_experimental_system_one_score",
+    ),
+    "PlanAdherenceMetric._experimental_system_one_questions": lambda i: _prompt(
+        PlanAdherenceMetric, "_experimental_system_one_questions",
+        has_trace=i["has_trace"],
+    ),
 }
 
 # Bundled templates of these metrics that no prompt case renders: GEval's
@@ -2181,6 +2216,50 @@ PROMPT_CASES = {
     },
     "step_efficiency_experimental_system_one_questions_trace": {
         "template": "StepEfficiencyMetric._experimental_system_one_questions",
+        "inputs": {"has_trace": True},
+    },
+    "plan_quality_evaluate_plan_quality": {
+        "template": "PlanQualityMetric.evaluate_plan_quality",
+        "inputs": {"task": "Book a table for two at Café Odéon on Saturday.",
+                   "plan": ["Search for Café Odéon", "Book a table for two on Saturday",
+                            "Confirm the booking"]},
+    },
+    "plan_quality_experimental_system_one_score": {
+        "template": "PlanQualityMetric._experimental_system_one_score",
+        "inputs": {},
+    },
+    "plan_quality_experimental_system_one_questions": {
+        "template": "PlanQualityMetric._experimental_system_one_questions",
+        "inputs": {"has_trace": False},
+    },
+    "plan_quality_experimental_system_one_questions_trace": {
+        "template": "PlanQualityMetric._experimental_system_one_questions",
+        "inputs": {"has_trace": True},
+    },
+    "plan_adherence_extract_plan_from_trace": {
+        "template": "PlanAdherenceMetric.extract_plan_from_trace",
+        "inputs": {"trace": AGENT_TRACE},
+    },
+    "plan_adherence_extract_plan_from_trace_no_trace": {
+        "template": "PlanAdherenceMetric.extract_plan_from_trace",
+        "inputs": {"trace": None},
+    },
+    "plan_adherence_evaluate_adherence": {
+        "template": "PlanAdherenceMetric.evaluate_adherence",
+        "inputs": {"task": "Book a table for two at Café Odéon on Saturday.",
+                   "plan": ["Search for Café Odéon", "Book a table for two on Saturday"],
+                   "trace": AGENT_TRACE},
+    },
+    "plan_adherence_experimental_system_one_score": {
+        "template": "PlanAdherenceMetric._experimental_system_one_score",
+        "inputs": {},
+    },
+    "plan_adherence_experimental_system_one_questions": {
+        "template": "PlanAdherenceMetric._experimental_system_one_questions",
+        "inputs": {"has_trace": False},
+    },
+    "plan_adherence_experimental_system_one_questions_trace": {
+        "template": "PlanAdherenceMetric._experimental_system_one_questions",
         "inputs": {"has_trace": True},
     },
     "tool_use_get_tool_selection_score": {
@@ -2932,7 +3011,7 @@ PROMPT_CASES = {
 
 
 def check_prompt_coverage():
-    """Fails unless every bundled template of the twenty-eight metrics is rendered
+    """Fails unless every bundled template of the thirty metrics is rendered
     by some case or listed in UNRENDERED_TEMPLATES."""
     rendered = {case["template"] for case in PROMPT_CASES.values()}
     unknown = rendered - PROMPT_RENDERERS.keys()
@@ -3179,6 +3258,68 @@ STEP_EFFICIENCY = {
                           "reason": "The agent repeated its search once before answering."}],
     },
 }
+
+# The plan an agent states in an LLM span's output, extracted by the plan
+# metrics: one task extraction, one plan extraction and one score per measure.
+TRACED_PLAN = ["Search the help centre for password resets", "Answer with the steps found"]
+
+PLAN_QUALITY = {
+    "kind": "plan_quality",
+    "judge_model": "mock-model",
+    "params": {"threshold": 0.5},
+    "responses": {
+        "task": [{"task": "Tell the user how to reset their password"}],
+        "plan": [{"plan": TRACED_PLAN}],
+        "reason,score": [{"score": 0.75,
+                          "reason": "The plan does not say which help centre article to use."}],
+    },
+}
+
+PLAN_ADHERENCE = {
+    "kind": "plan_adherence",
+    "judge_model": "mock-model",
+    "params": {"threshold": 0.5},
+    "responses": {
+        "task": [{"task": "Tell the user how to reset their password"}],
+        "plan": [{"plan": TRACED_PLAN}],
+        "reason,score": [{"score": 0.5,
+                          "reason": "Step 1 was carried out twice; step 2 matches the answer."}],
+    },
+}
+
+
+def traced_planner(metrics, span_metrics):
+    """A planning agent: an LLM span states the plan, then the agent
+    searches and answers. `metrics` judge the trace, `span_metrics` the
+    agent span."""
+    return {
+        "goldens": [TRACED_GOLDEN],
+        "metrics": metrics,
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "observe": {"available_tools": ["search"]},
+                "metrics": span_metrics,
+                "body": [
+                    {"call": "plan", "args": ["$query"]},
+                    {"call": "search", "args": ["$query"]},
+                    {"call": "search", "args": ["$query"]},
+                    {"call": "generate", "args": ["$query", []], "as": "answer"},
+                    # The sync iterator's trace has no output of its own.
+                    {"update_current_trace": {"output": "$answer"}},
+                ],
+                "returns": "$answer",
+            },
+            "plan": {"type": "llm", "params": [["query"]],
+                     "observe": {"model": "gpt-4o-mini"},
+                     "returns": "My plan: 1. " + TRACED_PLAN[0] + ". 2. " + TRACED_PLAN[1] + "."},
+            "search": {"type": "tool", "params": [["query"]], "returns": ["result for {query}"]},
+            "generate": TRACED_GENERATE,
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    }
 
 
 TRACED_SCENARIOS = {
@@ -3603,6 +3744,16 @@ TRACED_SCENARIOS = {
         },
         "app": [{"call": "agent", "args": ["{input}"]}],
     },
+    "plan_quality": {
+        "description": "PlanQuality on the trace, judged by a ScriptedJudge from the nested "
+                       "dict of a trace whose LLM span states a plan",
+        **traced_planner([PLAN_QUALITY], []),
+    },
+    "plan_adherence": {
+        "description": "PlanAdherence on the agent span, judged by a ScriptedJudge from the "
+                       "nested dict of the span that states a plan and then carries it out",
+        **traced_planner([], [PLAN_ADHERENCE]),
+    },
 }
 
 TRACED_EXCEPTIONS = {"ValueError": ValueError, "RuntimeError": RuntimeError}
@@ -3643,7 +3794,7 @@ class TracedRun:
         kind = spec["kind"]
         if kind == "agent_loop_detection":
             return AgentLoopDetectionMetric(**spec.get("params", {}))
-        if kind in ("task_completion", "step_efficiency"):
+        if kind in ("task_completion", "step_efficiency", "plan_quality", "plan_adherence"):
             judge = ScriptedJudge(spec["judge_model"], spec["responses"])
             self.judges.append(judge)
             return SCRIPTED_METRICS[kind](model=judge, **spec.get("params", {}))

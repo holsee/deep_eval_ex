@@ -131,6 +131,8 @@ from deepeval.metrics import (  # noqa: E402
     KnowledgeRetentionMetric,
     JsonCorrectnessMetric,
     PIILeakageMetric,
+    PlanAdherenceMetric,
+    PlanQualityMetric,
     PromptAlignmentMetric,
     RoleAdherenceMetric,
     StepEfficiencyMetric,
@@ -195,6 +197,8 @@ METRICS = {
     "tool_use": ToolUseMetric,
     "task_completion": TaskCompletionMetric,
     "step_efficiency": StepEfficiencyMetric,
+    "plan_quality": PlanQualityMetric,
+    "plan_adherence": PlanAdherenceMetric,
 }
 
 # Metrics that follow their eval mode but never build a System One model, so
@@ -614,6 +618,36 @@ STEP_EFFICIENCY_TASK = {"task": [{"task": "Find my latest invoice."}]}
 STEP_EFFICIENCY_SCORE = {
     "reason,score": [{"score": 0.75, "reason": "The lookup was needed; the reply was direct."}],
 }
+# The plan metrics' LLM steps: both extract the task and the plan, then
+# score the plan (PlanQuality) or the trace's adherence to it
+# (PlanAdherence).
+PLAN_EXTRACT = {
+    "task": [{"task": "Find my latest invoice."}],
+    "plan": [{"plan": ["Look up the latest invoice", "Tell the user where to find it"]}],
+}
+PLAN_SCORE = {
+    "reason,score": [{"score": 0.75, "reason": "The plan does not say which account to search."}],
+}
+PLAN_QUALITY_OPTIONS = ["Inadequate plan", "Weak plan", "Adequate but flawed plan", "Good plan",
+                        "Excellent plan", "The agent states no plan"]
+PLAN_ADHERENCE_OPTIONS = ["No adherence", "Weak adherence", "Partial adherence",
+                          "Strong adherence", "Perfect adherence", "The agent states no plan"]
+NO_PLAN = "The agent states no plan"
+
+
+def plan_choices(first, second, third, options, confidence):
+    """Answers to the plan metrics' whole-metric (`system_one`) request:
+    three Choices, the last over the five levels and "no plan"; each takes
+    its answer's probability 0.7 and spreads the rest over its options."""
+    def answer(label, labels):
+        rest = round(0.3 / (len(labels) - 1), 4)
+        return choice(label, {name: (0.7 if name == label else rest) for name in labels},
+                      confidence)
+    return {"choices": {
+        "q_0": answer(first[0], first[1]),
+        "q_1": answer(second[0], second[1]),
+        "q_2": answer(third, options),
+    }}
 
 CAPITAL = {
     "input": "What is the capital of France?",
@@ -1898,6 +1932,118 @@ SCENARIOS = {
         "system_one": NO_JEV,
         "judge_model": JUDGE,
         "responses": {"step_efficiency": {**STEP_EFFICIENCY_TASK, **STEP_EFFICIENCY_SCORE}},
+    },
+    # PlanQuality
+    "plan_quality_system_one": {
+        "description": "PlanQuality decided by Jev in one request of three Choices about the "
+                       "compacted trace",
+        "metrics": [metric("plan_quality", "system_one")],
+        "test_case": INVOICE,
+        "trace": INVOICE_TRACE,
+        "system_one": {"model": JEV, "cost": JEV_COST, "answers": plan_choices(
+            ("Yes, the plan is complete",
+             ["Yes, the plan is complete", "No, the plan misses a requirement or prerequisite",
+              NO_PLAN]),
+            ("No, some step is vague, redundant, off-task or out of order",
+             ["Yes, every step is clear, necessary and well ordered",
+              "No, some step is vague, redundant, off-task or out of order", NO_PLAN]),
+            "Good plan", PLAN_QUALITY_OPTIONS, 0.6,
+        )},
+    },
+    "plan_quality_system_one_no_plan": {
+        "description": "PlanQuality decided by Jev without a trace, about the test case: the "
+                       "agent states no plan, so no question applies",
+        "metrics": [metric("plan_quality", "system_one")],
+        "test_case": INVOICE,
+        "system_one": {"model": JEV, "cost": JEV_COST, "answers": plan_choices(
+            (NO_PLAN, ["Yes, the plan is complete",
+                       "No, the plan misses a requirement or prerequisite", NO_PLAN]),
+            (NO_PLAN, ["Yes, every step is clear, necessary and well ordered",
+                       "No, some step is vague, redundant, off-task or out of order", NO_PLAN]),
+            NO_PLAN, PLAN_QUALITY_OPTIONS, 0.8,
+        )},
+    },
+    "plan_quality_hybrid": {
+        "description": "PlanQuality in hybrid mode: the LLM extracts the task and the plan from "
+                       "the trace, Jev scores the plan from the task and the plan",
+        "metrics": [metric("plan_quality", "hybrid")],
+        "test_case": INVOICE,
+        "trace": INVOICE_TRACE,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"scores": {"verdict": score(3, FIVE_LEVELS_MID, 0.4)}}},
+        "judge_model": JUDGE,
+        "responses": {"plan_quality": PLAN_EXTRACT},
+    },
+    "plan_quality_hybrid_fallback": {
+        "description": "PlanQuality in hybrid mode with Jev down: the LLM scores the plan",
+        "metrics": [metric("plan_quality", "hybrid")],
+        "test_case": INVOICE,
+        "trace": INVOICE_TRACE,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"plan_quality": {**PLAN_EXTRACT, **PLAN_SCORE}},
+    },
+    # PlanAdherence
+    "plan_adherence_system_one": {
+        "description": "PlanAdherence decided by Jev in one request of three Choices about the "
+                       "compacted trace",
+        "metrics": [metric("plan_adherence", "system_one")],
+        "test_case": INVOICE,
+        "trace": INVOICE_TRACE,
+        "system_one": {"model": JEV, "cost": JEV_COST, "answers": plan_choices(
+            ("Yes, every planned step is carried out in order",
+             ["Yes, every planned step is carried out in order",
+              "No, a planned step is missing, only implied or out of order", NO_PLAN]),
+            ("Yes, it takes actions outside the plan",
+             ["No, it does only what the plan says", "Yes, it takes actions outside the plan",
+              NO_PLAN]),
+            "Strong adherence", PLAN_ADHERENCE_OPTIONS, 0.55,
+        )},
+    },
+    "plan_adherence_system_one_no_trace": {
+        "description": "PlanAdherence decided by Jev without a trace, about the input, output "
+                       "and tools called",
+        "metrics": [metric("plan_adherence", "system_one")],
+        "test_case": INVOICE,
+        "system_one": {"model": JEV, "cost": JEV_COST, "answers": plan_choices(
+            ("No, a planned step is missing, only implied or out of order",
+             ["Yes, every planned step is carried out in order",
+              "No, a planned step is missing, only implied or out of order", NO_PLAN]),
+            ("No, it does only what the plan says",
+             ["No, it does only what the plan says", "Yes, it takes actions outside the plan",
+              NO_PLAN]),
+            "Partial adherence", PLAN_ADHERENCE_OPTIONS, 0.45,
+        )},
+    },
+    "plan_adherence_hybrid": {
+        "description": "PlanAdherence in hybrid mode: the LLM extracts the task and the plan "
+                       "from the trace, Jev scores the adherence from the task, the plan and "
+                       "the compacted trace",
+        "metrics": [metric("plan_adherence", "hybrid")],
+        "test_case": INVOICE,
+        "trace": INVOICE_TRACE,
+        "system_one": {"model": JEV, "cost": JEV_COST,
+                       "answers": {"scores": {"verdict": score(4, FIVE_LEVELS_HIGH, 0.55)}}},
+        "judge_model": JUDGE,
+        "responses": {"plan_adherence": PLAN_EXTRACT},
+    },
+    "plan_adherence_hybrid_fallback": {
+        "description": "PlanAdherence in hybrid mode with Jev down: the LLM scores the adherence",
+        "metrics": [metric("plan_adherence", "hybrid")],
+        "test_case": INVOICE,
+        "trace": INVOICE_TRACE,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"plan_adherence": {**PLAN_EXTRACT, **PLAN_SCORE}},
+    },
+    "plan_adherence_hybrid_no_trace": {
+        "description": "PlanAdherence in hybrid mode without a trace: Jev is not asked, the LLM "
+                       "scores the adherence",
+        "metrics": [metric("plan_adherence", "hybrid")],
+        "test_case": INVOICE,
+        "system_one": NO_JEV,
+        "judge_model": JUDGE,
+        "responses": {"plan_adherence": {**PLAN_EXTRACT, **PLAN_SCORE}},
     },
     "jev_eval_trace": {
         "description": "JevEval without evaluation_params: its state is the test case's trace "

@@ -1,0 +1,58 @@
+{
+  "description": "PlanQuality decided by Jev without a trace, about the test case: the agent states no plan, so no question applies",
+  "metrics": [
+    {
+      "kind": "plan_quality",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Where is my invoice?",
+    "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "choices": {
+        "q_0": {
+          "choice": "The agent states no plan",
+          "probabilities": {
+            "Yes, the plan is complete": 0.15,
+            "No, the plan misses a requirement or prerequisite": 0.15,
+            "The agent states no plan": 0.7
+          },
+          "confidence": 0.8
+        },
+        "q_1": {
+          "choice": "The agent states no plan",
+          "probabilities": {
+            "Yes, every step is clear, necessary and well ordered": 0.15,
+            "No, some step is vague, redundant, off-task or out of order": 0.15,
+            "The agent states no plan": 0.7
+          },
+          "confidence": 0.8
+        },
+        "q_2": {
+          "choice": "The agent states no plan",
+          "probabilities": {
+            "Inadequate plan": 0.06,
+            "Weak plan": 0.06,
+            "Adequate but flawed plan": 0.06,
+            "Good plan": 0.06,
+            "Excellent plan": 0.06,
+            "The agent states no plan": 0.7
+          },
+          "confidence": 0.8
+        }
+      }
+    }
+  }
+}

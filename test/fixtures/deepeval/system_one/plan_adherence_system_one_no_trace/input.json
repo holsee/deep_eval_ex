@@ -1,0 +1,58 @@
+{
+  "description": "PlanAdherence decided by Jev without a trace, about the input, output and tools called",
+  "metrics": [
+    {
+      "kind": "plan_adherence",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Where is my invoice?",
+    "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "choices": {
+        "q_0": {
+          "choice": "No, a planned step is missing, only implied or out of order",
+          "probabilities": {
+            "Yes, every planned step is carried out in order": 0.15,
+            "No, a planned step is missing, only implied or out of order": 0.7,
+            "The agent states no plan": 0.15
+          },
+          "confidence": 0.45
+        },
+        "q_1": {
+          "choice": "No, it does only what the plan says",
+          "probabilities": {
+            "No, it does only what the plan says": 0.7,
+            "Yes, it takes actions outside the plan": 0.15,
+            "The agent states no plan": 0.15
+          },
+          "confidence": 0.45
+        },
+        "q_2": {
+          "choice": "Partial adherence",
+          "probabilities": {
+            "No adherence": 0.06,
+            "Weak adherence": 0.06,
+            "Partial adherence": 0.7,
+            "Strong adherence": 0.06,
+            "Perfect adherence": 0.06,
+            "The agent states no plan": 0.06
+          },
+          "confidence": 0.45
+        }
+      }
+    }
+  }
+}

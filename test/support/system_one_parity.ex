@@ -39,6 +39,8 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     JsonCorrectness,
     KnowledgeRetention,
     PIILeakage,
+    PlanAdherence,
+    PlanQuality,
     PromptAlignment,
     RoleAdherence,
     StepEfficiency,
@@ -88,7 +90,9 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     "goal_accuracy" => GoalAccuracy,
     "tool_use" => ToolUse,
     "task_completion" => TaskCompletion,
-    "step_efficiency" => StepEfficiency
+    "step_efficiency" => StepEfficiency,
+    "plan_quality" => PlanQuality,
+    "plan_adherence" => PlanAdherence
   }
 
   @eval_modes %{"llm" => :llm, "hybrid" => :hybrid, "system_one" => :system_one}

@@ -73,6 +73,10 @@ defmodule DeepEvalEx do
     accomplished its task, judged from its trace
   - `DeepEvalEx.Metrics.StepEfficiency` - Whether a traced agent took only
     the steps its task needed, judged from its trace
+  - `DeepEvalEx.Metrics.PlanQuality` - Whether the plan a traced agent
+    stated is good enough for its task, judged from its trace
+  - `DeepEvalEx.Metrics.PlanAdherence` - Whether a traced agent followed
+    the plan it stated, judged from its trace
   - `DeepEvalEx.Metrics.JevEval` - Your own weighted questions, decided by
     a System One model (Jev)
 

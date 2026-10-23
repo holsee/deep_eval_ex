@@ -38,6 +38,8 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     KnowledgeRetention,
     PatternMatch,
     PIILeakage,
+    PlanAdherence,
+    PlanQuality,
     PromptAlignment,
     RoleAdherence,
     StepEfficiency,
@@ -91,7 +93,9 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "goal_accuracy" => GoalAccuracy,
     "tool_use" => ToolUse,
     "task_completion" => TaskCompletion,
-    "step_efficiency" => StepEfficiency
+    "step_efficiency" => StepEfficiency,
+    "plan_quality" => PlanQuality,
+    "plan_adherence" => PlanAdherence
   }
 
   # Pairs of steps that need not keep deepeval's relative order, as neither

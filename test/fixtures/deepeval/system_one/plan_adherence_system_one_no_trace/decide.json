@@ -1,0 +1,170 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "Where is my invoice?",
+            "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "choice",
+            "instructions": "Does `actual_output` (with the tools in `tools_called`) carry out every step of the plan the agent states in `actual_output`, explicitly and in the stated order?",
+            "criteria": {
+              "Yes, every planned step is carried out in order": null,
+              "No, a planned step is missing, only implied or out of order": null,
+              "The agent states no plan": null
+            }
+          },
+          "q_1": {
+            "type": "choice",
+            "instructions": "Does `actual_output` (with the tools in `tools_called`) take any major action, tool call or reasoning step that is not part of the plan the agent states in `actual_output`?",
+            "criteria": {
+              "No, it does only what the plan says": null,
+              "Yes, it takes actions outside the plan": null,
+              "The agent states no plan": null
+            }
+          },
+          "q_2": {
+            "type": "choice",
+            "instructions": "How strictly do the actions of `actual_output` (with the tools in `tools_called`) follow the plan the agent states in `actual_output`?",
+            "criteria": {
+              "No adherence": null,
+              "Weak adherence": null,
+              "Partial adherence": null,
+              "Strong adherence": null,
+              "Perfect adherence": null,
+              "The agent states no plan": null
+            }
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {
+            "q_0": {
+              "choice": "No, a planned step is missing, only implied or out of order",
+              "probabilities": {
+                "Yes, every planned step is carried out in order": 0.15,
+                "No, a planned step is missing, only implied or out of order": 0.7,
+                "The agent states no plan": 0.15
+              },
+              "confidence": 0.45
+            },
+            "q_1": {
+              "choice": "No, it does only what the plan says",
+              "probabilities": {
+                "No, it does only what the plan says": 0.7,
+                "Yes, it takes actions outside the plan": 0.15,
+                "The agent states no plan": 0.15
+              },
+              "confidence": 0.45
+            },
+            "q_2": {
+              "choice": "Partial adherence",
+              "probabilities": {
+                "No adherence": 0.06,
+                "Weak adherence": 0.06,
+                "Partial adherence": 0.7,
+                "Strong adherence": 0.06,
+                "Perfect adherence": 0.06,
+                "The agent states no plan": 0.06
+              },
+              "confidence": 0.45
+            }
+          },
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "input": "Where is my invoice?",
+          "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "choice",
+          "instructions": "Does `actual_output` (with the tools in `tools_called`) carry out every step of the plan the agent states in `actual_output`, explicitly and in the stated order?",
+          "criteria": {
+            "Yes, every planned step is carried out in order": null,
+            "No, a planned step is missing, only implied or out of order": null,
+            "The agent states no plan": null
+          }
+        },
+        "q_1": {
+          "type": "choice",
+          "instructions": "Does `actual_output` (with the tools in `tools_called`) take any major action, tool call or reasoning step that is not part of the plan the agent states in `actual_output`?",
+          "criteria": {
+            "No, it does only what the plan says": null,
+            "Yes, it takes actions outside the plan": null,
+            "The agent states no plan": null
+          }
+        },
+        "q_2": {
+          "type": "choice",
+          "instructions": "How strictly do the actions of `actual_output` (with the tools in `tools_called`) follow the plan the agent states in `actual_output`?",
+          "criteria": {
+            "No adherence": null,
+            "Weak adherence": null,
+            "Partial adherence": null,
+            "Strong adherence": null,
+            "Perfect adherence": null,
+            "The agent states no plan": null
+          }
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {
+          "q_0": {
+            "choice": "No, a planned step is missing, only implied or out of order",
+            "probabilities": {
+              "Yes, every planned step is carried out in order": 0.15,
+              "No, a planned step is missing, only implied or out of order": 0.7,
+              "The agent states no plan": 0.15
+            },
+            "confidence": 0.45
+          },
+          "q_1": {
+            "choice": "No, it does only what the plan says",
+            "probabilities": {
+              "No, it does only what the plan says": 0.7,
+              "Yes, it takes actions outside the plan": 0.15,
+              "The agent states no plan": 0.15
+            },
+            "confidence": 0.45
+          },
+          "q_2": {
+            "choice": "Partial adherence",
+            "probabilities": {
+              "No adherence": 0.06,
+              "Weak adherence": 0.06,
+              "Partial adherence": 0.7,
+              "Strong adherence": 0.06,
+              "Perfect adherence": 0.06,
+              "The agent states no plan": 0.06
+            },
+            "confidence": 0.45
+          }
+        },
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

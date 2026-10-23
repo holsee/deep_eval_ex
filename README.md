@@ -94,6 +94,8 @@ config :deep_eval_ex,
 | **ToolPermission** | Agent tool calls against an allowlist and denylist |
 | **TaskCompletion** | Whether a traced agent accomplished the task it was given, judged from its trace |
 | **StepEfficiency** | Whether a traced agent took only the steps its task needed, judged from its trace |
+| **PlanQuality** | Whether the plan a traced agent stated is complete, ordered and specific enough for its task |
+| **PlanAdherence** | Whether a traced agent followed the plan it stated, step by step and nothing more |
 | **JevEval** | Your own weighted Noul, Score and Choice questions, decided by a System One model (Jev) |
 | **ConversationalJevEval** | JevEval for multi-turn conversations: your own questions about the turns, decided by a System One model (Jev) |
 

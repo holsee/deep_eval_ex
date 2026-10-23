@@ -1,0 +1,64 @@
+[
+  {
+    "score": 0.6234355444305382,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.60.\n1. Would the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan), if carried out as written, fully accomplish the task the user gave in the root span's input of `trace`, covering every requirement and prerequisite? -> \"Yes, the plan is complete\" (P=0.70, confidence=0.60, weight=2)\n2. Is every step of the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan) specific enough to execute, necessary for the task the user gave in the root span's input of `trace`, and in a logical order, with no vague, redundant or off-task step? -> \"No, some step is vague, redundant, off-task or out of order\" (P=0.70, confidence=0.60)\n3. How good is the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan) for accomplishing the task the user gave in the root span's input of `trace`? -> \"Good plan\" (P=0.70, confidence=0.60)\nScore: 0.62 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [choice, weight=2] Would the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan), if carried out as written, fully accomplish the task the user gave in the root span's input of `trace`, covering every requirement and prerequisite?\n   value=0.824 applicable=True probabilities={'Yes, the plan is complete': 0.7, 'No, the plan misses a requirement or prerequisite': 0.15, 'The agent states no plan': 0.15} confidence=0.600\n2. [choice, weight=1] Is every step of the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan) specific enough to execute, necessary for the task the user gave in the root span's input of `trace`, and in a logical order, with no vague, redundant or off-task step?\n   value=0.176 applicable=True probabilities={'Yes, every step is clear, necessary and well ordered': 0.15, 'No, some step is vague, redundant, off-task or out of order': 0.7, 'The agent states no plan': 0.15} confidence=0.600\n3. [choice, weight=1] How good is the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan) for accomplishing the task the user gave in the root span's input of `trace`?\n   value=0.670 applicable=True probabilities={'Inadequate plan': 0.06, 'Weak plan': 0.06, 'Adequate but flawed plan': 0.06, 'Good plan': 0.7, 'Excellent plan': 0.06, 'The agent states no plan': 0.06} confidence=0.600",
+    "confidence": 0.6,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Would the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan), if carried out as written, fully accomplish the task the user gave in the root span's input of `trace`, covering every requirement and prerequisite?",
+        "type": "choice",
+        "weight": 2.0,
+        "value": 0.8235294117647058,
+        "applicable": true,
+        "probabilities": {
+          "Yes, the plan is complete": 0.7,
+          "No, the plan misses a requirement or prerequisite": 0.15,
+          "The agent states no plan": 0.15
+        },
+        "confidence": 0.6,
+        "passed": null
+      },
+      {
+        "question": "Is every step of the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan) specific enough to execute, necessary for the task the user gave in the root span's input of `trace`, and in a logical order, with no vague, redundant or off-task step?",
+        "type": "choice",
+        "weight": 1.0,
+        "value": 0.17647058823529413,
+        "applicable": true,
+        "probabilities": {
+          "Yes, every step is clear, necessary and well ordered": 0.15,
+          "No, some step is vague, redundant, off-task or out of order": 0.7,
+          "The agent states no plan": 0.15
+        },
+        "confidence": 0.6,
+        "passed": null
+      },
+      {
+        "question": "How good is the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan) for accomplishing the task the user gave in the root span's input of `trace`?",
+        "type": "choice",
+        "weight": 1.0,
+        "value": 0.6702127659574467,
+        "applicable": true,
+        "probabilities": {
+          "Inadequate plan": 0.06,
+          "Weak plan": 0.06,
+          "Adequate but flawed plan": 0.06,
+          "Good plan": 0.7,
+          "Excellent plan": 0.06,
+          "The agent states no plan": 0.06
+        },
+        "confidence": 0.6,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

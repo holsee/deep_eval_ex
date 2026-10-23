@@ -159,6 +159,8 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/ToolPermission.md",
         "wiki/metrics/TaskCompletion.md",
         "wiki/metrics/StepEfficiency.md",
+        "wiki/metrics/PlanQuality.md",
+        "wiki/metrics/PlanAdherence.md",
         # API
         "wiki/api/TestCase.md",
         "wiki/api/Result.md",

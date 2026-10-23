@@ -8,7 +8,7 @@ Fixtures written by **deepeval 4.3.1**, in twelve sets:
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
-  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's thirty-one
+  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's thirty-three
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
 - [prompt goldens](#prompt-goldens) (`prompts/`), used by
@@ -188,8 +188,8 @@ calling an LLM. A script holds:
   `pattern_match`, `tool_permission`, `conversational_g_eval`, `turn_relevancy`,
   `conversation_completeness`, `knowledge_retention`, `role_adherence`,
   `turn_faithfulness`, `turn_contextual_precision`, `turn_contextual_recall`,
-  `turn_contextual_relevancy`, `goal_accuracy`, `tool_use`, `task_completion`
-  or `step_efficiency`) and the metric's
+  `turn_contextual_relevancy`, `goal_accuracy`, `tool_use`, `task_completion`,
+  `step_efficiency`, `plan_quality` or `plan_adherence`) and the metric's
   constructor
   `params`. JsonCorrectness's `expected_schema` is a pydantic model's
   `model_json_schema()`: the generator rebuilds the model from it
@@ -260,6 +260,8 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | ToolUse | `tool_use_pass` (one unit calls a tool, one does not, so one argument score), `tool_use_fail` (two user and two assistant turns in one unit, their calls joined with commas; a call with empty `input_parameters`, left out of its `ToolCall.__repr__`), `tool_use_strict` (the integer `0`), `tool_use_no_tools` (no call: no argument score, so the score is `0.0`). Both reasons use `get_tool_selection_final_reason`, as deepeval does. deepeval's `measure()` never sets ToolUse's success, so `measure.json` has `success: null` while the test run, from `is_successful()`, has the boolean |
 | TaskCompletion | `task_completion_pass` (no trace: the task and outcome extracted from the input, the tools called as `print_tools_called` prints them and the output), `task_completion_task` (its own `task` replaces the extracted one in the verdict prompt; strict, the integer `0`), `task_completion_trace` (the task and outcome extracted from the trace, printed by `serialize_to_json(indent=2)` with non-ASCII escaped; a verdict without a reason, `null`). The verbose logs hold the task and outcome only |
 | StepEfficiency | `step_efficiency_pass` (the task, then the score, from the trace), `step_efficiency_strict` (the integer `0`), `step_efficiency_no_trace` (no trace: both prompts print `null`; an integer score read as `1.0`) |
+| PlanQuality | `plan_quality_pass` (the task with StepEfficiency's prompt, the plan with PlanAdherence's, then the plan scored, its steps one per line), `plan_quality_strict` (the integer `0`), `plan_quality_no_plan` (an empty plan: no score asked, the integer `1` and `a_measure`'s reason) |
+| PlanAdherence | `plan_adherence_pass` (the task, the plan, then the adherence scored against the trace), `plan_adherence_no_plan` (strict, an empty plan: the integer `1` all the same), `plan_adherence_no_trace` (no trace: every prompt prints `null`; an integer score read as `1.0`) |
 | TurnContextualRelevancy | `turn_contextual_relevancy_pass` (one request per node), `turn_contextual_relevancy_fail` (`window_size` 1; an irrelevant statement without a reason, `: None` in the reason prompt; a raw-text verdict out of vocabulary dropped), `turn_contextual_relevancy_strict`, `turn_contextual_relevancy_no_windows`. deepeval 4.3.1 raises on a `RetrievedContextData` node, so no scenario has one |
 | Faithfulness | `faithfulness_pass`, `faithfulness_fail`, `faithfulness_borderline`, `faithfulness_penalize_ambiguous` (`penalize_ambiguous_claims`: the borderline verdict fails and is an `(Ambiguous)` contradiction), `faithfulness_no_claims` (empty list), `faithfulness_strict` |
 | Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_no_verdicts` (empty list), `hallucination_strict`, `hallucination_messy_json` (raw-text answers: prose, a code fence and trailing commas around the verdicts, a reason missing its closing brace), `hallucination_invalid_json` (a raw-text answer with no JSON: the metric errors) |
@@ -308,7 +310,7 @@ scenarios, why it fails and its tag.
 ## Prompt goldens
 
 `prompts/<case>/` holds one prompt deepeval 4.3.1 renders for one of the
-twenty-eight LLM-judged metrics, for fixed inputs:
+thirty LLM-judged metrics, for fixed inputs:
 
 - `input.json` - `template`, deepeval's template class key and method (e.g.
   `FaithfulnessMetric.generate_truths`, from
@@ -456,6 +458,10 @@ bundle `deepeval/templates/metrics/templates.json`.
 | `Prompts.TaskCompletion.system_one_score/0`, `system_one_questions/1` | `TaskCompletionMetric._experimental_system_one_score`, `_questions` | `has_trace`, `has_task` (the questions; `tojson` escapes `'` as `\u0027`) | `task_completion_experimental_system_one_score`, `_questions`, `_questions_task`, `_questions_trace`, `_questions_trace_task` |
 | `Prompts.StepEfficiency.extract_task_from_trace/1`, `get_execution_efficiency/1` | `StepEfficiencyMetric.extract_task_from_trace`, `get_execution_efficiency` (`step_efficiency/templates/`) | `trace_json` or `trace_json_str` (`serialize_to_json(trace, indent=2)`, `null` without a trace), `task`; the multimodal input rules are always included, whatever `multimodal` says | `step_efficiency_extract_task_from_trace`, `_no_trace`, `step_efficiency_get_execution_efficiency`, `_multimodal` |
 | `Prompts.StepEfficiency.system_one_score/0`, `system_one_questions/1` | `StepEfficiencyMetric._experimental_system_one_score`, `_questions` | `has_trace` (the questions) | `step_efficiency_experimental_system_one_score`, `_questions`, `_questions_trace` |
+| `Prompts.PlanQuality.evaluate_plan_quality/1` | `PlanQualityMetric.evaluate_plan_quality` (`plan_quality/templates/`) | `user_task`, `agent_plan` (the steps joined with newlines); the multimodal input rules are always included | `plan_quality_evaluate_plan_quality` |
+| `Prompts.PlanQuality.system_one_score/0`, `system_one_questions/1` | `PlanQualityMetric._experimental_system_one_score`, `_questions` | `has_trace` (the questions: three Choices with a `null` "no plan" option) | `plan_quality_experimental_system_one_score`, `_questions`, `_questions_trace` |
+| `Prompts.PlanAdherence.extract_plan_from_trace/1`, `evaluate_adherence/1` | `PlanAdherenceMetric.extract_plan_from_trace`, `evaluate_adherence` (`plan_adherence/templates/`; PlanQuality borrows the first) | `trace_json_str` or `execution_trace_json` (`serialize_to_json(trace, indent=2)`, `null` without a trace), `user_task`, `agent_plan`; the multimodal input rules are always included | `plan_adherence_extract_plan_from_trace`, `_no_trace`, `plan_adherence_evaluate_adherence` |
+| `Prompts.PlanAdherence.system_one_score/0`, `system_one_questions/1` | `PlanAdherenceMetric._experimental_system_one_score`, `_questions` | `has_trace` (the questions) | `plan_adherence_experimental_system_one_score`, `_questions`, `_questions_trace` |
 | `Prompts.ToolCorrectness.system_one_tool_selection_score/0` | `ToolCorrectnessMetric._experimental_system_one_tool_selection_score` (`tool_correctness/templates/_experimental_system_one_tool_selection_score.txt`) | none | `tool_correctness_experimental_system_one_tool_selection_score` |
 
 Templates of these metrics without a DeepEvalEx counterpart, so without a
@@ -676,6 +682,12 @@ Each `system_one/<scenario>/` holds:
 | `task_completion_hybrid`, `step_efficiency_hybrid` | `hybrid` with one `SystemOneScoreSpec` each: TaskCompletion's verdict about the extracted `task` and `outcome`, StepEfficiency's score about the extracted `task` and the compacted `trace`. The LLM extracts (`prompts.json`); the reason is `format_decision_reason`'s |
 | `task_completion_hybrid_fallback`, `step_efficiency_hybrid_fallback` | The same with Jev down: the LLM judges, its reason kept, the error in `system_one_fallback_reason` |
 | `step_efficiency_hybrid_no_trace` | StepEfficiency in `hybrid` without a trace: no Score spec, so no `decide()` call and the LLM scores |
+| `plan_quality_system_one`, `plan_adherence_system_one` | The plan metrics' whole-metric request (three Choices, each with a not-applicable "The agent states no plan") about `compact_trace` of the test case's `_trace_dict` |
+| `plan_quality_system_one_no_plan` | PlanQuality without a trace, every answer "The agent states no plan": no question applies and the score is `1.0` |
+| `plan_adherence_system_one_no_trace` | PlanAdherence without a trace: the request asks about `input`, `actual_output` and `tools_called` |
+| `plan_quality_hybrid`, `plan_adherence_hybrid` | `hybrid` with one `SystemOneScoreSpec` each, after the LLM extracts the task and plan (`prompts.json`): PlanQuality's about the `task` and `plan`, PlanAdherence's about the `task`, `plan` and compacted `trace` |
+| `plan_quality_hybrid_fallback`, `plan_adherence_hybrid_fallback` | The same with Jev down: the LLM scores, its reason kept, the error in `system_one_fallback_reason` |
+| `plan_adherence_hybrid_no_trace` | PlanAdherence in `hybrid` without a trace: no Score spec, so no `decide()` call and the LLM scores |
 | `batch_system_one_retention_role` | KnowledgeRetention and RoleAdherence batched into one request by `evaluate()`, the state holding the turns and the `chatbot_role` |
 | `batch_system_one_down` | Two batched metrics with Jev down: no fallback, `measure()` raises and `evaluate()` records the error on each metric |
 | `refusal_classifier_system_one` | `RefusalClassifier` on Jev: one Choice over its labels, deterministic reason |
@@ -1039,7 +1051,8 @@ current span (`drop_current_span`) or raise (`raise`). A string value
 formatted with them (`str.format`); the generator's comment above
 `TRACED_SCENARIOS` has the details. Metric specs are the export
 scenarios' (`stub`, `exact_match`), `agent_loop_detection` and the
-ScriptedJudge-backed `task_completion` and `step_efficiency`.
+ScriptedJudge-backed `task_completion`, `step_efficiency`, `plan_quality`
+and `plan_adherence`.
 
 Each scenario directory also holds:
 
@@ -1074,6 +1087,7 @@ Each scenario directory also holds:
 | `two_top_level` | Two top-level spans per golden: sync keeps `root_spans[0].children[0]`, async makes a test case of each trace |
 | `requires_trace` | AgentLoopDetection on the trace, a span and a `{}`-input span (the `input="None"` placeholder in async), and TaskCompletion judged from the nested dict |
 | `trace_metrics` | TaskCompletion on the trace and StepEfficiency on the agent span, each judged by its own ScriptedJudge from the nested dict of its trace or span (`prompts_<mode>.json` lists one judge's prompts, then the other's) |
+| `plan_quality`, `plan_adherence` | A planning agent whose LLM span states a plan before it searches and answers: PlanQuality on the trace, PlanAdherence on the agent span, each judged by a ScriptedJudge (task, plan, then score) from the nested dict |
 | `llm_prompt_fields` | LlmSpan prompt fields from `observe(prompt=...)`, `update_llm_span(prompt=...)` and `next_llm_span(prompt=...)`; `tokenIntervals` |
 | `provider_normalisation` | Providers normalised to deepeval's `Provider` values outside evaluation, exported raw by the walkers |
 

@@ -71,6 +71,10 @@ defmodule DeepEvalEx.Metrics.SystemOneParityTest do
     task_completion_hybrid_fallback
     step_efficiency_system_one step_efficiency_hybrid step_efficiency_hybrid_fallback
     step_efficiency_hybrid_no_trace
+    plan_quality_system_one plan_quality_system_one_no_plan plan_quality_hybrid
+    plan_quality_hybrid_fallback
+    plan_adherence_system_one plan_adherence_system_one_no_trace plan_adherence_hybrid
+    plan_adherence_hybrid_fallback plan_adherence_hybrid_no_trace
   )
 
   @batched_scenarios ~w(

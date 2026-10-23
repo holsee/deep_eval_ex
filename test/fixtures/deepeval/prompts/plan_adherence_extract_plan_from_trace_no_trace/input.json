@@ -1,0 +1,6 @@
+{
+  "template": "PlanAdherenceMetric.extract_plan_from_trace",
+  "inputs": {
+    "trace": null
+  }
+}

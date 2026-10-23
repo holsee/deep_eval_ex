@@ -46,7 +46,9 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   # The metrics the generator judges with a ScriptedJudge.
   @judged %{
     "task_completion" => DeepEvalEx.Metrics.TaskCompletion,
-    "step_efficiency" => DeepEvalEx.Metrics.StepEfficiency
+    "step_efficiency" => DeepEvalEx.Metrics.StepEfficiency,
+    "plan_quality" => DeepEvalEx.Metrics.PlanQuality,
+    "plan_adherence" => DeepEvalEx.Metrics.PlanAdherence
   }
 
   @supported_steps ["call", "raise", "with", "drop_current_span" | Map.keys(@updates)]
@@ -238,8 +240,9 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   @doc """
   The metric spec of a script metric, as the generator's `build_metric`:
   a `stub` is a `DeepEvalEx.Test.ParityMetrics.Stub`, an `exact_match`
-  `DeepEvalEx.Metrics.ExactMatch`, and a `task_completion` or
-  `step_efficiency` the metric with its params, judged by
+  `DeepEvalEx.Metrics.ExactMatch`, and a `task_completion`,
+  `step_efficiency`, `plan_quality` or `plan_adherence` the metric with its
+  params, judged by
   `DeepEvalEx.LLM.Adapters.Mock` as `script_judges/1` scripts it. `nil`
   for a metric DeepEvalEx does not have yet.
   """

@@ -1,0 +1,150 @@
+{
+  "description": "PlanAdherence on the agent span, judged by a ScriptedJudge from the nested dict of the span that states a plan and then carries it out",
+  "goldens": [
+    {
+      "input": "How do I reset my password?",
+      "expected_output": "Use the 'Forgot password' link.",
+      "name": "password-reset"
+    }
+  ],
+  "metrics": [],
+  "modes": [
+    "sync",
+    "async"
+  ],
+  "functions": {
+    "agent": {
+      "type": "agent",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "observe": {
+        "available_tools": [
+          "search"
+        ]
+      },
+      "metrics": [
+        {
+          "kind": "plan_adherence",
+          "judge_model": "mock-model",
+          "params": {
+            "threshold": 0.5
+          },
+          "responses": {
+            "task": [
+              {
+                "task": "Tell the user how to reset their password"
+              }
+            ],
+            "plan": [
+              {
+                "plan": [
+                  "Search the help centre for password resets",
+                  "Answer with the steps found"
+                ]
+              }
+            ],
+            "reason,score": [
+              {
+                "score": 0.5,
+                "reason": "Step 1 was carried out twice; step 2 matches the answer."
+              }
+            ]
+          }
+        }
+      ],
+      "body": [
+        {
+          "call": "plan",
+          "args": [
+            "$query"
+          ]
+        },
+        {
+          "call": "search",
+          "args": [
+            "$query"
+          ]
+        },
+        {
+          "call": "search",
+          "args": [
+            "$query"
+          ]
+        },
+        {
+          "call": "generate",
+          "args": [
+            "$query",
+            []
+          ],
+          "as": "answer"
+        },
+        {
+          "update_current_trace": {
+            "output": "$answer"
+          }
+        }
+      ],
+      "returns": "$answer"
+    },
+    "plan": {
+      "type": "llm",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "observe": {
+        "model": "gpt-4o-mini"
+      },
+      "returns": "My plan: 1. Search the help centre for password resets. 2. Answer with the steps found."
+    },
+    "search": {
+      "type": "tool",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "returns": [
+        "result for {query}"
+      ]
+    },
+    "generate": {
+      "type": "llm",
+      "params": [
+        [
+          "query"
+        ],
+        [
+          "documents"
+        ]
+      ],
+      "observe": {
+        "model": "gpt-4o-mini",
+        "cost_per_input_token": 1.5e-07
+      },
+      "body": [
+        {
+          "update_llm_span": {
+            "input_token_count": 42,
+            "output_token_count": 7,
+            "cost_per_output_token": 6e-07
+          }
+        }
+      ],
+      "returns": "Answer to {query}"
+    }
+  },
+  "app": [
+    {
+      "call": "agent",
+      "args": [
+        "{input}"
+      ]
+    }
+  ]
+}

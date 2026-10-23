@@ -56,6 +56,10 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     jev_eval jev_eval_strict_not_applicable jev_eval_trace
     json_correctness_hybrid json_correctness_system_one
     pii_leakage_hybrid pii_leakage_hybrid_fallback pii_leakage_system_one
+    plan_adherence_hybrid plan_adherence_hybrid_fallback plan_adherence_hybrid_no_trace
+    plan_adherence_system_one plan_adherence_system_one_no_trace
+    plan_quality_hybrid plan_quality_hybrid_fallback plan_quality_system_one
+    plan_quality_system_one_no_plan
     prompt_alignment_hybrid prompt_alignment_hybrid_fallback prompt_alignment_system_one
     refusal_classifier_system_one
     role_adherence_hybrid role_adherence_hybrid_fallback role_adherence_system_one
@@ -88,8 +92,8 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
   defp asks?(spec), do: spec["kind"] not in @asks_nothing
 
   # Scenarios whose test case gives the metric nothing to ask: StepEfficiency
-  # has no hybrid Score without a trace.
-  @asks_nothing_of_test_case ~w(step_efficiency_hybrid_no_trace)
+  # and PlanAdherence have no hybrid Score without a trace.
+  @asks_nothing_of_test_case ~w(step_efficiency_hybrid_no_trace plan_adherence_hybrid_no_trace)
 
   defp asks?(scenario, spec), do: scenario not in @asks_nothing_of_test_case and asks?(spec)
 
@@ -112,7 +116,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
              argument_correctness tool_correctness turn_relevancy conversation_completeness
              knowledge_retention role_adherence turn_faithfulness turn_contextual_precision
              turn_contextual_recall turn_contextual_relevancy goal_accuracy tool_use
-             task_completion step_efficiency),
+             task_completion step_efficiency plan_quality plan_adherence),
         suffix <- ~w(system_one hybrid hybrid_fallback) do
       assert "#{kind}_#{suffix}" in @scenarios
     end

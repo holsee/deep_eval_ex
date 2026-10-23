@@ -2391,6 +2391,33 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     and judge prompts match deepeval's byte for byte in both modes.
     `generate_fixtures.py traced <scenario> ...` now regenerates only the
     named traced scenarios.
+- **`DeepEvalEx.Metrics.PlanQuality` and `DeepEvalEx.Metrics.PlanAdherence`**,
+  ports of deepeval 4.3.1's `PlanQualityMetric` and `PlanAdherenceMetric`,
+  trace metrics (`requires_trace?/0` is `true`) that judge the plan an
+  agent stated in its trace.
+  - Both extract the user's task (StepEfficiency's prompt) and the plan's
+    steps (`DeepEvalEx.Prompts.PlanAdherence.extract_plan_from_trace/1`)
+    from the nested trace dict, `null` without one. PlanQuality then scores
+    the plan itself (complete, ordered, minimal, specific), PlanAdherence
+    how strictly the trace followed it. When the trace holds no plan,
+    nothing is scored: the score is the integer `1`, with deepeval's
+    reason (`a_measure`'s wording, as deepeval runs it by default). The
+    metadata holds the `:task` and the `:plan`.
+  - Both follow `:eval_mode`. `:hybrid` asks System One one five-level
+    Score (PlanQuality: the `task` and `plan`; PlanAdherence: the `task`,
+    `plan` and compacted `trace`, only when there is one), falling back to
+    the LLM. `:system_one` asks three Choices in one request about the
+    compacted trace (or, without one, `input`, `actual_output` and
+    `tools_called`), each with the not-applicable option "The agent states
+    no plan", so a run without a plan scores `1` there too.
+  - Their prompts are `DeepEvalEx.Prompts.PlanQuality` and
+    `DeepEvalEx.Prompts.PlanAdherence`. As deepeval renders the LLM
+    prompts with an explicit `template_class`, `:evaluation_template`
+    overrides only their System One templates.
+  - Parity: 10 prompt goldens, 6 scripted scenarios, 9 System One
+    scenarios and the `plan_quality` (on the trace) and `plan_adherence`
+    (on the agent span) traced scenarios, whose `evaluate_traced/3` test
+    runs and judge prompts match deepeval's byte for byte in both modes.
 
 ### Changed
 

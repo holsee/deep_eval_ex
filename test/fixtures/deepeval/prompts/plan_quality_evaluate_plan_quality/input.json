@@ -1,0 +1,11 @@
+{
+  "template": "PlanQualityMetric.evaluate_plan_quality",
+  "inputs": {
+    "task": "Book a table for two at Café Odéon on Saturday.",
+    "plan": [
+      "Search for Café Odéon",
+      "Book a table for two on Saturday",
+      "Confirm the booking"
+    ]
+  }
+}

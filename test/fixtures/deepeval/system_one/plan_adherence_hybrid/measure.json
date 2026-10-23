@@ -1,0 +1,18 @@
+[
+  {
+    "score": 1.0,
+    "success": true,
+    "reason": "Decided by fake-jev: plan adherence 1.00, confidence 0.55.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Task: Find my latest invoice. \n \n \nAgent Plan: \n[\n    \"Look up the latest invoice\",\n    \"Tell the user where to find it\"\n] \n \n \nFinal Score: 1.0 \n",
+    "confidence": 0.55,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

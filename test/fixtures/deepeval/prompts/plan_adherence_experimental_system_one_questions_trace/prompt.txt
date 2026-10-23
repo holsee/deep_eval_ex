@@ -1,0 +1,20 @@
+
+
+[
+  {
+    "type": "choice",
+    "question": "Does the agent run in `trace` carry out every step of the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan), explicitly and in the stated order?",
+    "options": {"Yes, every planned step is carried out in order": 1.0, "No, a planned step is missing, only implied or out of order": 0.0, "The agent states no plan": null},
+    "weight": 2
+  },
+  {
+    "type": "choice",
+    "question": "Does the agent run in `trace` take any major action, tool call or reasoning step that is not part of the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan)?",
+    "options": {"No, it does only what the plan says": 1.0, "Yes, it takes actions outside the plan": 0.0, "The agent states no plan": null}
+  },
+  {
+    "type": "choice",
+    "question": "How strictly do the actions of the agent run in `trace` follow the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan)?",
+    "options": {"No adherence": 0.0, "Weak adherence": 0.25, "Partial adherence": 0.5, "Strong adherence": 0.75, "Perfect adherence": 1.0, "The agent states no plan": null}
+  }
+]

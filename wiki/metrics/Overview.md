@@ -84,6 +84,8 @@ Evaluate tool-using agents:
 | [ToolPermission](ToolPermission.md) | Tool calls within an allowlist and denylist (no LLM) | `tools_called` (and `allowed_tools` or `denied_tools`) |
 | [TaskCompletion](TaskCompletion.md) | Whether the agent accomplished its task, judged from its trace | `input`, `actual_output` (and the trace) |
 | [StepEfficiency](StepEfficiency.md) | Whether the agent took only the steps its task needed, judged from its trace | `input`, `actual_output` (and the trace) |
+| [PlanQuality](PlanQuality.md) | Whether the plan the agent stated is good enough for its task, judged from its trace | `input`, `actual_output` (and the trace) |
+| [PlanAdherence](PlanAdherence.md) | Whether the agent followed the plan it stated, judged from its trace | `input`, `actual_output` (and the trace) |
 
 ## Common Parameters
 
@@ -174,6 +176,8 @@ Faithfulness.measure(test_case, evaluation_template: MyFaithfulnessTemplate)
 - **ToolPermission** - Check the agent only called the tools it may
 - **TaskCompletion** - Check a traced agent finished the job it was given
 - **StepEfficiency** - Check a traced agent did not wander, repeat or over-fetch
+- **PlanQuality** - Check a traced agent's plan covers its task before it acts
+- **PlanAdherence** - Check a traced agent did what it said it would, in order
 
 ### For Exact Matching
 - **ExactMatch** - When output must exactly match expected
