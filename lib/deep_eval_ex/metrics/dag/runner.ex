@@ -28,8 +28,12 @@ defmodule DeepEvalEx.Metrics.DAG.Runner do
   alias DeepEvalEx.Schemas.MetricOutputs.DAG, as: Schema
   alias DeepEvalEx.SystemOne.{Answers, Decision, Spec}
 
-  # The DAG's own options, which a child metric does not inherit.
+  # The DAG's own options, which a child metric does not inherit. Nor does
+  # it inherit the run's error config: as in deepeval, a child's error goes
+  # up through the DAG's measure, and the DAG's error config handles it.
   @own_options [
+    :ignore_errors,
+    :skip_on_missing_params,
     :name,
     :dag,
     :threshold,
@@ -155,7 +159,8 @@ defmodule DeepEvalEx.Metrics.DAG.Runner do
   end
 
   # A verdict that hands over to a metric, measured on the test case with
-  # the DAG's run options: its score and reason become the DAG's.
+  # the DAG's run options: its score and reason become the DAG's. Its error
+  # is raised, to be the DAG's.
   defp hand_over(%VerdictNode{child: child} = node, state, depth) do
     metric = child_metric(child)
 

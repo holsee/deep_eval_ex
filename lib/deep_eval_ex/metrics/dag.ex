@@ -73,7 +73,10 @@ defmodule DeepEvalEx.Metrics.DAG do
 
   A verdict handing over to a metric measures it on the test case, with the
   run's options but not the DAG's own (name, threshold, strict mode...),
-  and out of verbose mode; its usage adds to the DAG's. A
+  and out of verbose mode; its usage adds to the DAG's. Its error is the
+  DAG's: as in deepeval, the run's `:ignore_errors` and
+  `:skip_on_missing_params` handle it as the DAG's (a child missing test
+  case params skips the DAG), not as the child's. A
   `DeepEvalEx.Metrics.GEval` is rebuilt from its name, evaluation params and
   criteria (or evaluation steps) and judged by the DAG's LLM, as deepeval
   does, so its other settings (threshold, rubric, strict mode, model) are
@@ -116,6 +119,10 @@ defmodule DeepEvalEx.Metrics.DAG do
     the judge's key order.
   - Missing evaluation params are listed in the order first met, where
     deepeval follows a Python set's order.
+  - A metric child that sets no `:model` of its own is judged by the DAG's
+    (or the run's) model, as it is measured with the run's options;
+    deepeval measures a copy of the child, with the model it was built
+    with (deepeval's default model, unless given one).
   - Uploading to and pulling from Confident AI (`upload()`, `pull()`) are
     not ported.
   """

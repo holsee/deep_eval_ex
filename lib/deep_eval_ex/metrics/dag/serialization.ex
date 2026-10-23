@@ -38,11 +38,14 @@ defmodule DeepEvalEx.Metrics.DAG.Serialization do
   @unsuffixed ~w(GEval ConversationalGEval JevEval ConversationalJevEval)
 
   # Options never written as a metric child's kwargs: they are not
-  # deepeval constructor arguments it could read back, or are secrets.
+  # deepeval constructor arguments it could read back, or carry secrets.
+  # Any other option is written when it is JSON, as deepeval writes every
+  # JSON-able kwarg.
   @private_options [
     :model,
     :adapter,
     :api_key,
+    :req_options,
     :system_one_model,
     :system_one,
     :evaluation_template
@@ -154,7 +157,6 @@ defmodule DeepEvalEx.Metrics.DAG.Serialization do
     kwargs =
       for {key, value} <- options,
           key not in @private_options,
-          not secret?(key),
           {:ok, json} <- [jsonable(value)],
           do: {Atom.to_string(key), json}
 
@@ -175,11 +177,6 @@ defmodule DeepEvalEx.Metrics.DAG.Serialization do
     raise ArgumentError,
           "VerdictNode.child has unsupported type #{inspect(other)}. Expected a DAG node, a " <>
             "GEval, or a metric (a module, {module, opts} or a metric struct)."
-  end
-
-  defp secret?(key) do
-    name = Atom.to_string(key)
-    Enum.any?(~w(key token secret password), &String.contains?(name, &1))
   end
 
   # deepeval's _maybe_jsonify: :error for anything that is not JSON.

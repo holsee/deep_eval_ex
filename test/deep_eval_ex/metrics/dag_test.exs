@@ -4,6 +4,7 @@
 defmodule DeepEvalEx.Metrics.DAGTest do
   use ExUnit.Case, async: true
 
+  alias DeepEvalEx.{Evaluator, MissingTestCaseParamsError, Result}
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.{DAG, ExactMatch, GEval}
 
@@ -247,7 +248,7 @@ defmodule DeepEvalEx.Metrics.DAGTest do
         [criteria: "c"]
         |> BinaryJudgementNode.new()
         |> BinaryJudgementNode.add_verdict(true,
-          then: {ExactMatch, threshold: 0.7, model: "gpt-4o"}
+          then: {ExactMatch, threshold: 0.7, max_tokens: 64, model: "gpt-4o", api_key: "sk-x"}
         )
         |> BinaryJudgementNode.add_verdict(false, score: 0)
 
@@ -255,11 +256,12 @@ defmodule DeepEvalEx.Metrics.DAGTest do
       [_judge, {_id, true_verdict}, _false] = nodes
 
       assert JSON.encode!(true_verdict["child"]) ==
-               ~s({"type": "metric", "metric_class": "ExactMatchMetric", "kwargs": {"threshold": 0.7}})
+               ~s({"type": "metric", "metric_class": "ExactMatchMetric", ) <>
+                 ~s("kwargs": {"threshold": 0.7, "max_tokens": 64}})
 
       rebuilt = nodes |> Jason.OrderedObject.new() |> then(&%{"nodes" => &1}) |> Graph.from_map()
       [%BinaryJudgementNode{children: [%VerdictNode{child: child}, _]}] = rebuilt.root_nodes
-      assert child == {ExactMatch, threshold: 0.7}
+      assert child == {ExactMatch, threshold: 0.7, max_tokens: 64}
     end
 
     test "raises deepeval's errors for malformed documents" do
@@ -458,6 +460,39 @@ defmodule DeepEvalEx.Metrics.DAGTest do
       assert result.verbose_logs =~ "Type: Exact Match Metric"
     end
 
+    test "a metric child's error is the DAG's, under the DAG's error config" do
+      judge =
+        [criteria: "Is it an answer?", evaluation_params: [:actual_output]]
+        |> BinaryJudgementNode.new()
+        |> BinaryJudgementNode.add_verdict(true, then: ExactMatch)
+        |> BinaryJudgementNode.add_verdict(false, score: 0)
+
+      metric = DAG.new(name: "F", dag: Graph.new([judge]))
+      no_expected = test_case(actual_output: "Paris")
+      script = %{"reason,verdict" => [%{"verdict" => true, "reason" => "Yes."}]}
+
+      Mock.script(script, model: "scripted-judge")
+
+      assert %Result{metric: "F [DAG]", score: nil, success: false, error: error} =
+               Evaluator.evaluate_metric(no_expected, metric, adapter: :mock, ignore_errors: true)
+
+      assert error == "'expected_output' cannot be None for the 'Exact Match' metric"
+
+      Mock.script(script, model: "scripted-judge")
+
+      assert %Result{metric: "F [DAG]", skipped: true, error: nil} =
+               Evaluator.evaluate_metric(no_expected, metric,
+                 adapter: :mock,
+                 skip_on_missing_params: true
+               )
+
+      Mock.script(script, model: "scripted-judge")
+
+      assert_raise MissingTestCaseParamsError, fn ->
+        Evaluator.evaluate_metric(no_expected, metric, adapter: :mock)
+      end
+    end
+
     test "rebuilds a GEval child with the DAG's judge" do
       geval =
         GEval.new(
@@ -490,28 +525,30 @@ defmodule DeepEvalEx.Metrics.DAGTest do
       assert result.verbose_logs =~ "Type: Tone [GEval] Metric\n\nCriteria:\nIs it polite?\n"
     end
 
-    test "under hybrid asks System One for each judgement" do
-      Mock.script(
-        %{"output" => [%{"output" => "Intro"}], "reason" => [%{"reason" => "Missing."}]},
-        model: "scripted-judge"
-      )
+    for eval_mode <- [:hybrid, :system_one] do
+      test "under #{eval_mode} asks System One for each judgement" do
+        Mock.script(
+          %{"output" => [%{"output" => "Intro"}], "reason" => [%{"reason" => "Missing."}]},
+          model: "scripted-judge"
+        )
 
-      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.2))
+        system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.2))
 
-      assert {:ok, result} =
-               DAG.measure(test_case(),
-                 adapter: :mock,
-                 name: "F",
-                 dag: headings_dag(),
-                 eval_mode: :system_one,
-                 system_one_model: system_one
-               )
+        assert {:ok, result} =
+                 DAG.measure(test_case(),
+                   adapter: :mock,
+                   name: "F",
+                   dag: headings_dag(),
+                   eval_mode: unquote(eval_mode),
+                   system_one_model: system_one
+                 )
 
-      assert result.score == 0.0
-      assert result.confidence == 0.6
-      assert result.verbose_logs =~ "Verdict: False\nReason: P(true)=0.20\n"
-      assert [%SystemOneMock.Call{state: state}] = SystemOneMock.calls(system_one)
-      assert JSON.encode!(state) == ~s({"text": "Headings:\\nIntro\\n\\n"})
+        assert result.score == 0.0
+        assert result.confidence == 0.6
+        assert result.verbose_logs =~ "Verdict: False\nReason: P(true)=0.20\n"
+        assert [%SystemOneMock.Call{state: state}] = SystemOneMock.calls(system_one)
+        assert JSON.encode!(state) == ~s({"text": "Headings:\\nIntro\\n\\n"})
+      end
     end
   end
 

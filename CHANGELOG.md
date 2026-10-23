@@ -2554,6 +2554,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     A verdict can also hand over to a metric. A GEval is rebuilt
     and judged by the DAG's LLM, as in deepeval. Any other metric is
     measured with the run's options, and its usage adds to the DAG's.
+    Its error is the DAG's, handled by the run's `:ignore_errors` and
+    `:skip_on_missing_params` as the DAG's error, as in deepeval: it is
+    recorded on the DAG's result, or skips the DAG when the child lacks
+    a test case param.
     Results are named `"<name> [DAG]"` (`include_dag_suffix: false`
     drops the suffix). Strict mode forces the threshold to `1` and keeps
     the score, as deepeval's DAG does.
@@ -2566,9 +2570,12 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - `Graph.to_map/1`, `to_json/2`, `from_map/1` and `from_json/1` read and
     write deepeval's `DeepAcyclicGraph.to_dict`/`to_json` documents. Their
     node, GEval and metric children follow deepeval's format; models,
-    adapters and keys are never written.
+    adapters, API keys and request options are never written, and every
+    other JSON-able metric option is (`max_tokens` included).
   - Divergences: a non-binary node offers its options in its verdicts'
-    order, where deepeval follows a Python set's; nodes run one at a time.
+    order, where deepeval follows a Python set's; nodes run one at a time;
+    a metric child without its own `:model` is judged by the DAG's (or
+    the run's) model, where deepeval's keeps the model it was built with.
     Confident AI `upload()`/`pull()` and the conversational DAG are not
     ported.
   - Parity fixtures written by deepeval: five scripted-judge scenarios

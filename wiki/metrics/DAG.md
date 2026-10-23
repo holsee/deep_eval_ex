@@ -84,7 +84,7 @@ concision =
 NonBinaryJudgementNode.add_verdict(order, "In order", then: concision)
 ```
 
-As in deepeval, a GEval is rebuilt from its name, criteria (or evaluation steps) and evaluation params and judged by the DAG's LLM. Any other metric (a module, `{module, opts}` or a metric struct) is measured as it is, with the run's options but not the DAG's own.
+As in deepeval, a GEval is rebuilt from its name, criteria (or evaluation steps) and evaluation params and judged by the DAG's LLM. Any other metric (a module, `{module, opts}` or a metric struct) is measured as it is, with the run's options but not the DAG's own. Its error is the DAG's: `ignore_errors: true` records it on the DAG's result, and `skip_on_missing_params: true` skips the DAG when the child lacks a test case param, as in deepeval.
 
 ## Saving a Graph as JSON
 
@@ -95,7 +95,7 @@ json = Graph.to_json(dag)
 dag = Graph.from_json(json)
 ```
 
-Node ids are fresh uuids each time; GEval children keep their constructor arguments, other metrics their deepeval class name (`"AnswerRelevancyMetric"`) and JSON-able options. Models, adapters and keys are never written.
+Node ids are fresh uuids each time; GEval children keep their constructor arguments, other metrics their deepeval class name (`"AnswerRelevancyMetric"`) and JSON-able options. Models, adapters, API keys and request options are never written; every other JSON-able option is.
 
 ## Options
 
@@ -125,6 +125,7 @@ As deepeval 4.3.1's `DAGMetric`, the judgements can be handed to a System One mo
 - A NonBinaryJudgementNode offers its options in the order of its verdicts; deepeval follows a Python set's order
 - Nodes run one at a time; deepeval's async mode runs a node's children concurrently
 - A task output that is a map prints in map order
+- A metric child without its own `:model` is judged by the DAG's (or the run's) model; deepeval's keeps the model it was built with
 - Confident AI `upload()` and `pull()` are not ported, nor is the conversational DAG
 
 ## Result Structure
