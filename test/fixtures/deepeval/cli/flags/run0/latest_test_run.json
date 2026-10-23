@@ -1,0 +1,115 @@
+{
+  "testRunData": {
+    "testFile": "test_runner.py",
+    "testCases": [
+      {
+        "name": "passing",
+        "input": "2 + 2?",
+        "actualOutput": "4",
+        "expectedOutput": "4",
+        "flaky": false,
+        "success": true,
+        "metricsData": [
+          {
+            "name": "Exact Match",
+            "threshold": 1.0,
+            "success": true,
+            "score": 1.0,
+            "reason": "The actual and expected outputs are exact matches.",
+            "strictMode": false,
+            "flaky": false
+          }
+        ],
+        "runDuration": 0.0,
+        "order": 0
+      },
+      {
+        "name": "failing",
+        "input": "2 + 3?",
+        "actualOutput": "6",
+        "expectedOutput": "5",
+        "flaky": false,
+        "success": false,
+        "metricsData": [
+          {
+            "name": "Exact Match",
+            "threshold": 1.0,
+            "success": false,
+            "score": 0.0,
+            "reason": "The actual and expected outputs are different.",
+            "strictMode": false,
+            "flaky": false
+          }
+        ],
+        "runDuration": 0.0,
+        "order": 1
+      },
+      {
+        "name": "flaky",
+        "input": "3 + 3?",
+        "actualOutput": "7",
+        "expectedOutput": "6",
+        "flaky": true,
+        "success": false,
+        "metricsData": [
+          {
+            "name": "Exact Match",
+            "threshold": 1.0,
+            "success": false,
+            "score": 0.0,
+            "reason": "The actual and expected outputs are different.",
+            "strictMode": false,
+            "flaky": false
+          }
+        ],
+        "runDuration": 0.0,
+        "order": 2
+      },
+      {
+        "name": "test_unnamed",
+        "input": "Capital of France?",
+        "actualOutput": "Paris",
+        "expectedOutput": "Paris",
+        "flaky": false,
+        "success": true,
+        "metricsData": [
+          {
+            "name": "Exact Match",
+            "threshold": 1.0,
+            "success": true,
+            "score": 1.0,
+            "reason": "The actual and expected outputs are exact matches.",
+            "strictMode": false,
+            "flaky": false
+          }
+        ],
+        "runDuration": 0.0,
+        "order": 3
+      }
+    ],
+    "conversationalTestCases": [],
+    "metricsScores": [
+      {
+        "metric": "Exact Match",
+        "scores": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "passes": 2,
+        "fails": 2,
+        "errors": 0
+      }
+    ],
+    "identifier": "nightly",
+    "hyperparameters": {
+      "model": "gpt-4.1",
+      "prompt_version": "v3"
+    },
+    "testPassed": 2,
+    "testFailed": 2,
+    "runDuration": 0.14839258300344227,
+    "official": false
+  }
+}

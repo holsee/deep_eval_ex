@@ -57,6 +57,26 @@ defmodule DeepEvalEx.TestRun.ManagerTest do
       assert run.hyperparameters == [{"k", "1"}]
     end
 
+    test "give test cases without an order (assert_test's) the next one, as deepeval" do
+      run =
+        Manager.new()
+        |> Manager.add(api_case("first", nil, [metric("M", 0.9)]))
+        |> Manager.add(api_case("ranked", 5, [metric("M", 0.9)]))
+        |> Manager.add(api_case("second", nil, [metric("M", 0.2)]))
+        |> Manager.to_test_run()
+
+      assert Enum.map(run.test_cases, &{&1.name, &1.order}) ==
+               [{"ranked", 5}, {"first", 6}, {"second", 7}]
+
+      run =
+        Manager.new()
+        |> Manager.add(api_case("first", nil, [metric("M", 0.9)]))
+        |> Manager.add(api_case("second", nil, [metric("M", 0.2)]))
+        |> Manager.to_test_run()
+
+      assert Enum.map(run.test_cases, &{&1.name, &1.order}) == [{"first", 0}, {"second", 1}]
+    end
+
     test "leave out test cases without metric data, as classifier-only results" do
       collected =
         Manager.new()

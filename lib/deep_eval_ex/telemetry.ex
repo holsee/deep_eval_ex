@@ -41,15 +41,18 @@ defmodule DeepEvalEx.Telemetry do
 
   ### Test Run Events
 
-  - `[:deep_eval_ex, :test_run, :stop]` - `DeepEvalEx.evaluate_run/3` wrapped
-    up a test run (see `DeepEvalEx.TestRun.Manager.wrap_up/2`); deepeval's
-    `on_test_run_end` hook. Not emitted for a classifier-only run, which has
-    no test run
+  - `[:deep_eval_ex, :test_run, :stop]` - `DeepEvalEx.evaluate_run/3` or
+    `mix deep_eval.test` wrapped up a test run (see
+    `DeepEvalEx.TestRun.Manager.wrap_up/2`); deepeval's `on_test_run_end`
+    hook. Not emitted for a classifier-only run, which has no test run, nor
+    by an `evaluate_run/3` inside a `mix deep_eval.test` run, which the task
+    wraps up once
     - Measurements: `%{duration: integer(), test_passed: integer(),
-      test_failed: integer()}`, `duration` in native time units
+      test_failed: integer()}`, `duration` in native time units (the whole
+      `mix test` under the task)
     - Metadata: `%{test_run: DeepEvalEx.TestRun.t(), path: Path.t() | nil,
-      identifier: String.t() | nil, source: :evaluate_run}`, where `path`
-      is the `test_run_<timestamp>.json` written to the results folder
+      identifier: String.t() | nil, source: :evaluate_run | :cli}`, where
+      `path` is the `test_run_<timestamp>.json` written to the results folder
 
   ### LLM Events
 

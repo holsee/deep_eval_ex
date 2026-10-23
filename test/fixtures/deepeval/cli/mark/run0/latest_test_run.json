@@ -1,0 +1,48 @@
+{
+  "testRunData": {
+    "testFile": "test_runner.py",
+    "testCases": [
+      {
+        "name": "test_unnamed",
+        "input": "Capital of France?",
+        "actualOutput": "Paris",
+        "expectedOutput": "Paris",
+        "flaky": false,
+        "success": true,
+        "metricsData": [
+          {
+            "name": "Exact Match",
+            "threshold": 1.0,
+            "success": true,
+            "score": 1.0,
+            "reason": "The actual and expected outputs are exact matches.",
+            "strictMode": false,
+            "flaky": false
+          }
+        ],
+        "runDuration": 0.0,
+        "order": 0
+      }
+    ],
+    "conversationalTestCases": [],
+    "metricsScores": [
+      {
+        "metric": "Exact Match",
+        "scores": [
+          1.0
+        ],
+        "passes": 1,
+        "fails": 0,
+        "errors": 0
+      }
+    ],
+    "hyperparameters": {
+      "model": "gpt-4.1",
+      "prompt_version": "v3"
+    },
+    "testPassed": 1,
+    "testFailed": 0,
+    "runDuration": 0.10959916699357564,
+    "official": false
+  }
+}

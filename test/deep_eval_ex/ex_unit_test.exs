@@ -856,6 +856,8 @@ defmodule DeepEvalEx.ExUnitTest do
     test "imports all assertion macros" do
       # This test verifies that using the module makes all macros available
       # Macros are imported, not exported as functions, so we check the source module
+      assert macro_exported?(DeepEvalEx.ExUnit, :assert_test, 2)
+      assert macro_exported?(DeepEvalEx.ExUnit, :assert_test, 3)
       assert macro_exported?(DeepEvalEx.ExUnit, :assert_passes, 2)
       assert macro_exported?(DeepEvalEx.ExUnit, :assert_passes, 3)
       assert macro_exported?(DeepEvalEx.ExUnit, :assert_fails, 2)

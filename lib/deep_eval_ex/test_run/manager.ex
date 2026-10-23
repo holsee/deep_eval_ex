@@ -44,6 +44,7 @@ defmodule DeepEvalEx.TestRun.Manager do
   and the run's settings.
   """
   @type collected :: %{
+          optional(:prompts) => [TestRun.raw()] | nil,
           cases: [ApiTestCase.t() | ConversationalTestCase.t()],
           hyperparameters: keyword() | map() | [{String.t(), String.t()}] | nil,
           identifier: String.t() | nil,
@@ -59,6 +60,8 @@ defmodule DeepEvalEx.TestRun.Manager do
   - `:test_file` - The test file or folder the run came from
   - `:hyperparameters` - The run's hyperparameters, see
     `DeepEvalEx.TestRun.process_hyperparameters/1`
+  - `:prompts` - The run's prompts: `[]` (the default) as `evaluate()`
+    writes them, `nil` as `deepeval test run`, which never sets them
   """
   @spec new(keyword()) :: collected()
   def new(opts \\ []) do
@@ -66,7 +69,8 @@ defmodule DeepEvalEx.TestRun.Manager do
       cases: [],
       hyperparameters: Keyword.get(opts, :hyperparameters),
       identifier: Keyword.get(opts, :identifier),
-      test_file: Keyword.get(opts, :test_file)
+      test_file: Keyword.get(opts, :test_file),
+      prompts: Keyword.get(opts, :prompts, [])
     }
   end
 
@@ -92,7 +96,8 @@ defmodule DeepEvalEx.TestRun.Manager do
     |> TestRun.from_test_cases(
       identifier: collected.identifier,
       test_file: collected.test_file,
-      hyperparameters: collected.hyperparameters
+      hyperparameters: collected.hyperparameters,
+      prompts: Map.get(collected, :prompts, [])
     )
   end
 

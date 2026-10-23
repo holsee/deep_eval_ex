@@ -8,7 +8,7 @@ DeepEvalEx provides custom ExUnit assertion macros that make it easy to test LLM
 
 ## Setup
 
-Add the `use` macro to your test module:
+Add the `use` macro to your test module, after `use ExUnit.Case`:
 
 ```elixir
 defmodule MyApp.LLMTest do
@@ -21,10 +21,16 @@ defmodule MyApp.LLMTest do
 end
 ```
 
+`use DeepEvalEx.ExUnit` raises when it comes first: besides importing the
+assertions, it registers each test with a `mix deep_eval.test` run and
+replaces the imported `test` macros with ones that honour `--repeat` (see
+"Test Runs" below).
+
 ## Available Assertions
 
 | Macro | Description |
 |-------|-------------|
+| `assert_test/2,3` | deepeval's `assert_test`: assert a test case passes its metrics, classifiers and expectations |
 | `assert_passes/2,3` | Assert metric evaluation passes (score >= threshold) |
 | `assert_fails/2,3` | Assert metric evaluation fails (score < threshold) |
 | `assert_score/3,4` | Assert score is within a specific range |
@@ -323,6 +329,77 @@ defmodule MyApp.RAGEvaluationTest do
   end
 end
 ```
+
+## Test Runs: `mix deep_eval.test`
+
+`mix deep_eval.test` is deepeval's `deepeval test run`: it runs `mix test`
+and collects every `assert_test/3` (`assert_evaluation/3`, `assert_passes/3`)
+of the run into one test run, then wraps it up as deepeval does. You see
+ExUnit's output, then any skipped tests, the `Test Results` table, the
+warnings and the summary; the run is saved to `.deepeval/.latest_test_run.json`
+(and `test_run_<timestamp>.json` with a results folder), and the test-run
+cache, `.deepeval/.deepeval-cache.json`, is written in deepeval's format.
+
+```elixir
+# mix.exs
+def cli, do: [preferred_envs: ["deep_eval.test": :test]]
+
+# test/test_helper.exs
+ExUnit.start()
+DeepEvalEx.ExUnit.log_hyperparameters(%{"model" => "gpt-4.1", "prompt_version" => "v3"})
+```
+
+```bash
+mix deep_eval.test test/evals -c -i -d failing --identifier nightly -n 8 -m rag
+mix deep_eval.test 'test/evals/refund_eval_test.exs::test refund policy answer' -r 3
+DEEPEVAL_EVAL_MODE=system_one mix deep_eval.test test/evals -c
+mix deep_eval.test test/evals -- --seed 0
+```
+
+The flags are `deepeval test run`'s:
+
+| Flag | Effect |
+|------|--------|
+| `-c`, `--use-cache` | Reuse cached results at cost 0 (not with `--repeat`) |
+| `-i`, `--ignore-errors` | Record metric errors instead of raising them |
+| `-s`, `--skip-on-missing-params` | Skip metrics whose test case lacks their params |
+| `-v`, `--verbose` | Verbose metric logs |
+| `-d`, `--display all\|failing\|passing` | The test cases the table shows |
+| `-id`, `--identifier NAME` | Name the run |
+| `-r`, `--repeat N` | Run each test N times, named `<test>[i-N]` |
+| `-n`, `--num-processes N` | `mix test --max-cases N` |
+| `-x`, `--exit-on-first-failure` | `mix test --max-failures 1` (`-X` undoes it) |
+| `-w`, `--show-warnings` | Print failing flaky test cases' warnings (`-W` undoes it) |
+| `-m`, `--mark EXPR` | `tag`, `not tag` or `a or b`, as `--only` / `--exclude` |
+| `--durations N` | `mix test --slowest N` |
+| `--color yes\|no\|auto` | Colour (default `yes`) |
+| `-o`, `--official` | Prints that a Confident AI key is needed |
+| `--eval-mode MODE` | The run's eval mode (DeepEvalEx only) |
+
+Anything else, and everything after `--`, goes to `mix test`. While the run
+is on, its flags win over `config :deep_eval_ex` and the environment (see
+[Configuration](Configuration.md)).
+
+In a run:
+
+- A test case without a `:name` is named after its test, with ExUnit's full
+  name: `"test refund policy answer"`, or `"test describe block refund policy
+  answer[2-3]"` under `--repeat`. Assertions made from a `Task` the test
+  started count as the test's.
+- `DeepEvalEx.evaluate_run/3` called from a test adds its test cases to the
+  run instead of saving a run of its own.
+- `assert_fails/3` and `assert_score/4` are never recorded.
+- A failing flaky test case's warning is printed after the run with `-w`.
+- Repeats of a test of an `async: true` module run concurrently.
+- `--pdb` is not supported: use `iex -S mix deep_eval.test PATH -- --breakpoints`.
+- deepeval always passes `--durations=10`, but `mix test --slowest` also
+  turns on `--trace` (one test at a time), so `--slowest` is passed only with
+  `--durations`.
+- The exit status is `mix test`'s (`2` when a test failed; pytest's is `1`).
+
+Each run emits `[:deep_eval_ex, :test_run, :stop]` with `source: :cli`
+(see [Telemetry](Telemetry.md)). Under plain `mix test` nothing is recorded,
+cached or saved, as under plain pytest.
 
 ## CI/CD Integration
 

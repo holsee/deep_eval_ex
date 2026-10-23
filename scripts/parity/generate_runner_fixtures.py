@@ -1,6 +1,6 @@
 """Generate the golden fixtures of DeepEvalEx's test-runner phase (P8):
-classifiers, expectations, the test-run cache and the console report for now;
-the CLI set follows.
+classifiers, expectations, the test-run cache, the console report and
+`deepeval test run`.
 
 Classifiers (`deepeval.classifiers`) assign exactly one label from a closed
 set to a test case, and only pass or fail when the test case declares the
@@ -110,6 +110,14 @@ without metric data is left out, as `update_test_run` leaves it):
                   off), recorded by a Rich console without colour or
                   wrapping
 
+`deepeval test run` (`cli/test/command.py`) is written under
+test/fixtures/deepeval/cli/: `args/cases.json` (the pytest arguments,
+settings, output or error of every argv in `CLI_ARGS_CASES`, with
+pytest.main patched) and, for every scenario in `CLI_SCENARIOS`, real runs of
+`test_runner.py` (also written there) with what each left: `run<i>/run.json`
+(argv, exit code, skipped-test lines), `latest_test_run.json` and
+`cache.json` (the cache file's bytes).
+
 Run it inside the devcontainer, from the repository root, with deepeval's
 source checked out at _ref/deepeval (tag v4.3.1):
 
@@ -127,6 +135,7 @@ import json
 import logging
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -1946,6 +1955,239 @@ REPORT_SCENARIOS = {
 }
 
 
+# `deepeval test run` (cli/test/command.py): the pytest arguments and settings
+# each set of flags gives, and real runs of a small pytest file.
+#
+# cli/args/cases.json - for every argv in CLI_ARGS_CASES: the `pytest_args`
+# command.py passed to (a patched) pytest.main, the settings it set
+# (`ENABLE_DEEPEVAL_CACHE`, `IGNORE_DEEPEVAL_ERRORS`,
+# `SKIP_DEEPEVAL_MISSING_PARAMS`, `DEEPEVAL_VERBOSE_MODE`,
+# `DEEPEVAL_IDENTIFIER` and the `DEEPEVAL` variable), what it printed, or the
+# error it raised (click's message for a usage error).
+#
+# cli/<scenario>/ - for every scenario in CLI_SCENARIOS, `deepeval test run`
+# over CLI_TEST_FILE (written as cli/test_runner.py) once per argv, in one
+# folder, each run<i>/ holding: run.json (argv, exit code and the skipped-test
+# lines deepeval printed, the run folder replaced by `<dir>`),
+# latest_test_run.json (`.deepeval/.latest_test_run.json`) and cache.json
+# (`.deepeval/.deepeval-cache.json`). Mirrored by
+# test/fixtures/projects/runner/.
+
+CLI = os.path.join(ROOT, "test", "fixtures", "deepeval", "cli")
+
+CLI_ARGS_CASES = [
+    ["test_example.py"],
+    ["test_example.py", "-c"],
+    ["test_example.py", "--use-cache", "--repeat", "2"],
+    ["test_example.py", "-c", "-r", "2"],
+    ["test_example.py", "-i", "-s", "-v"],
+    ["test_example.py", "--ignore-errors", "--skip-on-missing-params", "--verbose"],
+    ["test_example.py", "-x"],
+    ["test_example.py", "-x", "-X"],
+    ["test_example.py", "--exit-on-first-failure"],
+    ["test_example.py", "-w"],
+    ["test_example.py", "-w", "-W"],
+    ["test_example.py", "-id", "nightly"],
+    ["test_example.py", "--identifier", "nightly"],
+    ["test_example.py", "-n", "4"],
+    ["test_example.py", "-d", "FAILING"],
+    ["test_example.py", "--display", "passing"],
+    ["test_example.py", "-m", "rag"],
+    ["test_example.py", "-m", "not slow"],
+    ["test_example.py", "-m", "rag or slow"],
+    ["test_example.py", "--durations", "0"],
+    ["test_example.py", "--durations", "3"],
+    ["test_example.py", "--color", "no"],
+    ["test_example.py", "-o"],
+    ["test_example.py", "-ci"],
+    ["test_example.py", "-r3"],
+    ["test_example.py", "-k", "refund", "--tb", "short"],
+    ["test_example.py::test_refund"],
+    ["test_example.py", "-r", "0"],
+    ["test_example.py", "-d", "some"],
+    ["test_example.py", "-r", "x"],
+    ["missing.py"],
+]
+
+CLI_SETTINGS = [
+    ("use_cache", "ENABLE_DEEPEVAL_CACHE"),
+    ("ignore_errors", "IGNORE_DEEPEVAL_ERRORS"),
+    ("skip_on_missing_params", "SKIP_DEEPEVAL_MISSING_PARAMS"),
+    ("verbose_mode", "DEEPEVAL_VERBOSE_MODE"),
+    ("identifier", "DEEPEVAL_IDENTIFIER"),
+]
+
+
+def reset_cli_settings():
+    from deepeval.config.settings import get_settings
+
+    settings = get_settings()
+    with settings.edit(persist=False):
+        settings.ENABLE_DEEPEVAL_CACHE = False
+        settings.IGNORE_DEEPEVAL_ERRORS = False
+        settings.SKIP_DEEPEVAL_MISSING_PARAMS = False
+        settings.DEEPEVAL_VERBOSE_MODE = None
+        settings.DEEPEVAL_IDENTIFIER = None
+    os.environ.pop("DEEPEVAL", None)
+
+
+def run_cli_args_case(argv, command):
+    import pytest as pytest_module
+    import typer
+
+    from deepeval.config.settings import get_settings
+
+    reset_cli_settings()
+    calls = []
+    original_main = pytest_module.main
+    original_wrap_up = command.global_test_run_manager.wrap_up_test_run
+    original_hook = command.invoke_test_run_end_hook
+    pytest_module.main = lambda args: calls.append(list(args)) or 0
+    command.global_test_run_manager.wrap_up_test_run = lambda *args, **kwargs: None
+    command.invoke_test_run_end_hook = lambda: None
+    stdout = io.StringIO()
+    case = {"argv": argv}
+    try:
+        with contextlib.redirect_stdout(stdout):
+            typer.main.get_command(command.app).main(args=argv, standalone_mode=False)
+        case["error"] = None
+    except Exception as error:  # noqa: BLE001 - ValueError, or click's usage errors
+        # typer vendors click: its usage errors carry click's message.
+        message = getattr(error, "format_message", None)
+        case["error"] = message() if message else str(error)
+    finally:
+        pytest_module.main = original_main
+        command.global_test_run_manager.wrap_up_test_run = original_wrap_up
+        command.invoke_test_run_end_hook = original_hook
+    case["pytest_args"] = calls[0] if calls else None
+    settings = get_settings()
+    case["settings"] = {key: getattr(settings, name) for key, name in CLI_SETTINGS}
+    case["settings"]["running"] = os.environ.get("DEEPEVAL")
+    case["stdout"] = stdout.getvalue()
+    return case
+
+
+def write_cli_args():
+    command = importlib.import_module("deepeval.cli.test.command")
+    out_dir = os.path.join(CLI, "args")
+    os.makedirs(out_dir)
+    run_dir = tempfile.mkdtemp(prefix="cli_args_", dir=gf.WORK_DIR)
+    previous = os.getcwd()
+    os.chdir(run_dir)
+    try:
+        with open("test_example.py", "w") as file:
+            file.write("def test_refund():\n    pass\n")
+        cases = [run_cli_args_case(argv, command) for argv in CLI_ARGS_CASES]
+    finally:
+        os.chdir(previous)
+        reset_cli_settings()
+    gf.write_json(os.path.join(out_dir, "cases.json"), cases)
+
+
+CLI_TEST_FILE = """\
+import pytest
+
+from deepeval import assert_test
+from deepeval.metrics import ExactMatchMetric
+from deepeval.test_case import LLMTestCase
+from deepeval.test_run import log_hyperparameters
+
+
+@log_hyperparameters
+def hyperparameters():
+    return {"model": "gpt-4.1", "prompt_version": "v3"}
+
+
+def test_passing():
+    test_case = LLMTestCase(name="passing", input="2 + 2?", actual_output="4", expected_output="4")
+    assert_test(test_case, [ExactMatchMetric()])
+
+
+def test_failing():
+    test_case = LLMTestCase(name="failing", input="2 + 3?", actual_output="6", expected_output="5")
+    assert_test(test_case, [ExactMatchMetric()])
+
+
+def test_flaky():
+    test_case = LLMTestCase(
+        name="flaky", input="3 + 3?", actual_output="7", expected_output="6", flaky=True
+    )
+    assert_test(test_case, [ExactMatchMetric()])
+
+
+@pytest.mark.rag
+def test_unnamed():
+    test_case = LLMTestCase(input="Capital of France?", actual_output="Paris", expected_output="Paris")
+    assert_test(test_case, [ExactMatchMetric()])
+
+
+@pytest.mark.skip(reason="not ready")
+def test_skipped():
+    test_case = LLMTestCase(name="skipped", input="x", actual_output="x", expected_output="x")
+    assert_test(test_case, [ExactMatchMetric()])
+"""
+
+CLI_SCENARIOS = {
+    "default": [[]],
+    "flags": [["-i", "-d", "failing", "--identifier", "nightly", "-w"]],
+    "repeat": [["-r", "2"]],
+    "mark": [["-m", "rag"]],
+    "warm_cache": [[], ["-c"]],
+}
+
+
+def read_bytes(path):
+    if not os.path.exists(path):
+        return None
+    with open(path, "rb") as file:
+        return file.read().decode("utf-8")
+
+
+def run_cli_scenario(name, runs):
+    out_dir = os.path.join(CLI, name)
+    run_dir = tempfile.mkdtemp(prefix=f"cli_{name}_", dir=gf.WORK_DIR)
+    with open(os.path.join(run_dir, "test_runner.py"), "w") as file:
+        file.write(CLI_TEST_FILE)
+    env = {k: v for k, v in os.environ.items() if not k.startswith("PYTHON")}
+    env.pop("DEEPEVAL", None)
+    os.makedirs(out_dir)
+    gf.write_json(os.path.join(out_dir, "input.json"), {"runs": runs})
+    for index, args in enumerate(runs):
+        argv = ["test_runner.py", *args]
+        completed = subprocess.run(
+            ["deepeval", "test", "run", *argv, "--color", "no"],
+            cwd=run_dir, env=env, capture_output=True, text=True,
+        )
+        skipped = [
+            line.replace(run_dir, "<dir>")
+            for line in completed.stdout.splitlines()
+            if line.startswith("Test ") and " was skipped. Reason: " in line
+        ]
+        run_out = os.path.join(out_dir, f"run{index}")
+        os.makedirs(run_out)
+        gf.write_json(os.path.join(run_out, "run.json"), {
+            "argv": argv, "exit_code": completed.returncode, "skipped": skipped,
+        })
+        latest = read_bytes(os.path.join(run_dir, ".deepeval", ".latest_test_run.json"))
+        gf.write_json(os.path.join(run_out, "latest_test_run.json"), json.loads(latest))
+        cache = read_bytes(os.path.join(run_dir, ".deepeval", ".deepeval-cache.json"))
+        with open(os.path.join(run_out, "cache.json"), "w") as file:
+            file.write(cache)
+
+
+def write_cli():
+    if os.path.isdir(CLI):
+        shutil.rmtree(CLI)
+    write_cli_args()
+    print(f"wrote {os.path.relpath(os.path.join(CLI, 'args'), ROOT)}")
+    os.makedirs(CLI, exist_ok=True)
+    with open(os.path.join(CLI, "test_runner.py"), "w") as file:
+        file.write(CLI_TEST_FILE)
+    for name, runs in CLI_SCENARIOS.items():
+        run_cli_scenario(name, runs)
+        print(f"wrote {os.path.relpath(os.path.join(CLI, name), ROOT)}")
+
+
 
 def main():
     if gf.deepeval.__version__ != gf.DEEPEVAL_VERSION:
@@ -1979,6 +2221,7 @@ def main():
         for name, scenario in REPORT_SCENARIOS.items():
             run_report_scenario(name, scenario)
             print(f"wrote {os.path.relpath(os.path.join(REPORT, name), ROOT)}")
+        write_cli()
     finally:
         shutil.rmtree(gf.WORK_DIR, ignore_errors=True)
 

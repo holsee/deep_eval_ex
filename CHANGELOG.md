@@ -1977,6 +1977,65 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     the report's panels, trees and table cells, the `Test Results` table,
     the Markdown file and the summary text of 15 scenarios, byte for byte.
     A new [Console Report](wiki/guides/Console-Report.md) guide covers it.
+- **`mix deep_eval.test`, one test run from ExUnit assertions** (ADR-0010),
+  a port of deepeval 4.3.1's `deepeval test run` (`cli/test/command.py`)
+  and its pytest plugin: it runs `mix test` and collects every
+  `assert_test` of the run into one test run, then wraps it up as deepeval
+  does: skipped tests (`Test <file>::<test> was skipped. Reason: ...`), the
+  `Test Results` table, warnings and summary, `.deepeval/.latest_test_run.json`
+  and the results folder's `test_run_<timestamp>.json` (with `testFile`, the
+  path given), and the test-run cache. Under plain `mix test` nothing is
+  recorded, as under plain pytest.
+  - Flags as `deepeval test run`'s: `-c/--use-cache` (off with `--repeat`),
+    `-i/--ignore-errors`, `-s/--skip-on-missing-params`, `-v/--verbose`,
+    `-d/--display all|failing|passing`, `-id/--identifier`, `-r/--repeat`,
+    `-n/--num-processes` (`--max-cases`), `-x/-X` (`--max-failures 1`),
+    `-w/-W` (flaky test cases' warnings), `-m/--mark` (`tag`, `not tag` and
+    `a or b`, as `--only`/`--exclude`), `--durations` (`--slowest`),
+    `--color` and `-o/--official` (prints deepeval's warning), plus
+    `--eval-mode`; anything else, and everything after `--`, goes to
+    `mix test`. `--pdb` raises with an `iex -S ... -- --breakpoints` hint.
+    Bad arguments raise deepeval's messages ("The repeat argument must be
+    at least 1.", "Provided path is neither a valid file nor a
+    directory.", click's "Invalid value for ..."). `DeepEvalEx.CLI.TestArgs`
+    parses them, purely.
+  - `DeepEvalEx.ExUnit.assert_test/2,3` is public: deepeval's
+    `assert_test(test_case, metrics, classifiers=...)`, which
+    `assert_evaluation/3` and `assert_passes/3` are. In a run it records
+    the test case, named after the ExUnit test when unnamed (`"test refund
+    policy answer"`, also from a `Task` the test started), evaluates with
+    the run's cache (read with `-c`) and keeps a failing flaky test case's
+    warning for `-w`. `assert_fails/3` and `assert_score/4` never record.
+    `DeepEvalEx.evaluate_run/3` called from a test adds its test cases to
+    the run and saves nothing itself.
+  - `DeepEvalEx.ExUnit.log_hyperparameters/1`, deepeval's
+    `@log_hyperparameters`, for `test/test_helper.exs`: the run's
+    hyperparameters, saved with it and part of its cache keys.
+  - `-r N` registers each test of a module that uses `DeepEvalEx.ExUnit`
+    N times, as `<test>[i-N]` with its tags, as pytest-repeat does
+    (`DeepEvalEx.ExUnit.Repeat`).
+  - `DeepEvalEx.ExUnit.Collector` (the run's test cases, tests,
+    hyperparameters, cache, skipped tests and warnings) and
+    `DeepEvalEx.ExUnit.Formatter` (reports skipped tests), started only by
+    the task.
+  - Run overrides: `DeepEvalEx.Config.put_run_overrides/1`,
+    `clear_run_overrides/0` and `run_overrides/0` set values that win over
+    application config and the environment, as deepeval's in-process
+    setters; the task puts its flags there. New settings `:running`
+    (`DEEPEVAL`), `:repeat`, `:display`, `:test_file` and `:show_warnings`.
+  - `[:deep_eval_ex, :test_run, :stop]` is emitted by the task too, with
+    `source: :cli`, as deepeval's `on_test_run_end` hook.
+  - Kept divergences: `--slowest` is passed only with `--durations`, as it
+    turns on `--trace` (deepeval always passes `--durations=10`); the exit
+    status is mix's; `-n` is concurrency within one VM; repeats of an
+    `async: true` module run concurrently.
+  - Parity fixtures from deepeval (`test/fixtures/deepeval/cli/`): the
+    pytest arguments and settings of 31 argument lists, and real
+    `deepeval test run`s of a pytest file (default, flags, `-r 2`, `-m`, a
+    warm `-c` run) that `test/fixtures/projects/runner/` mirrors: the saved
+    run matches but for times and the unnamed test's name, and the cache
+    file byte for byte. The [ExUnit Integration](wiki/guides/ExUnit-Integration.md)
+    guide covers it, and ADR-0010 is now part of the documentation.
 
 ### Changed
 
@@ -2308,6 +2367,19 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   ..."`); `evaluate/3` used to evaluate nothing. A run whose test cases
   have expectations no longer requires a metric with a threshold, and a
   run with classifiers and expectations but no metrics writes its test run.
+- `use DeepEvalEx.ExUnit` must come after `use ExUnit.Case`, and raises
+  `ArgumentError` otherwise: it now adds a `setup` registering each test
+  with a `mix deep_eval.test` run and imports `DeepEvalEx.ExUnit.Repeat`'s
+  `test` macros in place of `ExUnit.Case`'s (unchanged outside a run with
+  `--repeat`).
+- A test run's test cases may be collected without an order
+  (`DeepEvalEx.TestRun.TestCase` and `ConversationalTestCase` `:order` may
+  be `nil`): sorting gives each the order after its predecessor's, as
+  deepeval's `_assign_unique_orders`. `DeepEvalEx.TestRun.from_results/3`
+  takes `:test_name` and `from_test_cases/2` and
+  `DeepEvalEx.TestRun.Manager.new/1` take `:prompts`.
+- `DeepEvalEx.TestRun.Cache.Store` writes entries filed with the same order
+  in the order they were filed, as deepeval's cache keeps insertion order.
 
 ### Deprecated
 

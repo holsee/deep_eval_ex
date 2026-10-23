@@ -23,11 +23,14 @@ defmodule DeepEvalEx.MixProject do
       source_url: @source_url,
       docs: docs(),
 
-      # The test support helpers call ExUnit.
-      dialyzer: [plt_add_apps: [:ex_unit]],
+      # mix deep_eval.test and the ExUnit integration use Mix and ExUnit.
+      dialyzer: [plt_add_apps: [:mix, :ex_unit]],
 
       # Test
-      test_coverage: [tool: ExCoveralls]
+      test_coverage: [tool: ExCoveralls],
+      # The fixture projects run their own tests (see
+      # test/deep_eval_ex/cli/integration_test.exs).
+      test_ignore_filters: [&String.starts_with?(&1, "test/fixtures/")]
     ]
   end
 
@@ -36,7 +39,8 @@ defmodule DeepEvalEx.MixProject do
       preferred_envs: [
         coveralls: :test,
         "coveralls.detail": :test,
-        "coveralls.html": :test
+        "coveralls.html": :test,
+        "deep_eval.test": :test
       ]
     ]
   end
@@ -170,6 +174,7 @@ defmodule DeepEvalEx.MixProject do
         "docs/adr/0007-basemetric-macro-for-instrumentation.md",
         "docs/adr/0008-peri-schema-validation-replacing-ecto.md",
         "docs/adr/0009-system-one-models-and-eval-modes.md",
+        "docs/adr/0010-test-runner-report-cache-classifiers.md",
         {"docs/adr/template.md", [title: "ADR Template"]}
       ],
       groups_for_extras: [
@@ -200,6 +205,14 @@ defmodule DeepEvalEx.MixProject do
         "System One": ~r/DeepEvalEx\.SystemOne(\..*)?$/,
         Datasets: ~r/DeepEvalEx\.Dataset(\..*)?$/,
         Reports: ~r/DeepEvalEx\.Report(\..*)?$/,
+        "Test Runner": [
+          DeepEvalEx.ExUnit,
+          DeepEvalEx.ExUnit.Collector,
+          DeepEvalEx.ExUnit.Formatter,
+          DeepEvalEx.ExUnit.Repeat,
+          DeepEvalEx.CLI.TestArgs,
+          Mix.Tasks.DeepEval.Test
+        ],
         Schemas: ~r/DeepEvalEx\.Schemas\..*/,
         Telemetry: [DeepEvalEx.Telemetry]
       ]

@@ -31,7 +31,7 @@ The P8 unit briefs are:
 Three designs were drawn up and judged:
 
 - **A, faithful CLI.** It ports a subset of Rich for byte-exact terminal output, adds Manager and Cache GenServer singletons, and runs the wrap-up in the mix task after `mix test`.
-- **B, ExUnit-native.** A formatter wraps `ExUnit.CLIFormatter` and owns the wrap-up. A Collector walks `$callers`. CLI flags go into a `:persistent_term` override layer, report parity is checked on the cell model, and the cache is byte-compatible.
+- **B, ExUnit-native.** A formatter wraps ExUnit's `CLIFormatter` and owns the wrap-up. A Collector walks `$callers`. CLI flags go into a `:persistent_term` override layer, report parity is checked on the cell model, and the cache is byte-compatible.
 - **C, minimal library-first.** It has a pure Report and Cache, a formatter that is also the collector, and a thin mix task. It rejects `--repeat`.
 
 B scored best on balance. This ADR takes B as its base and grafts in A's flag surface and C's pure functions, with corrections from checking the reference and the toolchain.
@@ -39,13 +39,13 @@ B scored best on balance. This ADR takes B as its base and grafts in A's flag su
 Facts checked while writing this ADR:
 
 1. **`mix test` returns to its caller after failures.** In Elixir 1.20.4, `lib/mix/lib/mix/tasks/test.ex:721-727` sets the failure exit status through `System.at_exit(fn _ -> exit({:shutdown, status}) end)`. A task that calls `Mix.Task.run("test", args)` therefore gets control back and can wrap up, which is exactly what `command.py` does after `pytest.main`. B's reason for a formatter-side wrap-up ("mix test exits on failure") does not hold.
-2. **ExUnit's suite end is ordered.** `ExUnit.Runner` (`runner.ex:66-71`) sends `:suite_finished`, then calls `EventManager.stop/1`, which runs `GenServer.stop/3` on every formatter, and only then runs the `after_suite` callbacks. Anything printed after `Mix.Task.run("test")` returns comes after ExUnit's summary, so there is no interleaving and no need to wrap `CLIFormatter`.
+2. **ExUnit's suite end is ordered.** ExUnit's `Runner` (`runner.ex:66-71`) sends `:suite_finished`, then calls `EventManager.stop/1`, which runs `GenServer.stop/3` on every formatter, and only then runs the `after_suite` callbacks. Anything printed after `Mix.Task.run("test")` returns comes after ExUnit's summary, so there is no interleaving and no need to wrap `CLIFormatter`.
 3. **Under plain pytest, deepeval records nothing.** `pytest_sessionstart` creates the test run only when `get_is_running_deepeval()` is true, and only `command.py` calls `wrap_up_test_run`. Plain `pytest` prints "Running teardown with pytest sessionfinish..." and the skipped lines, but saves no run and writes no cache (`assert_test` uses `write_cache=get_is_running_deepeval()`).
 4. **The test case name comes from the test.** `test_case/api.py:93` names an API test case `os.getenv(PYTEST_RUN_TEST_NAME, f"test_case_{order}")` when `test_case.name` is nil. The plugin sets that variable to the last nodeid segment, which is `test_foo[1-3]` under pytest-repeat, with no space before the bracket.
 5. **Cache keys use the run's hyperparameters.** `cache.py` builds the key from input, actual_output, expected_output, context, retrieval_context (each `RetrievedContextData` flattened to `.context`) and `hyperparameters`. When the case has expectations it adds `expectations` and `expectation_evidence`. The key is `serialize(cache_dict)`. The hyperparameters are the test run's at execution time, so they are `None` under `evaluate()` and whatever `log_hyperparameters` set under the CLI.
 6. **Cache reads and writes are tied together.** `get_cached_test_case` returns `None` when `disable_write_cache` is set, so `use_cache` without `write_cache` never hits. `wrap_up_cached_test_run` deletes both cache files when writes are disabled. Otherwise it writes the temp run (this run's entries) over the main file and deletes the temp file.
 7. **`evaluate()` defaults.** `DisplayConfig` defaults to `print_results=True`, `display_option=ALL` and `truncate_passing_cases=True`, and `CacheConfig` defaults to `write_cache=True` and `use_cache=False`. `file_type`/`file_output_dir` are marked deprecated. `evaluate()` skips its own wrap-up in CLI mode.
-8. **What DeepEvalEx already has.** `TestRun.JSON.encode!/2` already supports `ensure_ascii` (default true) with Python float repr. `Config.get/1` reads app config before the env (`config.ex:162`). `TestCase` already has `expected_labels` and `expectations`, and `TestResult.classifications` already exists as maps folded into success. `SystemOne.Batch.candidate?/3` documents "DeepEvalEx has no result cache". The `assert_test/3` behind `assert_evaluation/3` is private.
+8. **What DeepEvalEx already has.** `TestRun.JSON.encode!/2` already supports `ensure_ascii` (default true) with Python float repr. `DeepEvalEx.Config.get/1` reads app config before the env (`config.ex:162`). `TestCase` already has `expected_labels` and `expectations`, and `TestResult.classifications` already exists as maps folded into success. `SystemOne.Batch.candidate?/3` documents "DeepEvalEx has no result cache". The `assert_test/3` behind `assert_evaluation/3` is private.
 
 ## Decision
 
@@ -111,7 +111,7 @@ The task ports `command.py` step by step:
 10. Emit `[:deep_eval_ex, :test_run, :stop]`, which stands in for `invoke_test_run_end_hook`.
 11. Clear the overrides and stop the Collector and Store. Mix's own `at_exit` then sets the exit status (2 on failures by default; pytest uses 1).
 
-The task requires `MIX_ENV=test`. If `Mix.env()` is not `:test`, it raises with a hint to add `def cli, do: [preferred_envs: ["deep_eval.test": :test]]` to mix.exs. It adds `--formatter DeepEvalEx.ExUnit.Formatter` and keeps `ExUnit.CLIFormatter`, unless the user passed formatters, in which case ours is appended to theirs.
+The task requires `MIX_ENV=test`. If `Mix.env()` is not `:test`, it raises with a hint to add `def cli, do: [preferred_envs: ["deep_eval.test": :test]]` to mix.exs. It adds `--formatter DeepEvalEx.ExUnit.Formatter` and keeps ExUnit's `CLIFormatter`, unless the user passed formatters, in which case ours is appended to theirs.
 
 **Flag mapping** (deepeval 4.3.1 `run` signature):
 
@@ -297,7 +297,7 @@ end
 
 ### 8. Expectations
 
-`DeepEvalEx.Metrics.Expectations` (`@moduledoc false`) ports `_ExpectationEvaluator`:
+`Metrics.Expectations` (`@moduledoc false`) ports `_ExpectationEvaluator`:
 
 - It is named "Expectations", with threshold 1.0, strict.
 - **Mode.** `Mode.for_classifier(Config.get(:eval_mode) || expectations.eval_mode)`. The env wins here, the reverse of metrics; this deepeval quirk is kept.
@@ -409,7 +409,7 @@ Report.Console.build(test_results, display: :all) |> Report.Terminal.render() |>
 | `DeepEvalEx.Classifier`, `Classifier.Utils`, `DeepEvalEx.Classification` | `base_classifier.py`, `classifier/classifier.py`, `utils.py`, `test_run/api.py` Classification | P8-4 |
 | `DeepEvalEx.Classifiers` (13 constructors) | `classifiers/*.py` built-ins | P8-4 |
 | `DeepEvalEx.Prompts.Classifier` | `classifier/templates` | P8-4 |
-| `DeepEvalEx.Metrics.Expectations` (private) | `evaluate/expectations.py` | P8-5 |
+| `Metrics.Expectations` (private) | `evaluate/expectations.py` | P8-5 |
 | `Dataset.Expectations.evidence/1`, `TestRun.ExpectationsData` | `dataset/expectations.py`, `create_expectations_data` | P8-5 |
 | `TestRun.Cache` (+ `Cached*`, `MetricConfiguration`, `ClassifierConfiguration`), `TestRun.Cache.Store` | `test_run/cache.py` | P8-3 |
 | `BaseMetric.cache_configuration/1` (optional callback) | `create_metric_configuration` | P8-3 |
@@ -425,7 +425,7 @@ Report.Console.build(test_results, display: :all) |> Report.Terminal.render() |>
 | deepeval | DeepEvalEx |
 |---|---|
 | `deepeval test run` | `mix deep_eval.test`, same flags (section 2); exit code is mix's (2), not pytest's (1) |
-| `set_is_running_deepeval(True)`, `set_should_*`, `set_identifier` | `Config.put_run_overrides/1` |
+| `set_is_running_deepeval(True)`, `set_should_*`, `set_identifier` | `DeepEvalEx.Config.put_run_overrides/1` |
 | `pytest_sessionstart` → `create_test_run(identifier, file_name)` | `Collector.start_link/1` in the task, `testFile` = PATH |
 | `pytest_runtest_protocol` → `PYTEST_RUN_TEST_NAME` | `use DeepEvalEx.ExUnit` setup plus the `$callers` lookup |
 | `pytest_runtest_call` Observer/EvalSession | not ported (P9 trace scope) |
@@ -662,7 +662,7 @@ The maintainer accepted every recommended option below (2026-10-23).
    **Recommended: (a).** It is unique, it keeps describe context, and the parity fixtures set names explicitly.
 5. **Plain `mix test` producing a run.**
    - (a) No. Only `mix deep_eval.test` records and wraps up, matching plain pytest.
-   - (b) Add an opt-in `DeepEvalEx.ExUnit.start_run/1` for `test_helper.exs` that registers an `ExUnit.after_suite/1` wrap-up.
+   - (b) Add an opt-in `start_run/1` to `DeepEvalEx.ExUnit` for `test_helper.exs` that registers an `ExUnit.after_suite/1` wrap-up.
 
    **Recommended: (a) for P8**, with (b) as a follow-up if asked for.
 6. **Confident AI and pytest-isms in output.** These are the "Note: Use Confident AI…" table row, the "deepeval view" footer, the doc links in warnings, and "Running teardown with pytest sessionfinish...".

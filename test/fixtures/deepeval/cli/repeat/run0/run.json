@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "test_runner.py",
+    "-r",
+    "2"
+  ],
+  "exit_code": 1,
+  "skipped": [
+    "Test test_runner.py::test_skipped[1-2] was skipped. Reason: ",
+    "Test test_runner.py::test_skipped[2-2] was skipped. Reason: "
+  ]
+}

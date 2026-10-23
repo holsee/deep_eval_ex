@@ -1,0 +1,819 @@
+[
+  {
+    "argv": [
+      "test_example.py"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-c"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": true,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "--use-cache",
+      "--repeat",
+      "2"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "--count",
+      "2",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-c",
+      "-r",
+      "2"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "--count",
+      "2",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-i",
+      "-s",
+      "-v"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--verbose",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": true,
+      "skip_on_missing_params": true,
+      "verbose_mode": true,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "--ignore-errors",
+      "--skip-on-missing-params",
+      "--verbose"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--verbose",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": true,
+      "skip_on_missing_params": true,
+      "verbose_mode": true,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-x"
+    ],
+    "error": null,
+    "pytest_args": [
+      "-x",
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-x",
+      "-X"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "--exit-on-first-failure"
+    ],
+    "error": null,
+    "pytest_args": [
+      "-x",
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-w"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-w",
+      "-W"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-id",
+      "nightly"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "--identifier",
+      "nightly",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": "nightly",
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "--identifier",
+      "nightly"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "--identifier",
+      "nightly",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": "nightly",
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-n",
+      "4"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-n",
+      "4",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-d",
+      "FAILING"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "--display",
+      "passing"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-m",
+      "rag"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-m",
+      "rag",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-m",
+      "not slow"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-m",
+      "not slow",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-m",
+      "rag or slow"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-m",
+      "rag or slow",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "--durations",
+      "0"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=0",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "--durations",
+      "3"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=3",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "--color",
+      "no"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=no",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-o"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": "Warning: --official requires a CONFIDENT_API_KEY environment variable to be set. Skipping.\n"
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-ci"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": true,
+      "ignore_errors": true,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-r3"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "--count",
+      "3",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-k",
+      "refund",
+      "--tb",
+      "short"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval",
+      "-k",
+      "refund",
+      "--tb",
+      "short"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py::test_refund"
+    ],
+    "error": null,
+    "pytest_args": [
+      "test_example.py::test_refund",
+      "--quiet",
+      "--color=yes",
+      "--durations=10",
+      "-s",
+      "--disable-warnings",
+      "-p",
+      "deepeval"
+    ],
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-r",
+      "0"
+    ],
+    "error": "The repeat argument must be at least 1.",
+    "pytest_args": null,
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": "1"
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-d",
+      "some"
+    ],
+    "error": "Invalid value for '--display' / '-d': 'some' is not one of 'all', 'failing', 'passing'.",
+    "pytest_args": null,
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": null
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "test_example.py",
+      "-r",
+      "x"
+    ],
+    "error": "Invalid value for '--repeat' / '-r': 'x' is not a valid int.",
+    "pytest_args": null,
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": null
+    },
+    "stdout": ""
+  },
+  {
+    "argv": [
+      "missing.py"
+    ],
+    "error": "Provided path is neither a valid file nor a directory.",
+    "pytest_args": null,
+    "settings": {
+      "use_cache": false,
+      "ignore_errors": false,
+      "skip_on_missing_params": false,
+      "verbose_mode": null,
+      "identifier": null,
+      "running": null
+    },
+    "stdout": ""
+  }
+]

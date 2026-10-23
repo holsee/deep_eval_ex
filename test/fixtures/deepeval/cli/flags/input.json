@@ -1,0 +1,12 @@
+{
+  "runs": [
+    [
+      "-i",
+      "-d",
+      "failing",
+      "--identifier",
+      "nightly",
+      "-w"
+    ]
+  ]
+}

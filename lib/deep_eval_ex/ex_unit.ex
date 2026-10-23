@@ -29,6 +29,8 @@ defmodule DeepEvalEx.ExUnit do
 
   ## Available Assertions
 
+  - `assert_test/2,3` - deepeval's `assert_test`: assert a test case passes
+    its metrics, classifiers and expectations
   - `assert_passes/2,3` - Assert metric evaluation passes (score >= threshold)
   - `assert_fails/2,3` - Assert metric evaluation fails (score < threshold)
   - `assert_score/3,4` - Assert score is within a range
@@ -36,9 +38,10 @@ defmodule DeepEvalEx.ExUnit do
 
   ## deepeval's `assert_test`
 
-  `assert_evaluation(test_case, metrics)` is deepeval 4.3.1's
-  `assert_test(test_case, metrics)`, and `assert_passes(test_case, metric)`
-  is `assert_test(test_case, [metric])`:
+  `assert_test(test_case, metrics, opts)` is deepeval 4.3.1's
+  `assert_test(test_case, metrics, classifiers=...)`.
+  `assert_evaluation(test_case, metrics)` is the same assertion, and
+  `assert_passes(test_case, metric)` is `assert_test(test_case, [metric])`:
 
   - Like `assert_test`, they raise `ArgumentError` unless at least one
     metric has a threshold and is not flaky (see
@@ -87,7 +90,37 @@ defmodule DeepEvalEx.ExUnit do
 
   `assert_fails/2,3` and `assert_score/3,4` have no deepeval counterpart.
   They evaluate their metric through `DeepEvalEx.Evaluator.evaluate/3` too,
-  with the same defaults, and keep their own messages.
+  with the same defaults, and keep their own messages. They are never
+  recorded in a `mix deep_eval.test` run, where a passing test would
+  otherwise show a failed metric.
+
+  ## `mix deep_eval.test`
+
+  Under `mix deep_eval.test` (deepeval's `deepeval test run`, see
+  `Mix.Tasks.DeepEval.Test`) every `assert_test/2,3`,
+  `assert_evaluation/2,3` and `assert_passes/2,3` also records its test case
+  in the run's `DeepEvalEx.ExUnit.Collector`, as deepeval's `assert_test`
+  adds it to the test run. The task then wraps the run up once the tests are
+  done: the `Test Results` table, the summary and the saved run. In detail:
+
+  - A test case without a `:name` is named after the ExUnit test that
+    evaluated it, its full name (`"test refund policy answer"`,
+    `"test describe block refund policy answer"`), as deepeval names it
+    after the pytest test; the test is found from the asserting process or
+    the process that started it (a `Task`).
+  - The test-run cache is written, and with `--use-cache` (`-c`) read, as
+    `assert_test` evaluates with `CacheConfig(write_cache=True,
+    use_cache=should_use_cache())`; cache keys include the hyperparameters
+    of `log_hyperparameters/1`.
+  - A failing flaky test case's warning is kept for the run, and printed
+    after it with `--show-warnings` (`-w`), instead of `IO.warn/1`.
+  - `use DeepEvalEx.ExUnit` must come after `use ExUnit.Case`: it adds a
+    `setup` that registers each test with the run, and replaces the
+    imported `test` macros with `DeepEvalEx.ExUnit.Repeat`'s, which honour
+    `--repeat`.
+
+  Under plain `mix test` nothing is recorded, cached or saved, as under
+  plain pytest.
 
   ## Errored Metrics
 
@@ -121,7 +154,8 @@ defmodule DeepEvalEx.ExUnit do
   option wins over both.
   """
 
-  alias DeepEvalEx.{Classification, Config, Evaluator, Result, TestResult}
+  alias DeepEvalEx.{Classification, Config, Evaluator, Result, TestResult, TestRun}
+  alias DeepEvalEx.ExUnit.Collector
   alias DeepEvalEx.Metrics.Utils.Verbose
 
   # Settings the assertions read, as deepeval's assert_test.
@@ -135,6 +169,11 @@ defmodule DeepEvalEx.ExUnit do
   @doc """
   Imports DeepEvalEx.ExUnit macros into your test module.
 
+  Must come after `use ExUnit.Case`, and raises `ArgumentError` otherwise:
+  it also registers each test with a `mix deep_eval.test` run (see
+  "`mix deep_eval.test`") and imports `DeepEvalEx.ExUnit.Repeat`'s `test`
+  macros in place of `ExUnit.Case`'s.
+
   ## Example
 
       defmodule MyTest do
@@ -144,7 +183,61 @@ defmodule DeepEvalEx.ExUnit do
   """
   defmacro __using__(_opts) do
     quote do
+      DeepEvalEx.ExUnit.__check_case__!(__MODULE__)
+
+      import ExUnit.Case, except: [test: 1, test: 2, test: 3]
+      import DeepEvalEx.ExUnit.Repeat, only: [test: 1, test: 2, test: 3]
       import DeepEvalEx.ExUnit
+
+      require ExUnit.Callbacks
+
+      ExUnit.Callbacks.setup({DeepEvalEx.ExUnit.Collector, :register})
+    end
+  end
+
+  @doc false
+  def __check_case__!(module) do
+    unless Module.has_attribute?(module, :ex_unit_setup) do
+      raise ArgumentError,
+            "use DeepEvalEx.ExUnit must come after use ExUnit.Case in #{inspect(module)}"
+    end
+  end
+
+  @doc """
+  Sets the hyperparameters of the `mix deep_eval.test` run, deepeval's
+  `@log_hyperparameters`: saved with the run and part of every cache key
+  of its test cases. Call it from `test/test_helper.exs`:
+
+      ExUnit.start()
+      DeepEvalEx.ExUnit.log_hyperparameters(%{"model" => "gpt-4.1", "prompt_version" => "v3"})
+
+  Takes a map or keyword list (see
+  `DeepEvalEx.TestRun.process_hyperparameters/1`). Does nothing under plain
+  `mix test`.
+  """
+  @spec log_hyperparameters(keyword() | map()) :: :ok
+  def log_hyperparameters(hyperparameters), do: Collector.log_hyperparameters(hyperparameters)
+
+  @doc """
+  Asserts that a test case passes its metrics, classifiers and
+  expectations: deepeval's `assert_test(test_case, metrics,
+  classifiers=...)`.
+
+  See "deepeval's `assert_test`" in the module documentation for its
+  failure message, flaky test cases and options, and "`mix deep_eval.test`"
+  for how a run records it. Takes every `DeepEvalEx.Evaluator.evaluate/3`
+  option, `:classifiers` included. Returns the metrics'
+  `DeepEvalEx.Result`s, in the order of `metrics`.
+
+  ## Examples
+
+      assert_test(test_case, [Faithfulness, {AnswerRelevancy, threshold: 0.7}],
+        classifiers: [DeepEvalEx.Classifiers.refusal()]
+      )
+  """
+  defmacro assert_test(test_case, metrics, opts \\ []) do
+    quote bind_quoted: [test_case: test_case, metrics: metrics, opts: opts] do
+      DeepEvalEx.ExUnit.__assert_test__(test_case, metrics, opts)
     end
   end
 
@@ -243,7 +336,7 @@ defmodule DeepEvalEx.ExUnit do
 
   @doc false
   def __assert_passes__(test_case, metric, opts) do
-    [result] = assert_test(test_case, [metric], opts)
+    [result] = __assert_test__(test_case, [metric], opts)
     result
   end
 
@@ -275,7 +368,7 @@ defmodule DeepEvalEx.ExUnit do
   end
 
   defp run_metric(test_case, metric, opts) do
-    {[result], _classifications} = evaluate(test_case, [metric], assert_opts(opts))
+    {[result], _classifications, _duration} = evaluate(test_case, [metric], assert_opts(opts))
     result
   end
 
@@ -298,17 +391,24 @@ defmodule DeepEvalEx.ExUnit do
 
     opts = Keyword.put_new(opts, :throttle_value, @throttle_value)
 
-    {[results], [classifications], _durations} = Evaluator.run([test_case], metrics, opts)
-    {results, classifications}
+    {[results], [classifications], [duration]} = Evaluator.run([test_case], metrics, opts)
+    {results, classifications, duration}
   end
 
+  @doc false
   # deepeval's assert_test: the test case fails as its TestResult does, and
-  # a flaky test case only warns.
-  defp assert_test(test_case, metrics, opts) do
+  # a flaky test case only warns. In a mix deep_eval.test run it evaluates
+  # with the run's cache and records the test case.
+  def __assert_test__(test_case, metrics, opts) do
     opts = assert_opts(opts)
     check_metrics!(test_case, metrics, Keyword.get(opts, :classifiers, []), opts)
 
-    {results, classifications} = evaluate(test_case, metrics, opts)
+    running? = Collector.active?()
+    opts = if running?, do: run_cache_opts(opts), else: opts
+
+    {results, classifications, duration} = evaluate(test_case, metrics, opts)
+    if running?, do: record(test_case, results, duration)
+
     # deepeval's assert_test builds its TestResult with index=None; only
     # :success, :metrics_data and :classifications are read here, so the
     # index is immaterial.
@@ -316,13 +416,48 @@ defmodule DeepEvalEx.ExUnit do
 
     if test_result.success == false do
       message = assert_test_message(test_result.metrics_data, test_result.classifications)
+      warning = "Flaky test case failed (no assertion raised): " <> message
 
-      if test_case.flaky,
-        do: IO.warn("Flaky test case failed (no assertion raised): " <> message),
-        else: flunk!(message)
+      cond do
+        not test_case.flaky -> flunk!(message)
+        running? -> Collector.warn(warning)
+        true -> IO.warn(warning)
+      end
     end
 
     results
+  end
+
+  # assert_test's CacheConfig(write_cache=get_is_running_deepeval(),
+  # use_cache=should_use_cache()), keyed with the run's hyperparameters.
+  defp run_cache_opts(opts) do
+    opts
+    |> Keyword.put_new_lazy(:cache, &Collector.cache/0)
+    |> Keyword.put_new_lazy(:use_cache, fn -> Config.get(:use_cache) == true end)
+    |> Keyword.put_new_lazy(:cache_hyperparameters, &Collector.cache_hyperparameters/0)
+  end
+
+  # deepeval's create_api_test_case(index=None) and update_test_run: named
+  # after the test, without an order until the run is sorted, and with the
+  # seconds it took as a float (update_run_duration), however short.
+  defp record(test_case, results, duration) do
+    test_run =
+      TestRun.from_results([test_case], [results],
+        run_durations: [duration],
+        test_name: Collector.test_name()
+      )
+
+    case test_run.test_cases ++ test_run.conversational_test_cases do
+      [api_test_case] ->
+        Collector.record(%{
+          api_test_case
+          | order: test_case.dataset_rank,
+            run_duration: duration / 1
+        })
+
+      [] ->
+        :ok
+    end
   end
 
   # deepeval's validate_assert_test_inputs: with no metrics and no
@@ -389,7 +524,8 @@ defmodule DeepEvalEx.ExUnit do
   end
 
   @doc false
-  def __assert_evaluation__(test_case, metrics, opts), do: assert_test(test_case, metrics, opts)
+  def __assert_evaluation__(test_case, metrics, opts),
+    do: __assert_test__(test_case, metrics, opts)
 
   defp format_skipped_message(result) do
     """

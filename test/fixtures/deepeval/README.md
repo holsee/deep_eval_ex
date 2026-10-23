@@ -1,10 +1,10 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in ten sets:
+Fixtures written by **deepeval 4.3.1**, in eleven sets:
 
 - export scenarios (the directories below, except `scripted/`, `prompts/`,
   `round_trip/`, `system_one/`, `datasets/`, `classifiers/`,
-  `expectations/`, `cache/` and `report/`), used by
+  `expectations/`, `cache/`, `report/` and `cli/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
@@ -44,6 +44,10 @@ Fixtures written by **deepeval 4.3.1**, in ten sets:
 - [report fixtures](#report-fixtures) (`report/`), what deepeval's console
   report, Markdown export, `Test Results` table and wrap-up print, used by
   `test/deep_eval_ex/report/report_parity_test.exs`
+- [CLI fixtures](#cli-fixtures) (`cli/`), what `deepeval test run` passes to
+  pytest for its flags, and what its runs of a pytest file save, used by
+  `test/deep_eval_ex/cli/test_args_test.exs` and
+  `test/deep_eval_ex/cli/integration_test.exs`
 
 ## Export scenarios
 
@@ -672,8 +676,8 @@ fixtures.
 
 `scripts/parity/generate_runner_fixtures.py` writes them, from the
 scenarios in its `CLASSIFIER_SCENARIOS`, along with the
-[expectation fixtures](#expectation-fixtures), and will also write the
-other P8 sets (cache, report, CLI):
+[expectation fixtures](#expectation-fixtures), and the other P8 sets
+(cache, report, CLI):
 
 ```sh
 devcontainer exec --workspace-folder . \
@@ -909,3 +913,44 @@ as its Rich markup), and `DeepEvalEx.Report.Markdown.render/1` and
 `DeepEvalEx.Report.Summary.wrap_up/3` (with `confident_ai: true`) with
 `report.md` and `summary.txt`, byte for byte. How the terminal draws them
 is DeepEvalEx's own and not compared.
+
+## CLI fixtures
+
+`scripts/parity/generate_runner_fixtures.py` also runs deepeval's
+`deepeval test run` (`cli/test/command.py`). Under `cli/`:
+
+- `args/cases.json` - for each argument list in the generator's
+  `CLI_ARGS_CASES`, with `pytest.main` patched: the `pytest_args`
+  `command.py` built, the settings it set (`use_cache`, `ignore_errors`,
+  `skip_on_missing_params`, `verbose_mode`, `identifier` and the `DEEPEVAL`
+  variable as `running`), what it printed (`stdout`, the `--official`
+  warning) and the error it raised (`error`, click's message for a usage
+  error)
+- `test_runner.py` - the pytest file the runs run: passing, failing and
+  flaky test cases, an unnamed one marked `rag`, a skipped one, and
+  `@log_hyperparameters`
+- `<scenario>/input.json` - the argument lists of the scenario's runs, made
+  one after the other in one folder; `<scenario>/run<i>/` - `run.json`
+  (`argv`, `exit_code` and the `Test ... was skipped` lines),
+  `latest_test_run.json` (`.deepeval/.latest_test_run.json`) and
+  `cache.json` (`.deepeval/.deepeval-cache.json`, its bytes)
+
+| Scenario | Runs |
+| --- | --- |
+| `default` | `test_runner.py` |
+| `flags` | `-i -d failing --identifier nightly -w` |
+| `repeat` | `-r 2`: every test twice, `test_unnamed[1-2]`, a repeated cache key filed once |
+| `mark` | `-m rag`: the unnamed test case only |
+| `warm_cache` | a plain run, then `-c`: every metric from the cache at cost 0 |
+
+`test/deep_eval_ex/cli/test_args_test.exs` checks that
+`DeepEvalEx.CLI.TestArgs.parse!/1` gives `mix test` arguments meaning what
+the pytest arguments mean, the same settings and the same errors.
+`test/deep_eval_ex/cli/integration_test.exs` runs `mix deep_eval.test` in
+`test/fixtures/projects/runner/`, whose `test/runner_eval.exs` mirrors
+`test_runner.py` (run with `--seed 0`, in definition order), for every
+scenario, and compares the saved run (times, `testFile` and the unnamed
+test's name, `test_unnamed` against `test unnamed`, aside) and the cache
+file, byte for byte, the exit status (non-zero on failure; mix exits with
+`2`, pytest with `1`) and the skipped lines. deepeval prints an empty skip
+reason; DeepEvalEx prints ExUnit's.

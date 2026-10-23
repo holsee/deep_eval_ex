@@ -43,11 +43,34 @@ defmodule DeepEvalEx.Config do
   | `:typesafe_model_name` | `TYPESAFE_MODEL_NAME` | string | `nil` |
   | `:typesafe_cost_per_input_token` | `TYPESAFE_COST_PER_INPUT_TOKEN` | float >= 0 | `nil` |
   | `:print_results` | none | boolean | `true` |
+  | `:running` | `DEEPEVAL` | boolean | `false` |
+  | `:repeat` | none | integer >= 1 | `nil` |
+  | `:display` | none | `:all`, `:failing` or `:passing` | `:all` |
+  | `:test_file` | none | string | `nil` |
+  | `:show_warnings` | none | boolean | `false` |
 
   `:print_results` is DeepEvalEx's own: whether `DeepEvalEx.evaluate_run/3`
   prints the evaluation report and summary (deepeval's
   `DisplayConfig.print_results`); set it to `false` to silence every run,
   in tests for instance. It has no environment variable.
+
+  `:running`, `:repeat`, `:display`, `:test_file` and `:show_warnings` are
+  the settings of a `mix deep_eval.test` run, which sets them as run
+  overrides (see below): `:running` is deepeval's `get_is_running_deepeval()`
+  (the `DEEPEVAL` variable, which `deepeval test run` sets to `YES`), and
+  the others are the task's `--repeat`, `--display`, test path and
+  `--show-warnings`.
+
+  ## Run overrides
+
+  `put_run_overrides/1` sets values that win over application config and
+  the environment until `clear_run_overrides/0`, as deepeval's
+  `set_should_use_cache`, `set_should_ignore_errors`, `set_identifier` and
+  the other in-process setters win over `.env`. `mix deep_eval.test` puts
+  its flags there (see `Mix.Tasks.DeepEval.Test`). An override of `nil` is
+  a value, not a fall-through: `verbose_mode: nil` reads as `nil` whatever
+  the config says, as `set_verbose_mode(None)` does. Overrides are kept in
+  `:persistent_term`, so they are seen by every process of the VM.
 
   ## Parsing
 
@@ -103,8 +126,19 @@ defmodule DeepEvalEx.Config do
     # deepeval's setting is a PositiveFloat, but its TypeSafeModel accepts a
     # price of 0 (a free Jev); only a negative price is an error there.
     typesafe_cost_per_input_token: {"TYPESAFE_COST_PER_INPUT_TOKEN", {:float, :>=, 0}, nil},
-    print_results: {nil, :boolean, true}
+    print_results: {nil, :boolean, true},
+    running: {"DEEPEVAL", :boolean, false},
+    repeat: {nil, {:integer, :>=, 1}, nil},
+    display: {nil, :display, :all},
+    test_file: {nil, :string, nil},
+    show_warnings: {nil, :boolean, false}
   ]
+
+  # Where put_run_overrides/1 keeps its overrides.
+  @overrides_key {__MODULE__, :run_overrides}
+
+  # deepeval's TestRunResultDisplay values.
+  @displays [:all, :failing, :passing]
 
   # deepeval's Settings._normalize_fs aliases.
   @read_only_aliases ~w(READ_ONLY READ-ONLY READONLY RO)
@@ -133,6 +167,11 @@ defmodule DeepEvalEx.Config do
           | :typesafe_model_name
           | :typesafe_cost_per_input_token
           | :print_results
+          | :running
+          | :repeat
+          | :display
+          | :test_file
+          | :show_warnings
 
   @doc """
   Every setting `get/1` resolves.
@@ -156,7 +195,8 @@ defmodule DeepEvalEx.Config do
   end
 
   @doc """
-  Resolves a setting: `config :deep_eval_ex, key` when set, else its
+  Resolves a setting: its run override when one is set (see "Run
+  overrides"), else `config :deep_eval_ex, key` when set, else its
   environment variable, else deepeval's default (see the table above).
 
   Raises `ArgumentError` for an unknown key or a numeric value that is not
@@ -171,11 +211,59 @@ defmodule DeepEvalEx.Config do
   def get(key) do
     {var, type, default} = setting!(key)
 
-    with nil <- parse(config(key), type, "config :deep_eval_ex, #{inspect(key)}"),
-         nil <- parse(var && env(var), type, var) do
-      default
+    case fetch_run_override(key) do
+      {:ok, value} ->
+        value
+
+      :error ->
+        with nil <- parse(config(key), type, "config :deep_eval_ex, #{inspect(key)}"),
+             nil <- parse(var && env(var), type, var) do
+          default
+        end
     end
   end
+
+  @doc """
+  Sets run overrides: each value wins over application config and the
+  environment in `get/1` until `clear_run_overrides/0` (see "Run
+  overrides"). Values are parsed as application config is, and merged
+  into the overrides already set.
+
+  Raises `ArgumentError` for an unknown key or an invalid value.
+
+  ## Examples
+
+      DeepEvalEx.Config.put_run_overrides(ignore_errors: true, identifier: "nightly")
+      DeepEvalEx.Config.get(:ignore_errors)
+      #=> true
+  """
+  @spec put_run_overrides(keyword()) :: :ok
+  def put_run_overrides(overrides) when is_list(overrides) do
+    parsed =
+      Map.new(overrides, fn {key, value} ->
+        {_var, type, _default} = setting!(key)
+        {key, parse(value, type, "run override #{inspect(key)}")}
+      end)
+
+    :persistent_term.put(@overrides_key, Map.merge(run_overrides(), parsed))
+  end
+
+  @doc """
+  Clears every run override set by `put_run_overrides/1`.
+  """
+  @spec clear_run_overrides() :: :ok
+  def clear_run_overrides do
+    :persistent_term.erase(@overrides_key)
+    :ok
+  end
+
+  @doc """
+  The run overrides currently set, as a map.
+  """
+  @spec run_overrides() :: %{optional(key()) => term()}
+  def run_overrides, do: :persistent_term.get(@overrides_key, %{})
+
+  defp fetch_run_override(key), do: Map.fetch(run_overrides(), key)
 
   @doc """
   The time budget in seconds for evaluating one test case, deepeval's
@@ -230,6 +318,16 @@ defmodule DeepEvalEx.Config do
 
   defp parse(value, :boolean, _source), do: parse_bool(value)
   defp parse(value, :eval_mode, _source), do: Mode.normalize(value)
+  defp parse(value, :display, _source) when value in @displays, do: value
+
+  defp parse(value, :display, source) when is_binary(value) do
+    case String.downcase(String.trim(value)) do
+      display when display in ~w(all failing passing) -> String.to_existing_atom(display)
+      _other -> raise_display(value, source)
+    end
+  end
+
+  defp parse(value, :display, source), do: raise_display(value, source)
   defp parse(:read_only, :file_system, _source), do: :read_only
 
   defp parse(value, :file_system, source) when is_binary(value) do
@@ -246,6 +344,11 @@ defmodule DeepEvalEx.Config do
     if number != nil and compare(number, op, bound),
       do: number,
       else: raise(ArgumentError, "#{source} must be #{describe(type)}, got: #{inspect(value)}")
+  end
+
+  defp raise_display(value, source) do
+    raise ArgumentError,
+          "#{source} must be one of :all, :failing or :passing, got: #{inspect(value)}"
   end
 
   defp raise_file_system(value, source) do

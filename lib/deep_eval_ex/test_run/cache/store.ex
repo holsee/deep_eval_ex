@@ -59,8 +59,10 @@ defmodule DeepEvalEx.TestRun.Cache.Store do
       read_only: Keyword.get_lazy(opts, :read_only, &Config.read_only?/0),
       # The cache file's entries, loaded on first use: {keys in order, map}.
       main: nil,
-      # This run's entries: key => {order, entry}.
-      fresh: %{}
+      # This run's entries: key => {order, seq, entry}; seq keeps entries of
+      # one order (each assertion's test case is order 0) in filing order.
+      fresh: %{},
+      seq: 0
     }
 
     GenServer.start_link(__MODULE__, state)
@@ -75,8 +77,9 @@ defmodule DeepEvalEx.TestRun.Cache.Store do
 
   @doc """
   Files `entry` under `key` for this run, `order` being its test case's
-  place in the run (the cache file's order after `wrap_up/1`); a later
-  `put/4` of the same key replaces it (deepeval's `cache_test_case`).
+  place in the run (the cache file's order after `wrap_up/1`, entries of
+  the same order in the order they were first filed); a later `put/4` of
+  the same key replaces it (deepeval's `cache_test_case`).
   """
   @spec put(t(), String.t(), non_neg_integer(), CachedTestCase.t()) :: :ok
   def put(store, key, order, %CachedTestCase{} = entry),
@@ -119,9 +122,11 @@ defmodule DeepEvalEx.TestRun.Cache.Store do
     main = {keys, Map.put(entries, key, entry)}
 
     fresh =
-      Map.update(state.fresh, key, {order, entry}, fn {first, _entry} -> {first, entry} end)
+      Map.update(state.fresh, key, {order, state.seq, entry}, fn {first, seq, _entry} ->
+        {first, seq, entry}
+      end)
 
-    state = %{state | main: main, fresh: fresh}
+    state = %{state | main: main, fresh: fresh, seq: state.seq + 1}
     write(state, Cache.cache_file(), main_run(state))
     write(state, Cache.temp_cache_file(), fresh_run(state))
     {:reply, :ok, state}
@@ -158,8 +163,8 @@ defmodule DeepEvalEx.TestRun.Cache.Store do
   defp fresh_run(%{fresh: fresh}) do
     entries =
       fresh
-      |> Enum.sort_by(fn {_key, {order, _entry}} -> order end)
-      |> Enum.map(fn {key, {_order, entry}} -> {key, entry} end)
+      |> Enum.sort_by(fn {_key, {order, seq, _entry}} -> {order, seq} end)
+      |> Enum.map(fn {key, {_order, _seq, entry}} -> {key, entry} end)
 
     %CachedTestRun{test_cases_lookup_map: entries}
   end

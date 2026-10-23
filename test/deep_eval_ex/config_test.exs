@@ -26,11 +26,12 @@ defmodule DeepEvalEx.ConfigTest do
     cache_folder: "DEEPEVAL_CACHE_FOLDER",
     typesafe_api_key: "TYPESAFE_API_KEY",
     typesafe_model_name: "TYPESAFE_MODEL_NAME",
-    typesafe_cost_per_input_token: "TYPESAFE_COST_PER_INPUT_TOKEN"
+    typesafe_cost_per_input_token: "TYPESAFE_COST_PER_INPUT_TOKEN",
+    running: "DEEPEVAL"
   }
 
   # DeepEvalEx's own settings, without an environment variable.
-  @own_settings [:print_results]
+  @own_settings [:print_results, :repeat, :display, :test_file, :show_warnings]
 
   doctest Config
 
@@ -50,6 +51,7 @@ defmodule DeepEvalEx.ConfigTest do
     Enum.each(@own_settings, &Application.delete_env(:deep_eval_ex, &1))
 
     on_exit(fn ->
+      Config.clear_run_overrides()
       System.delete_env("DEEP_EVAL_EX_DOC_EXAMPLE")
       Application.delete_env(:deep_eval_ex, :doc_example)
 
@@ -395,6 +397,79 @@ defmodule DeepEvalEx.ConfigTest do
 
       Application.put_env(:deep_eval_ex, :doc_example, 0.3)
       assert Config.config(:doc_example) == 0.3
+    end
+  end
+
+  describe "run overrides" do
+    test "win over application config and the environment until cleared" do
+      System.put_env("IGNORE_DEEPEVAL_ERRORS", "true")
+      Application.put_env(:deep_eval_ex, :identifier, "from-config")
+
+      Config.put_run_overrides(ignore_errors: false, identifier: "nightly")
+
+      assert Config.get(:ignore_errors) == false
+      assert Config.get(:identifier) == "nightly"
+      assert Config.run_overrides() == %{ignore_errors: false, identifier: "nightly"}
+
+      Config.clear_run_overrides()
+
+      assert Config.get(:ignore_errors) == true
+      assert Config.get(:identifier) == "from-config"
+      assert Config.run_overrides() == %{}
+    end
+
+    test "an override of nil reads as nil, as deepeval's set_verbose_mode(None)" do
+      Application.put_env(:deep_eval_ex, :verbose_mode, true)
+      Config.put_run_overrides(verbose_mode: nil)
+
+      assert Config.get(:verbose_mode) == nil
+    end
+
+    test "are merged into the overrides already set" do
+      Config.put_run_overrides(running: true)
+      Config.put_run_overrides(use_cache: true)
+
+      assert Config.get(:running) == true
+      assert Config.get(:use_cache) == true
+    end
+
+    test "are parsed as application config is" do
+      Config.put_run_overrides(repeat: "3", display: "FAILING", running: "YES")
+
+      assert Config.get(:repeat) == 3
+      assert Config.get(:display) == :failing
+      assert Config.get(:running) == true
+    end
+
+    test "reject unknown keys and invalid values" do
+      assert_raise ArgumentError, ~r/unknown DeepEvalEx setting/, fn ->
+        Config.put_run_overrides(nope: 1)
+      end
+
+      assert_raise ArgumentError, ~r/run override :repeat must be an integer/, fn ->
+        Config.put_run_overrides(repeat: 0)
+      end
+
+      assert_raise ArgumentError, ~r/run override :display must be one of/, fn ->
+        Config.put_run_overrides(display: "some")
+      end
+
+      assert Config.run_overrides() == %{}
+    end
+  end
+
+  describe "the run settings" do
+    test "default to a run that is not a mix deep_eval.test run" do
+      assert Config.get(:running) == false
+      assert Config.get(:repeat) == nil
+      assert Config.get(:display) == :all
+      assert Config.get(:test_file) == nil
+      assert Config.get(:show_warnings) == false
+    end
+
+    test ":running reads deepeval's DEEPEVAL variable" do
+      System.put_env("DEEPEVAL", "YES")
+      assert Config.get(:running) == true
     end
   end
 end

@@ -115,12 +115,15 @@ Emitted when batch evaluation completes.
 
 Emitted when `DeepEvalEx.evaluate_run/3` (or `DeepEvalEx.evaluate/3`) has
 wrapped up its test run, saved and printed it (see the
-[Console Report](Console-Report.md) guide); deepeval's `on_test_run_end`
-hook. A classifier-only run has no test run and emits none.
+[Console Report](Console-Report.md) guide), and when `mix deep_eval.test` has
+wrapped up its run (see the [ExUnit Integration](ExUnit-Integration.md)
+guide); deepeval's `on_test_run_end` hook. A classifier-only run has no test
+run and emits none, and an `evaluate_run/3` inside a `mix deep_eval.test` run
+emits none either: the task wraps the whole run up once.
 
 | Measurement | Type | Description |
 |-------------|------|-------------|
-| `duration` | integer | Duration of the evaluation, in native time units |
+| `duration` | integer | Duration of the evaluation (of `mix test` for the task), in native time units |
 | `test_passed` | integer | Test cases that passed |
 | `test_failed` | integer | Test cases that failed |
 
@@ -129,7 +132,7 @@ hook. A classifier-only run has no test run and emits none.
 | `test_run` | `DeepEvalEx.TestRun` | The wrapped-up run |
 | `path` | string \| nil | The `test_run_<timestamp>.json` written to the results folder |
 | `identifier` | string \| nil | The run's identifier |
-| `source` | atom | `:evaluate_run` |
+| `source` | atom | `:evaluate_run`, or `:cli` for `mix deep_eval.test` |
 
 ### LLM Events
 

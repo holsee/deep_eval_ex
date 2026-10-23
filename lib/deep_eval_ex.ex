@@ -102,6 +102,7 @@ defmodule DeepEvalEx do
   """
 
   alias DeepEvalEx.{Config, EvaluationResult, Evaluator, Result, TestCase, TestRun}
+  alias DeepEvalEx.ExUnit.Collector
   alias DeepEvalEx.Report.{Console, Markdown, Terminal}
   alias DeepEvalEx.TestRun.Cache.Store
   alias DeepEvalEx.TestRun.Manager
@@ -344,6 +345,18 @@ defmodule DeepEvalEx do
   Each wrapped-up run emits `[:deep_eval_ex, :test_run, :stop]` (see
   `DeepEvalEx.Telemetry`).
 
+  ## Under `mix deep_eval.test`
+
+  As deepeval's `evaluate()` under `deepeval test run`, a call made from a
+  test of a `mix deep_eval.test` run adds its test cases to that run (see
+  `DeepEvalEx.ExUnit.Collector`) instead of wrapping up a run of its own:
+  unnamed test cases are named after the test, the run's test-run cache
+  and hyperparameters are used (`:hyperparameters`, when given, become the
+  run's), and nothing is saved and no `[:deep_eval_ex, :test_run, :stop]`
+  is emitted, as the task wraps the whole run up once. The report is still
+  printed, and the returned run holds this call's test cases, with `path`
+  `nil`.
+
   ## Cache
 
   As deepeval's `evaluate()` with its default `CacheConfig`, every run
@@ -454,17 +467,64 @@ defmodule DeepEvalEx do
     # deepeval fails to load its settings, rather than after the LLM calls.
     export_opts = Keyword.put(export_opts, :read_only, Config.read_only?())
 
-    {:ok, cache} =
-      Store.start_link(
-        write_cache: Keyword.get(eval_opts, :write_cache, true),
-        folder: presence(export_opts[:cache_folder]) || Config.get(:cache_folder),
-        read_only: export_opts[:read_only]
+    if Collector.active?() do
+      evaluate_in_run(test_cases, metrics, eval_opts, export_opts)
+    else
+      {:ok, cache} =
+        Store.start_link(
+          write_cache: Keyword.get(eval_opts, :write_cache, true),
+          folder: presence(export_opts[:cache_folder]) || Config.get(:cache_folder),
+          read_only: export_opts[:read_only]
+        )
+
+      try do
+        evaluate_and_export(test_cases, metrics, eval_opts, export_opts, hyperparameters, cache)
+      after
+        Store.stop(cache)
+      end
+    end
+  end
+
+  # deepeval's evaluate() under `deepeval test run`: the test cases go into
+  # the run (named after the test), with the run's cache and hyperparameters,
+  # and the CLI wraps the run up once, so nothing is wrapped up or saved here.
+  defp evaluate_in_run(test_cases, metrics, eval_opts, export_opts) do
+    classifiers = Keyword.get(eval_opts, :classifiers, [])
+    expectations? = Enum.any?(test_cases, &Evaluator.has_expectations?/1)
+    cache = if Keyword.get(eval_opts, :write_cache, true), do: Collector.cache()
+
+    eval_opts =
+      Keyword.merge(eval_opts,
+        cache: cache,
+        use_cache: use_cache?(eval_opts),
+        cache_hyperparameters: Collector.cache_hyperparameters()
       )
 
-    try do
-      evaluate_and_export(test_cases, metrics, eval_opts, export_opts, hyperparameters, cache)
-    after
-      Store.stop(cache)
+    started = System.monotonic_time()
+    {results, classifications, durations} = Evaluator.run(test_cases, metrics, eval_opts)
+    elapsed = System.monotonic_time() - started
+    run_duration = System.convert_time_unit(elapsed, :native, :microsecond) / 1_000_000
+
+    if print_results?(export_opts),
+      do: print_report(test_cases, results, classifications, export_opts)
+
+    if metrics == [] and classifiers != [] and not expectations? do
+      {results, classifications, nil, nil}
+    else
+      if export_opts[:hyperparameters] != nil,
+        do: Collector.log_hyperparameters(export_opts[:hyperparameters])
+
+      test_run =
+        TestRun.from_results(test_cases, results,
+          run_durations: durations,
+          run_duration: run_duration,
+          identifier: export_opts[:identifier],
+          hyperparameters: TestRun.process_hyperparameters(export_opts[:hyperparameters]),
+          test_name: Collector.test_name()
+        )
+
+      Enum.each(test_run.test_cases ++ test_run.conversational_test_cases, &Collector.record/1)
+      {results, classifications, test_run, nil}
     end
   end
 

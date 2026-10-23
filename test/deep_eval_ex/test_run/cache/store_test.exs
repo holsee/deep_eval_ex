@@ -83,6 +83,18 @@ defmodule DeepEvalEx.TestRun.Cache.StoreTest do
     refute File.exists?(Path.join(dir, Cache.temp_cache_file()))
   end
 
+  test "wrap_up/1 keeps entries of the same order in the order they were filed",
+       %{tmp_dir: dir} do
+    # Every assert_test's test case is order 0 in its own evaluation.
+    store = start(dir)
+
+    for key <- ~w(c a d b), do: :ok = Store.put(store, key, 0, entry(key))
+    :ok = Store.put(store, "a", 0, entry("again"))
+    :ok = Store.wrap_up(store)
+
+    assert dir |> read(Cache.cache_file()) |> keys() == ~w(c a d b)
+  end
+
   test "wrap_up/1 writes an empty cache for a run that cached nothing", %{tmp_dir: dir} do
     write_cache(dir, [{"old", entry("Old")}])
     :ok = dir |> start() |> Store.wrap_up()

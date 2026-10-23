@@ -293,7 +293,7 @@ defmodule DeepEvalEx.TestRun do
             metrics_data: [MetricData.t()],
             run_duration: float() | 0,
             evaluation_cost: float() | nil,
-            order: non_neg_integer(),
+            order: non_neg_integer() | nil,
             metadata: map() | nil,
             comments: String.t() | nil,
             expectations_data: DeepEvalEx.TestRun.raw() | nil,
@@ -477,7 +477,7 @@ defmodule DeepEvalEx.TestRun do
             run_duration: number(),
             evaluation_cost: float() | nil,
             turns: [Turn.t()],
-            order: non_neg_integer(),
+            order: non_neg_integer() | nil,
             scenario: String.t() | nil,
             expected_outcome: String.t() | nil,
             user_description: String.t() | nil,
@@ -591,9 +591,14 @@ defmodule DeepEvalEx.TestRun do
   - `:dataset_alias`, `:dataset_id`, `:dataset_version` - The dataset the
     test cases came from
   - `:official` - Marks the run official (default: `false`)
+  - `:test_name` - The name of test cases without one, instead of
+    `"test_case_<order>"`: under `mix deep_eval.test`, the ExUnit test that
+    evaluated them, as deepeval names them after the pytest test
+    (`PYTEST_RUN_TEST_NAME`)
 
   `prompts` is `[]`, as deepeval's `evaluate()` writes it when no
-  hyperparameter is a `Prompt`.
+  hyperparameter is a `Prompt`; `from_test_cases/2` takes a `:prompts`
+  option, `nil` for a `deepeval test run`'s run, which never sets them.
   """
   @spec from_results(
           [EvalTestCase.t() | EvalConversationalTestCase.t()],
@@ -610,8 +615,12 @@ defmodule DeepEvalEx.TestRun do
       |> index_by_kind()
       |> Enum.flat_map(fn {{test_case, case_results, duration}, index} ->
         case Enum.reject(case_results, & &1.skipped) do
-          [] -> []
-          kept -> [api_test_case(test_case, kept, duration, test_case.dataset_rank || index)]
+          [] ->
+            []
+
+          kept ->
+            api = api_test_case(test_case, kept, duration, test_case.dataset_rank || index)
+            [name_after_test(api, test_case, Keyword.get(opts, :test_name))]
         end
       end)
       |> Enum.split_with(&match?(%ConversationalTestCase{}, &1))
@@ -645,7 +654,7 @@ defmodule DeepEvalEx.TestRun do
       metrics_scores: metrics_scores(evaluated),
       identifier: Keyword.get(opts, :identifier),
       hyperparameters: process_hyperparameters(Keyword.get(opts, :hyperparameters)),
-      prompts: [],
+      prompts: Keyword.get(opts, :prompts, []),
       test_passed: test_passed,
       test_failed: test_failed,
       run_duration: to_float(Keyword.get(opts, :run_duration, 0.0)),
@@ -850,6 +859,13 @@ defmodule DeepEvalEx.TestRun do
     }
   end
 
+  # Under `deepeval test run`, an unnamed test case is named after the test
+  # that evaluated it (PYTEST_RUN_TEST_NAME).
+  defp name_after_test(api, %{name: nil}, test_name) when is_binary(test_name),
+    do: %{api | name: test_name}
+
+  defp name_after_test(api, _test_case, _test_name), do: api
+
   # deepeval's executors count single- and multi-turn test cases apart:
   # each item is paired with its position among the test cases of its kind.
   defp index_by_kind(items) do
@@ -952,16 +968,23 @@ defmodule DeepEvalEx.TestRun do
 
   # deepeval's calculate_test_passes_and_fails: a test case without a
   # verdict (success None) neither passes nor fails.
-  # deepeval's sort_test_cases: a stable sort by order, then
-  # _assign_unique_orders renumbers every order from 0 when two are equal
-  # (every order is set here, so its gap filling never applies)
+  # deepeval's sort_test_cases: a stable sort by order, test cases without
+  # one (an assert_test's) last, then _assign_unique_orders: a test case
+  # without an order gets the one after its predecessor's, and when two are
+  # equal every order is renumbered from 0.
   defp sort_test_cases(test_cases) do
-    sorted = Enum.sort_by(test_cases, & &1.order)
+    sorted = Enum.sort_by(test_cases, &if(&1.order, do: {0, &1.order}, else: {1, 0}))
 
-    if sorted |> Enum.uniq_by(& &1.order) |> length() == length(sorted) do
-      sorted
+    {filled, _next} =
+      Enum.map_reduce(sorted, 0, fn test_case, next ->
+        order = test_case.order || next
+        {%{test_case | order: order}, order + 1}
+      end)
+
+    if filled |> Enum.uniq_by(& &1.order) |> length() == length(filled) do
+      filled
     else
-      sorted
+      filled
       |> Enum.with_index()
       |> Enum.map(fn {test_case, order} -> %{test_case | order: order} end)
     end
