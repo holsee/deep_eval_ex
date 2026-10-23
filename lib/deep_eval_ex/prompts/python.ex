@@ -14,7 +14,7 @@ defmodule DeepEvalEx.Prompts.Python do
   - `repr/1` - Python's `repr()` of strings, lists, dicts, numbers, `None`,
     booleans and deepeval `ToolCall`s and `RetrievedContextData`
   - `str/1` - Python's `str()` of a string or a deepeval
-    `RetrievedContextData`
+    `RetrievedContextData` or `ToolCall`
   - `format_fixed/2` - Python's `format(number, ".<n>f")`
   - `format_g/1` - Python's `format(number, "g")`, as in deepeval's
     `f"weight={weight:g}"`
@@ -113,21 +113,42 @@ defmodule DeepEvalEx.Prompts.Python do
   @doc """
   Formats `term` like Python's `str(term)`, for what deepeval passes
   through `str()`: a string as it is, and a
-  `DeepEvalEx.Schemas.RetrievedContextData` as pydantic's `__str__`, its
-  fields as `name=repr(value)` joined with spaces (not deepeval's
-  `model_serializer`, which only `model_dump` uses).
+  `DeepEvalEx.Schemas.RetrievedContextData` or a
+  `DeepEvalEx.Schemas.ToolCall` as pydantic's `__str__`, every field as
+  `name=repr(value)` joined with spaces (not deepeval's `model_serializer`
+  or `ToolCall.__repr__`, which `str()` does not call). A tool call's
+  `type` prints as its enum member, `<ToolCallType.FUNCTION: 'FUNCTION'>`.
 
   ## Examples
 
       iex> alias DeepEvalEx.Schemas.RetrievedContextData
       iex> DeepEvalEx.Prompts.Python.str(%RetrievedContextData{context: "It's here.", source: "wiki"})
       ~S(context="It's here." source='wiki')
+
+      iex> DeepEvalEx.Prompts.Python.str(%DeepEvalEx.Schemas.ToolCall{name: "search", output: 1})
+      "name='search' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output=1 input_parameters=None"
   """
-  @spec str(String.t() | RetrievedContextData.t()) :: String.t()
+  @spec str(String.t() | RetrievedContextData.t() | ToolCall.t()) :: String.t()
   def str(binary) when is_binary(binary), do: binary
 
   def str(%RetrievedContextData{context: context, source: source}),
     do: IO.iodata_to_binary(["context=", string(context), " source=", string(source)])
+
+  def str(%ToolCall{} = tool_call) do
+    type = tool_call.type |> Atom.to_string() |> String.upcase()
+
+    [
+      {"name", tool_call.name},
+      {"type", %EnumMember{class: "ToolCallType", name: type, value: type}},
+      {"description", tool_call.description},
+      {"reasoning", tool_call.reasoning},
+      {"output", tool_call.output},
+      {"input_parameters", tool_call.input_parameters}
+    ]
+    |> Enum.map(fn {name, value} -> [name, ?=, do_repr(value)] end)
+    |> Enum.intersperse(" ")
+    |> IO.iodata_to_binary()
+  end
 
   @doc """
   Formats `string` like Jinja's `tojson` filter, which deepeval's templates

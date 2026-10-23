@@ -2237,6 +2237,32 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     metrics come later) and start as the async iterator's test-run traces,
     and every traced fixture run's `metricsScores` and
     `traceMetricsScores` are recomputed exactly.
+- **Nested and compact traces** (ADR-0011), ports of deepeval 4.3.1's
+  `create_nested_spans_dict` and `compact_trace`, the forms of a trace the
+  trace metrics read. The [Tracing](wiki/guides/Tracing.md) guide covers
+  them.
+  - `DeepEvalEx.Tracing.NestedDict.build/1` builds a span's nested trace
+    dict: a `Jason.OrderedObject` of its exported fields by name, in
+    `BaseApiSpan` order, without the uuids, times, status, test case,
+    metric data, metric collection, metadata or `nil` values, and its
+    children (dropped spans included) under `"children"`. Values are the
+    span's own (tool calls stay `DeepEvalEx.Schemas.ToolCall`s) and the
+    provider is not normalised. `to_json/2` renders it as
+    `serialize_to_json(trace_dict, indent=2)`, every tool call field
+    included.
+  - `DeepEvalEx.Tracing.CompactTrace.compact/1` keeps deepeval's
+    `_TRACE_SPAN_KEYS` of each span in order, drops `nil`, `[]` and `""`,
+    and makes values JSON-ready as `_jsonable`: anything that is not a
+    string, number, boolean, `nil`, list or map becomes its Python
+    `str()`.
+  - `DeepEvalEx.TestCase` has a new `:trace_dict` field, deepeval's
+    private `_trace_dict`: the nested dict of the trace a test case was
+    built from. `new/1` never sets it and it is never exported.
+  - `DeepEvalEx.Prompts.Python.str/1` formats a `ToolCall` as pydantic's
+    `__str__` (`name='search' type=<ToolCallType.FUNCTION: 'FUNCTION'>
+    ...`).
+  - The traces of all thirteen traced scenarios build deepeval's
+    `nested.json` and `compact.json` byte for byte.
 
 ### Changed
 

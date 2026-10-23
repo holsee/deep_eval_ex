@@ -119,6 +119,29 @@ In a test run, `traceMetricsScores` sums the span metric results per span
 type, span name and metric (`DeepEvalEx.TestRun.TraceMetricScores`), and
 the same results count in `metricsScores`.
 
+### Nested and compact traces
+
+Metrics that judge a whole agent run read the trace as deepeval's nested
+trace dict, which `DeepEvalEx.Tracing.NestedDict.build/1` builds from a
+root span: each span's fields by name (`input`, `output`,
+`tools_called`, `model`, ...), without ids, times, status, metadata or
+metric data, and its children under `"children"`. `DeepEvalEx.TestCase`'s
+`:trace_dict` field holds it for those metrics, as deepeval's private
+`_trace_dict`, and is never exported. `NestedDict.to_json/2` renders it
+as the JSON those metrics put in their prompts:
+
+```elixir
+{_answer, [trace]} = DeepEvalEx.Tracing.capture([], fn -> MyApp.Support.answer("hi") end)
+
+trace_dict = DeepEvalEx.Tracing.NestedDict.build(hd(trace.root_spans))
+IO.puts(DeepEvalEx.Tracing.NestedDict.to_json(trace_dict))
+```
+
+`DeepEvalEx.Tracing.CompactTrace.compact/1` cuts the dict down to what a
+System One model is asked about: each span's name, type, description,
+inputs, outputs, error, model, contexts and tool calls, with empty values
+left out and tool calls as their Python `str()`.
+
 ## Updating spans and traces
 
 Code running in a span can add to it, as deepeval's `update_current_span`

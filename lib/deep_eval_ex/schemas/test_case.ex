@@ -43,6 +43,11 @@ defmodule DeepEvalEx.TestCase do
     `order`, and so its `"test_case_<order>"` name, in place of the test
     case's position in the evaluated list. `nil` (the default) outside a
     dataset; `new/1` never sets it
+  - `:trace_dict` - The nested trace dict of the trace the test case was
+    built from (`DeepEvalEx.Tracing.NestedDict`), deepeval's private
+    `_trace_dict`, which the trace metrics read. `nil` (the default) for a
+    test case not built from a trace; `new/1` never sets it, and it is
+    never exported
 
   `:comments` through `:flaky` mirror deepeval's `LLMTestCase` and are
   carried through to results and exports unchanged; no metric reads them.
@@ -120,7 +125,8 @@ defmodule DeepEvalEx.TestCase do
           custom_column_key_values: %{optional(String.t()) => String.t()} | nil,
           expected_labels: %{optional(String.t()) => String.t()} | nil,
           expectations: Expectations.t() | nil,
-          dataset_rank: non_neg_integer() | nil
+          dataset_rank: non_neg_integer() | nil,
+          trace_dict: DeepEvalEx.Tracing.NestedDict.t() | nil
         }
 
   defstruct [
@@ -143,6 +149,7 @@ defmodule DeepEvalEx.TestCase do
     :tools_called,
     :expected_tools,
     :dataset_rank,
+    :trace_dict,
     flaky: false
   ]
 

@@ -327,8 +327,18 @@ defmodule DeepEvalEx.Tracing.Api do
     {"promptCommitHash", :prompt_commit_hash, :hash}
   ]
 
-  defp prompt_pairs(%Span{type: :llm} = span) do
-    for {key, field, prompt_key} <- @prompt_fields do
+  @prompt_keys Map.new(@prompt_fields, fn {key, field, _prompt_key} -> {field, key} end)
+
+  defp prompt_pairs(span),
+    do: for({field, value} <- prompt_fields(span), do: {Map.fetch!(@prompt_keys, field), value})
+
+  @doc false
+  # An LLM span's prompt fields as `_convert_span_to_api_span` sets them,
+  # by field name in BaseApiSpan's order: the prompt's, overridden by the
+  # span's own when truthy. `[]` for another type.
+  @spec prompt_fields(Span.t()) :: keyword()
+  def prompt_fields(%Span{type: :llm} = span) do
+    for {_key, field, prompt_key} <- @prompt_fields do
       own = Map.fetch!(span, field)
 
       value =
@@ -336,25 +346,29 @@ defmodule DeepEvalEx.Tracing.Api do
           do: own,
           else: span.prompt && prompt_value(span.prompt, prompt_key)
 
-      {key, value}
+      {field, value}
     end
   end
 
-  defp prompt_pairs(%Span{}), do: []
+  def prompt_fields(%Span{}), do: []
 
   defp prompt_value(%OrderedObject{} = prompt, key), do: prompt[Atom.to_string(key)]
 
   defp prompt_value(prompt, key) when is_map(prompt),
     do: Map.get(prompt, key, Map.get(prompt, Atom.to_string(key)))
 
-  defp token_intervals(intervals) when is_map(intervals) and map_size(intervals) > 0 do
+  @doc false
+  # An LLM span's token intervals keyed by microsecond ISO times, in time
+  # order; `nil` when it has none, as `if span.token_intervals`.
+  @spec token_intervals(%{optional(integer()) => String.t()} | nil) :: OrderedObject.t() | nil
+  def token_intervals(intervals) when is_map(intervals) and map_size(intervals) > 0 do
     intervals
     |> Enum.sort()
     |> Enum.map(fn {us, text} -> {Time.to_zod_iso(us, :microsecond), text} end)
     |> OrderedObject.new()
   end
 
-  defp token_intervals(_intervals), do: nil
+  def token_intervals(_intervals), do: nil
 
   @doc """
   Appends an exported span (`span_api/2`) to its type's bucket of a

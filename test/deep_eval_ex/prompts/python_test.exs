@@ -149,6 +149,27 @@ defmodule DeepEvalEx.Prompts.PythonTest do
     end
   end
 
+  describe "str/1" do
+    test "formats a ToolCall as pydantic's __str__, every field as name=repr(value)" do
+      assert Python.str(%ToolCall{name: "search"}) ==
+               "name='search' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None " <>
+                 "reasoning=None output=None input_parameters=None"
+
+      tool_call = %ToolCall{
+        name: "s",
+        type: :mcp,
+        description: "it's",
+        reasoning: "r",
+        output: [1, 0.5, nil],
+        input_parameters: Jason.OrderedObject.new([{"b", 1}, {"a", true}])
+      }
+
+      assert Python.str(tool_call) ==
+               ~S|name='s' type=<ToolCallType.MCP: 'MCP'> description="it's" reasoning='r' | <>
+                 ~S|output=[1, 0.5, None] input_parameters={'b': 1, 'a': True}|
+    end
+  end
+
   describe "tojson/1" do
     test "writes JSON with <, >, & and ' escaped for HTML" do
       assert Python.tojson("plain") == ~S("plain")

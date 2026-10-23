@@ -447,6 +447,11 @@ defmodule DeepEvalEx.TestCaseTest do
                TestCase.new(%{"input" => "Q", "dataset_rank" => 3, "_dataset_rank" => 3})
     end
 
+    test "does not take a trace dict, deepeval's private _trace_dict" do
+      assert {:ok, %TestCase{trace_dict: nil}} =
+               TestCase.new(%{"input" => "Q", "trace_dict" => %{}, "_trace_dict" => %{}})
+    end
+
     test "requires custom_column_key_values and expected_labels to map strings to strings" do
       assert {:error, _} = TestCase.new(input: "Q", custom_column_key_values: %{"a" => 1})
       assert {:error, _} = TestCase.new(input: "Q", expected_labels: %{"tone" => :neutral})
