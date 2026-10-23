@@ -2726,6 +2726,47 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `1` or `0` as pydantic does; deepeval's `Prompt` values are not ported.
   See the [TestCase](wiki/api/TestCase.md) page.
 
+- **`DeepEvalEx.Synthesizer`: synthetic goldens from contexts, from scratch
+  and from goldens**, a port of deepeval 4.3.1's `Synthesizer`
+  (`synthesizer/synthesizer.py`, `config.py`, `schema.py` and
+  `templates/`).
+  - `Synthesizer.new/1` takes the model (`:model`, `:adapter`),
+    `:max_concurrent` (default `100`), `:cost_tracking` and the
+    `DeepEvalEx.Synthesizer.StylingConfig` (scenario, task, input format,
+    expected output format), `DeepEvalEx.Synthesizer.EvolutionConfig`
+    (`num_evolutions`, the weighted `evolutions`) and
+    `DeepEvalEx.Synthesizer.FiltrationConfig` (quality threshold, retries,
+    critic model), as structs or keyword lists.
+  - `generate_goldens_from_contexts/3` generates up to
+    `:max_goldens_per_context` inputs per context, has the critic score
+    them and rewrites those below the threshold, evolves each, restyles it
+    when a styling is set and generates its expected output, with
+    `:source_files`, `:context_chunk_source_files` and
+    `:target_files_per_context` for contexts spanning files.
+    `generate_goldens_from_scratch/3` generates from the styling alone and
+    `generate_goldens_from_goldens/3` from goldens' contexts, or from
+    scratch, extracting the styling from their inputs unless one was set.
+    Each returns `{:ok, synthesizer}` with `:synthetic_goldens` and
+    `:synthesis_cost` (the native model's cost, else `nil`), or the first
+    failed call's `{:error, reason}`; without a full styling, generating
+    from scratch raises `ArgumentError` with deepeval's message.
+  - The seven evolutions (`DeepEvalEx.Synthesizer.Evolution`: Reasoning,
+    Multi-context, Concretizing, Constrained, Comparative, Hypothetical,
+    In-Breadth), drawn by weight as `random.choices` draws them, and the
+    templates copied verbatim: `SynthesizerTemplate`, `FilterTemplate`,
+    `EvolutionTemplate`, `PromptEvolutionTemplate`,
+    `PromptSynthesizerTemplate` and `ExtractionTemplate` under
+    `DeepEvalEx.Synthesizer`, with the schemas in
+    `DeepEvalEx.Synthesizer.Schema`.
+  - Parity fixtures written by deepeval
+    (`scripts/parity/generate_synthesizer_fixtures.py`): every template's
+    prompts, byte for byte, and twenty scenarios replaying a scripted
+    judge, compared prompt by prompt and golden by golden.
+  - Not ported: generating from documents (chunking and context
+    construction), conversational and text-to-SQL goldens, `save_as`,
+    `to_pandas` and deepeval's `async_mode=False` path. See the
+    [Synthesizer](wiki/guides/Synthesizer.md) guide.
+
 ### Changed
 
 - The Anthropic adapter's `supports_multimodal?/0` is now `true`, as for

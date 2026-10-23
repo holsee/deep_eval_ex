@@ -1,0 +1,136 @@
+{
+  "method": "generate_goldens_from_scratch",
+  "synthesizer": {
+    "styling_config": {
+      "scenario": "Tourists planning a trip to Paris",
+      "task": "Travel assistant answering landmark questions",
+      "input_format": "A short question in English",
+      "expected_output_format": null
+    },
+    "evolution_config": {
+      "num_evolutions": 2,
+      "evolutions": {
+        "Multi-context": 1,
+        "Reasoning": 1
+      }
+    },
+    "filtration_config": {
+      "synthetic_input_quality_threshold": 0.5,
+      "max_quality_retries": 3
+    }
+  },
+  "args": {
+    "num_goldens": 2
+  },
+  "script": {
+    "data": [
+      {
+        "data": [
+          {
+            "input": "Is the Louvre open on Mondays?"
+          },
+          {
+            "input": "Best time to see the tower?"
+          },
+          {
+            "input": "A third the judge adds"
+          }
+        ]
+      }
+    ],
+    "response": [
+      {
+        "response": "Evolution 1"
+      },
+      {
+        "response": "Evolution 2"
+      },
+      {
+        "response": "Evolution 3"
+      },
+      {
+        "response": "Evolution 4"
+      },
+      {
+        "response": "Evolution 5"
+      },
+      {
+        "response": "Evolution 6"
+      }
+    ]
+  },
+  "prompts": [
+    {
+      "step": "data",
+      "prompt": "Generate a series of input prompts from scratch based on the provided scenario, task, and output format.\n        The inputs must align with the given scenario and task description, and conform to specified output format.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'data' key as a list of JSON objects.\n        You MUST TRY to generate 2 data points.\n\n        Example scenario: technical SWE typing SQL queries to query from a database called FAST_FOOD_RESTAURANTS\n        Example task: Text2SQL LLM Assistant\n        Example input format: SQL String\n        Example num prompts: 2\n        Example JSON:\n        {\n            \"data\": [\n                {\n                    \"input\": \"SELECT * FROM menu\"\n                },\n                {\n                    \"input\": \"SELECT AVG(price) FROM menu;\"\n                }\n            ]  \n        }\n\n        You MUST include at least one statement as the input. `input` MUST be of `A short question in English` format.\n        You MUST TRY to generate 2 data points, unless the generated `input` is getting repetitive.\n        **\n\n        scenario: Tourists planning a trip to Paris\n        task: Travel assistant answering landmark questions\n        input format: A short question in English\n        num prompts: 2\n        JSON:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input`. You MUST complicate the given `Input` using the following method:\n            1. If `Input` can be solved with just a few simple thinking processes, you can rewrite it to explicitly request multiple-step reasoning.\n            2. `Rewritten Input` should require readers to make multiple logical connections or inferences.\n            3. `Rewritten Input` should be concise and understandable by humans.\n            4. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example input:\n            Why are plants green?\n            Example rewritten input:\n            How does chlorophyll's role in absorbing light relate to plants' green color and their ability to produce glucose?\n        \n            --------------------------\n            \n            Example input:\n            What causes seasons to change?\n            Example rewritten input: \n            Given the trapping of solar radiation by atmospheric gases, explain how the enhanced activity impact Earth's climate.\n\n            --------------------------\n\n            Example input:\n            Identify the primary factors that determine the price of goods in a market.\n            Example rewritten input:\n            Examine how the interplay of market demand, supply dynamics, and government policy interventions collectively shape the pricing mechanism of goods within a market ecosystem.\n            **\n\n            Input:\n            Is the Louvre open on Mondays?\n            Rewritten Input:            \n            "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input`. You MUST complicate the given `Input` using the following method:\n            1. If `Input` can be solved with just a few simple thinking processes, you can rewrite it to explicitly request multiple-step reasoning.\n            2. `Rewritten Input` should require readers to make multiple logical connections or inferences.\n            3. `Rewritten Input` should be concise and understandable by humans.\n            4. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example input:\n            Why are plants green?\n            Example rewritten input:\n            How does chlorophyll's role in absorbing light relate to plants' green color and their ability to produce glucose?\n        \n            --------------------------\n            \n            Example input:\n            What causes seasons to change?\n            Example rewritten input: \n            Given the trapping of solar radiation by atmospheric gases, explain how the enhanced activity impact Earth's climate.\n\n            --------------------------\n\n            Example input:\n            Identify the primary factors that determine the price of goods in a market.\n            Example rewritten input:\n            Examine how the interplay of market demand, supply dynamics, and government policy interventions collectively shape the pricing mechanism of goods within a market ecosystem.\n            **\n\n            Input:\n            Evolution 1\n            Rewritten Input:            \n            "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input`. You MUST complicate the given `Input` using the following method:\n            1. If `Input` can be solved with just a few simple thinking processes, you can rewrite it to explicitly request multiple-step reasoning.\n            2. `Rewritten Input` should require readers to make multiple logical connections or inferences.\n            3. `Rewritten Input` should be concise and understandable by humans.\n            4. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example input:\n            Why are plants green?\n            Example rewritten input:\n            How does chlorophyll's role in absorbing light relate to plants' green color and their ability to produce glucose?\n        \n            --------------------------\n            \n            Example input:\n            What causes seasons to change?\n            Example rewritten input: \n            Given the trapping of solar radiation by atmospheric gases, explain how the enhanced activity impact Earth's climate.\n\n            --------------------------\n\n            Example input:\n            Identify the primary factors that determine the price of goods in a market.\n            Example rewritten input:\n            Examine how the interplay of market demand, supply dynamics, and government policy interventions collectively shape the pricing mechanism of goods within a market ecosystem.\n            **\n\n            Input:\n            Best time to see the tower?\n            Rewritten Input:            \n            "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input`. You MUST complicate the given `Input` using the following method:\n            1. If `Input` can be solved with just a few simple thinking processes, you can rewrite it to explicitly request multiple-step reasoning.\n            2. `Rewritten Input` should require readers to make multiple logical connections or inferences.\n            3. `Rewritten Input` should be concise and understandable by humans.\n            4. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example input:\n            Why are plants green?\n            Example rewritten input:\n            How does chlorophyll's role in absorbing light relate to plants' green color and their ability to produce glucose?\n        \n            --------------------------\n            \n            Example input:\n            What causes seasons to change?\n            Example rewritten input: \n            Given the trapping of solar radiation by atmospheric gases, explain how the enhanced activity impact Earth's climate.\n\n            --------------------------\n\n            Example input:\n            Identify the primary factors that determine the price of goods in a market.\n            Example rewritten input:\n            Examine how the interplay of market demand, supply dynamics, and government policy interventions collectively shape the pricing mechanism of goods within a market ecosystem.\n            **\n\n            Input:\n            Evolution 3\n            Rewritten Input:            \n            "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input`. You MUST complicate the given `Input` using the following method:\n            1. If `Input` can be solved with just a few simple thinking processes, you can rewrite it to explicitly request multiple-step reasoning.\n            2. `Rewritten Input` should require readers to make multiple logical connections or inferences.\n            3. `Rewritten Input` should be concise and understandable by humans.\n            4. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example input:\n            Why are plants green?\n            Example rewritten input:\n            How does chlorophyll's role in absorbing light relate to plants' green color and their ability to produce glucose?\n        \n            --------------------------\n            \n            Example input:\n            What causes seasons to change?\n            Example rewritten input: \n            Given the trapping of solar radiation by atmospheric gases, explain how the enhanced activity impact Earth's climate.\n\n            --------------------------\n\n            Example input:\n            Identify the primary factors that determine the price of goods in a market.\n            Example rewritten input:\n            Examine how the interplay of market demand, supply dynamics, and government policy interventions collectively shape the pricing mechanism of goods within a market ecosystem.\n            **\n\n            Input:\n            A third the judge adds\n            Rewritten Input:            \n            "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input`. You MUST complicate the given `Input` using the following method:\n            1. If `Input` can be solved with just a few simple thinking processes, you can rewrite it to explicitly request multiple-step reasoning.\n            2. `Rewritten Input` should require readers to make multiple logical connections or inferences.\n            3. `Rewritten Input` should be concise and understandable by humans.\n            4. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example input:\n            Why are plants green?\n            Example rewritten input:\n            How does chlorophyll's role in absorbing light relate to plants' green color and their ability to produce glucose?\n        \n            --------------------------\n            \n            Example input:\n            What causes seasons to change?\n            Example rewritten input: \n            Given the trapping of solar radiation by atmospheric gases, explain how the enhanced activity impact Earth's climate.\n\n            --------------------------\n\n            Example input:\n            Identify the primary factors that determine the price of goods in a market.\n            Example rewritten input:\n            Examine how the interplay of market demand, supply dynamics, and government policy interventions collectively shape the pricing mechanism of goods within a market ecosystem.\n            **\n\n            Input:\n            Evolution 5\n            Rewritten Input:            \n            "
+    }
+  ],
+  "goldens": [
+    {
+      "input": "Evolution 2",
+      "expected_output": null,
+      "context": null,
+      "source_file": null,
+      "additional_metadata": {
+        "evolutions": [
+          "Reasoning",
+          "Reasoning"
+        ]
+      }
+    },
+    {
+      "input": "Evolution 4",
+      "expected_output": null,
+      "context": null,
+      "source_file": null,
+      "additional_metadata": {
+        "evolutions": [
+          "Reasoning",
+          "Reasoning"
+        ]
+      }
+    },
+    {
+      "input": "Evolution 6",
+      "expected_output": null,
+      "context": null,
+      "source_file": null,
+      "additional_metadata": {
+        "evolutions": [
+          "Reasoning",
+          "Reasoning"
+        ]
+      }
+    }
+  ],
+  "styling_config": {
+    "scenario": "Tourists planning a trip to Paris",
+    "task": "Travel assistant answering landmark questions",
+    "input_format": "A short question in English",
+    "expected_output_format": null
+  }
+}

@@ -1,0 +1,273 @@
+{
+  "method": "generate_goldens_from_contexts",
+  "synthesizer": {
+    "styling_config": null,
+    "evolution_config": {
+      "num_evolutions": 1,
+      "evolutions": {
+        "Reasoning": 1
+      }
+    },
+    "filtration_config": {
+      "synthetic_input_quality_threshold": 0.7,
+      "max_quality_retries": 2
+    }
+  },
+  "args": {
+    "contexts": [
+      [
+        "The Eiffel Tower was completed in 1889 for the World's Fair.",
+        "It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady."
+      ],
+      [
+        "Paris has 20 arrondissements.",
+        "The Louvre is in the 1st."
+      ]
+    ],
+    "max_goldens_per_context": 2
+  },
+  "script": {
+    "data": [
+      {
+        "data": [
+          {
+            "input": "How tall is it?"
+          },
+          {
+            "input": "Tell me about the tower"
+          },
+          {
+            "input": "Dropped input"
+          }
+        ]
+      },
+      {
+        "data": [
+          {
+            "input": "Where is the Louvre?"
+          },
+          {
+            "input": "How many arrondissements?"
+          }
+        ]
+      }
+    ],
+    "feedback,score": [
+      {
+        "feedback": "Clear.",
+        "score": 0.9
+      },
+      {
+        "feedback": "Which tower?",
+        "score": 0.2
+      },
+      {
+        "feedback": "Clear.",
+        "score": 1
+      },
+      {
+        "feedback": "Too vague.",
+        "score": 0.5
+      },
+      {
+        "feedback": "Still vague.",
+        "score": 0.6
+      },
+      {
+        "feedback": "Clear.",
+        "score": 0.75
+      }
+    ],
+    "rewritten_input": [
+      {
+        "rewritten_input": "Tell me about the Eiffel Tower"
+      },
+      {
+        "rewritten_input": "Which arrondissement holds the Louvre?"
+      },
+      {
+        "rewritten_input": "In which arrondissement is the Louvre?"
+      }
+    ],
+    "response": [
+      {
+        "response": "Why is the Eiffel Tower 330 metres tall?"
+      },
+      {
+        "response": "It is 330 metres tall."
+      },
+      {
+        "response": "What led to the Eiffel Tower's 1889 completion?"
+      },
+      {
+        "response": "It was built for the 1889 World's Fair."
+      },
+      {
+        "response": "How does the Louvre's arrondissement relate to Paris's 20?"
+      },
+      {
+        "response": "The 1st."
+      },
+      {
+        "response": "Given 20 arrondissements, where is the Louvre?"
+      },
+      {
+        "response": "In the 1st arrondissement."
+      }
+    ]
+  },
+  "prompts": [
+    {
+      "step": "data",
+      "prompt": "I want you act as a copywriter. Based on the given context, which is list of strings, please generate a list of JSON objects with a `input` key.\n        The `input` can either be a question or a statement that can be addressed by the given context.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'data' key as a list of JSON objects.\n        You MUST TRY to generate 2 data points, unless the `input` is getting repetitive.\n\n        Example context: [\"Einstein won the Nobel Prize for his discovery of penicillin.\", \"Einstein won the Nobel Prize in 1968.\"]\n        Example max goldens per context: 2\n        Example JSON:\n        {\n            \"data\": [\n                {\n                    \"input\": \"What was Einstein known for?\"\n                },\n                {\n                    \"input\": \"Einstein was a smart guy huh\"\n                }\n            ]  \n        }\n\n\n        You should NOT incorporate any prior knowledge you have and take each context at face value.\n        You MUST include at least one statement as the input.\n        `input` MUST be a STRING.\n        \n        \n        \n        You MUST TRY to generate 2 data points, unless the generated `input` is getting repetitive.\n        **\n\n        Max Goldens Per Context:\n        2\n\n        Context:\n        [\"The Eiffel Tower was completed in 1889 for the World's Fair.\", 'It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady.']\n\n        JSON:\n        "
+    },
+    {
+      "step": "feedback,score",
+      "prompt": "Evaluate the provided synthetic query (which may be a question, task, or instruction) for clarity and answerability, assuming sufficient domain knowledge. Use the following criteria to guide your assessment:\n\n        1. **Self-Containment**: Can the query be understood and completed without needing additional context or external references not provided within the query itself? It should be self-sufficient, meaning it doesn't depend on specific documents, tables, or prior knowledge not included in the query.\n        2. **Clear Objective**: Does the query clearly convey its intent? It should specify what information, action, or response is being requested, allowing for a direct and appropriate answer or execution without ambiguity.\n\n        Based on these criteria, assign a score between 0 and 1, where:\n        - \"1\" means the query is clear, self-contained, and answerable.\n        - \"0\" means the query is vague, relies on external references, or is unclear in its intent.\n        - Scores between 0 and 1 indicate partial clarity or answerability, where the query meets some but not all of the criteria.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'feedback' and 'score' keys.\n\n        Example query: \"What technological innovations have changed communication over the last 20 years?\"\n        Example JSON:\n        {\n            \"feedback\": \"The query is somewhat vague as it asks about 'technological innovations' without specifying particular areas of communication (e.g., social media, messaging apps). It could be improved by narrowing the focus to a specific type of innovation or timeframe.\",\n            \"score\": 0.5\n        }\n\n        Example query: \"Explain the impact of renewable energy policies in Germany on local economies in 2021.\"\n        Example JSON:\n        {\n            \"feedback\": \"This query clearly specifies the focus (renewable energy policies), the region (Germany), and the timeframe (2021). It is self-contained and answerable without needing additional context, making it clear and effective.\",\n            \"score\": 1.0\n        }\n\n        Example query: \"What are the main criticisms of the current education system in the United States?\"\n        Example JSON:\n        {\n            \"feedback\": \"The question is broad and lacks specificity, as 'main criticisms' could refer to various aspects (e.g., funding, curriculum, access). To improve clarity, it could specify which aspect of the education system is being critiqued.\",\n            \"score\": 0.4\n        }\n\n        Example query: \"Discuss the role of AI in healthcare, particularly in diagnostics, as noted in the last report.\"\n        Example JSON:\n        {\n            \"feedback\": \"This question refers to 'the last report' without providing context or details, making it unclear and dependent on external information. It would be clearer if it provided some background on the report or defined what aspects of AI in diagnostics to address.\",\n            \"score\": 0.3\n        }\n                \n        The `feedback` MUST be a STRING and `score` must be a float from 0 to 1.\n        **\n                \n        Query:\n        How tall is it?\n\n        JSON:\n        "
+    },
+    {
+      "step": "feedback,score",
+      "prompt": "Evaluate the provided synthetic query (which may be a question, task, or instruction) for clarity and answerability, assuming sufficient domain knowledge. Use the following criteria to guide your assessment:\n\n        1. **Self-Containment**: Can the query be understood and completed without needing additional context or external references not provided within the query itself? It should be self-sufficient, meaning it doesn't depend on specific documents, tables, or prior knowledge not included in the query.\n        2. **Clear Objective**: Does the query clearly convey its intent? It should specify what information, action, or response is being requested, allowing for a direct and appropriate answer or execution without ambiguity.\n\n        Based on these criteria, assign a score between 0 and 1, where:\n        - \"1\" means the query is clear, self-contained, and answerable.\n        - \"0\" means the query is vague, relies on external references, or is unclear in its intent.\n        - Scores between 0 and 1 indicate partial clarity or answerability, where the query meets some but not all of the criteria.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'feedback' and 'score' keys.\n\n        Example query: \"What technological innovations have changed communication over the last 20 years?\"\n        Example JSON:\n        {\n            \"feedback\": \"The query is somewhat vague as it asks about 'technological innovations' without specifying particular areas of communication (e.g., social media, messaging apps). It could be improved by narrowing the focus to a specific type of innovation or timeframe.\",\n            \"score\": 0.5\n        }\n\n        Example query: \"Explain the impact of renewable energy policies in Germany on local economies in 2021.\"\n        Example JSON:\n        {\n            \"feedback\": \"This query clearly specifies the focus (renewable energy policies), the region (Germany), and the timeframe (2021). It is self-contained and answerable without needing additional context, making it clear and effective.\",\n            \"score\": 1.0\n        }\n\n        Example query: \"What are the main criticisms of the current education system in the United States?\"\n        Example JSON:\n        {\n            \"feedback\": \"The question is broad and lacks specificity, as 'main criticisms' could refer to various aspects (e.g., funding, curriculum, access). To improve clarity, it could specify which aspect of the education system is being critiqued.\",\n            \"score\": 0.4\n        }\n\n        Example query: \"Discuss the role of AI in healthcare, particularly in diagnostics, as noted in the last report.\"\n        Example JSON:\n        {\n            \"feedback\": \"This question refers to 'the last report' without providing context or details, making it unclear and dependent on external information. It would be clearer if it provided some background on the report or defined what aspects of AI in diagnostics to address.\",\n            \"score\": 0.3\n        }\n                \n        The `feedback` MUST be a STRING and `score` must be a float from 0 to 1.\n        **\n                \n        Query:\n        Tell me about the tower\n\n        JSON:\n        "
+    },
+    {
+      "step": "rewritten_input",
+      "prompt": "I want you to act as a query rewriter. Based on the provided context, original query, and feedback, generate a rewritten query that improves its clarity and answerability based on the feedback provided.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'rewritten_input' key.\n\n        Example context: \"The Golden Gate Bridge, located in San Francisco, was completed in 1937 and is known for its Art Deco design. It connects the city of San Francisco to Marin County and spans the Golden Gate Strait.\"\n        Example query: \"When was the bridge completed?\"\n        Example feedback: \"The question asks about the completion of 'the bridge' but does not specify which bridge it refers to. There are many famous bridges, and without specifying the name, the question is too vague. To improve clarity, include the bridge's name.\"\n        Example JSON:\n        {\n            \"rewritten_input\": \"When was the Golden Gate Bridge completed?\"\n        }\n\n        Example context: \"The paper 'Advancements in Quantum Computing' by Dr. Alice Thompson discusses breakthroughs in quantum algorithms and was published in 2022. It explores the potential applications of quantum computing in cryptography and drug discovery.\"\n        Example query: \"What applications of quantum computing are discussed in the paper?\"\n        Example feedback: \"The query is asking about applications of quantum computing but doesn't specify which paper is being referenced. Since many papers may discuss quantum computing, it would help to specify the title or author of the paper to improve clarity.\"\n        Example JSON:\n        {\n            \"rewritten_input\": \"What applications of quantum computing are discussed in the paper 'Advancements in Quantum Computing' by Dr. Alice Thompson?\"\n        }\n\n        You should NOT incorporate any prior knowledge and should base the rewritten query only on the context and feedback provided.\n        The `rewritten_input` MUST be a STRING.\n        **\n\n        Context:\n        [\"The Eiffel Tower was completed in 1889 for the World's Fair.\", 'It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady.']\n\n        Query:\n        Tell me about the tower\n\n        Feedback:\n        Which tower?\n\n        JSON:\n        "
+    },
+    {
+      "step": "feedback,score",
+      "prompt": "Evaluate the provided synthetic query (which may be a question, task, or instruction) for clarity and answerability, assuming sufficient domain knowledge. Use the following criteria to guide your assessment:\n\n        1. **Self-Containment**: Can the query be understood and completed without needing additional context or external references not provided within the query itself? It should be self-sufficient, meaning it doesn't depend on specific documents, tables, or prior knowledge not included in the query.\n        2. **Clear Objective**: Does the query clearly convey its intent? It should specify what information, action, or response is being requested, allowing for a direct and appropriate answer or execution without ambiguity.\n\n        Based on these criteria, assign a score between 0 and 1, where:\n        - \"1\" means the query is clear, self-contained, and answerable.\n        - \"0\" means the query is vague, relies on external references, or is unclear in its intent.\n        - Scores between 0 and 1 indicate partial clarity or answerability, where the query meets some but not all of the criteria.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'feedback' and 'score' keys.\n\n        Example query: \"What technological innovations have changed communication over the last 20 years?\"\n        Example JSON:\n        {\n            \"feedback\": \"The query is somewhat vague as it asks about 'technological innovations' without specifying particular areas of communication (e.g., social media, messaging apps). It could be improved by narrowing the focus to a specific type of innovation or timeframe.\",\n            \"score\": 0.5\n        }\n\n        Example query: \"Explain the impact of renewable energy policies in Germany on local economies in 2021.\"\n        Example JSON:\n        {\n            \"feedback\": \"This query clearly specifies the focus (renewable energy policies), the region (Germany), and the timeframe (2021). It is self-contained and answerable without needing additional context, making it clear and effective.\",\n            \"score\": 1.0\n        }\n\n        Example query: \"What are the main criticisms of the current education system in the United States?\"\n        Example JSON:\n        {\n            \"feedback\": \"The question is broad and lacks specificity, as 'main criticisms' could refer to various aspects (e.g., funding, curriculum, access). To improve clarity, it could specify which aspect of the education system is being critiqued.\",\n            \"score\": 0.4\n        }\n\n        Example query: \"Discuss the role of AI in healthcare, particularly in diagnostics, as noted in the last report.\"\n        Example JSON:\n        {\n            \"feedback\": \"This question refers to 'the last report' without providing context or details, making it unclear and dependent on external information. It would be clearer if it provided some background on the report or defined what aspects of AI in diagnostics to address.\",\n            \"score\": 0.3\n        }\n                \n        The `feedback` MUST be a STRING and `score` must be a float from 0 to 1.\n        **\n                \n        Query:\n        Tell me about the Eiffel Tower\n\n        JSON:\n        "
+    },
+    {
+      "step": "data",
+      "prompt": "I want you act as a copywriter. Based on the given context, which is list of strings, please generate a list of JSON objects with a `input` key.\n        The `input` can either be a question or a statement that can be addressed by the given context.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'data' key as a list of JSON objects.\n        You MUST TRY to generate 2 data points, unless the `input` is getting repetitive.\n\n        Example context: [\"Einstein won the Nobel Prize for his discovery of penicillin.\", \"Einstein won the Nobel Prize in 1968.\"]\n        Example max goldens per context: 2\n        Example JSON:\n        {\n            \"data\": [\n                {\n                    \"input\": \"What was Einstein known for?\"\n                },\n                {\n                    \"input\": \"Einstein was a smart guy huh\"\n                }\n            ]  \n        }\n\n\n        You should NOT incorporate any prior knowledge you have and take each context at face value.\n        You MUST include at least one statement as the input.\n        `input` MUST be a STRING.\n        \n        \n        \n        You MUST TRY to generate 2 data points, unless the generated `input` is getting repetitive.\n        **\n\n        Max Goldens Per Context:\n        2\n\n        Context:\n        ['Paris has 20 arrondissements.', 'The Louvre is in the 1st.']\n\n        JSON:\n        "
+    },
+    {
+      "step": "feedback,score",
+      "prompt": "Evaluate the provided synthetic query (which may be a question, task, or instruction) for clarity and answerability, assuming sufficient domain knowledge. Use the following criteria to guide your assessment:\n\n        1. **Self-Containment**: Can the query be understood and completed without needing additional context or external references not provided within the query itself? It should be self-sufficient, meaning it doesn't depend on specific documents, tables, or prior knowledge not included in the query.\n        2. **Clear Objective**: Does the query clearly convey its intent? It should specify what information, action, or response is being requested, allowing for a direct and appropriate answer or execution without ambiguity.\n\n        Based on these criteria, assign a score between 0 and 1, where:\n        - \"1\" means the query is clear, self-contained, and answerable.\n        - \"0\" means the query is vague, relies on external references, or is unclear in its intent.\n        - Scores between 0 and 1 indicate partial clarity or answerability, where the query meets some but not all of the criteria.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'feedback' and 'score' keys.\n\n        Example query: \"What technological innovations have changed communication over the last 20 years?\"\n        Example JSON:\n        {\n            \"feedback\": \"The query is somewhat vague as it asks about 'technological innovations' without specifying particular areas of communication (e.g., social media, messaging apps). It could be improved by narrowing the focus to a specific type of innovation or timeframe.\",\n            \"score\": 0.5\n        }\n\n        Example query: \"Explain the impact of renewable energy policies in Germany on local economies in 2021.\"\n        Example JSON:\n        {\n            \"feedback\": \"This query clearly specifies the focus (renewable energy policies), the region (Germany), and the timeframe (2021). It is self-contained and answerable without needing additional context, making it clear and effective.\",\n            \"score\": 1.0\n        }\n\n        Example query: \"What are the main criticisms of the current education system in the United States?\"\n        Example JSON:\n        {\n            \"feedback\": \"The question is broad and lacks specificity, as 'main criticisms' could refer to various aspects (e.g., funding, curriculum, access). To improve clarity, it could specify which aspect of the education system is being critiqued.\",\n            \"score\": 0.4\n        }\n\n        Example query: \"Discuss the role of AI in healthcare, particularly in diagnostics, as noted in the last report.\"\n        Example JSON:\n        {\n            \"feedback\": \"This question refers to 'the last report' without providing context or details, making it unclear and dependent on external information. It would be clearer if it provided some background on the report or defined what aspects of AI in diagnostics to address.\",\n            \"score\": 0.3\n        }\n                \n        The `feedback` MUST be a STRING and `score` must be a float from 0 to 1.\n        **\n                \n        Query:\n        Where is the Louvre?\n\n        JSON:\n        "
+    },
+    {
+      "step": "rewritten_input",
+      "prompt": "I want you to act as a query rewriter. Based on the provided context, original query, and feedback, generate a rewritten query that improves its clarity and answerability based on the feedback provided.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'rewritten_input' key.\n\n        Example context: \"The Golden Gate Bridge, located in San Francisco, was completed in 1937 and is known for its Art Deco design. It connects the city of San Francisco to Marin County and spans the Golden Gate Strait.\"\n        Example query: \"When was the bridge completed?\"\n        Example feedback: \"The question asks about the completion of 'the bridge' but does not specify which bridge it refers to. There are many famous bridges, and without specifying the name, the question is too vague. To improve clarity, include the bridge's name.\"\n        Example JSON:\n        {\n            \"rewritten_input\": \"When was the Golden Gate Bridge completed?\"\n        }\n\n        Example context: \"The paper 'Advancements in Quantum Computing' by Dr. Alice Thompson discusses breakthroughs in quantum algorithms and was published in 2022. It explores the potential applications of quantum computing in cryptography and drug discovery.\"\n        Example query: \"What applications of quantum computing are discussed in the paper?\"\n        Example feedback: \"The query is asking about applications of quantum computing but doesn't specify which paper is being referenced. Since many papers may discuss quantum computing, it would help to specify the title or author of the paper to improve clarity.\"\n        Example JSON:\n        {\n            \"rewritten_input\": \"What applications of quantum computing are discussed in the paper 'Advancements in Quantum Computing' by Dr. Alice Thompson?\"\n        }\n\n        You should NOT incorporate any prior knowledge and should base the rewritten query only on the context and feedback provided.\n        The `rewritten_input` MUST be a STRING.\n        **\n\n        Context:\n        ['Paris has 20 arrondissements.', 'The Louvre is in the 1st.']\n\n        Query:\n        Where is the Louvre?\n\n        Feedback:\n        Too vague.\n\n        JSON:\n        "
+    },
+    {
+      "step": "feedback,score",
+      "prompt": "Evaluate the provided synthetic query (which may be a question, task, or instruction) for clarity and answerability, assuming sufficient domain knowledge. Use the following criteria to guide your assessment:\n\n        1. **Self-Containment**: Can the query be understood and completed without needing additional context or external references not provided within the query itself? It should be self-sufficient, meaning it doesn't depend on specific documents, tables, or prior knowledge not included in the query.\n        2. **Clear Objective**: Does the query clearly convey its intent? It should specify what information, action, or response is being requested, allowing for a direct and appropriate answer or execution without ambiguity.\n\n        Based on these criteria, assign a score between 0 and 1, where:\n        - \"1\" means the query is clear, self-contained, and answerable.\n        - \"0\" means the query is vague, relies on external references, or is unclear in its intent.\n        - Scores between 0 and 1 indicate partial clarity or answerability, where the query meets some but not all of the criteria.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'feedback' and 'score' keys.\n\n        Example query: \"What technological innovations have changed communication over the last 20 years?\"\n        Example JSON:\n        {\n            \"feedback\": \"The query is somewhat vague as it asks about 'technological innovations' without specifying particular areas of communication (e.g., social media, messaging apps). It could be improved by narrowing the focus to a specific type of innovation or timeframe.\",\n            \"score\": 0.5\n        }\n\n        Example query: \"Explain the impact of renewable energy policies in Germany on local economies in 2021.\"\n        Example JSON:\n        {\n            \"feedback\": \"This query clearly specifies the focus (renewable energy policies), the region (Germany), and the timeframe (2021). It is self-contained and answerable without needing additional context, making it clear and effective.\",\n            \"score\": 1.0\n        }\n\n        Example query: \"What are the main criticisms of the current education system in the United States?\"\n        Example JSON:\n        {\n            \"feedback\": \"The question is broad and lacks specificity, as 'main criticisms' could refer to various aspects (e.g., funding, curriculum, access). To improve clarity, it could specify which aspect of the education system is being critiqued.\",\n            \"score\": 0.4\n        }\n\n        Example query: \"Discuss the role of AI in healthcare, particularly in diagnostics, as noted in the last report.\"\n        Example JSON:\n        {\n            \"feedback\": \"This question refers to 'the last report' without providing context or details, making it unclear and dependent on external information. It would be clearer if it provided some background on the report or defined what aspects of AI in diagnostics to address.\",\n            \"score\": 0.3\n        }\n                \n        The `feedback` MUST be a STRING and `score` must be a float from 0 to 1.\n        **\n                \n        Query:\n        Which arrondissement holds the Louvre?\n\n        JSON:\n        "
+    },
+    {
+      "step": "rewritten_input",
+      "prompt": "I want you to act as a query rewriter. Based on the provided context, original query, and feedback, generate a rewritten query that improves its clarity and answerability based on the feedback provided.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'rewritten_input' key.\n\n        Example context: \"The Golden Gate Bridge, located in San Francisco, was completed in 1937 and is known for its Art Deco design. It connects the city of San Francisco to Marin County and spans the Golden Gate Strait.\"\n        Example query: \"When was the bridge completed?\"\n        Example feedback: \"The question asks about the completion of 'the bridge' but does not specify which bridge it refers to. There are many famous bridges, and without specifying the name, the question is too vague. To improve clarity, include the bridge's name.\"\n        Example JSON:\n        {\n            \"rewritten_input\": \"When was the Golden Gate Bridge completed?\"\n        }\n\n        Example context: \"The paper 'Advancements in Quantum Computing' by Dr. Alice Thompson discusses breakthroughs in quantum algorithms and was published in 2022. It explores the potential applications of quantum computing in cryptography and drug discovery.\"\n        Example query: \"What applications of quantum computing are discussed in the paper?\"\n        Example feedback: \"The query is asking about applications of quantum computing but doesn't specify which paper is being referenced. Since many papers may discuss quantum computing, it would help to specify the title or author of the paper to improve clarity.\"\n        Example JSON:\n        {\n            \"rewritten_input\": \"What applications of quantum computing are discussed in the paper 'Advancements in Quantum Computing' by Dr. Alice Thompson?\"\n        }\n\n        You should NOT incorporate any prior knowledge and should base the rewritten query only on the context and feedback provided.\n        The `rewritten_input` MUST be a STRING.\n        **\n\n        Context:\n        ['Paris has 20 arrondissements.', 'The Louvre is in the 1st.']\n\n        Query:\n        Which arrondissement holds the Louvre?\n\n        Feedback:\n        Still vague.\n\n        JSON:\n        "
+    },
+    {
+      "step": "feedback,score",
+      "prompt": "Evaluate the provided synthetic query (which may be a question, task, or instruction) for clarity and answerability, assuming sufficient domain knowledge. Use the following criteria to guide your assessment:\n\n        1. **Self-Containment**: Can the query be understood and completed without needing additional context or external references not provided within the query itself? It should be self-sufficient, meaning it doesn't depend on specific documents, tables, or prior knowledge not included in the query.\n        2. **Clear Objective**: Does the query clearly convey its intent? It should specify what information, action, or response is being requested, allowing for a direct and appropriate answer or execution without ambiguity.\n\n        Based on these criteria, assign a score between 0 and 1, where:\n        - \"1\" means the query is clear, self-contained, and answerable.\n        - \"0\" means the query is vague, relies on external references, or is unclear in its intent.\n        - Scores between 0 and 1 indicate partial clarity or answerability, where the query meets some but not all of the criteria.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'feedback' and 'score' keys.\n\n        Example query: \"What technological innovations have changed communication over the last 20 years?\"\n        Example JSON:\n        {\n            \"feedback\": \"The query is somewhat vague as it asks about 'technological innovations' without specifying particular areas of communication (e.g., social media, messaging apps). It could be improved by narrowing the focus to a specific type of innovation or timeframe.\",\n            \"score\": 0.5\n        }\n\n        Example query: \"Explain the impact of renewable energy policies in Germany on local economies in 2021.\"\n        Example JSON:\n        {\n            \"feedback\": \"This query clearly specifies the focus (renewable energy policies), the region (Germany), and the timeframe (2021). It is self-contained and answerable without needing additional context, making it clear and effective.\",\n            \"score\": 1.0\n        }\n\n        Example query: \"What are the main criticisms of the current education system in the United States?\"\n        Example JSON:\n        {\n            \"feedback\": \"The question is broad and lacks specificity, as 'main criticisms' could refer to various aspects (e.g., funding, curriculum, access). To improve clarity, it could specify which aspect of the education system is being critiqued.\",\n            \"score\": 0.4\n        }\n\n        Example query: \"Discuss the role of AI in healthcare, particularly in diagnostics, as noted in the last report.\"\n        Example JSON:\n        {\n            \"feedback\": \"This question refers to 'the last report' without providing context or details, making it unclear and dependent on external information. It would be clearer if it provided some background on the report or defined what aspects of AI in diagnostics to address.\",\n            \"score\": 0.3\n        }\n                \n        The `feedback` MUST be a STRING and `score` must be a float from 0 to 1.\n        **\n                \n        Query:\n        How many arrondissements?\n\n        JSON:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input` and must be factually correct according to the supporting information in `Context`.\n    You MUST complicate the given `Input` using the following method:\n            1. If `Input` can be solved with just a few simple thinking processes, you can rewrite it to explicitly request multiple-step reasoning.\n            2. `Rewritten Input` should require readers to make multiple logical connections or inferences.\n            3. `Rewritten Input` should be concise and understandable by humans.\n            4. `Rewritten Input` should not contain phrases like  'based on the provided context' or 'according to the context'.\n            5. `Rewritten Input` must be fully answerable from information in `Context`. \n            6. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example context:\n            Chlorophyll allows plants to absorb energy from light, and this energy is used to convert carbon dioxide and water into glucose and oxygen, a process known as photosynthesis.\n            Example input:\n            Why are plants green?\n            Example rewritten input:\n            How does chlorophyll's role in absorbing light relate to plants' green color and their ability to produce glucose?\n        \n            --------------------------\n            \n            Example context:\n            The greenhouse effect occurs when the Earth's atmosphere traps solar radiation, caused by gases such as carbon dioxide, methane, and water vapor. This process maintains the planet's temperature but can lead to increased global temperatures when exacerbated by human activities.\n            Example input:\n            What causes seasons to change?\n            Example rewritten input: \n            Given the trapping of solar radiation by atmospheric gases, explain how the enhanced activity impacts Earth's climate.\n\n            --------------------------\n\n            Example context:\n            Economic theories suggest that market demand and supply determine prices, but government policies can also influence market dynamics through regulations, taxes, and subsidies.\n            Example input:\n            Identify the primary factors that determine the price of goods in a market.\n            Example rewritten input:\n            Examine how the interplay of market demand, supply dynamics, and government policy interventions collectively shapes the pricing mechanism of goods within a market ecosystem.\n            **\n\n            Context:\n            [\"The Eiffel Tower was completed in 1889 for the World's Fair.\", 'It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady.']\n            Input:\n            How tall is it?\n            Rewritten Input:            \n            "
+    },
+    {
+      "step": "response",
+      "prompt": "Given the input, which may or may not be a question, generate a response using information presented in context.\n\n        **\n        IMPORTANT: Please make sure to generate a response that is concise and straight to the point, and uses supporting information in context.\n        **\n\n        Context:\n        The Eiffel Tower was completed in 1889 for the World's Fair.\nIt is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady.\n\n        Input:\n        Why is the Eiffel Tower 330 metres tall?\n\n        Generated Response:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input` and must be factually correct according to the supporting information in `Context`.\n    You MUST complicate the given `Input` using the following method:\n            1. If `Input` can be solved with just a few simple thinking processes, you can rewrite it to explicitly request multiple-step reasoning.\n            2. `Rewritten Input` should require readers to make multiple logical connections or inferences.\n            3. `Rewritten Input` should be concise and understandable by humans.\n            4. `Rewritten Input` should not contain phrases like  'based on the provided context' or 'according to the context'.\n            5. `Rewritten Input` must be fully answerable from information in `Context`. \n            6. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example context:\n            Chlorophyll allows plants to absorb energy from light, and this energy is used to convert carbon dioxide and water into glucose and oxygen, a process known as photosynthesis.\n            Example input:\n            Why are plants green?\n            Example rewritten input:\n            How does chlorophyll's role in absorbing light relate to plants' green color and their ability to produce glucose?\n        \n            --------------------------\n            \n            Example context:\n            The greenhouse effect occurs when the Earth's atmosphere traps solar radiation, caused by gases such as carbon dioxide, methane, and water vapor. This process maintains the planet's temperature but can lead to increased global temperatures when exacerbated by human activities.\n            Example input:\n            What causes seasons to change?\n            Example rewritten input: \n            Given the trapping of solar radiation by atmospheric gases, explain how the enhanced activity impacts Earth's climate.\n\n            --------------------------\n\n            Example context:\n            Economic theories suggest that market demand and supply determine prices, but government policies can also influence market dynamics through regulations, taxes, and subsidies.\n            Example input:\n            Identify the primary factors that determine the price of goods in a market.\n            Example rewritten input:\n            Examine how the interplay of market demand, supply dynamics, and government policy interventions collectively shapes the pricing mechanism of goods within a market ecosystem.\n            **\n\n            Context:\n            [\"The Eiffel Tower was completed in 1889 for the World's Fair.\", 'It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady.']\n            Input:\n            Tell me about the Eiffel Tower\n            Rewritten Input:            \n            "
+    },
+    {
+      "step": "response",
+      "prompt": "Given the input, which may or may not be a question, generate a response using information presented in context.\n\n        **\n        IMPORTANT: Please make sure to generate a response that is concise and straight to the point, and uses supporting information in context.\n        **\n\n        Context:\n        The Eiffel Tower was completed in 1889 for the World's Fair.\nIt is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady.\n\n        Input:\n        What led to the Eiffel Tower's 1889 completion?\n\n        Generated Response:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input` and must be factually correct according to the supporting information in `Context`.\n    You MUST complicate the given `Input` using the following method:\n            1. If `Input` can be solved with just a few simple thinking processes, you can rewrite it to explicitly request multiple-step reasoning.\n            2. `Rewritten Input` should require readers to make multiple logical connections or inferences.\n            3. `Rewritten Input` should be concise and understandable by humans.\n            4. `Rewritten Input` should not contain phrases like  'based on the provided context' or 'according to the context'.\n            5. `Rewritten Input` must be fully answerable from information in `Context`. \n            6. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example context:\n            Chlorophyll allows plants to absorb energy from light, and this energy is used to convert carbon dioxide and water into glucose and oxygen, a process known as photosynthesis.\n            Example input:\n            Why are plants green?\n            Example rewritten input:\n            How does chlorophyll's role in absorbing light relate to plants' green color and their ability to produce glucose?\n        \n            --------------------------\n            \n            Example context:\n            The greenhouse effect occurs when the Earth's atmosphere traps solar radiation, caused by gases such as carbon dioxide, methane, and water vapor. This process maintains the planet's temperature but can lead to increased global temperatures when exacerbated by human activities.\n            Example input:\n            What causes seasons to change?\n            Example rewritten input: \n            Given the trapping of solar radiation by atmospheric gases, explain how the enhanced activity impacts Earth's climate.\n\n            --------------------------\n\n            Example context:\n            Economic theories suggest that market demand and supply determine prices, but government policies can also influence market dynamics through regulations, taxes, and subsidies.\n            Example input:\n            Identify the primary factors that determine the price of goods in a market.\n            Example rewritten input:\n            Examine how the interplay of market demand, supply dynamics, and government policy interventions collectively shapes the pricing mechanism of goods within a market ecosystem.\n            **\n\n            Context:\n            ['Paris has 20 arrondissements.', 'The Louvre is in the 1st.']\n            Input:\n            In which arrondissement is the Louvre?\n            Rewritten Input:            \n            "
+    },
+    {
+      "step": "response",
+      "prompt": "Given the input, which may or may not be a question, generate a response using information presented in context.\n\n        **\n        IMPORTANT: Please make sure to generate a response that is concise and straight to the point, and uses supporting information in context.\n        **\n\n        Context:\n        Paris has 20 arrondissements.\nThe Louvre is in the 1st.\n\n        Input:\n        How does the Louvre's arrondissement relate to Paris's 20?\n\n        Generated Response:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input` and must be factually correct according to the supporting information in `Context`.\n    You MUST complicate the given `Input` using the following method:\n            1. If `Input` can be solved with just a few simple thinking processes, you can rewrite it to explicitly request multiple-step reasoning.\n            2. `Rewritten Input` should require readers to make multiple logical connections or inferences.\n            3. `Rewritten Input` should be concise and understandable by humans.\n            4. `Rewritten Input` should not contain phrases like  'based on the provided context' or 'according to the context'.\n            5. `Rewritten Input` must be fully answerable from information in `Context`. \n            6. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example context:\n            Chlorophyll allows plants to absorb energy from light, and this energy is used to convert carbon dioxide and water into glucose and oxygen, a process known as photosynthesis.\n            Example input:\n            Why are plants green?\n            Example rewritten input:\n            How does chlorophyll's role in absorbing light relate to plants' green color and their ability to produce glucose?\n        \n            --------------------------\n            \n            Example context:\n            The greenhouse effect occurs when the Earth's atmosphere traps solar radiation, caused by gases such as carbon dioxide, methane, and water vapor. This process maintains the planet's temperature but can lead to increased global temperatures when exacerbated by human activities.\n            Example input:\n            What causes seasons to change?\n            Example rewritten input: \n            Given the trapping of solar radiation by atmospheric gases, explain how the enhanced activity impacts Earth's climate.\n\n            --------------------------\n\n            Example context:\n            Economic theories suggest that market demand and supply determine prices, but government policies can also influence market dynamics through regulations, taxes, and subsidies.\n            Example input:\n            Identify the primary factors that determine the price of goods in a market.\n            Example rewritten input:\n            Examine how the interplay of market demand, supply dynamics, and government policy interventions collectively shapes the pricing mechanism of goods within a market ecosystem.\n            **\n\n            Context:\n            ['Paris has 20 arrondissements.', 'The Louvre is in the 1st.']\n            Input:\n            How many arrondissements?\n            Rewritten Input:            \n            "
+    },
+    {
+      "step": "response",
+      "prompt": "Given the input, which may or may not be a question, generate a response using information presented in context.\n\n        **\n        IMPORTANT: Please make sure to generate a response that is concise and straight to the point, and uses supporting information in context.\n        **\n\n        Context:\n        Paris has 20 arrondissements.\nThe Louvre is in the 1st.\n\n        Input:\n        Given 20 arrondissements, where is the Louvre?\n\n        Generated Response:\n        "
+    }
+  ],
+  "goldens": [
+    {
+      "input": "Why is the Eiffel Tower 330 metres tall?",
+      "expected_output": "It is 330 metres tall.",
+      "context": [
+        "The Eiffel Tower was completed in 1889 for the World's Fair.",
+        "It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady."
+      ],
+      "source_file": null,
+      "additional_metadata": {
+        "evolutions": [
+          "Reasoning"
+        ],
+        "synthetic_input_quality": 0.9,
+        "context_source_files": [],
+        "used_source_files": []
+      }
+    },
+    {
+      "input": "What led to the Eiffel Tower's 1889 completion?",
+      "expected_output": "It was built for the 1889 World's Fair.",
+      "context": [
+        "The Eiffel Tower was completed in 1889 for the World's Fair.",
+        "It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady."
+      ],
+      "source_file": null,
+      "additional_metadata": {
+        "evolutions": [
+          "Reasoning"
+        ],
+        "synthetic_input_quality": 1.0,
+        "context_source_files": [],
+        "used_source_files": []
+      }
+    },
+    {
+      "input": "How does the Louvre's arrondissement relate to Paris's 20?",
+      "expected_output": "The 1st.",
+      "context": [
+        "Paris has 20 arrondissements.",
+        "The Louvre is in the 1st."
+      ],
+      "source_file": null,
+      "additional_metadata": {
+        "evolutions": [
+          "Reasoning"
+        ],
+        "synthetic_input_quality": 0.6,
+        "context_source_files": [],
+        "used_source_files": []
+      }
+    },
+    {
+      "input": "Given 20 arrondissements, where is the Louvre?",
+      "expected_output": "In the 1st arrondissement.",
+      "context": [
+        "Paris has 20 arrondissements.",
+        "The Louvre is in the 1st."
+      ],
+      "source_file": null,
+      "additional_metadata": {
+        "evolutions": [
+          "Reasoning"
+        ],
+        "synthetic_input_quality": 0.75,
+        "context_source_files": [],
+        "used_source_files": []
+      }
+    }
+  ],
+  "styling_config": {
+    "scenario": null,
+    "task": null,
+    "input_format": null,
+    "expected_output_format": null
+  }
+}

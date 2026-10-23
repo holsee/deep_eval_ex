@@ -1,0 +1,179 @@
+{
+  "method": "generate_goldens_from_goldens",
+  "synthesizer": {
+    "styling_config": {
+      "scenario": "Tourists planning a trip to Paris",
+      "task": "Travel assistant answering landmark questions",
+      "input_format": "A short question in English",
+      "expected_output_format": null
+    },
+    "evolution_config": {
+      "num_evolutions": 1,
+      "evolutions": {
+        "In-Breadth": 1
+      }
+    },
+    "filtration_config": {
+      "synthetic_input_quality_threshold": 0.5,
+      "max_quality_retries": 3
+    }
+  },
+  "args": {
+    "goldens": [
+      {
+        "input": "How tall is it?",
+        "context": [
+          "The Eiffel Tower was completed in 1889 for the World's Fair.",
+          "It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady."
+        ],
+        "source_file": "eiffel.md"
+      },
+      {
+        "input": "No context here"
+      },
+      {
+        "input": "Louvre hours?",
+        "context": [
+          "The Louvre opens at 9."
+        ]
+      }
+    ],
+    "max_goldens_per_golden": 1,
+    "include_expected_output": true
+  },
+  "script": {
+    "data": [
+      {
+        "data": [
+          {
+            "input": "Eiffel height?"
+          }
+        ]
+      },
+      {
+        "data": [
+          {
+            "input": "Louvre opening?"
+          }
+        ]
+      }
+    ],
+    "feedback,score": [
+      {
+        "feedback": "Clear.",
+        "score": 1.0
+      },
+      {
+        "feedback": "Clear.",
+        "score": 0.9
+      }
+    ],
+    "response": [
+      {
+        "response": "Rare Eiffel question?"
+      },
+      {
+        "response": "330 m."
+      },
+      {
+        "response": "Rare Louvre question?"
+      },
+      {
+        "response": "9am."
+      }
+    ],
+    "input,used_source_files": [
+      {
+        "input": "How tall is the Eiffel Tower?"
+      },
+      {
+        "input": "When does the Louvre open?"
+      }
+    ]
+  },
+  "prompts": [
+    {
+      "step": "data",
+      "prompt": "I want you act as a copywriter. Based on the given context, which is list of strings, please generate a list of JSON objects with a `input` key.\n        The `input` can either be a question or a statement that can be addressed by the given context.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'data' key as a list of JSON objects.\n        You MUST TRY to generate 1 data points, unless the `input` is getting repetitive.\n\n        Example context: [\"Einstein won the Nobel Prize for his discovery of penicillin.\", \"Einstein won the Nobel Prize in 1968.\"]\n        Example max goldens per context: 2\n        Example JSON:\n        {\n            \"data\": [\n                {\n                    \"input\": \"What was Einstein known for?\"\n                },\n                {\n                    \"input\": \"Einstein was a smart guy huh\"\n                }\n            ]  \n        }\n\n\n        You should NOT incorporate any prior knowledge you have and take each context at face value.\n        You MUST include at least one statement as the input.\n        `input` MUST strictly adhere to the following format: A short question in English.\n        `input`s MUST be relevant to this specific scenario: ```Tourists planning a trip to Paris``` (The scenario describes the circumstances under which the inputs are generated and the user's intent in eliciting a response).\n        `input`s MUST be framed in a way that evokes a response aligned with the following task: Travel assistant answering landmark questions (The task represents the goal or function the entity is expected to achieve when responding).\n        \n        You MUST TRY to generate 1 data points, unless the generated `input` is getting repetitive.\n        **\n\n        Max Goldens Per Context:\n        1\n\n        Context:\n        [\"The Eiffel Tower was completed in 1889 for the World's Fair.\", 'It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady.']\n\n        JSON:\n        "
+    },
+    {
+      "step": "feedback,score",
+      "prompt": "Evaluate the provided synthetic query (which may be a question, task, or instruction) for clarity and answerability, assuming sufficient domain knowledge. Use the following criteria to guide your assessment:\n\n        1. **Self-Containment**: Can the query be understood and completed without needing additional context or external references not provided within the query itself? It should be self-sufficient, meaning it doesn't depend on specific documents, tables, or prior knowledge not included in the query.\n        2. **Clear Objective**: Does the query clearly convey its intent? It should specify what information, action, or response is being requested, allowing for a direct and appropriate answer or execution without ambiguity.\n\n        Based on these criteria, assign a score between 0 and 1, where:\n        - \"1\" means the query is clear, self-contained, and answerable.\n        - \"0\" means the query is vague, relies on external references, or is unclear in its intent.\n        - Scores between 0 and 1 indicate partial clarity or answerability, where the query meets some but not all of the criteria.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'feedback' and 'score' keys.\n\n        Example query: \"What technological innovations have changed communication over the last 20 years?\"\n        Example JSON:\n        {\n            \"feedback\": \"The query is somewhat vague as it asks about 'technological innovations' without specifying particular areas of communication (e.g., social media, messaging apps). It could be improved by narrowing the focus to a specific type of innovation or timeframe.\",\n            \"score\": 0.5\n        }\n\n        Example query: \"Explain the impact of renewable energy policies in Germany on local economies in 2021.\"\n        Example JSON:\n        {\n            \"feedback\": \"This query clearly specifies the focus (renewable energy policies), the region (Germany), and the timeframe (2021). It is self-contained and answerable without needing additional context, making it clear and effective.\",\n            \"score\": 1.0\n        }\n\n        Example query: \"What are the main criticisms of the current education system in the United States?\"\n        Example JSON:\n        {\n            \"feedback\": \"The question is broad and lacks specificity, as 'main criticisms' could refer to various aspects (e.g., funding, curriculum, access). To improve clarity, it could specify which aspect of the education system is being critiqued.\",\n            \"score\": 0.4\n        }\n\n        Example query: \"Discuss the role of AI in healthcare, particularly in diagnostics, as noted in the last report.\"\n        Example JSON:\n        {\n            \"feedback\": \"This question refers to 'the last report' without providing context or details, making it unclear and dependent on external information. It would be clearer if it provided some background on the report or defined what aspects of AI in diagnostics to address.\",\n            \"score\": 0.3\n        }\n                \n        The `feedback` MUST be a STRING and `score` must be a float from 0 to 1.\n        **\n                \n        Query:\n        Eiffel height?\n\n        JSON:\n        "
+    },
+    {
+      "step": "data",
+      "prompt": "I want you act as a copywriter. Based on the given context, which is list of strings, please generate a list of JSON objects with a `input` key.\n        The `input` can either be a question or a statement that can be addressed by the given context.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'data' key as a list of JSON objects.\n        You MUST TRY to generate 1 data points, unless the `input` is getting repetitive.\n\n        Example context: [\"Einstein won the Nobel Prize for his discovery of penicillin.\", \"Einstein won the Nobel Prize in 1968.\"]\n        Example max goldens per context: 2\n        Example JSON:\n        {\n            \"data\": [\n                {\n                    \"input\": \"What was Einstein known for?\"\n                },\n                {\n                    \"input\": \"Einstein was a smart guy huh\"\n                }\n            ]  \n        }\n\n\n        You should NOT incorporate any prior knowledge you have and take each context at face value.\n        You MUST include at least one statement as the input.\n        `input` MUST strictly adhere to the following format: A short question in English.\n        `input`s MUST be relevant to this specific scenario: ```Tourists planning a trip to Paris``` (The scenario describes the circumstances under which the inputs are generated and the user's intent in eliciting a response).\n        `input`s MUST be framed in a way that evokes a response aligned with the following task: Travel assistant answering landmark questions (The task represents the goal or function the entity is expected to achieve when responding).\n        \n        You MUST TRY to generate 1 data points, unless the generated `input` is getting repetitive.\n        **\n\n        Max Goldens Per Context:\n        1\n\n        Context:\n        ['The Louvre opens at 9.']\n\n        JSON:\n        "
+    },
+    {
+      "step": "feedback,score",
+      "prompt": "Evaluate the provided synthetic query (which may be a question, task, or instruction) for clarity and answerability, assuming sufficient domain knowledge. Use the following criteria to guide your assessment:\n\n        1. **Self-Containment**: Can the query be understood and completed without needing additional context or external references not provided within the query itself? It should be self-sufficient, meaning it doesn't depend on specific documents, tables, or prior knowledge not included in the query.\n        2. **Clear Objective**: Does the query clearly convey its intent? It should specify what information, action, or response is being requested, allowing for a direct and appropriate answer or execution without ambiguity.\n\n        Based on these criteria, assign a score between 0 and 1, where:\n        - \"1\" means the query is clear, self-contained, and answerable.\n        - \"0\" means the query is vague, relies on external references, or is unclear in its intent.\n        - Scores between 0 and 1 indicate partial clarity or answerability, where the query meets some but not all of the criteria.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'feedback' and 'score' keys.\n\n        Example query: \"What technological innovations have changed communication over the last 20 years?\"\n        Example JSON:\n        {\n            \"feedback\": \"The query is somewhat vague as it asks about 'technological innovations' without specifying particular areas of communication (e.g., social media, messaging apps). It could be improved by narrowing the focus to a specific type of innovation or timeframe.\",\n            \"score\": 0.5\n        }\n\n        Example query: \"Explain the impact of renewable energy policies in Germany on local economies in 2021.\"\n        Example JSON:\n        {\n            \"feedback\": \"This query clearly specifies the focus (renewable energy policies), the region (Germany), and the timeframe (2021). It is self-contained and answerable without needing additional context, making it clear and effective.\",\n            \"score\": 1.0\n        }\n\n        Example query: \"What are the main criticisms of the current education system in the United States?\"\n        Example JSON:\n        {\n            \"feedback\": \"The question is broad and lacks specificity, as 'main criticisms' could refer to various aspects (e.g., funding, curriculum, access). To improve clarity, it could specify which aspect of the education system is being critiqued.\",\n            \"score\": 0.4\n        }\n\n        Example query: \"Discuss the role of AI in healthcare, particularly in diagnostics, as noted in the last report.\"\n        Example JSON:\n        {\n            \"feedback\": \"This question refers to 'the last report' without providing context or details, making it unclear and dependent on external information. It would be clearer if it provided some background on the report or defined what aspects of AI in diagnostics to address.\",\n            \"score\": 0.3\n        }\n                \n        The `feedback` MUST be a STRING and `score` must be a float from 0 to 1.\n        **\n                \n        Query:\n        Louvre opening?\n\n        JSON:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input` and must be factually correct according to the supporting information in `Context`.\n    You MUST complicate the given `Input` using the following method:\n            1. Rewrite `Input` to create a brand new prompt.\n            2. `Rewritten Input` should belong to the same domain as the `input` but be even more rare.\n            3. `Rewritten Input` should be concise, clear, and understandable by humans.\n            4. `Rewritten Input` should not contain phrases like 'based on the provided context' or 'according to the context'.\n            5. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example context:\n            Wearable technology has revolutionized personal health monitoring, allowing individuals to track vital signs and activity levels in real time.\n            Example input:\n            Explore the impact of wearable technology on personal health management.\n            Example rewritten input:\n            Delve into the development of implantable health devices and their potential to transform chronic disease management.\n\n            --------------------------\n\n            Example context:\n            Quantum computing leverages the principles of quantum mechanics to process information, offering significant advancements over traditional computing methods.\n            Example input:\n            How is quantum computing different from traditional computing?\n            Example rewritten input:\n            Explore the potential of quantum cryptography in enhancing cybersecurity measures beyond current encryption standards\n\n            --------------------------\n\n            Example context:\n            Virtual reality (VR) offers immersive learning experiences, transforming educational methodologies by providing interactive and engaging ways to acquire knowledge, especially in fields requiring practical skills.\n            Example input:\n            What impact does virtual reality (VR) have on education?\n            Example rewritten input:\n            Investigate the use of VR simulations in medical training to enhance practical skills and decision-making under pressure.\n            **\n\n            Context:\n            [\"The Eiffel Tower was completed in 1889 for the World's Fair.\", 'It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady.']\n            Input:\n            Eiffel height?\n            Rewritten Input:\n            "
+    },
+    {
+      "step": "input,used_source_files",
+      "prompt": "Given the evolved input, which may be a question or a statement, generate a JSON object with a key 'input'. This key should contain a statement or question that fits any provided scenario, aligns with the task's purpose, and matches the required input format (if specified).\n\n        **\n        IMPORTANT: Try to change the evolved input as little as possible. However, if the evolved input does not align with the provided scenario, task, or input format, it must ultimately be adjusted to fit these requirements. The output must be in JSON format, with the 'input' key only. If necessary, the evolved input should be rewritten to ensure it conforms to the scenario, task, and input format.\n\n        Example Evolved Input: \"Is it okay to joke about someone losing their job in front of their coworkers if I'm just trying to lighten the mood?\"\n        Example Scenario: \"Tourists planning a trip to Paris\"\n        Example Task: \"Travel assistant answering landmark questions\"\n        Example Input Format: \"A short question in English\"\n        Example JSON: {\n            \"input\": \"How can I joke about someone losing their job without making the situation worse? Is it possible to use humor here without hurting anyone's feelings?\"\n        }\n\n        Evolved Input:\n        Rare Eiffel question?\n        \n        Scenario: \"Tourists planning a trip to Paris\"\n        Task: \"Travel assistant answering landmark questions\"\n        Input Format: \"A short question in English\"\n\n        JSON:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "Given the input, which may or may not be a question, generate a response using information presented in context.\n\n        **\n        IMPORTANT: Please make sure to generate a response that is concise and straight to the point, and uses supporting information in context.\n        **\n\n        Context:\n        The Eiffel Tower was completed in 1889 for the World's Fair.\nIt is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady.\n\n        Input:\n        How tall is the Eiffel Tower?\n\n        Generated Response:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input` and must be factually correct according to the supporting information in `Context`.\n    You MUST complicate the given `Input` using the following method:\n            1. Rewrite `Input` to create a brand new prompt.\n            2. `Rewritten Input` should belong to the same domain as the `input` but be even more rare.\n            3. `Rewritten Input` should be concise, clear, and understandable by humans.\n            4. `Rewritten Input` should not contain phrases like 'based on the provided context' or 'according to the context'.\n            5. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example context:\n            Wearable technology has revolutionized personal health monitoring, allowing individuals to track vital signs and activity levels in real time.\n            Example input:\n            Explore the impact of wearable technology on personal health management.\n            Example rewritten input:\n            Delve into the development of implantable health devices and their potential to transform chronic disease management.\n\n            --------------------------\n\n            Example context:\n            Quantum computing leverages the principles of quantum mechanics to process information, offering significant advancements over traditional computing methods.\n            Example input:\n            How is quantum computing different from traditional computing?\n            Example rewritten input:\n            Explore the potential of quantum cryptography in enhancing cybersecurity measures beyond current encryption standards\n\n            --------------------------\n\n            Example context:\n            Virtual reality (VR) offers immersive learning experiences, transforming educational methodologies by providing interactive and engaging ways to acquire knowledge, especially in fields requiring practical skills.\n            Example input:\n            What impact does virtual reality (VR) have on education?\n            Example rewritten input:\n            Investigate the use of VR simulations in medical training to enhance practical skills and decision-making under pressure.\n            **\n\n            Context:\n            ['The Louvre opens at 9.']\n            Input:\n            Louvre opening?\n            Rewritten Input:\n            "
+    },
+    {
+      "step": "input,used_source_files",
+      "prompt": "Given the evolved input, which may be a question or a statement, generate a JSON object with a key 'input'. This key should contain a statement or question that fits any provided scenario, aligns with the task's purpose, and matches the required input format (if specified).\n\n        **\n        IMPORTANT: Try to change the evolved input as little as possible. However, if the evolved input does not align with the provided scenario, task, or input format, it must ultimately be adjusted to fit these requirements. The output must be in JSON format, with the 'input' key only. If necessary, the evolved input should be rewritten to ensure it conforms to the scenario, task, and input format.\n\n        Example Evolved Input: \"Is it okay to joke about someone losing their job in front of their coworkers if I'm just trying to lighten the mood?\"\n        Example Scenario: \"Tourists planning a trip to Paris\"\n        Example Task: \"Travel assistant answering landmark questions\"\n        Example Input Format: \"A short question in English\"\n        Example JSON: {\n            \"input\": \"How can I joke about someone losing their job without making the situation worse? Is it possible to use humor here without hurting anyone's feelings?\"\n        }\n\n        Evolved Input:\n        Rare Louvre question?\n        \n        Scenario: \"Tourists planning a trip to Paris\"\n        Task: \"Travel assistant answering landmark questions\"\n        Input Format: \"A short question in English\"\n\n        JSON:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "Given the input, which may or may not be a question, generate a response using information presented in context.\n\n        **\n        IMPORTANT: Please make sure to generate a response that is concise and straight to the point, and uses supporting information in context.\n        **\n\n        Context:\n        The Louvre opens at 9.\n\n        Input:\n        When does the Louvre open?\n\n        Generated Response:\n        "
+    }
+  ],
+  "goldens": [
+    {
+      "input": "How tall is the Eiffel Tower?",
+      "expected_output": "330 m.",
+      "context": [
+        "The Eiffel Tower was completed in 1889 for the World's Fair.",
+        "It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady."
+      ],
+      "source_file": "eiffel.md",
+      "additional_metadata": {
+        "evolutions": [
+          "In-Breadth"
+        ],
+        "synthetic_input_quality": 1.0,
+        "context_source_files": [
+          "eiffel.md"
+        ],
+        "used_source_files": []
+      }
+    },
+    {
+      "input": "When does the Louvre open?",
+      "expected_output": "9am.",
+      "context": [
+        "The Louvre opens at 9."
+      ],
+      "source_file": null,
+      "additional_metadata": {
+        "evolutions": [
+          "In-Breadth"
+        ],
+        "synthetic_input_quality": 0.9,
+        "context_source_files": [],
+        "used_source_files": []
+      }
+    }
+  ],
+  "styling_config": {
+    "scenario": "Tourists planning a trip to Paris",
+    "task": "Travel assistant answering landmark questions",
+    "input_format": "A short question in English",
+    "expected_output_format": null
+  }
+}

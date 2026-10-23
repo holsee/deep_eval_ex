@@ -1,11 +1,11 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in fifteen sets:
+Fixtures written by **deepeval 4.3.1**, in sixteen sets:
 
 - export scenarios (the directories below, except `scripted/`, `prompts/`,
   `round_trip/`, `system_one/`, `datasets/`, `classifiers/`,
   `expectations/`, `cache/`, `report/`, `cli/`, `traced/`,
-  `loop_detection/`, `multimodal/` and `mcp/`), used by
+  `loop_detection/`, `multimodal/`, `mcp/` and `synthesizer/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
@@ -67,6 +67,11 @@ Fixtures written by **deepeval 4.3.1**, in fifteen sets:
   MCP servers, used by `test/deep_eval_ex/parity_test.exs`, and what
   deepeval makes of MCP calls in turns and test cases, used by
   `test/deep_eval_ex/mcp_test.exs`
+- [synthesizer fixtures](#synthesizer-fixtures) (`synthesizer/`), what
+  deepeval's synthesizer templates render and what its `Synthesizer` sends
+  a scripted judge and makes of its answers, used by
+  `test/deep_eval_ex/synthesizer/templates_test.exs` and
+  `test/deep_eval_ex/synthesizer/synthesizer_parity_test.exs`
 
 ## Export scenarios
 
@@ -1214,3 +1219,49 @@ metrics on multimodal test cases (whose `test_case` has `images` the
 generator creates), checking their prompts and the test run's
 `imagesMapping`. The scripted judge reports `supports_multimodal()` so
 deepeval asks it.
+
+## Synthesizer fixtures
+
+`scripts/parity/generate_synthesizer_fixtures.py` writes `synthesizer/`:
+
+- `templates.json`, one entry per render of a synthesizer template
+  (`SynthesizerTemplate`, `FilterTemplate`, `EvolutionTemplate`,
+  `PromptEvolutionTemplate`, `PromptSynthesizerTemplate` and
+  `ExtractionTemplate`): the template, its arguments and the prompt.
+  `test/deep_eval_ex/synthesizer/templates_test.exs` renders each with
+  `DeepEvalEx.Synthesizer`'s template modules and compares the bytes, and
+  checks every template function is covered
+- `scenarios/<name>.json`, one run of deepeval's `Synthesizer` (default
+  `async_mode=True`) with a scripted custom judge, as the scripted-judge
+  scenarios': the method and its arguments, the synthesizer's styling,
+  evolution and filtration configs, the script, the prompts the judge was
+  sent with their steps, and the goldens returned with the styling config
+  afterwards, or the exception raised.
+  `test/deep_eval_ex/synthesizer/synthesizer_parity_test.exs` replays the
+  script through `DeepEvalEx.Synthesizer` with `max_concurrent: 1` and
+  compares the prompts of each step, in order, and the goldens
+
+| Scenario | What it covers |
+| --- | --- |
+| `contexts_filtration` | two contexts, one more input offered than asked (dropped), inputs passing the critic, rewritten once, and rewritten until the retries run out |
+| `contexts_styled` | every styling field, two evolutions in a row, the restyling call, source files as a string and `None` |
+| `contexts_cross_file` | chunks labelled `[SOURCE: ...]`, the available source files and target in the prompt, `used_source_files`, no critic (`max_quality_retries=0`), no expected output |
+| `scratch` | from scratch: Multi-context dropped from the distribution, two evolutions per input, more inputs than asked (kept) |
+| `scratch_without_styling` | deepeval's `TypeError` without a full styling |
+| `goldens_extracted` | from a golden without context: the styling extracted, then from scratch |
+| `goldens_with_contexts` | from goldens with contexts and a set styling: no extraction, a golden without context skipped |
+| `evolution_<name>` | each of the seven evolutions from a context |
+| `prompt_evolution_<name>` | each of the six evolutions from scratch |
+
+deepeval draws the evolutions with `random.choices` and the goldens to
+extract a styling from with `random.sample`, which DeepEvalEx cannot
+replay: every scenario gives one evolution all the weight and extracts
+from a single golden. The scripted judge is a custom model, so deepeval
+asks it for its free-text answers (evolutions and expected outputs) with
+the `Response` schema, step `"response"`.
+
+```sh
+devcontainer exec --workspace-folder . \
+  env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_synthesizer_fixtures.py
+```
+

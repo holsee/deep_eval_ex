@@ -1,0 +1,93 @@
+{
+  "method": "generate_goldens_from_contexts",
+  "synthesizer": {
+    "styling_config": null,
+    "evolution_config": {
+      "num_evolutions": 1,
+      "evolutions": {
+        "Hypothetical": 1
+      }
+    },
+    "filtration_config": {
+      "synthetic_input_quality_threshold": 0.5,
+      "max_quality_retries": 3
+    }
+  },
+  "args": {
+    "contexts": [
+      [
+        "The Eiffel Tower was completed in 1889 for the World's Fair.",
+        "It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady."
+      ]
+    ],
+    "max_goldens_per_context": 1
+  },
+  "script": {
+    "data": [
+      {
+        "data": [
+          {
+            "input": "How tall is the Eiffel Tower?"
+          }
+        ]
+      }
+    ],
+    "feedback,score": [
+      {
+        "feedback": "Clear.",
+        "score": 0.9
+      }
+    ],
+    "response": [
+      {
+        "response": "Hypothetical evolved input?"
+      },
+      {
+        "response": "330 metres."
+      }
+    ]
+  },
+  "prompts": [
+    {
+      "step": "data",
+      "prompt": "I want you act as a copywriter. Based on the given context, which is list of strings, please generate a list of JSON objects with a `input` key.\n        The `input` can either be a question or a statement that can be addressed by the given context.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'data' key as a list of JSON objects.\n        You MUST TRY to generate 1 data points, unless the `input` is getting repetitive.\n\n        Example context: [\"Einstein won the Nobel Prize for his discovery of penicillin.\", \"Einstein won the Nobel Prize in 1968.\"]\n        Example max goldens per context: 2\n        Example JSON:\n        {\n            \"data\": [\n                {\n                    \"input\": \"What was Einstein known for?\"\n                },\n                {\n                    \"input\": \"Einstein was a smart guy huh\"\n                }\n            ]  \n        }\n\n\n        You should NOT incorporate any prior knowledge you have and take each context at face value.\n        You MUST include at least one statement as the input.\n        `input` MUST be a STRING.\n        \n        \n        \n        You MUST TRY to generate 1 data points, unless the generated `input` is getting repetitive.\n        **\n\n        Max Goldens Per Context:\n        1\n\n        Context:\n        [\"The Eiffel Tower was completed in 1889 for the World's Fair.\", 'It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady.']\n\n        JSON:\n        "
+    },
+    {
+      "step": "feedback,score",
+      "prompt": "Evaluate the provided synthetic query (which may be a question, task, or instruction) for clarity and answerability, assuming sufficient domain knowledge. Use the following criteria to guide your assessment:\n\n        1. **Self-Containment**: Can the query be understood and completed without needing additional context or external references not provided within the query itself? It should be self-sufficient, meaning it doesn't depend on specific documents, tables, or prior knowledge not included in the query.\n        2. **Clear Objective**: Does the query clearly convey its intent? It should specify what information, action, or response is being requested, allowing for a direct and appropriate answer or execution without ambiguity.\n\n        Based on these criteria, assign a score between 0 and 1, where:\n        - \"1\" means the query is clear, self-contained, and answerable.\n        - \"0\" means the query is vague, relies on external references, or is unclear in its intent.\n        - Scores between 0 and 1 indicate partial clarity or answerability, where the query meets some but not all of the criteria.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'feedback' and 'score' keys.\n\n        Example query: \"What technological innovations have changed communication over the last 20 years?\"\n        Example JSON:\n        {\n            \"feedback\": \"The query is somewhat vague as it asks about 'technological innovations' without specifying particular areas of communication (e.g., social media, messaging apps). It could be improved by narrowing the focus to a specific type of innovation or timeframe.\",\n            \"score\": 0.5\n        }\n\n        Example query: \"Explain the impact of renewable energy policies in Germany on local economies in 2021.\"\n        Example JSON:\n        {\n            \"feedback\": \"This query clearly specifies the focus (renewable energy policies), the region (Germany), and the timeframe (2021). It is self-contained and answerable without needing additional context, making it clear and effective.\",\n            \"score\": 1.0\n        }\n\n        Example query: \"What are the main criticisms of the current education system in the United States?\"\n        Example JSON:\n        {\n            \"feedback\": \"The question is broad and lacks specificity, as 'main criticisms' could refer to various aspects (e.g., funding, curriculum, access). To improve clarity, it could specify which aspect of the education system is being critiqued.\",\n            \"score\": 0.4\n        }\n\n        Example query: \"Discuss the role of AI in healthcare, particularly in diagnostics, as noted in the last report.\"\n        Example JSON:\n        {\n            \"feedback\": \"This question refers to 'the last report' without providing context or details, making it unclear and dependent on external information. It would be clearer if it provided some background on the report or defined what aspects of AI in diagnostics to address.\",\n            \"score\": 0.3\n        }\n                \n        The `feedback` MUST be a STRING and `score` must be a float from 0 to 1.\n        **\n                \n        Query:\n        How tall is the Eiffel Tower?\n\n        JSON:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input` and must be factually correct according to the supporting information in `Context`.\n    You MUST complicate the given `Input` using the following method:\n            1. Rewrite `Input` to include a hypothetical or speculative scenario that is relevant to the `Context`.\n            2. `Rewritten Input` should encourage the reader to apply knowledge from the `Context` to imagine or deduce outcomes.\n            3. `Rewritten Input` should be concise, clear, and understandable by humans.\n            4. `Rewritten Input` should not contain phrases like 'based on the provided context' or 'according to the context'.\n            5. `Rewritten Input` must be fully answerable from information in `Context`.\n            6. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example context:\n            The greenhouse effect is a natural process where the Earth's atmosphere traps some of the Sun's energy, warming the planet to a temperature that supports life. Human activities, particularly the emission of greenhouse gases like carbon dioxide and methane, have intensified this effect, leading to global warming and climate change.\n            Example input:\n            What are the consequences of the greenhouse effect?\n            Example rewritten input:\n            Imagine a world where greenhouse gas emissions were doubled overnight. How might this intensified greenhouse effect impact global climate patterns and ecosystems?\n\n            --------------------------\n\n            Example context:\n            Antibiotics are drugs used to treat bacterial infections. They work by killing bacteria or preventing their growth. However, overuse and misuse of antibiotics have led to the development of antibiotic-resistant bacteria, which are harder to treat because they can withstand the drugs designed to kill them.\n            Example input:\n            How do antibiotics work?\n            Example rewritten input:\n            In a scenario where a new antibiotic-resistant superbug emerges, how would the principles of antibiotic action and resistance influence our approach to treatment?\n\n            --------------------------\n\n            Example context:\n            Quantum computing relies on the principles of quantum mechanics to process information, utilizing quantum bits or qubits. These qubits can exist in multiple states simultaneously, allowing quantum computers to perform complex calculations much faster than traditional computers.\n            Example input:\n            What is quantum computing?\n            Example rewritten input:\n            Suppose a quantum computer was tasked with solving a problem that currently takes traditional computers centuries to solve. How might the unique capabilities of quantum computing change the outcome?\n            **\n\n            Context:\n            [\"The Eiffel Tower was completed in 1889 for the World's Fair.\", 'It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady.']\n            Input:\n            How tall is the Eiffel Tower?\n            Rewritten Input:\n            "
+    },
+    {
+      "step": "response",
+      "prompt": "Given the input, which may or may not be a question, generate a response using information presented in context.\n\n        **\n        IMPORTANT: Please make sure to generate a response that is concise and straight to the point, and uses supporting information in context.\n        **\n\n        Context:\n        The Eiffel Tower was completed in 1889 for the World's Fair.\nIt is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady.\n\n        Input:\n        Hypothetical evolved input?\n\n        Generated Response:\n        "
+    }
+  ],
+  "goldens": [
+    {
+      "input": "Hypothetical evolved input?",
+      "expected_output": "330 metres.",
+      "context": [
+        "The Eiffel Tower was completed in 1889 for the World's Fair.",
+        "It is 330 metres tall and nicknamed \"La dame de fer\" — the iron lady."
+      ],
+      "source_file": null,
+      "additional_metadata": {
+        "evolutions": [
+          "Hypothetical"
+        ],
+        "synthetic_input_quality": 0.9,
+        "context_source_files": [],
+        "used_source_files": []
+      }
+    }
+  ],
+  "styling_config": {
+    "scenario": null,
+    "task": null,
+    "input_format": null,
+    "expected_output_format": null
+  }
+}
