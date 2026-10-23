@@ -25,7 +25,10 @@ defmodule DeepEvalEx.TestResult do
   - `:input`, `:actual_output`, `:expected_output`, `:context`,
     `:retrieval_context`, `:metadata` - The test case's own fields; of a
     `DeepEvalEx.Schemas.RetrievedContextData` in `:retrieval_context` only
-    its `:context` is kept, as deepeval does
+    its `:context` is kept, as deepeval does. A traced span's test result
+    (`DeepEvalEx.Evaluator.Agentic`) has the span's exported input and
+    output, which may be any JSON value, as deepeval's
+    `extract_span_test_results`
   - `:classifications` - One `DeepEvalEx.Classification` per classifier
     run (`DeepEvalEx.evaluate/3`'s `:classifiers`), in their order; `[]`
     where deepeval has `None`
@@ -59,8 +62,8 @@ defmodule DeepEvalEx.TestResult do
           metrics_data: [Result.t()],
           conversational: boolean(),
           index: non_neg_integer() | nil,
-          input: String.t() | nil,
-          actual_output: String.t() | nil,
+          input: String.t() | term(),
+          actual_output: String.t() | term(),
           expected_output: String.t() | nil,
           context: [String.t()] | nil,
           retrieval_context: [String.t()] | nil,

@@ -271,7 +271,7 @@ defmodule DeepEvalEx.Evaluator do
   # ... and each classifier's.
   @classifier_contexts_key :__classifier_contexts__
   # Run-level keys never passed on to a metric.
-  @run_keys [@contexts_key, @classifier_contexts_key, :classifiers] ++
+  @run_keys [@contexts_key, @classifier_contexts_key, :classifiers, :error_text] ++
               [:cache, :use_cache, :write_cache, :cache_hyperparameters]
 
   # deepeval's AsyncConfig defaults.
@@ -423,8 +423,16 @@ defmodule DeepEvalEx.Evaluator do
   with deepeval's timeout message without affecting the other metrics: with
   `ignore_errors: true` it yields an errored `DeepEvalEx.Result`, otherwise
   it raises (see "Timeouts" and "Errors" in the module documentation).
+
+  A metric may also be given as `{module, opts}`, as spans and traces
+  declare metrics (`DeepEvalEx.Tracing.Span`): its options win over the
+  run's, as a metric struct's fields do.
   """
-  @spec evaluate_single(TestCase.t(), [module() | struct()], keyword()) :: [Result.t()]
+  @spec evaluate_single(
+          TestCase.t(),
+          [module() | {module(), keyword()} | struct()],
+          keyword()
+        ) :: [Result.t()]
   def evaluate_single(test_case, metrics, opts \\ []) do
     {opts, _throttle_value} = async_config!(opts)
     ClassifierUtils.validate!([test_case], Keyword.get(opts, :classifiers, []))
@@ -960,7 +968,7 @@ defmodule DeepEvalEx.Evaluator do
         {:ok, skipped_result(metric, opts)}
 
       Keyword.get(opts, :ignore_errors, false) ->
-        {:ok, error_result(reason, metric, opts, usages)}
+        {:ok, reason |> error_result(metric, opts, usages) |> error_text(reason, opts)}
 
       stacktrace != nil ->
         {:raise, reason, stacktrace}
@@ -1260,10 +1268,16 @@ defmodule DeepEvalEx.Evaluator do
   defp copy_metric(module), do: module
 
   defp metric_module(metric) when is_atom(metric), do: metric
+  defp metric_module({module, _opts}), do: module
   defp metric_module(%{__struct__: module}), do: module
 
   defp metric_opts(metric, opts) when is_atom(metric),
     do: opts |> Keyword.drop(@run_keys) |> BaseMetric.with_default_opts(metric)
+
+  # A {module, opts} spec, as spans and traces declare metrics: its options
+  # win over the run's, as a struct's fields do.
+  defp metric_opts({module, metric_opts}, opts),
+    do: module |> metric_opts(opts) |> Keyword.merge(metric_opts)
 
   defp metric_opts(metric, opts) do
     opts
@@ -1309,6 +1323,33 @@ defmodule DeepEvalEx.Evaluator do
     |> finish(metric, reason)
   end
 
+  # The internal :error_text option (DeepEvalEx.Evaluator.Agentic's sync
+  # walker) records an ignored error as deepeval's synchronous
+  # _execute_metric does, format_error_text(e): the exception's type before
+  # its message, a missing-params error's as MissingTestCaseParamsError. A
+  # System One batch error already carries that text, and any other reason
+  # (a timeout, an error tuple) keeps its message.
+  defp error_text(%Result{} = result, reason, opts) do
+    case {Keyword.get(opts, :error_text), reason} do
+      {:format_error_text, %Batch.Error{}} ->
+        result
+
+      {:format_error_text, exception} when is_exception(exception) ->
+        %{result | error: Result.format_error_text(exception)}
+
+      {:format_error_text, reason} ->
+        if missing_params?(reason),
+          do: %{
+            result
+            | error: Result.format_error_text(%MissingTestCaseParamsError{message: result.error})
+          },
+          else: result
+
+      {_default, _reason} ->
+        result
+    end
+  end
+
   # A configured struct may name its results after its configuration (e.g.
   # GEval's "<name> [GEval]"); otherwise fall back to the module's name.
   defp metric_name(%{__struct__: module} = metric) do
@@ -1319,6 +1360,7 @@ defmodule DeepEvalEx.Evaluator do
     end
   end
 
+  defp metric_name({module, _opts}), do: module.metric_name()
   defp metric_name(module) when is_atom(module), do: module.metric_name()
 
   # `[threshold: threshold]` with the threshold the metric would have used:

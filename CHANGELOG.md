@@ -2263,6 +2263,48 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     ...`).
   - The traces of all thirteen traced scenarios build deepeval's
     `nested.json` and `compact.json` byte for byte.
+- **Evaluating traces** (ADR-0011): `DeepEvalEx.Evaluator.Agentic.evaluate/3`
+  ports deepeval 4.3.1's component-level evaluation, `evaluate/execute/agentic.py`
+  (`mode: :async`, the default) and `loop.py`'s sync walker (`mode: :sync`),
+  with `_common.py`'s `_skip_metrics_for_error`, `_trace_error` and
+  `filter_duplicate_results`. The [Tracing](wiki/guides/Tracing.md) guide
+  covers it.
+  - It evaluates a captured trace against its golden: the trace-level
+    metrics (the `:metrics` option, which replaces the trace's own) on a
+    test case built from the trace and the golden, then each span's
+    metrics on a test case built from the span (its input and output as
+    Python's `str()`).
+  - The two modes keep deepeval's differences: async builds a span test
+    case when the input is truthy and exports spans in breadth-first level
+    order, measuring them concurrently; sync builds one when the input is
+    not `nil`, exports spans in pre-order and measures them in post-order,
+    recording an ignored metric error as `format_error_text`
+    (`"RuntimeError: boom"`). Both walk every root.
+  - An errored span, or every span of an errored trace, has its metrics
+    skipped and its children left out, and is exported `ERRORED` with its
+    error or the trace's first span error. A span with metrics but no test
+    case is exported `ERRORED` with deepeval's `"DeepEvalError: Span has
+    metrics but no LLMTestCase. ..."`; in async, a trace in the same state
+    marks its first root with the `"Trace has metrics but no LLMTestCase
+    ..."` text, and an iterator metric that never ran is written to the
+    test case unmeasured.
+  - A metric requiring the trace is measured on the span's (or first
+    root's) nested trace dict as `:trace_dict`, on a `"None"` input when
+    there is none.
+  - It returns the golden's `DeepEvalEx.TestRun.TestCase`, with its trace
+    export, trace-level metric data and cost, and a success that span
+    metrics can fail; the golden's `DeepEvalEx.TestResult` followed by one
+    per span with metric data, bucket by bucket, without duplicates; and
+    the walked LLM spans' prompts.
+  - Every traced scenario but `raised_uncaught` (the iterator marks it)
+    and `requires_trace` (its metrics come later) evaluates, in both
+    modes, to the test cases, `metricsScores`, `traceMetricsScores`,
+    counts and cost of deepeval's `test_run_sync.json` and
+    `test_run_async.json`, byte for byte.
+- `DeepEvalEx.Metrics.BaseMetric` has the optional `requires_trace?/0` and
+  `requires_trace?/1` callbacks, deepeval's `requires_trace`, and
+  `BaseMetric.requires_trace?/1` to ask a module, `{module, opts}` or
+  metric struct (`false` when the metric does not implement them).
 
 ### Changed
 
@@ -2273,6 +2315,18 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `calculate_metrics_scores` does. A run loaded with `DeepEvalEx.TestRun.load/1`
   keeps the `traceMetricsScores` it was saved with. Runs without traces are
   unchanged.
+
+- `DeepEvalEx.Evaluator.evaluate_single/3` also takes a metric as
+  `{module, opts}`, as spans and traces declare them; its options win over
+  the run's, as a metric struct's fields do.
+
+- `DeepEvalEx.Prompts.Python.str/1` formats any term as Python's `str()`:
+  an atom as its string, and a dict, list, number, `None` or boolean as
+  its `repr/1`, as deepeval's span test cases take `str(span.input)`.
+
+- `DeepEvalEx.TestResult`'s `:input` and `:actual_output` may hold any
+  JSON value: a traced span's test result carries the span's exported
+  input and output, as deepeval's.
 
 - `DeepEvalEx.Metrics.BaseMetric`'s `measure/2` runs inside
   `DeepEvalEx.Tracing.suppress/1`, so the LLM calls of a metric's judge

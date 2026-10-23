@@ -5,8 +5,9 @@ an LLM, often from several processes. DeepEvalEx records those steps as a
 **trace** of **spans**, as Python deepeval 4.3.1 does with `@observe`, so
 that each step can later be inspected and evaluated.
 
-> Exporting a trace in deepeval's `TraceApi` shape and evaluating traces
-> with metrics are not available yet. This guide covers recording them.
+> Running a whole dataset through a traced agent (deepeval's
+> `evals_iterator`) is not available yet. This guide covers recording,
+> exporting and evaluating traces one at a time.
 
 ## Traced functions
 
@@ -141,6 +142,45 @@ IO.puts(DeepEvalEx.Tracing.NestedDict.to_json(trace_dict))
 System One model is asked about: each span's name, type, description,
 inputs, outputs, error, model, contexts and tool calls, with empty values
 left out and tool calls as their Python `str()`.
+
+## Evaluating traces
+
+`DeepEvalEx.Evaluator.Agentic.evaluate/3` evaluates a captured trace
+against the golden it was run for, as deepeval's `evals_iterator` does once
+your agent has run: the trace-level metrics first, then the metrics each
+span declares (`deftraced ..., metrics: [...]`), each on a test case built
+from the span's input and output:
+
+```elixir
+golden = %DeepEvalEx.Dataset.Golden{input: "How do I reset my password?", name: "reset"}
+{_answer, [trace]} = DeepEvalEx.Tracing.capture([], fn -> MyApp.Support.answer(golden.input) end)
+
+%{test_case: test_case, test_results: results} =
+  DeepEvalEx.Evaluator.Agentic.evaluate(trace, golden,
+    metrics: [DeepEvalEx.Metrics.AnswerRelevancy],
+    ignore_errors: true
+  )
+
+DeepEvalEx.TestRun.from_test_cases([test_case])
+```
+
+`test_case` is the golden's entry in `test_run_<timestamp>.json`, its
+`trace` holding every span and its metric data, and `results` the golden's
+`DeepEvalEx.TestResult` followed by one per span with metric data.
+
+deepeval walks the spans in two ways, and `:mode` picks one:
+
+- `:async` (the default, deepeval's `run_async=True`) builds a span's test
+  case only when its input is truthy, so a function without arguments
+  (`%{}`) reports "Span has metrics but no LLMTestCase", and exports the
+  spans level by level.
+- `:sync` builds one whenever the input is not `nil`, exports the spans
+  depth first and measures them one at a time.
+
+A span that raised, or every span of a trace whose root raised, has its
+metrics skipped and is exported `ERRORED` with its error. Metrics that
+judge the whole run (`requires_trace?`) get the span's nested trace dict
+as the test case's `:trace_dict`.
 
 ## Updating spans and traces
 

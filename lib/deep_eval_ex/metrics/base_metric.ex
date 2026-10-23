@@ -276,6 +276,28 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   """
   @callback cache_configuration(opts(), Result.t() | nil) :: map()
 
+  @doc """
+  Optional callback returning `true` for a metric that judges a whole
+  traced run, deepeval's `requires_trace` (TaskCompletion, StepEfficiency
+  and the other agentic metrics).
+
+  When a span or trace has such a metric, `DeepEvalEx.Evaluator.Agentic`
+  gives the test case the nested trace dict as `:trace_dict`
+  (`DeepEvalEx.Tracing.NestedDict`), and measures even without an input,
+  on a test case whose input is the placeholder `"None"`. A metric that
+  does not implement it does not require the trace (see
+  `requires_trace?/1`).
+  """
+  @callback requires_trace?() :: boolean()
+
+  @doc """
+  Optional callback returning whether a configured metric struct requires
+  the trace, for a metric where it depends on configuration (GEval and
+  JevEval in trace mode). Preferred over `c:requires_trace?/0` for a
+  struct, as `c:metric_name/1` is.
+  """
+  @callback requires_trace?(metric :: struct()) :: boolean()
+
   @optional_callbacks [
     default_opts: 0,
     metric_name: 1,
@@ -283,8 +305,36 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
     system_one_eval_spec: 2,
     system_one?: 0,
     system_one_model?: 0,
-    cache_configuration: 2
+    cache_configuration: 2,
+    requires_trace?: 0,
+    requires_trace?: 1
   ]
+
+  @doc """
+  Whether a metric spec (a module, `{module, opts}` or a metric struct)
+  requires the trace, deepeval's `metric.requires_trace`: a struct's
+  `c:requires_trace?/1` when its module implements it, else the module's
+  `c:requires_trace?/0`, else `false`.
+
+  ## Examples
+
+      iex> DeepEvalEx.Metrics.BaseMetric.requires_trace?(DeepEvalEx.Metrics.ExactMatch)
+      false
+  """
+  @spec requires_trace?(module() | {module(), keyword()} | struct()) :: boolean()
+  def requires_trace?(%module{} = metric) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :requires_trace?, 1),
+      do: module.requires_trace?(metric),
+      else: requires_trace?(module)
+  end
+
+  def requires_trace?({module, opts}) when is_atom(module) and is_list(opts),
+    do: requires_trace?(module)
+
+  def requires_trace?(module) when is_atom(module) do
+    Code.ensure_loaded?(module) and function_exported?(module, :requires_trace?, 0) and
+      module.requires_trace?()
+  end
 
   defmacro __using__(opts \\ []) do
     default_threshold = Keyword.get(opts, :default_threshold, 0.5)

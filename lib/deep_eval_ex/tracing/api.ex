@@ -405,9 +405,12 @@ defmodule DeepEvalEx.Tracing.Api do
     |> OrderedObject.new()
   end
 
+  @doc false
   # create_metric_data of a metric that has not measured: its configured
   # name, threshold, strict mode and judge model, and is_successful() False.
-  defp unmeasured_metric_data(spec) do
+  # Also the rows DeepEvalEx.Evaluator.Agentic writes for metrics it skips.
+  @spec unmeasured_metric_data(Span.metric_spec()) :: MetricData.t()
+  def unmeasured_metric_data(spec) do
     {module, opts} = metric_config(spec)
     default = if function_exported?(module, :default_threshold, 0), do: module.default_threshold()
 

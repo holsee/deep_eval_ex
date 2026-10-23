@@ -168,6 +168,22 @@ defmodule DeepEvalEx.Prompts.PythonTest do
                ~S|name='s' type=<ToolCallType.MCP: 'MCP'> description="it's" reasoning='r' | <>
                  ~S|output=[1, 0.5, None] input_parameters={'b': 1, 'a': True}|
     end
+
+    test "formats a string as it is and an atom as its string" do
+      assert Python.str("it's") == "it's"
+      assert Python.str(:planner) == "planner"
+    end
+
+    test "formats a dict, list, number, None or boolean as its repr, as Python's str()" do
+      kwargs = Jason.OrderedObject.new([{"query", "it's"}, {"k", 2}])
+
+      assert Python.str(kwargs) == ~S|{'query': "it's", 'k': 2}|
+      assert Python.str(%{}) == "{}"
+      assert Python.str(["a", 0.5]) == "['a', 0.5]"
+      assert Python.str(3) == "3"
+      assert Python.str(nil) == "None"
+      assert Python.str(true) == "True"
+    end
   end
 
   describe "tojson/1" do

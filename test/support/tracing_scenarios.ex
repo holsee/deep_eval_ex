@@ -134,7 +134,13 @@ defmodule DeepEvalEx.Test.TracingScenarios do
     end
   end
 
-  defp run_steps(module, steps, env, uncaught \\ false) do
+  @doc """
+  Runs a script's steps with bound values and returns the values bound
+  after them. With `uncaught`, a call that raises is caught as the
+  generator's script catches it.
+  """
+  @spec run_steps(module(), [OrderedObject.t()], map(), boolean()) :: map()
+  def run_steps(module, steps, env, uncaught \\ false) do
     Enum.reduce(steps, env, fn step, env -> run_step(module, step, env, uncaught) end)
   end
 

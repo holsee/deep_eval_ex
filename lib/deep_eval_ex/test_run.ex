@@ -941,12 +941,14 @@ defmodule DeepEvalEx.TestRun do
     }
   end
 
+  @doc false
   # deepeval's update_metric_data and ApiMetricsData serializer: the
   # expectation evaluator's row gives the test case its expectationsData (a
   # copy with the row's cost) and is not exported as metric data, nor
   # counted in metricsScores; it still decides the test case's success and
-  # adds to its cost.
-  defp split_expectations(metrics_data) do
+  # adds to its cost. Also DeepEvalEx.Evaluator.Agentic's.
+  @spec split_expectations([MetricData.t()]) :: {raw() | nil, [MetricData.t()]}
+  def split_expectations(metrics_data) do
     {expectations, metrics} = Enum.split_with(metrics_data, & &1.expectations_data)
     {Enum.find_value(expectations, & &1.expectations_data), metrics}
   end

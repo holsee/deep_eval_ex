@@ -193,7 +193,8 @@ defmodule DeepEvalEx.MixProject do
           DeepEvalEx.Result,
           DeepEvalEx.EvaluationResult,
           DeepEvalEx.TestResult,
-          DeepEvalEx.Evaluator
+          DeepEvalEx.Evaluator,
+          DeepEvalEx.Evaluator.Agentic
         ],
         Metrics: ~r/DeepEvalEx\.Metrics\..*/,
         Classifiers: [

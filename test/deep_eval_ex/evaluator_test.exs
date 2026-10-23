@@ -316,6 +316,17 @@ defmodule DeepEvalEx.EvaluatorTest do
     end
   end
 
+  describe "evaluate_single/3 {module, opts} metrics" do
+    test "measures the module with its options over the run's" do
+      test_case = TestCase.new!(input: "q", actual_output: "a", expected_output: "b")
+
+      [result] =
+        Evaluator.evaluate_single(test_case, [{ExactMatch, threshold: 0.0}], threshold: 0.9)
+
+      assert {result.metric, result.threshold, result.success} == {"Exact Match", 0.0, true}
+    end
+  end
+
   describe "evaluate_single/3 concurrency" do
     test "preserves metric order when metrics finish out of order" do
       metrics = [

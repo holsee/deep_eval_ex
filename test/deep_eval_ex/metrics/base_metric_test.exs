@@ -5,7 +5,7 @@ defmodule DeepEvalEx.Metrics.BaseMetricTest do
   alias DeepEvalEx.Metrics.BaseMetric
   alias DeepEvalEx.{Result, TestCase}
 
-  doctest BaseMetric, only: [threshold: 2, strict_score: 2]
+  doctest BaseMetric, only: [threshold: 2, strict_score: 2, requires_trace?: 1]
 
   defmodule FixedScore do
     @moduledoc false
@@ -242,6 +242,58 @@ defmodule DeepEvalEx.Metrics.BaseMetricTest do
       assert BaseMetric.threshold([threshold: nil], 0.5) == nil
       assert BaseMetric.threshold([], 0.5) == 0.5
       assert BaseMetric.threshold([strict_mode: false], 1) === 1
+    end
+  end
+
+  defmodule TraceJudge do
+    @moduledoc false
+
+    use DeepEvalEx.Metrics.BaseMetric
+
+    @impl true
+    def metric_name, do: "TraceJudge"
+
+    @impl true
+    def required_params, do: []
+
+    @impl true
+    def requires_trace?, do: true
+  end
+
+  defmodule ModeJudge do
+    @moduledoc false
+
+    use DeepEvalEx.Metrics.BaseMetric
+
+    defstruct trace?: false
+
+    @impl true
+    def metric_name, do: "ModeJudge"
+
+    @impl true
+    def required_params, do: []
+
+    @impl true
+    def requires_trace?, do: true
+
+    @impl true
+    def requires_trace?(%__MODULE__{trace?: trace?}), do: trace?
+  end
+
+  describe "requires_trace?/1" do
+    test "is the module's requires_trace?/0, for a module or {module, opts}" do
+      assert BaseMetric.requires_trace?(TraceJudge)
+      assert BaseMetric.requires_trace?({TraceJudge, threshold: 0.5})
+    end
+
+    test "is false for a metric that does not implement it" do
+      refute BaseMetric.requires_trace?(FixedScore)
+      refute BaseMetric.requires_trace?({FixedScore, []})
+    end
+
+    test "prefers a struct's requires_trace?/1" do
+      refute BaseMetric.requires_trace?(%ModeJudge{})
+      assert BaseMetric.requires_trace?(%ModeJudge{trace?: true})
     end
   end
 

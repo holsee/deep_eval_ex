@@ -13,8 +13,9 @@ defmodule DeepEvalEx.Prompts.Python do
 
   - `repr/1` - Python's `repr()` of strings, lists, dicts, numbers, `None`,
     booleans and deepeval `ToolCall`s and `RetrievedContextData`
-  - `str/1` - Python's `str()` of a string or a deepeval
-    `RetrievedContextData` or `ToolCall`
+  - `str/1` - Python's `str()`: a string as it is, a deepeval
+    `RetrievedContextData` or `ToolCall` as pydantic prints it, anything
+    else as `repr/1`
   - `format_fixed/2` - Python's `format(number, ".<n>f")`
   - `format_g/1` - Python's `format(number, "g")`, as in deepeval's
     `f"weight={weight:g}"`
@@ -119,7 +120,15 @@ defmodule DeepEvalEx.Prompts.Python do
   or `ToolCall.__repr__`, which `str()` does not call). A tool call's
   `type` prints as its enum member, `<ToolCallType.FUNCTION: 'FUNCTION'>`.
 
+  An atom is a string, as `repr/1` takes it. Anything else (a dict, a
+  list, a number, `None`, a boolean) is its `repr/1`, as Python's `str()`
+  of a built-in container or scalar is its `repr()`: deepeval's span and
+  trace test cases take `str(span.input)` of the call's arguments.
+
   ## Examples
+
+      iex> DeepEvalEx.Prompts.Python.str(Jason.OrderedObject.new([{"query", "hi"}, {"k", 2}]))
+      "{'query': 'hi', 'k': 2}"
 
       iex> alias DeepEvalEx.Schemas.RetrievedContextData
       iex> DeepEvalEx.Prompts.Python.str(%RetrievedContextData{context: "It's here.", source: "wiki"})
@@ -128,7 +137,7 @@ defmodule DeepEvalEx.Prompts.Python do
       iex> DeepEvalEx.Prompts.Python.str(%DeepEvalEx.Schemas.ToolCall{name: "search", output: 1})
       "name='search' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output=1 input_parameters=None"
   """
-  @spec str(String.t() | RetrievedContextData.t() | ToolCall.t()) :: String.t()
+  @spec str(term()) :: String.t()
   def str(binary) when is_binary(binary), do: binary
 
   def str(%RetrievedContextData{context: context, source: source}),
@@ -149,6 +158,9 @@ defmodule DeepEvalEx.Prompts.Python do
     |> Enum.intersperse(" ")
     |> IO.iodata_to_binary()
   end
+
+  def str(atom) when is_atom(atom) and atom not in [nil, true, false], do: Atom.to_string(atom)
+  def str(term), do: repr(term)
 
   @doc """
   Formats `string` like Jinja's `tojson` filter, which deepeval's templates
