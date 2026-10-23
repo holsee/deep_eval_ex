@@ -13,6 +13,7 @@ Fast, deterministic metrics that don't require LLM calls:
 | [PatternMatch](PatternMatch.md) | Whole output matches a regular expression | ⚡ Instant |
 | [JsonCorrectness](JsonCorrectness.md) | Output is JSON matching a JSON Schema (an LLM explains failures) | ⚡ Instant |
 | [ToolPermission](ToolPermission.md) | Tool calls within an allow/deny policy | ⚡ Instant |
+| [AgentLoopDetection](AgentLoopDetection.md) | A traced agent's repeated tool calls, stagnating reasoning and recursive cycles | ⚡ Instant |
 
 ### LLM-as-Judge Metrics
 Use an LLM to evaluate outputs based on criteria:
@@ -86,6 +87,7 @@ Evaluate tool-using agents:
 | [StepEfficiency](StepEfficiency.md) | Whether the agent took only the steps its task needed, judged from its trace | `input`, `actual_output` (and the trace) |
 | [PlanQuality](PlanQuality.md) | Whether the plan the agent stated is good enough for its task, judged from its trace | `input`, `actual_output` (and the trace) |
 | [PlanAdherence](PlanAdherence.md) | Whether the agent followed the plan it stated, judged from its trace | `input`, `actual_output` (and the trace) |
+| [AgentLoopDetection](AgentLoopDetection.md) | Whether the agent got stuck in a loop, from its trace (no LLM) | `input`, `actual_output` (and the trace) |
 
 ## Common Parameters
 
@@ -178,6 +180,7 @@ Faithfulness.measure(test_case, evaluation_template: MyFaithfulnessTemplate)
 - **StepEfficiency** - Check a traced agent did not wander, repeat or over-fetch
 - **PlanQuality** - Check a traced agent's plan covers its task before it acts
 - **PlanAdherence** - Check a traced agent did what it said it would, in order
+- **AgentLoopDetection** - Catch a traced agent repeating itself, at no cost
 
 ### For Exact Matching
 - **ExactMatch** - When output must exactly match expected

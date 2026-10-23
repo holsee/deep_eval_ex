@@ -2418,6 +2418,31 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     scenarios and the `plan_quality` (on the trace) and `plan_adherence`
     (on the agent span) traced scenarios, whose `evaluate_traced/3` test
     runs and judge prompts match deepeval's byte for byte in both modes.
+- **`DeepEvalEx.Metrics.AgentLoopDetection`**, a port of deepeval 4.3.1's
+  `AgentLoopDetectionMetric`: a deterministic trace metric
+  (`requires_trace?/0` is `true`, no LLM or System One model, an
+  `evaluation_cost` of `0`) scoring how much a traced agent looped.
+  - Three weighted checks over the nested trace dict: repeated tool calls
+    with identical arguments (key order and JSON-string inputs ignored),
+    stagnating consecutive LLM outputs (the larger of bigram Jaccard and
+    the `SequenceMatcher` ratio of their meaningful words) and recursive
+    `type:name:input` cycles on an ancestry path (the input cut at 64
+    characters, as deepeval's `_input_hash`). Each can be turned off;
+    `:repetition_threshold` and `:similarity_threshold` tune them. The
+    metadata holds each check's score as `:score_breakdown`. Without a
+    trace the score is `0.0` and the test case fails.
+  - **`DeepEvalEx.Metrics.Utils.SequenceMatcher`**, a port of Python's
+    `difflib.SequenceMatcher` `ratio/3` and `matching_blocks/3`, with
+    `isjunk` and the 200-element `autojunk` heuristic, comparing strings by
+    code point.
+  - Parity: 10 scripted scenarios, a 97-row `SequenceMatcher` table and an
+    `_input_hash` table generated with real deepeval, and the
+    `requires_trace` traced scenario (AgentLoopDetection on the trace, a
+    span and a zero-argument span, with TaskCompletion), whose
+    `evaluate_traced/3` test runs and TraceApi exports now match deepeval's
+    byte for byte in both modes. `generate_fixtures.py scripted [scenario
+    ...]` regenerates only the scripted scenarios' outputs, and
+    `generate_fixtures.py loop_detection` only the new tables.
 
 ### Changed
 

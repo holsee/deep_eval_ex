@@ -1,0 +1,12 @@
+{
+  "score": 1.0,
+  "success": true,
+  "reason": "No loop patterns detected.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": null,
+  "evaluation_cost": 0,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Tool Repetition Score: 1.0 (Tool repetition check skipped.) \n \nReasoning Stagnation Score: 1.0 (Reasoning stagnation check skipped.) \n \nCall Graph Cycles Score: 1.0 (Call graph cycles check skipped.) \n \nCombined Loop Score: 1.0"
+}

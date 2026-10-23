@@ -12,8 +12,6 @@ defmodule DeepEvalEx.Evaluator.TracedParityTest do
   When the scenario's metrics have ScriptedJudges, the prompts their
   judges got (`prompts_sync.json`, `prompts_async.json`) are compared too,
   each metric's on its own: deepeval's file lists them judge by judge.
-
-  `requires_trace` declares metrics ported by later units.
   """
 
   use ExUnit.Case, async: true
@@ -28,10 +26,7 @@ defmodule DeepEvalEx.Evaluator.TracedParityTest do
   # The run logs where it saved the test run.
   @moduletag :capture_log
 
-  @skipped ["requires_trace"]
-
   for scenario <- TracedFixtures.scenarios(),
-      scenario not in @skipped,
       mode <- TracedFixtures.load!(scenario, "input.json")["modes"] do
     @external_resource Path.join([TracedFixtures.dir(), scenario, "test_run_#{mode}.json"])
 

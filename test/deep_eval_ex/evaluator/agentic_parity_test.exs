@@ -14,8 +14,7 @@ defmodule DeepEvalEx.Evaluator.AgenticParityTest do
   as deepeval ends them. The run's `prompts` and `hyperparameters` and
   the iterator itself (one capture per golden, the uncaught error's
   marking) are `evaluate_traced/3`'s, so `raised_uncaught` is left to
-  `DeepEvalEx.Evaluator.TracedParityTest`;
-  `requires_trace` declares metrics ported by later units.
+  `DeepEvalEx.Evaluator.TracedParityTest`.
   """
 
   use ExUnit.Case, async: true
@@ -35,7 +34,7 @@ defmodule DeepEvalEx.Evaluator.AgenticParityTest do
 
   @wrapper "__deepeval_internal_pytest_test_wrapper__"
 
-  @skipped ["raised_uncaught", "requires_trace"]
+  @skipped ["raised_uncaught"]
 
   for scenario <- TracedFixtures.scenarios(),
       scenario not in @skipped,

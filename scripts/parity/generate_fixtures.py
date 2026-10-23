@@ -65,6 +65,15 @@ Run it inside the devcontainer, from the repository root:
     devcontainer exec --workspace-folder . \
       env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_fixtures.py
 
+With the argument `scripted` it rewrites only the scripted-judge scenarios'
+outputs; scenario names after it rewrite only those scenarios.
+
+With the argument `loop_detection` it writes only
+test/fixtures/deepeval/loop_detection/: vector tables of
+`difflib.SequenceMatcher` (`sequence_matcher.json`) and of
+AgentLoopDetectionMetric's `_input_hash` (`input_hash.json`), see
+`write_loop_detection_tables`.
+
 With the argument `traced` it writes only the traced fixtures,
 test/fixtures/deepeval/traced/: agent scripts (`TRACED_SCENARIOS`) run
 through deepeval's @observe tracing outside evaluation and under the sync
@@ -80,6 +89,7 @@ import glob
 import inspect
 import json
 import os
+import random
 import shutil
 import sys
 import tempfile
@@ -229,6 +239,7 @@ from deepeval.tracing import (  # noqa: E402
 from deepeval.tracing.trace_test_manager import trace_testing_manager  # noqa: E402
 from deepeval.tracing.utils import to_zod_compatible_iso  # noqa: E402
 from deepeval.metrics.utils import compact_trace  # noqa: E402
+from difflib import SequenceMatcher  # noqa: E402
 from deepeval.utils import serialize_to_json  # noqa: E402
 from openai.types.chat import ChatCompletion  # noqa: E402
 from pydantic import Field, create_model  # noqa: E402
@@ -799,10 +810,11 @@ SCRIPTED_METRICS = {
     "step_efficiency": StepEfficiencyMetric,
     "plan_quality": PlanQualityMetric,
     "plan_adherence": PlanAdherenceMetric,
+    "agent_loop_detection": AgentLoopDetectionMetric,
 }
 
 # Metrics that call no LLM and take no `model`.
-JUDGELESS_METRICS = {"exact_match", "pattern_match", "tool_permission"}
+JUDGELESS_METRICS = {"exact_match", "pattern_match", "tool_permission", "agent_loop_detection"}
 
 
 def build_scripted_metric(script):
@@ -4116,6 +4128,154 @@ def generate_traced(names=None):
         print(f"wrote {os.path.relpath(os.path.join(TRACED, name), ROOT)}")
 
 
+LOOP_DETECTION_DIR = os.path.join(FIXTURES, "loop_detection")
+
+# The isjunk functions a sequence_matcher.json row may name.
+SEQUENCE_MATCHER_JUNK = {None: None, "space": lambda c: c == " "}
+
+LOOP_WORDS = [
+    "search", "results", "query", "password", "reset", "account", "settings",
+    "email", "link", "user", "answer", "check", "again", "documents", "help",
+    "centre", "forgot", "login", "page", "steps", "confirm", "retry", "tool",
+]
+
+
+def _mutate(rng, text, alphabet, edits):
+    """`text` after `edits` random insertions, deletions and substitutions."""
+    chars = list(text)
+    for _ in range(edits):
+        op = rng.choice("ids") if chars else "i"
+        at = rng.randrange(len(chars) + (op == "i"))
+        if op == "i":
+            chars.insert(at, rng.choice(alphabet))
+        elif op == "d":
+            del chars[at]
+        else:
+            chars[at] = rng.choice(alphabet)
+    return "".join(chars)
+
+
+def _sequence_matcher_pairs():
+    """(a, b, isjunk, autojunk) pairs: fixed edge cases, then seeded random
+    strings over small alphabets (many equal elements), mutated copies
+    (high ratios), junk-heavy texts with a space isjunk, texts of 190 to 260
+    elements around autojunk's 200-element popularity cut, and word texts
+    like the cleaned LLM outputs AgentLoopDetection compares."""
+    pairs = [
+        ("", "", None, True),
+        ("", "abc", None, True),
+        ("abc", "", None, True),
+        ("abcd", "bcde", None, True),
+        ("abcd", "abcd", None, True),
+        ("qabxcd", "abycdf", None, True),
+        ("private Thread currentThread;", "private volatile Thread currentThread;", None, True),
+        ("private Thread currentThread;", "private volatile Thread currentThread;", "space", True),
+        (" abcd", "abcd abcd", None, True),
+        (" abcd", "abcd abcd", "space", True),
+        ("café crème brûlée", "cafe creme brulee", None, True),
+        ("naïve é \U0001F600 ok", "naive é \U0001F600 ok", None, True),
+        ("a" * 199, "a" * 199, None, True),
+        ("a" * 200, "a" * 200, None, True),
+        ("a" * 200, "a" * 200, None, False),
+        ("b" + "a" * 199, "a" * 199 + "b", None, True),
+        ("x" * 50 + "a" * 150, "a" * 150 + "x" * 50, None, True),
+        ("x" * 50 + "a" * 150, "a" * 150 + "x" * 50, None, False),
+    ]
+    rng = random.Random(431)
+    for _ in range(30):
+        alphabet = rng.choice(["ab", "abc", "abcd"])
+        pairs.append((
+            "".join(rng.choice(alphabet) for _ in range(rng.randrange(0, 40))),
+            "".join(rng.choice(alphabet) for _ in range(rng.randrange(0, 40))),
+            None,
+            True,
+        ))
+    for _ in range(15):
+        alphabet = "abcdefgh "
+        b = "".join(rng.choice(alphabet) for _ in range(rng.randrange(20, 120)))
+        pairs.append((_mutate(rng, b, alphabet, rng.randrange(1, 12)), b, None, True))
+    for _ in range(10):
+        alphabet = "ab     "
+        pairs.append((
+            "".join(rng.choice(alphabet) for _ in range(rng.randrange(40, 160))),
+            "".join(rng.choice(alphabet) for _ in range(rng.randrange(40, 160))),
+            "space",
+            True,
+        ))
+    for _ in range(12):
+        alphabet = rng.choice(["abcde ", "ab", "abcdefghijklmnopqrstuvwxyz  "])
+        b = "".join(rng.choice(alphabet) for _ in range(rng.randrange(190, 261)))
+        a = _mutate(rng, b, alphabet, rng.randrange(5, 60))
+        autojunk = rng.random() < 0.75
+        pairs.append((a, b, None, autojunk))
+    for _ in range(12):
+        b = " ".join(rng.choice(LOOP_WORDS) for _ in range(rng.randrange(20, 60)))
+        if rng.random() < 0.5:
+            words = b.split()
+            rng.shuffle(words)
+            a = " ".join(words)
+        else:
+            a = _mutate(rng, b, "abcdefghijklmnopqrstuvwxyz ", rng.randrange(0, 30))
+        pairs.append((a, b, None, True))
+    return pairs
+
+
+def write_loop_detection_tables():
+    """loop_detection/sequence_matcher.json: for each pair,
+    SequenceMatcher(isjunk, a, b, autojunk).ratio() and its matching blocks
+    (AgentLoopDetection compares texts with SequenceMatcher(None, a, b));
+    loop_detection/input_hash.json: AgentLoopDetectionMetric._input_hash of
+    nested-dict spans, the input part of its cycle labels (sorted-keys JSON,
+    or str(), truncated to 64 characters)."""
+    rows = []
+    for a, b, junk, autojunk in _sequence_matcher_pairs():
+        matcher = SequenceMatcher(SEQUENCE_MATCHER_JUNK[junk], a, b, autojunk)
+        rows.append({
+            "a": a,
+            "b": b,
+            "isjunk": junk,
+            "autojunk": autojunk,
+            "ratio": matcher.ratio(),
+            "matching_blocks": [list(block) for block in matcher.get_matching_blocks()],
+        })
+    spans = [
+        {"name": "search"},
+        {"name": "search", "input": None},
+        {"name": "search", "input": ""},
+        {"name": "search", "input": "short query"},
+        {"name": "search", "input": "q" * 63 + "é" + "z" * 10},
+        {"name": "search", "input": "é" * 40},
+        {"name": "search", "input": {}},
+        {"name": "search", "input": {"query": "reset password"}},
+        {"name": "search", "input": {"z": 1, "a": [1, 2.5, None, True], "m": {"y": "x", "b": False}}},
+        {"name": "search", "input": {"query": "Café Odéon, table for two on Saturday at 19:00 please"}},
+        {"name": "search", "input": {"text": "\U0001F600   \"quoted\" \\ back\nslash"}},
+        {"name": "search", "input": {"k" * 70: "v"}},
+        {"name": "search", "input": ["a", {"b": 1}, 2.0]},
+        {"name": "search", "input": 42},
+        {"name": "search", "input": 1.5e-07},
+        {"name": "search", "input": True},
+    ]
+    hashes = [{"span": span, "input_hash": AgentLoopDetectionMetric._input_hash(span)}
+              for span in spans]
+    os.makedirs(LOOP_DETECTION_DIR, exist_ok=True)
+    write_json(os.path.join(LOOP_DETECTION_DIR, "sequence_matcher.json"), rows)
+    write_json(os.path.join(LOOP_DETECTION_DIR, "input_hash.json"), hashes)
+
+
+def generate_scripted(names=None):
+    """The scripted-judge scenarios' outputs, or only those of `names`."""
+    available = sorted(name for name in os.listdir(SCRIPTED)
+                       if os.path.isfile(os.path.join(SCRIPTED, name, "script.json")))
+    unknown = sorted(set(names or []) - set(available))
+    if unknown:
+        sys.exit(f"unknown scripted scenarios: {', '.join(unknown)}")
+    for name in available:
+        if not names or name in names:
+            run_scripted_scenario(name)
+            print(f"wrote {os.path.relpath(os.path.join(SCRIPTED, name), ROOT)}")
+
+
 def main():
     if deepeval.__version__ != DEEPEVAL_VERSION:
         sys.exit(f"expected deepeval {DEEPEVAL_VERSION}, found {deepeval.__version__}")
@@ -4125,18 +4285,29 @@ def main():
         finally:
             shutil.rmtree(WORK_DIR, ignore_errors=True)
         return
+    if sys.argv[1:2] == ["scripted"]:
+        try:
+            generate_scripted(sys.argv[2:])
+        finally:
+            shutil.rmtree(WORK_DIR, ignore_errors=True)
+        return
+    if sys.argv[1:] == ["loop_detection"]:
+        write_loop_detection_tables()
+        shutil.rmtree(WORK_DIR, ignore_errors=True)
+        print(f"wrote {os.path.relpath(LOOP_DETECTION_DIR, ROOT)}")
+        return
     if sys.argv[1:]:
-        sys.exit(f"usage: {os.path.basename(__file__)} [traced [scenario ...]]")
+        sys.exit(f"usage: {os.path.basename(__file__)} "
+                 "[traced [scenario ...] | scripted [scenario ...] | loop_detection]")
     try:
         for name, scenario in SCENARIOS.items():
             run_scenario(name, scenario)
             print(f"wrote {os.path.relpath(os.path.join(FIXTURES, name), ROOT)}")
         run_round_trip_traced_dataset()
         print(f"wrote {os.path.relpath(os.path.join(ROUND_TRIP, 'traced_dataset'), ROOT)}")
-        for name in sorted(os.listdir(SCRIPTED)):
-            if os.path.isfile(os.path.join(SCRIPTED, name, "script.json")):
-                run_scripted_scenario(name)
-                print(f"wrote {os.path.relpath(os.path.join(SCRIPTED, name), ROOT)}")
+        generate_scripted()
+        write_loop_detection_tables()
+        print(f"wrote {os.path.relpath(LOOP_DETECTION_DIR, ROOT)}")
         check_prompt_coverage()
         for name, case in PROMPT_CASES.items():
             run_prompt_case(name, case)

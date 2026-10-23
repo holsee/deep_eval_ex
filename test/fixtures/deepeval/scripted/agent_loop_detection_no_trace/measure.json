@@ -1,0 +1,12 @@
+{
+  "score": 0.0,
+  "success": false,
+  "reason": "No trace data found. This metric requires trace data from @observe.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": null,
+  "evaluation_cost": 0,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": ""
+}

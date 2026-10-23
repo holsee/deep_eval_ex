@@ -8,9 +8,6 @@ defmodule DeepEvalEx.Tracing.ApiParityTest do
   fields, token interval keys, normalised providers, dropped spans and
   the unmeasured metric data of each span's metrics.
 
-  `requires_trace` declares metrics ported by later units (TaskCompletion,
-  AgentLoopDetection), so it is skipped until they land.
-
   `eval_trace_api/2` is compared with the traces of the async
   `evals_iterator`'s test runs (`test_run_async.json`), which capture the
   same traces: everything but the buckets and metric data the evaluation
@@ -29,17 +26,14 @@ defmodule DeepEvalEx.Tracing.ApiParityTest do
 
   @scenarios TracedFixtures.scenarios()
 
-  test "covers every traced scenario whose metrics are ported" do
-    supported =
-      Enum.filter(@scenarios, fn scenario ->
-        scenario |> TracedFixtures.load!("input.json") |> TracingScenarios.supported_metrics?()
-      end)
-
-    assert @scenarios -- supported == ["requires_trace"]
+  test "covers every traced scenario: their metrics are all ported" do
+    for scenario <- @scenarios do
+      input = TracedFixtures.load!(scenario, "input.json")
+      assert TracingScenarios.supported_metrics?(input), scenario
+    end
   end
 
-  for scenario <- @scenarios,
-      scenario != "requires_trace" do
+  for scenario <- @scenarios do
     @external_resource Path.join([TracedFixtures.dir(), scenario, "input.json"])
     @external_resource Path.join([TracedFixtures.dir(), scenario, "trace_api.json"])
 

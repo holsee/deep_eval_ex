@@ -1,14 +1,15 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in twelve sets:
+Fixtures written by **deepeval 4.3.1**, in thirteen sets:
 
 - export scenarios (the directories below, except `scripted/`, `prompts/`,
   `round_trip/`, `system_one/`, `datasets/`, `classifiers/`,
-  `expectations/`, `cache/`, `report/`, `cli/` and `traced/`), used by
+  `expectations/`, `cache/`, `report/`, `cli/`, `traced/` and
+  `loop_detection/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
-  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's thirty-three
+  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's thirty-four
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
 - [prompt goldens](#prompt-goldens) (`prompts/`), used by
@@ -53,6 +54,11 @@ Fixtures written by **deepeval 4.3.1**, in twelve sets:
   under the sync and async `evals_iterator`, for the tracing units
   (ADR-0011). `test/deep_eval_ex/traced_fixtures_test.exs` only checks
   their structure for now
+- [loop detection tables](#loop-detection-tables) (`loop_detection/`),
+  what Python's `difflib.SequenceMatcher` and AgentLoopDetectionMetric's
+  `_input_hash` make of fixed inputs, used by
+  `test/deep_eval_ex/metrics/utils/sequence_matcher_test.exs` and
+  `test/deep_eval_ex/metrics/agent_loop_detection_test.exs`
 
 ## Export scenarios
 
@@ -120,8 +126,11 @@ the parity test's "covers every scenario" assertion.
 It also rewrites the [round-trip test runs](#round-trip-test-runs) and the
 outputs of every scripted scenario that has a
 `script.json`, and every [prompt golden](#prompt-goldens) (defined in
-`PROMPT_CASES`). With the argument `traced` it rewrites the
-[traced fixtures](#traced-fixtures) instead, and nothing else. Runs are
+`PROMPT_CASES`), and the [loop detection tables](#loop-detection-tables).
+With the argument `traced` it rewrites the [traced fixtures](#traced-fixtures)
+instead, and nothing else; with `scripted` (and optionally scenario names)
+only the scripted scenarios' outputs; with `loop_detection` only the loop
+detection tables. Runs are
 deterministic: no network, a fixed string hash seed (deepeval orders some
 reasons by iterating sets), and only the `runDuration` values change between
 runs (and the round-trip and traced runs' uuids and timestamps).
@@ -189,7 +198,8 @@ calling an LLM. A script holds:
   `conversation_completeness`, `knowledge_retention`, `role_adherence`,
   `turn_faithfulness`, `turn_contextual_precision`, `turn_contextual_recall`,
   `turn_contextual_relevancy`, `goal_accuracy`, `tool_use`, `task_completion`,
-  `step_efficiency`, `plan_quality` or `plan_adherence`) and the metric's
+  `step_efficiency`, `plan_quality`, `plan_adherence` or
+  `agent_loop_detection`) and the metric's
   constructor
   `params`. JsonCorrectness's `expected_schema` is a pydantic model's
   `model_json_schema()`: the generator rebuilds the model from it
@@ -262,6 +272,7 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | StepEfficiency | `step_efficiency_pass` (the task, then the score, from the trace), `step_efficiency_strict` (the integer `0`), `step_efficiency_no_trace` (no trace: both prompts print `null`; an integer score read as `1.0`) |
 | PlanQuality | `plan_quality_pass` (the task with StepEfficiency's prompt, the plan with PlanAdherence's, then the plan scored, its steps one per line), `plan_quality_strict` (the integer `0`), `plan_quality_no_plan` (an empty plan: no score asked, the integer `1` and `a_measure`'s reason) |
 | PlanAdherence | `plan_adherence_pass` (the task, the plan, then the adherence scored against the trace), `plan_adherence_no_plan` (strict, an empty plan: the integer `1` all the same), `plan_adherence_no_trace` (no trace: every prompt prints `null`; an integer score read as `1.0`) |
+| AgentLoopDetection | `agent_loop_detection_pass` (distinct tool calls, another tool with the same arguments, short reasoning), `agent_loop_detection_tool_repetition` (three identical calls: dict keys in another order, one input a JSON string, nested dicts as their `str()`; another tool's call counted apart), `agent_loop_detection_tool_repetition_severe` (six identical calls, `0.0`, failing a `0.7` threshold; a non-JSON string input), `agent_loop_detection_stagnation` (identical outputs at steps 1 and 2), `agent_loop_detection_overlap` (a `0.89` overlap; Unicode whitespace, upper case and a final sigma), `agent_loop_detection_cycle` (an agent named `kb:planner` delegating back to itself, its input cut at 64 characters; a colon in the name splits its label), `agent_loop_detection_strict` (`0.0` under the threshold `1`), `agent_loop_detection_no_trace` (`0.0`, no verbose logs), `agent_loop_detection_custom` (`repetition_threshold` 2, `similarity_threshold` 0.5, no cycle check, `verbose_mode`: weights over the checks run), `agent_loop_detection_checks_off` (every check off: `1.0`); no judge, an `evaluation_cost` of the integer `0` |
 | TurnContextualRelevancy | `turn_contextual_relevancy_pass` (one request per node), `turn_contextual_relevancy_fail` (`window_size` 1; an irrelevant statement without a reason, `: None` in the reason prompt; a raw-text verdict out of vocabulary dropped), `turn_contextual_relevancy_strict`, `turn_contextual_relevancy_no_windows`. deepeval 4.3.1 raises on a `RetrievedContextData` node, so no scenario has one |
 | Faithfulness | `faithfulness_pass`, `faithfulness_fail`, `faithfulness_borderline`, `faithfulness_penalize_ambiguous` (`penalize_ambiguous_claims`: the borderline verdict fails and is an `(Ambiguous)` contradiction), `faithfulness_no_claims` (empty list), `faithfulness_strict` |
 | Hallucination | `hallucination_pass`, `hallucination_fail` (two contradictions out of three contexts), `hallucination_no_verdicts` (empty list), `hallucination_strict`, `hallucination_messy_json` (raw-text answers: prose, a code fence and trailing commas around the verdicts, a reason missing its closing brace), `hallucination_invalid_json` (a raw-text answer with no JSON: the metric errors) |
@@ -1104,3 +1115,24 @@ including truncation edges such as `x.9995` and the last `datetime`.
 `test/deep_eval_ex/traced_fixtures_test.exs` checks that the fixtures are
 consistent and that every file normalises. The tracing units compare
 DeepEvalEx's traces, exports and test runs with them.
+
+## Loop detection tables
+
+`generate_fixtures.py loop_detection` writes two tables under
+`loop_detection/`, from seeded inputs (`write_loop_detection_tables`):
+
+- `sequence_matcher.json` - for each pair of strings `a` and `b`, with an
+  `isjunk` (`null`, or `"space"` for `lambda c: c == " "`) and `autojunk`,
+  `SequenceMatcher(isjunk, a, b, autojunk).ratio()` and
+  `get_matching_blocks()`: edge cases (empty strings, Python's documented
+  examples, combining characters and emoji), random strings over small
+  alphabets, mutated copies, junk-heavy texts, texts of 190 to 260
+  characters around the 200-element autojunk cut, with and without it, and
+  word texts like the cleaned LLM outputs AgentLoopDetection compares.
+  `DeepEvalEx.Metrics.Utils.SequenceMatcher` must give the same ratio (as
+  the same float) and blocks
+- `input_hash.json` - for each nested-dict span, AgentLoopDetectionMetric's
+  `_input_hash`: no input, `None`, strings around the 64-character cut
+  (combining characters counted as code points), dicts dumped with sorted
+  keys and non-ASCII escaped, cut at 64 characters, and lists, numbers and
+  booleans as their `str()`

@@ -184,8 +184,9 @@ as the test case's `:trace_dict`: `DeepEvalEx.Metrics.TaskCompletion`
 (did the agent accomplish its task?), `DeepEvalEx.Metrics.StepEfficiency`
 (did it take only the steps it needed?), `DeepEvalEx.Metrics.PlanQuality`
 (was the plan it stated good?) and `DeepEvalEx.Metrics.PlanAdherence` (did
-it follow that plan?) judge the agent's trajectory from it, and are
-measured even when the span has no input.
+it follow that plan?) judge the agent's trajectory from it, and
+`DeepEvalEx.Metrics.AgentLoopDetection` checks it for loops without an
+LLM. They are measured even when the span has no input.
 
 ## Evaluating a traced agent over goldens
 

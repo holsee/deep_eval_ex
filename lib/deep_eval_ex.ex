@@ -77,6 +77,8 @@ defmodule DeepEvalEx do
     stated is good enough for its task, judged from its trace
   - `DeepEvalEx.Metrics.PlanAdherence` - Whether a traced agent followed
     the plan it stated, judged from its trace
+  - `DeepEvalEx.Metrics.AgentLoopDetection` - Whether a traced agent got
+    stuck in a loop, from its trace and without an LLM
   - `DeepEvalEx.Metrics.JevEval` - Your own weighted questions, decided by
     a System One model (Jev)
 

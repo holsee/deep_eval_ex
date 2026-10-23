@@ -1,0 +1,12 @@
+{
+  "score": 0.825,
+  "success": true,
+  "reason": "High reasoning overlap (0.89) at steps 0 and 1.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": null,
+  "evaluation_cost": 0,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Tool Repetition Score: 1.0 (No tool spans found.) \n \nReasoning Stagnation Score: 0.5 (High reasoning overlap (0.89) at steps 0 and 1.) \n \nCall Graph Cycles Score: 1.0 (No execution cycles detected.) \n \nCombined Loop Score: 0.825"
+}

@@ -26,7 +26,7 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   """
 
   alias DeepEvalEx.LLM.Adapters.Mock, as: LLMMock
-  alias DeepEvalEx.Metrics.ExactMatch
+  alias DeepEvalEx.Metrics.{AgentLoopDetection, ExactMatch}
   alias DeepEvalEx.Test.ParityMetrics.Stub
   alias DeepEvalEx.Test.TracedFixtures
   alias DeepEvalEx.Tracing
@@ -240,11 +240,12 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   @doc """
   The metric spec of a script metric, as the generator's `build_metric`:
   a `stub` is a `DeepEvalEx.Test.ParityMetrics.Stub`, an `exact_match`
-  `DeepEvalEx.Metrics.ExactMatch`, and a `task_completion`,
-  `step_efficiency`, `plan_quality` or `plan_adherence` the metric with its
-  params, judged by
-  `DeepEvalEx.LLM.Adapters.Mock` as `script_judges/1` scripts it. `nil`
-  for a metric DeepEvalEx does not have yet.
+  `DeepEvalEx.Metrics.ExactMatch`, an `agent_loop_detection`
+  `DeepEvalEx.Metrics.AgentLoopDetection` with its params, and a
+  `task_completion`, `step_efficiency`, `plan_quality` or `plan_adherence`
+  the metric with its params, judged by `DeepEvalEx.LLM.Adapters.Mock` as
+  `script_judges/1` scripts it. `nil` for a metric DeepEvalEx does not
+  have yet.
   """
   @spec metric(OrderedObject.t()) :: DeepEvalEx.Tracing.Span.metric_spec() | nil
   def metric(spec) do
@@ -264,19 +265,24 @@ defmodule DeepEvalEx.Test.TracingScenarios do
       "exact_match" ->
         ExactMatch
 
+      "agent_loop_detection" ->
+        {AgentLoopDetection, params(spec)}
+
       kind when is_map_key(@judged, kind) ->
         module = Map.fetch!(@judged, kind)
         Code.ensure_loaded!(module)
-
-        params =
-          for {key, value} <- (spec["params"] || OrderedObject.new([])).values,
-              do: {String.to_existing_atom(key), plain(value)}
-
-        {module, [adapter: :mock] ++ params}
+        {module, [adapter: :mock] ++ params(spec)}
 
       _not_yet_ported ->
         nil
     end
+  end
+
+  # A metric spec's params as options, their names atoms the metric's
+  # module defines.
+  defp params(spec) do
+    for {key, value} <- (spec["params"] || OrderedObject.new([])).values,
+        do: {String.to_existing_atom(key), plain(value)}
   end
 
   @doc """

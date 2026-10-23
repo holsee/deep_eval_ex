@@ -161,6 +161,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/StepEfficiency.md",
         "wiki/metrics/PlanQuality.md",
         "wiki/metrics/PlanAdherence.md",
+        "wiki/metrics/AgentLoopDetection.md",
         # API
         "wiki/api/TestCase.md",
         "wiki/api/Result.md",

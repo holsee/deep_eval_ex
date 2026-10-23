@@ -21,6 +21,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
   alias DeepEvalEx.LLM.Adapters.Mock
 
   alias DeepEvalEx.Metrics.{
+    AgentLoopDetection,
     AnswerRelevancy,
     ArgumentCorrectness,
     Bias,
@@ -95,7 +96,8 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     "task_completion" => TaskCompletion,
     "step_efficiency" => StepEfficiency,
     "plan_quality" => PlanQuality,
-    "plan_adherence" => PlanAdherence
+    "plan_adherence" => PlanAdherence,
+    "agent_loop_detection" => AgentLoopDetection
   }
 
   # Pairs of steps that need not keep deepeval's relative order, as neither

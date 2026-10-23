@@ -1,0 +1,91 @@
+{
+  "description": "AgentLoopDetection: one tool called three times with the same arguments, in another key order and once as a JSON string",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "agent_loop_detection",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "How do I reset my password?",
+    "actual_output": "Use the 'Forgot password' link on the login page."
+  },
+  "trace": {
+    "name": "support_agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "Use the 'Forgot password' link on the login page.",
+    "available_tools": [
+      "search",
+      "lookup"
+    ],
+    "agent_handoffs": [],
+    "children": [
+      {
+        "name": "search",
+        "type": "tool",
+        "input": {
+          "query": "reset password",
+          "limit": 5,
+          "filters": {
+            "lang": "en"
+          }
+        },
+        "output": [
+          "Password reset article"
+        ],
+        "children": []
+      },
+      {
+        "name": "search",
+        "type": "tool",
+        "input": {
+          "filters": {
+            "lang": "en"
+          },
+          "limit": 5,
+          "query": "reset password"
+        },
+        "output": [
+          "Password reset article"
+        ],
+        "children": []
+      },
+      {
+        "name": "search",
+        "type": "tool",
+        "input": "{\"limit\": 5, \"query\": \"reset password\", \"filters\": {\"lang\": \"en\"}}",
+        "output": [
+          "Password reset article"
+        ],
+        "children": []
+      },
+      {
+        "name": "lookup",
+        "type": "tool",
+        "input": {
+          "query": "reset password",
+          "limit": "5",
+          "filters": {
+            "lang": "en"
+          }
+        },
+        "output": [
+          "Password reset article"
+        ],
+        "children": []
+      },
+      {
+        "name": "think",
+        "type": "llm",
+        "input": {},
+        "output": "I will search.",
+        "children": []
+      }
+    ]
+  },
+  "responses": {}
+}

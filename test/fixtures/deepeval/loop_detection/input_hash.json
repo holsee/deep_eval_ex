@@ -1,0 +1,139 @@
+[
+  {
+    "span": {
+      "name": "search"
+    },
+    "input_hash": ""
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": null
+    },
+    "input_hash": "None"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": ""
+    },
+    "input_hash": ""
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": "short query"
+    },
+    "input_hash": "short query"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqézzzzzzzzzz"
+    },
+    "input_hash": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqé"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": "éééééééééééééééééééééééééééééééééééééééé"
+    },
+    "input_hash": "éééééééééééééééééééééééééééééééé"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": {}
+    },
+    "input_hash": "{}"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": {
+        "query": "reset password"
+      }
+    },
+    "input_hash": "{\"query\": \"reset password\"}"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": {
+        "z": 1,
+        "a": [
+          1,
+          2.5,
+          null,
+          true
+        ],
+        "m": {
+          "y": "x",
+          "b": false
+        }
+      }
+    },
+    "input_hash": "{\"a\": [1, 2.5, null, true], \"m\": {\"b\": false, \"y\": \"x\"}, \"z\": 1}"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": {
+        "query": "Café Odéon, table for two on Saturday at 19:00 please"
+      }
+    },
+    "input_hash": "{\"query\": \"Caf\\u00e9 Od\\u00e9on, table for two on Saturday at 19"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": {
+        "text": "😀   \"quoted\" \\ back\nslash"
+      }
+    },
+    "input_hash": "{\"text\": \"\\ud83d\\ude00 \\u2028 \\\"quoted\\\" \\\\ back\\nslash\"}"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": {
+        "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "v"
+      }
+    },
+    "input_hash": "{\"kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": [
+        "a",
+        {
+          "b": 1
+        },
+        2.0
+      ]
+    },
+    "input_hash": "['a', {'b': 1}, 2.0]"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": 42
+    },
+    "input_hash": "42"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": 1.5e-07
+    },
+    "input_hash": "1.5e-07"
+  },
+  {
+    "span": {
+      "name": "search",
+      "input": true
+    },
+    "input_hash": "True"
+  }
+]
