@@ -2713,6 +2713,19 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     export scenarios run with MCP servers, and `mcp/dumps.json`. See the
     [TestCase](wiki/api/TestCase.md) page.
 
+- **`DeepEvalEx.ArenaTestCase` and `DeepEvalEx.Contestant`**, ports of
+  deepeval 4.3.1's `test_case/arena_test_case.py`: contestants (a name, the
+  `DeepEvalEx.TestCase` it produced, and optional hyperparameters) answering
+  the same input, for head-to-head comparison. `ArenaTestCase.new/1`
+  returns deepeval's errors unless the contestant names are unique and
+  every test case shares its `input` and `expected_output`, and an error
+  for no contestants (where deepeval raises an `IndexError`); it sets
+  `multimodal` when any contestant's test case is multimodal. Both take
+  structs or keyword/map attributes and have raising `new!/1` forms.
+  Hyperparameter values are strings, integers or floats, a boolean cast to
+  `1` or `0` as pydantic does; deepeval's `Prompt` values are not ported.
+  See the [TestCase](wiki/api/TestCase.md) page.
+
 ### Changed
 
 - The Anthropic adapter's `supports_multimodal?/0` is now `true`, as for

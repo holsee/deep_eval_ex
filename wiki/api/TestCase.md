@@ -139,6 +139,35 @@ The MCP calls are not exported in a test run (deepeval does not export
 them), but expectations and System One states see them, and conversational
 metrics can name a turn's MCP calls as evaluation params.
 
+## Arena Test Cases
+
+`DeepEvalEx.ArenaTestCase` holds contestants answering the same input, to
+be compared head to head, as deepeval 4.3.1's `ArenaTestCase`. Each
+`DeepEvalEx.Contestant` names a version of an application and holds the
+test case it produced, with the hyperparameters that produced it:
+
+```elixir
+{:ok, arena} =
+  DeepEvalEx.ArenaTestCase.new(
+    contestants: [
+      [
+        name: "gpt-4o",
+        test_case: [input: "What is 2 + 2?", actual_output: "4"],
+        hyperparameters: [temperature: 0.7]
+      ],
+      [name: "claude", test_case: [input: "What is 2 + 2?", actual_output: "Four."]]
+    ]
+  )
+```
+
+As deepeval's, `new/1` returns an error unless the contestant names are
+unique (`"All contestant names must be unique."`) and every test case has
+the same `input` and `expected_output` (`"All contestants must have the
+same 'input'."`, `"... 'expected_output'."`). An arena test case is
+multimodal when any contestant's test case is. Hyperparameter values are
+strings, integers or floats (a boolean becomes `1` or `0`, as pydantic
+casts it); deepeval's `Prompt` values are not ported.
+
 ## Context and Retrieval Context
 
 As in deepeval 4.3.1, `context` and `retrieval_context` are separate fields,

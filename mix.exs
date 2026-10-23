@@ -208,6 +208,8 @@ defmodule DeepEvalEx.MixProject do
           DeepEvalEx.MCPToolCall,
           DeepEvalEx.MCPResourceCall,
           DeepEvalEx.MCPPromptCall,
+          DeepEvalEx.ArenaTestCase,
+          DeepEvalEx.Contestant,
           DeepEvalEx.Result,
           DeepEvalEx.EvaluationResult,
           DeepEvalEx.TestResult,
