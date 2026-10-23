@@ -65,15 +65,24 @@ Run it inside the devcontainer, from the repository root:
     devcontainer exec --workspace-folder . \
       env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_fixtures.py
 
+With the argument `traced` it writes only the traced fixtures,
+test/fixtures/deepeval/traced/: agent scripts (`TRACED_SCENARIOS`) run
+through deepeval's @observe tracing outside evaluation and under the sync
+and async evals_iterator, and `iso_table.json`, deepeval's ISO timestamps
+for fixed epoch times. See the comment above `TRACED_SCENARIOS`.
+
 See test/fixtures/deepeval/README.md.
 """
 
+import asyncio
 import glob
+import inspect
 import json
 import os
 import shutil
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FIXTURES = os.path.join(ROOT, "test", "fixtures", "deepeval")
@@ -88,7 +97,11 @@ PROMPTS = os.path.join(FIXTURES, "prompts")
 if sys.flags.hash_randomization:
     env = {k: v for k, v in os.environ.items() if not k.startswith("PYTHON")}
     env["PYTHONHASHSEED"] = "0"
-    os.execve(sys.executable, [sys.executable, "-s", "-P", os.path.abspath(__file__)], env)
+    os.execve(
+        sys.executable,
+        [sys.executable, "-s", "-P", os.path.abspath(__file__), *sys.argv[1:]],
+        env,
+    )
 
 # Before deepeval is imported: no telemetry, no Confident AI, no prompts.
 os.environ["DEEPEVAL_TELEMETRY_OPT_OUT"] = "1"
@@ -112,6 +125,7 @@ from deepeval.evaluate.configs import (  # noqa: E402
     ErrorConfig,
 )
 from deepeval.metrics import (  # noqa: E402
+    AgentLoopDetectionMetric,
     AnswerRelevancyMetric,
     ArgumentCorrectnessMetric,
     BaseConversationalMetric,
@@ -134,6 +148,7 @@ from deepeval.metrics import (  # noqa: E402
     PromptAlignmentMetric,
     RoleAdherenceMetric,
     SummarizationMetric,
+    TaskCompletionMetric,
     ToolCorrectnessMetric,
     ToolPermissionMetric,
     ToolUseMetric,
@@ -190,7 +205,26 @@ from deepeval.test_case import (  # noqa: E402
     ToolCallParams,
     Turn,
 )
-from deepeval.tracing import observe, update_current_span, update_current_trace  # noqa: E402
+from deepeval.tracing import (  # noqa: E402
+    current_span_context,
+    current_trace_context,
+    next_agent_span,
+    next_llm_span,
+    next_retriever_span,
+    next_span,
+    next_tool_span,
+    observe,
+    trace_manager,
+    update_agent_span,
+    update_current_span,
+    update_current_trace,
+    update_llm_span,
+    update_retriever_span,
+    update_tool_span,
+)
+from deepeval.tracing.trace_test_manager import trace_testing_manager  # noqa: E402
+from deepeval.tracing.utils import to_zod_compatible_iso  # noqa: E402
+from deepeval.metrics.utils import compact_trace  # noqa: E402
 from deepeval.utils import serialize_to_json  # noqa: E402
 from openai.types.chat import ChatCompletion  # noqa: E402
 from pydantic import Field, create_model  # noqa: E402
@@ -2868,9 +2902,858 @@ def run_round_trip_traced_dataset():
     shutil.copyfile(path, os.path.join(out_dir, "test_run.json"))
 
 
+###############################################################################
+# Traced scenarios (`generate_fixtures.py traced`)
+###############################################################################
+#
+# Each scenario of `TRACED_SCENARIOS` is an agent script: `functions`, each
+# an @observe'd function (span `type`, `params` as [name] or [name, default],
+# `observe` keyword arguments, span `metrics` and `metric_collection`, a
+# `body` of steps and the value it `returns`), and `app`, the steps user code
+# runs for every golden. The script is interpreted twice, as plain functions
+# and as coroutines, so the same call tree runs under deepeval's sync and
+# async evals_iterator. Its steps:
+#
+# - {"call": f, "args": [...], "kwargs": {...}, "as": name, "catch": bool}
+#   calls function f, binds its result to `name`, and with `catch` swallows
+#   the exception it raises
+# - {"update_current_span" | "update_current_trace" | "update_llm_span" |
+#   "update_agent_span" | "update_tool_span" | "update_retriever_span": kwargs}
+# - {"with": "next_span" | "next_agent_span" | ..., "kwargs": kwargs,
+#   "body": [steps]} runs `body` inside that context manager
+# - {"drop_current_span": true}, deepeval's `current_span_context.drop()`
+# - {"raise": {"type": "ValueError" | "RuntimeError", "message": text}}
+#
+# A value is resolved against the function's arguments and bound results
+# (the golden's `input` for `app`): "$name" is that value, and any other
+# string is formatted with them (`str.format`). In kwargs, `test_case` is an
+# LLMTestCase's keyword arguments, `tools_called` and `expected_tools`
+# ToolCall keyword arguments, `prompt` a Prompt (`alias`, `version`,
+# `label`, `hash`), `token_intervals` keys perf_counter values as strings,
+# and `metrics` metric specs (`traced_metric`).
+#
+# For every scenario this writes, under test/fixtures/deepeval/traced/<name>/:
+#
+# - input.json        - the scenario
+# - trace_api.json    - outside evaluation (EvalMode.OFF), for every trace
+#                       the plain-function app started, in order: the body
+#                       deepeval would post, `create_trace_api(trace)` dumped
+#                       by alias without None values (what end_trace hands
+#                       trace_testing_manager)
+# - nested.json       - for the same traces, `create_nested_spans_dict` of
+#                       the trace's root span, made JSON-serialisable as
+#                       `serialize_to_json` does (the `_trace_dict` trace
+#                       metrics read)
+# - compact.json      - `compact_trace` of each nested dict (the trace System
+#                       One reads)
+# - test_run_<mode>.json - for every mode in `modes`, the test run deepeval's
+#                       evals_iterator wrote with AsyncConfig(run_async=False)
+#                       ("sync") or run_async=True ("async")
+# - prompts_<mode>.json - when a metric has a ScriptedJudge: every prompt it
+#                       was sent during that run, with its step
+#
+# Async runs use only metrics that never suspend, so asyncio's span order is
+# deterministic. Uuids and timestamps differ between runs; see the README.
+
+TRACED = os.path.join(FIXTURES, "traced")
+
+TRACED_GOLDEN = {
+    "input": "How do I reset my password?",
+    "expected_output": "Use the 'Forgot password' link.",
+    "name": "password-reset",
+}
+
+TRACED_GOLDEN_DE = {"input": "Wo ist meine Rechnung?", "expected_output": "Unter Konto › Rechnungen."}
+
+# An LLM call: tokens and per-token costs reported with update_llm_span.
+TRACED_GENERATE = {
+    "type": "llm",
+    "params": [["query"], ["documents"]],
+    "observe": {"model": "gpt-4o-mini", "cost_per_input_token": 1.5e-07},
+    "body": [{"update_llm_span": {"input_token_count": 42, "output_token_count": 7,
+                                  "cost_per_output_token": 6e-07}}],
+    "returns": "Answer to {query}",
+}
+
+LOOP_DETECTION = {"kind": "agent_loop_detection", "params": {"threshold": 0.5}}
+
+# TaskCompletion judged from the trace: one task-and-outcome extraction and
+# one verdict per measure.
+TASK_COMPLETION = {
+    "kind": "task_completion",
+    "judge_model": "mock-model",
+    "params": {"threshold": 0.5},
+    "responses": {
+        "outcome,task": [{"task": "Tell the user how to reset their password",
+                          "outcome": "The agent searched twice, then answered."}],
+        "reason,verdict": [{"verdict": 0.8,
+                            "reason": "The agent answered, after repeating a search."}],
+    },
+}
+
+
+TRACED_SCENARIOS = {
+    "nested_spans": {
+        "description": "An agent calling a retriever, a tool and an LLM, over two goldens: "
+                       "span types and their fields, the tool's call auto-filled into the "
+                       "agent's toolsCalled, trace attributes, span and trace metrics",
+        "goldens": [TRACED_GOLDEN, TRACED_GOLDEN_DE],
+        "metrics": [STUB_JUDGE],
+        "modes": ["sync", "async"],
+        "functions": {
+            "answer": {
+                "type": "agent",
+                "params": [["query"]],
+                "observe": {"available_tools": ["search_docs"], "agent_handoffs": ["billing"]},
+                "body": [
+                    {"call": "retrieve", "args": ["$query"], "as": "documents"},
+                    {"call": "search_docs", "kwargs": {"query": "$query"}},
+                    {"call": "generate", "args": ["$query", "$documents"], "as": "answer"},
+                    {"update_current_trace": {"name": "support", "tags": ["parity"],
+                                              "metadata": {"channel": "chat"},
+                                              "thread_id": "thread-1", "user_id": "user-1"}},
+                ],
+                "returns": "$answer",
+            },
+            "retrieve": {
+                "type": "retriever",
+                "params": [["query"], ["k", 2]],
+                "observe": {"embedder": "text-embedding-3-small"},
+                "metrics": [SPAN_JUDGE],
+                "body": [{"update_retriever_span": {"top_k": 2, "chunk_size": 512}},
+                         {"update_current_span": {"retrieval_context": ["FAQ: {query}"],
+                                                  "metadata": {"index": "faq"}}}],
+                "returns": ["FAQ: {query}", "Policy: answers cite the help centre."],
+            },
+            "search_docs": {
+                "type": "tool",
+                "params": [["query"]],
+                "observe": {"description": "Searches the help centre"},
+                "returns": {"hits": 2, "query": "$query"},
+            },
+            "generate": {**TRACED_GENERATE, "metrics": [STRICT_JUDGE]},
+        },
+        "app": [{"call": "answer", "args": ["{input}"]}],
+    },
+    "function_kwargs": {
+        "description": "Default span inputs from the call's arguments: a zero-argument function "
+                       "({}), and arguments bound in signature order whatever the call order, "
+                       "with defaults applied, and their Python str() as the span test case input",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [STUB_JUDGE],
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "body": [
+                    {"call": "clock", "as": "now"},
+                    {"call": "lookup", "kwargs": {"mid": True, "zeta": "$query", "alpha": 3}},
+                ],
+                "returns": "Looked up at {now}",
+            },
+            "clock": {"returns": "noon"},
+            "lookup": {
+                "type": "tool",
+                "params": [["zeta"], ["alpha"], ["mid", False], ["omega", None], ["beta", [1, 2]]],
+                "metrics": [SPAN_JUDGE],
+                "returns": {"found": True},
+            },
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    },
+    "metrics_without_input": {
+        "description": "Span metrics on a zero-argument span, whose input is {}: sync builds "
+                       "a test case from it (`is not None`), async does not (truthiness) and "
+                       "reports the missing LLMTestCase",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [STUB_JUDGE],
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "body": [{"call": "ping"}],
+                "returns": "pong for {query}",
+            },
+            "ping": {"metrics": [SPAN_JUDGE], "returns": "pong"},
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    },
+    "raised_caught": {
+        "description": "A tool that raises inside an agent that catches it: the tool span is "
+                       "ERRORED with str(exception) and its metrics skipped, the agent and "
+                       "the trace succeed",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [STUB_JUDGE],
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "body": [{"call": "flaky_tool", "args": ["$query"], "catch": True}],
+                "returns": "Recovered from a failed lookup",
+            },
+            "flaky_tool": {
+                "type": "tool",
+                "params": [["query"]],
+                "metrics": [SPAN_JUDGE],
+                "body": [{"raise": {"type": "ValueError", "message": "upstream timeout"}}],
+            },
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    },
+    "errored_trace": {
+        "description": "A root span that raises, caught by the app: in async (and outside "
+                       "evaluation) the root marks the trace ERRORED, which skips every trace "
+                       "and span metric; in sync the root is the wrapper span's child, so the "
+                       "trace stays SUCCESS",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [STUB_JUDGE],
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "metrics": [SPAN_JUDGE],
+                "body": [
+                    {"call": "search", "args": ["$query"]},
+                    {"raise": {"type": "RuntimeError", "message": "planner crashed"}},
+                ],
+            },
+            "search": {
+                "type": "tool",
+                "params": [["query"]],
+                "metrics": [SPAN_JUDGE],
+                "returns": ["result for {query}"],
+            },
+        },
+        "app": [{"call": "agent", "args": ["{input}"], "catch": True}],
+    },
+    "raised_uncaught": {
+        "description": "The app's coroutine raises out of the root span: the async iterator "
+                       "marks the trace and its root ERRORED with format_error_text. Async "
+                       "only: in sync the exception leaves the user's loop and no run is saved",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [STUB_JUDGE],
+        "modes": ["async"],
+        "uncaught": True,
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "body": [
+                    {"call": "search", "args": ["$query"]},
+                    {"raise": {"type": "RuntimeError", "message": "agent gave up"}},
+                ],
+            },
+            "search": {
+                "type": "tool",
+                "params": [["query"]],
+                "metrics": [SPAN_JUDGE],
+                "returns": ["result for {query}"],
+            },
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    },
+    "span_test_case": {
+        "description": "update_current_span(test_case=...) setting a span's input, output, "
+                       "expected output, contexts and tools, judged by span metrics, and "
+                       "update_current_trace(test_case=...) doing the same for the trace",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [{"kind": "exact_match"}, STUB_JUDGE],
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "body": [
+                    {"call": "retrieve", "args": ["$query"], "as": "documents"},
+                    {"update_current_trace": {"test_case": {
+                        "input": "$query",
+                        "actual_output": "Use the 'Forgot password' link.",
+                        "expected_output": "Use the 'Forgot password' link.",
+                        "retrieval_context": "$documents",
+                        "tools_called": [{"name": "retrieve"}],
+                    }}},
+                ],
+                "returns": "Use the 'Forgot password' link.",
+            },
+            "retrieve": {
+                "type": "retriever",
+                "params": [["query"]],
+                "metrics": [{"kind": "exact_match"}, SPAN_JUDGE],
+                "body": [{"update_current_span": {"test_case": {
+                    "input": "$query",
+                    "actual_output": "FAQ: reset",
+                    "expected_output": "FAQ: reset",
+                    "context": ["Accounts have passwords."],
+                    "retrieval_context": ["FAQ: reset", "FAQ: billing"],
+                    "tools_called": [{"name": "index", "input_parameters": {"q": "$query"}}],
+                    "expected_tools": [{"name": "index"}],
+                }}}],
+                "returns": ["FAQ: reset", "FAQ: billing"],
+            },
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    },
+    "next_span_staging": {
+        "description": "next_llm_span and next_span: staged fields land on the next span of "
+                       "the type only (the second LLM call gets none), typed slots win over "
+                       "the base slot, staged metrics run",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [STUB_JUDGE],
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "body": [
+                    {"with": "next_span", "kwargs": {"metadata": {"staged": "base"},
+                                                     "metric_collection": "base-collection"},
+                     "body": [
+                         {"with": "next_llm_span",
+                          "kwargs": {"model": "gpt-4o", "input_token_count": 10,
+                                     "metadata": {"staged": "llm"}, "name": "staged_call",
+                                     "metrics": [SPAN_JUDGE]},
+                          "body": [
+                              {"call": "generate", "args": ["$query", []]},
+                              {"call": "generate", "args": ["again", []]},
+                          ]},
+                     ]},
+                    {"with": "next_tool_span", "kwargs": {"description": "Staged description"},
+                     "body": [{"call": "lookup", "args": ["$query"]}]},
+                ],
+                "returns": "done",
+            },
+            "generate": TRACED_GENERATE,
+            "lookup": {"type": "tool", "params": [["query"]], "returns": "found"},
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    },
+    "dropped_span": {
+        "description": "A span that drops itself: outside evaluation create_trace_api skips "
+                       "it and re-parents its children; the evaluation walkers keep it",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [STUB_JUDGE],
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "body": [{"call": "plan", "args": ["$query"]}],
+                "returns": "planned",
+            },
+            "plan": {
+                "params": [["query"]],
+                "body": [{"drop_current_span": True},
+                         {"call": "search", "args": ["$query"]},
+                         {"call": "search", "args": ["more {query}"]}],
+                "returns": "plan",
+            },
+            "search": {"type": "tool", "params": [["query"]], "returns": "hit for {query}"},
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    },
+    "two_top_level": {
+        "description": "Two top-level spans per golden: sync keeps the wrapper span's first "
+                       "child only (root_spans[0].children[0]); async evaluates each trace "
+                       "as its own test case",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [STUB_JUDGE],
+        "modes": ["sync", "async"],
+        "functions": {
+            "first": {
+                "type": "agent",
+                "params": [["query"]],
+                "metrics": [SPAN_JUDGE],
+                "returns": "first answer to {query}",
+            },
+            "second": {
+                "type": "agent",
+                "params": [["query"]],
+                "metrics": [STRICT_JUDGE],
+                "returns": "second answer to {query}",
+            },
+        },
+        "app": [{"call": "first", "args": ["{input}"]}, {"call": "second", "args": ["{input}"]}],
+    },
+    "requires_trace": {
+        "description": "Metrics that read the trace (requires_trace): AgentLoopDetection on the "
+                       "trace, on a span and on a zero-argument span (whose test case is the "
+                       "input=\"None\" placeholder in async), and TaskCompletion judged by a "
+                       "ScriptedJudge from the nested trace dict",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [LOOP_DETECTION, TASK_COMPLETION],
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "observe": {"available_tools": ["search"]},
+                "metrics": [LOOP_DETECTION],
+                "body": [
+                    {"call": "search", "args": ["$query"]},
+                    {"call": "search", "args": ["$query"]},
+                    {"call": "think"},
+                    {"call": "generate", "args": ["$query", []], "as": "answer"},
+                    # The sync iterator's trace has no output of its own.
+                    {"update_current_trace": {"output": "$answer"}},
+                ],
+                "returns": "$answer",
+            },
+            "search": {"type": "tool", "params": [["query"]], "returns": ["result for {query}"]},
+            "think": {"type": "llm", "metrics": [LOOP_DETECTION], "returns": "I will search."},
+            "generate": TRACED_GENERATE,
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    },
+    "llm_prompt_fields": {
+        "description": "LlmSpan prompt fields: from observe(prompt=...), from "
+                       "update_llm_span(prompt=...) over it, and from next_llm_span(prompt=...); "
+                       "token_intervals keys as microsecond timestamps",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [STUB_JUDGE],
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "body": [
+                    {"call": "draft", "args": ["$query"]},
+                    {"call": "polish", "args": ["$query"]},
+                    {"with": "next_llm_span",
+                     "kwargs": {"prompt": {"alias": "staged-prompt", "version": "00.00.02",
+                                           "label": "staging", "hash": "bbb222"}},
+                     "body": [{"call": "draft", "args": ["staged"]}]},
+                ],
+                "returns": "drafted",
+            },
+            "draft": {
+                "type": "llm",
+                "params": [["query"]],
+                "observe": {"model": "claude-3-5-sonnet",
+                            "prompt": {"alias": "draft-prompt", "version": "00.00.01",
+                                       "label": "production", "hash": "aaa111"}},
+                "returns": "draft of {query}",
+            },
+            "polish": {
+                "type": "llm",
+                "params": [["query"]],
+                "observe": {"model": "gpt-4o",
+                            "prompt": {"alias": "draft-prompt", "version": "00.00.01",
+                                       "label": "production", "hash": "aaa111"}},
+                "body": [{"update_llm_span": {
+                    "prompt": {"alias": "polish-prompt", "version": "00.00.07", "hash": "ccc333"},
+                    "token_intervals": {"1.25": "Hel", "1.5": "lo", "2.000001": "!"},
+                }}],
+                "returns": "polished {query}",
+            },
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    },
+    "provider_normalisation": {
+        "description": "LlmSpan providers: normalised to deepeval's Provider values outside "
+                       "evaluation (exact, case and separator variants, a model path, an "
+                       "unknown provider kept), exported raw by the evaluation walkers",
+        "goldens": [TRACED_GOLDEN],
+        "metrics": [STUB_JUDGE],
+        "modes": ["sync", "async"],
+        "functions": {
+            "agent": {
+                "type": "agent",
+                "params": [["query"]],
+                "body": [
+                    {"call": "call_openai"},
+                    {"call": "call_anthropic"},
+                    {"call": "call_vertex"},
+                    {"call": "call_custom"},
+                    {"call": "call_updated"},
+                ],
+                "returns": "called",
+            },
+            "call_openai": {"type": "llm", "observe": {"model": "gpt-4o", "provider": "openai"},
+                            "returns": "a"},
+            "call_anthropic": {"type": "llm",
+                               "observe": {"model": "claude-3-haiku",
+                                           "provider": "anthropic/claude-3-haiku"},
+                               "returns": "b"},
+            "call_vertex": {"type": "llm", "observe": {"model": "gemini-1.5", "provider": "Vertex AI"},
+                            "returns": "c"},
+            "call_custom": {"type": "llm", "observe": {"model": "local", "provider": "My Lab"},
+                            "returns": "d"},
+            "call_updated": {"type": "llm", "observe": {"model": "grok-2"},
+                             "body": [{"update_current_span": {"provider": "x_ai"}}],
+                             "returns": "e"},
+        },
+        "app": [{"call": "agent", "args": ["{input}"]}],
+    },
+}
+
+TRACED_EXCEPTIONS = {"ValueError": ValueError, "RuntimeError": RuntimeError}
+
+TRACED_UPDATES = {
+    "update_current_span": update_current_span,
+    "update_current_trace": update_current_trace,
+    "update_llm_span": update_llm_span,
+    "update_agent_span": update_agent_span,
+    "update_tool_span": update_tool_span,
+    "update_retriever_span": update_retriever_span,
+}
+
+TRACED_NEXT = {
+    "next_span": next_span,
+    "next_agent_span": next_agent_span,
+    "next_llm_span": next_llm_span,
+    "next_tool_span": next_tool_span,
+    "next_retriever_span": next_retriever_span,
+}
+
+
+class TracedRun:
+    """What one interpretation of a script produced: the traces its spans
+    belonged to (read from deepeval's trace context, in start order) and
+    the ScriptedJudges its metrics were built with."""
+
+    def __init__(self):
+        self.traces = []
+        self.judges = []
+
+    def saw_trace(self):
+        trace = current_trace_context.get()
+        if trace is not None and all(t is not trace for t in self.traces):
+            self.traces.append(trace)
+
+    def metric(self, spec):
+        kind = spec["kind"]
+        if kind == "agent_loop_detection":
+            return AgentLoopDetectionMetric(**spec.get("params", {}))
+        if kind == "task_completion":
+            judge = ScriptedJudge(spec["judge_model"], spec["responses"])
+            self.judges.append(judge)
+            return TaskCompletionMetric(model=judge, **spec.get("params", {}))
+        return build_metric(spec)
+
+    def metrics(self, specs):
+        return [self.metric(spec) for spec in specs] if specs else None
+
+
+def build_prompt(spec):
+    """A Prompt as pull() leaves it: alias, version, label and hash set."""
+    prompt = Prompt(alias=spec.get("alias"), text_template=spec.get("text_template", "{input}"))
+    prompt.version = spec.get("version")
+    prompt.label = spec.get("label")
+    prompt.hash = spec.get("hash")
+    return prompt
+
+
+def resolve(value, env):
+    if isinstance(value, str):
+        if value.startswith("$") and value[1:] in env:
+            return env[value[1:]]
+        return value.format(**env) if "{" in value else value
+    if isinstance(value, list):
+        return [resolve(item, env) for item in value]
+    if isinstance(value, dict):
+        return {key: resolve(item, env) for key, item in value.items()}
+    return value
+
+
+def tracing_kwargs(kwargs, run):
+    kwargs = dict(kwargs)
+    if "test_case" in kwargs:
+        kwargs["test_case"] = build_test_case(kwargs["test_case"])
+    for key in ("tools_called", "expected_tools"):
+        if kwargs.get(key):
+            kwargs[key] = [ToolCall(**tool_call) for tool_call in kwargs[key]]
+    if "prompt" in kwargs:
+        kwargs["prompt"] = build_prompt(kwargs["prompt"])
+    if "token_intervals" in kwargs:
+        kwargs["token_intervals"] = {float(k): v for k, v in kwargs["token_intervals"].items()}
+    if "metrics" in kwargs:
+        kwargs["metrics"] = run.metrics(kwargs["metrics"])
+    return kwargs
+
+
+def run_traced_step(step, env, run):
+    """Runs a step that calls no function; False for one that does."""
+    for name, update in TRACED_UPDATES.items():
+        if name in step:
+            update(**tracing_kwargs(resolve(step[name], env), run))
+            return True
+    if step.get("drop_current_span"):
+        current_span_context.drop()
+        return True
+    if "raise" in step:
+        raise TRACED_EXCEPTIONS[step["raise"]["type"]](step["raise"]["message"])
+    return False
+
+
+def traced_call(step, env, functions):
+    function = functions[step["call"]]
+    return function(*resolve(step.get("args", []), env), **resolve(step.get("kwargs", {}), env))
+
+
+def run_traced_steps(steps, env, functions, run):
+    for step in steps:
+        if run_traced_step(step, env, run):
+            continue
+        if "with" in step:
+            kwargs = tracing_kwargs(resolve(step.get("kwargs", {}), env), run)
+            with TRACED_NEXT[step["with"]](**kwargs):
+                run_traced_steps(step["body"], env, functions, run)
+            continue
+        try:
+            result = traced_call(step, env, functions)
+        except Exception:
+            if not step.get("catch"):
+                raise
+            result = None
+        if "as" in step:
+            env[step["as"]] = result
+
+
+async def a_run_traced_steps(steps, env, functions, run):
+    for step in steps:
+        if run_traced_step(step, env, run):
+            continue
+        if "with" in step:
+            kwargs = tracing_kwargs(resolve(step.get("kwargs", {}), env), run)
+            with TRACED_NEXT[step["with"]](**kwargs):
+                await a_run_traced_steps(step["body"], env, functions, run)
+            continue
+        try:
+            result = await traced_call(step, env, functions)
+        except Exception:
+            if not step.get("catch"):
+                raise
+            result = None
+        if "as" in step:
+            env[step["as"]] = result
+
+
+def build_traced_functions(script, run, is_async):
+    """The script's functions, @observe'd, as plain functions or coroutines.
+    Each gets the script's name and signature, which observe reads for the
+    span name and the default input (the bound arguments, defaults
+    applied)."""
+    functions = {}
+    for name, spec in script["functions"].items():
+        signature = inspect.Signature([
+            inspect.Parameter(param[0], inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                              **({"default": param[1]} if len(param) > 1 else {}))
+            for param in spec.get("params", [])
+        ])
+
+        def env_of(args, kwargs, signature=signature):
+            bound = signature.bind(*args, **kwargs)
+            bound.apply_defaults()
+            return dict(bound.arguments)
+
+        if is_async:
+            async def function(*args, _spec=spec, _env_of=env_of, **kwargs):
+                run.saw_trace()
+                env = _env_of(args, kwargs)
+                await a_run_traced_steps(_spec.get("body", []), env, functions, run)
+                return resolve(_spec.get("returns"), env)
+        else:
+            def function(*args, _spec=spec, _env_of=env_of, **kwargs):
+                run.saw_trace()
+                env = _env_of(args, kwargs)
+                run_traced_steps(_spec.get("body", []), env, functions, run)
+                return resolve(_spec.get("returns"), env)
+
+        function.__name__ = function.__qualname__ = name
+        function.__signature__ = signature
+        observe_kwargs = dict(spec.get("observe", {}))
+        if "prompt" in observe_kwargs:
+            observe_kwargs["prompt"] = build_prompt(observe_kwargs["prompt"])
+        functions[name] = observe(
+            function,
+            type=spec.get("type"),
+            metrics=run.metrics(spec.get("metrics")),
+            metric_collection=spec.get("metric_collection"),
+            **observe_kwargs,
+        )
+    return functions
+
+
+def build_goldens(specs):
+    goldens = []
+    for spec in specs:
+        spec = dict(spec)
+        for key in ("tools_called", "expected_tools"):
+            if key in spec:
+                spec[key] = [ToolCall(**tool_call) for tool_call in spec[key]]
+        goldens.append(Golden(**spec))
+    return goldens
+
+
+def capture_untraced(script):
+    """Runs the plain-function app outside evaluation, one golden after the
+    other, and returns the TraceApi bodies deepeval built as each trace
+    ended, with the traces themselves. trace_testing_manager is deepeval's
+    own hook for this: with a test name set, end_trace stores the body it
+    would post instead of posting it."""
+    if trace_manager.is_evaluating or trace_manager.environment != "development":
+        raise RuntimeError("traced: the OFF-mode capture must run before any evaluation")
+    run = TracedRun()
+    functions = build_traced_functions(script, run, is_async=False)
+    bodies = []
+    for golden in script["goldens"]:
+        env = {"input": golden["input"]}
+        for step in script["app"]:
+            trace_testing_manager.test_name = "deepeval_ex_parity"
+            trace_testing_manager.test_dict = None
+            try:
+                traced_call(step, env, functions)
+            except Exception:
+                if not step.get("catch") and not script.get("uncaught"):
+                    raise
+            finally:
+                bodies.append(trace_testing_manager.test_dict)
+                trace_testing_manager.test_name = None
+                trace_testing_manager.test_dict = None
+    if any(body is None for body in bodies) or len(bodies) != len(run.traces):
+        raise RuntimeError("traced: expected one trace per top-level call")
+    return bodies, run.traces
+
+
+def run_traced_mode(script, mode, results_folder):
+    run = TracedRun()
+    is_async = mode == "async"
+    functions = build_traced_functions(script, run, is_async=is_async)
+    dataset = EvaluationDataset()
+    dataset.goldens = build_goldens(script["goldens"])
+
+    async def a_app(golden):
+        env = {"input": golden.input}
+        await a_run_traced_steps(script["app"], env, functions, run)
+
+    iterator = dataset.evals_iterator(
+        metrics=run.metrics(script.get("metrics")),
+        identifier=script.get("identifier"),
+        async_config=AsyncConfig(run_async=is_async),
+        display_config=DisplayConfig(show_indicator=False, print_results=False,
+                                     inspect_after_run=False,
+                                     results_folder=results_folder),
+        cache_config=CacheConfig(write_cache=False, use_cache=False),
+        error_config=ErrorConfig(ignore_errors=True),
+    )
+    for golden in iterator:
+        if is_async:
+            # evals_iterator patches asyncio.create_task to collect the task.
+            asyncio.create_task(a_app(golden))
+        else:
+            run_traced_steps(script["app"], {"input": golden.input}, functions, run)
+    for judge in run.judges:
+        judge.assert_exhausted()
+    return run
+
+
+def run_traced_scenario(name, script):
+    out_dir = os.path.join(TRACED, name)
+    shutil.rmtree(out_dir, ignore_errors=True)
+    os.makedirs(out_dir)
+    write_json(os.path.join(out_dir, "input.json"), script)
+
+    bodies, traces = capture_untraced(script)
+    nested, compact = [], []
+    for trace in traces:
+        if len(trace.root_spans) != 1:
+            raise RuntimeError(f"{name}: expected one root span, found {len(trace.root_spans)}")
+        # The dict holds deepeval objects (ToolCalls): serialize_to_json
+        # turns them into dicts, compact_trace into their str().
+        trace_dict = trace_manager.create_nested_spans_dict(trace.root_spans[0])
+        nested.append(json.loads(serialize_to_json(trace_dict)))
+        compact.append(compact_trace(trace_dict))
+    write_json(os.path.join(out_dir, "trace_api.json"), bodies)
+    write_json(os.path.join(out_dir, "nested.json"), nested)
+    write_json(os.path.join(out_dir, "compact.json"), compact)
+    return out_dir
+
+
+def run_traced_evaluations(name, script):
+    out_dir = os.path.join(TRACED, name)
+    for mode in script["modes"]:
+        results_folder = tempfile.mkdtemp(prefix=f"traced_{name}_{mode}_", dir=WORK_DIR)
+        run = run_traced_mode(script, mode, results_folder)
+        [path] = glob.glob(os.path.join(results_folder, "test_run_*.json"))
+        shutil.copyfile(path, os.path.join(out_dir, f"test_run_{mode}.json"))
+        if run.judges:
+            write_json(os.path.join(out_dir, f"prompts_{mode}.json"),
+                       [prompt for judge in run.judges for prompt in judge.prompts])
+
+
+# Epoch times in microseconds, deepeval's span timestamps after
+# perf_counter_to_datetime, with the edges of to_zod_compatible_iso's
+# truncation (never rounding) to milliseconds and of its microsecond form
+# for token interval keys.
+ISO_TABLE_INPUTS = [
+    0,
+    1,
+    999,
+    1_000,
+    1_499,
+    1_500,
+    999_499,
+    999_500,
+    999_999,
+    1_000_000,
+    1_700_000_000_000_000,
+    1_700_000_000_000_999,
+    1_700_000_000_999_500,
+    1_700_000_000_999_999,
+    1_709_251_199_999_999,  # 2024-02-29T23:59:59.999999, a leap day
+    1_761_177_600_123_456,
+    2_147_483_647_999_999,  # past the 32-bit time_t limit
+    4_102_444_799_999_999,  # 2099-12-31T23:59:59.999999
+    253_402_300_799_999_999,  # 9999-12-31T23:59:59.999999, the last datetime
+]
+
+
+def write_iso_table():
+    """traced/iso_table.json: what to_zod_compatible_iso makes of each epoch
+    time, in milliseconds (span and trace times) and microseconds (token
+    interval keys). Built from the exact microsecond count, as
+    perf_counter_to_datetime's datetime holds one."""
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    rows = []
+    for epoch_us in ISO_TABLE_INPUTS:
+        dt = epoch + timedelta(microseconds=epoch_us)
+        rows.append({
+            "epoch_us": epoch_us,
+            "milliseconds": to_zod_compatible_iso(dt),
+            "microseconds": to_zod_compatible_iso(dt, microsecond_precision=True),
+        })
+    os.makedirs(TRACED, exist_ok=True)
+    write_json(os.path.join(TRACED, "iso_table.json"), rows)
+
+
+def generate_traced():
+    """Every traced scenario's untraced capture first: a sync evaluation
+    switches trace_manager's environment to "testing" for good, and
+    create_trace_api exports it."""
+    write_iso_table()
+    print(f"wrote {os.path.relpath(os.path.join(TRACED, 'iso_table.json'), ROOT)}")
+    for name, script in TRACED_SCENARIOS.items():
+        run_traced_scenario(name, script)
+    for name, script in TRACED_SCENARIOS.items():
+        run_traced_evaluations(name, script)
+        print(f"wrote {os.path.relpath(os.path.join(TRACED, name), ROOT)}")
+
+
 def main():
     if deepeval.__version__ != DEEPEVAL_VERSION:
         sys.exit(f"expected deepeval {DEEPEVAL_VERSION}, found {deepeval.__version__}")
+    if sys.argv[1:] == ["traced"]:
+        try:
+            generate_traced()
+        finally:
+            shutil.rmtree(WORK_DIR, ignore_errors=True)
+        return
+    if sys.argv[1:]:
+        sys.exit(f"usage: {os.path.basename(__file__)} [traced]")
     try:
         for name, scenario in SCENARIOS.items():
             run_scenario(name, scenario)

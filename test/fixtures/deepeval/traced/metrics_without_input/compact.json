@@ -1,0 +1,18 @@
+[
+  {
+    "name": "agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "pong for How do I reset my password?",
+    "children": [
+      {
+        "name": "ping",
+        "type": "base",
+        "input": {},
+        "output": "pong"
+      }
+    ]
+  }
+]

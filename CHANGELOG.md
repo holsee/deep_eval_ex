@@ -609,6 +609,21 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   shape, the answers, the measured state (including `confidence` and
   `system_one_fallback_reason`) and the exported test run. A new test checks
   their structure; DeepEvalEx does not implement eval modes yet.
+- **Traced fixtures** (ADR-0011). `scripts/parity/generate_fixtures.py
+  traced` runs 13 declarative agent scripts through real deepeval 4.3.1's
+  `@observe` tracing, with nothing patched: nested agent, retriever, LLM and
+  tool spans, default inputs from call arguments, caught and uncaught
+  raises, an errored trace, span test cases, `next_*_span` staging, a
+  dropped span, two top-level spans, `requires_trace` metrics
+  (AgentLoopDetection and a scripted TaskCompletion), LLM prompt fields and
+  provider normalisation. Each records the TraceApi deepeval would post, the
+  nested trace dict and compact trace its trace metrics read, and the test
+  runs of its sync and async `evals_iterator`. `traced/iso_table.json`
+  records deepeval's truncated ISO timestamps for fixed epoch times. The
+  fixtures' README gains the normalisation the tracing units compare with:
+  uuids numbered by first appearance, checked timestamps and test-case
+  `runDuration`. A new test checks the fixtures' structure; DeepEvalEx does
+  not trace yet.
 - **Shared QAG verdict handling.** `DeepEvalEx.Metrics.QAG` ports deepeval
   4.3.1's `normalize_qag_verdict` and `score_qag_verdicts`:
   `normalize_qag_verdict/2` coerces a judge's reply into `:yes`, `:no` or

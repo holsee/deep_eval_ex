@@ -1,0 +1,132 @@
+{
+  "description": "update_current_span(test_case=...) setting a span's input, output, expected output, contexts and tools, judged by span metrics, and update_current_trace(test_case=...) doing the same for the trace",
+  "goldens": [
+    {
+      "input": "How do I reset my password?",
+      "expected_output": "Use the 'Forgot password' link.",
+      "name": "password-reset"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "exact_match"
+    },
+    {
+      "kind": "stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    }
+  ],
+  "modes": [
+    "sync",
+    "async"
+  ],
+  "functions": {
+    "agent": {
+      "type": "agent",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "body": [
+        {
+          "call": "retrieve",
+          "args": [
+            "$query"
+          ],
+          "as": "documents"
+        },
+        {
+          "update_current_trace": {
+            "test_case": {
+              "input": "$query",
+              "actual_output": "Use the 'Forgot password' link.",
+              "expected_output": "Use the 'Forgot password' link.",
+              "retrieval_context": "$documents",
+              "tools_called": [
+                {
+                  "name": "retrieve"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "returns": "Use the 'Forgot password' link."
+    },
+    "retrieve": {
+      "type": "retriever",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "metrics": [
+        {
+          "kind": "exact_match"
+        },
+        {
+          "kind": "stub",
+          "name": "Span Judge",
+          "score": 0.75,
+          "reason": "Three of the four statements are supported. café ✓",
+          "threshold": 0.7,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 1234,
+          "output_tokens": 56
+        }
+      ],
+      "body": [
+        {
+          "update_current_span": {
+            "test_case": {
+              "input": "$query",
+              "actual_output": "FAQ: reset",
+              "expected_output": "FAQ: reset",
+              "context": [
+                "Accounts have passwords."
+              ],
+              "retrieval_context": [
+                "FAQ: reset",
+                "FAQ: billing"
+              ],
+              "tools_called": [
+                {
+                  "name": "index",
+                  "input_parameters": {
+                    "q": "$query"
+                  }
+                }
+              ],
+              "expected_tools": [
+                {
+                  "name": "index"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "returns": [
+        "FAQ: reset",
+        "FAQ: billing"
+      ]
+    }
+  },
+  "app": [
+    {
+      "call": "agent",
+      "args": [
+        "{input}"
+      ]
+    }
+  ]
+}

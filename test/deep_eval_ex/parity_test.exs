@@ -51,12 +51,13 @@ defmodule DeepEvalEx.ParityTest do
   # loads and re-encodes, datasets/ the files of Dataset.LoaderParityTest,
   # classifiers/ the scenarios of ClassifierParityTest, cache/ those of
   # TestRun.CacheParityTest, report/ those of Report.ReportParityTest, cli/
-  # those of CLI.TestArgsTest and CLI.IntegrationTest.
+  # those of CLI.TestArgsTest and CLI.IntegrationTest, traced/ those of
+  # TracedFixturesTest.
   @scenarios @fixtures
              |> File.ls!()
              |> Enum.reject(
                &(&1 in ~w(cache classifiers cli datasets expectations prompts report round_trip
-                        scripted system_one))
+                        scripted system_one traced))
              )
              |> Enum.filter(&File.dir?(Path.join(@fixtures, &1)))
              |> Enum.sort()

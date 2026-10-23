@@ -1,0 +1,93 @@
+[
+  {
+    "uuid": "0fb3d81e-159f-4af4-aaff-60050c30e6cc",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "5e1f9762-ff6d-4097-8c47-394b9e67ed2e",
+        "name": "agent",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.919Z",
+        "endTime": "2026-10-23T03:23:29.919Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "Use the 'Forgot password' link.",
+        "availableTools": [],
+        "agentHandoffs": []
+      }
+    ],
+    "llmSpans": [],
+    "retrieverSpans": [
+      {
+        "uuid": "22021584-3dbc-44d7-ae9e-8a0c6f9b73ec",
+        "name": "retrieve",
+        "status": "SUCCESS",
+        "type": "retriever",
+        "parentUuid": "5e1f9762-ff6d-4097-8c47-394b9e67ed2e",
+        "startTime": "2026-10-23T03:23:29.919Z",
+        "endTime": "2026-10-23T03:23:29.919Z",
+        "input": "How do I reset my password?",
+        "output": "FAQ: reset",
+        "retrievalContext": [
+          "FAQ: reset",
+          "FAQ: billing"
+        ],
+        "context": [
+          "Accounts have passwords."
+        ],
+        "expectedOutput": "FAQ: reset",
+        "toolsCalled": [
+          {
+            "name": "index",
+            "type": "FUNCTION",
+            "inputParameters": {
+              "q": "How do I reset my password?"
+            }
+          }
+        ],
+        "expectedTools": [
+          {
+            "name": "index",
+            "type": "FUNCTION"
+          }
+        ],
+        "metricsData": [
+          {
+            "name": "Exact Match",
+            "threshold": 1.0,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          },
+          {
+            "name": "Span Judge",
+            "threshold": 0.7,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "toolSpans": [],
+    "startTime": "2026-10-23T03:23:29.919Z",
+    "endTime": "2026-10-23T03:23:29.919Z",
+    "environment": "development",
+    "input": "How do I reset my password?",
+    "output": "Use the 'Forgot password' link.",
+    "status": "SUCCESS",
+    "retrievalContext": [
+      "FAQ: reset",
+      "FAQ: billing"
+    ],
+    "expectedOutput": "Use the 'Forgot password' link.",
+    "toolsCalled": [
+      {
+        "name": "retrieve",
+        "type": "FUNCTION"
+      }
+    ]
+  }
+]

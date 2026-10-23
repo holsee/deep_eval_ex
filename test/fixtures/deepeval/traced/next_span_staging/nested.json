@@ -1,0 +1,66 @@
+[
+  {
+    "name": "agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "done",
+    "tools_called": [
+      {
+        "name": "lookup",
+        "type": "FUNCTION",
+        "description": "Staged description",
+        "reasoning": null,
+        "output": "found",
+        "input_parameters": {
+          "query": "How do I reset my password?"
+        }
+      }
+    ],
+    "available_tools": [],
+    "agent_handoffs": [],
+    "children": [
+      {
+        "name": "staged_call",
+        "type": "llm",
+        "input": {
+          "query": "How do I reset my password?",
+          "documents": []
+        },
+        "output": "Answer to How do I reset my password?",
+        "model": "gpt-4o",
+        "input_token_count": 42.0,
+        "output_token_count": 7.0,
+        "cost_per_input_token": 1.5e-07,
+        "cost_per_output_token": 6e-07,
+        "children": []
+      },
+      {
+        "name": "generate",
+        "type": "llm",
+        "input": {
+          "query": "again",
+          "documents": []
+        },
+        "output": "Answer to again",
+        "model": "gpt-4o-mini",
+        "input_token_count": 42.0,
+        "output_token_count": 7.0,
+        "cost_per_input_token": 1.5e-07,
+        "cost_per_output_token": 6e-07,
+        "children": []
+      },
+      {
+        "name": "lookup",
+        "type": "tool",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "found",
+        "description": "Staged description",
+        "children": []
+      }
+    ]
+  }
+]

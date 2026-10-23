@@ -1,0 +1,38 @@
+[
+  {
+    "name": "agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "Looked up at noon",
+    "tools_called": [
+      "name='lookup' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output={'found': True} input_parameters={'zeta': 'How do I reset my password?', 'alpha': 3, 'mid': True, 'omega': None, 'beta': [1, 2]}"
+    ],
+    "children": [
+      {
+        "name": "clock",
+        "type": "base",
+        "input": {},
+        "output": "noon"
+      },
+      {
+        "name": "lookup",
+        "type": "tool",
+        "input": {
+          "zeta": "How do I reset my password?",
+          "alpha": 3,
+          "mid": true,
+          "omega": null,
+          "beta": [
+            1,
+            2
+          ]
+        },
+        "output": {
+          "found": true
+        }
+      }
+    ]
+  }
+]

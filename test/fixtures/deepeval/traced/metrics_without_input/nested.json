@@ -1,0 +1,21 @@
+[
+  {
+    "name": "agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "pong for How do I reset my password?",
+    "available_tools": [],
+    "agent_handoffs": [],
+    "children": [
+      {
+        "name": "ping",
+        "type": "base",
+        "input": {},
+        "output": "pong",
+        "children": []
+      }
+    ]
+  }
+]

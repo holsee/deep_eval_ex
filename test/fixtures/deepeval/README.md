@@ -1,10 +1,10 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in eleven sets:
+Fixtures written by **deepeval 4.3.1**, in twelve sets:
 
 - export scenarios (the directories below, except `scripted/`, `prompts/`,
   `round_trip/`, `system_one/`, `datasets/`, `classifiers/`,
-  `expectations/`, `cache/`, `report/` and `cli/`), used by
+  `expectations/`, `cache/`, `report/`, `cli/` and `traced/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
@@ -48,6 +48,11 @@ Fixtures written by **deepeval 4.3.1**, in eleven sets:
   pytest for its flags, and what its runs of a pytest file save, used by
   `test/deep_eval_ex/cli/test_args_test.exs` and
   `test/deep_eval_ex/cli/integration_test.exs`
+- [traced fixtures](#traced-fixtures) (`traced/`), what deepeval's tracing
+  makes of agent scripts run through `@observe`, outside evaluation and
+  under the sync and async `evals_iterator`, for the tracing units
+  (ADR-0011). `test/deep_eval_ex/traced_fixtures_test.exs` only checks
+  their structure for now
 
 ## Export scenarios
 
@@ -115,9 +120,11 @@ the parity test's "covers every scenario" assertion.
 It also rewrites the [round-trip test runs](#round-trip-test-runs) and the
 outputs of every scripted scenario that has a
 `script.json`, and every [prompt golden](#prompt-goldens) (defined in
-`PROMPT_CASES`). Runs are deterministic: no network, a fixed string hash seed
-(deepeval orders some reasons by iterating sets), and only the `runDuration`
-values change between runs (and the round-trip runs' uuids and timestamps).
+`PROMPT_CASES`). With the argument `traced` it rewrites the
+[traced fixtures](#traced-fixtures) instead, and nothing else. Runs are
+deterministic: no network, a fixed string hash seed (deepeval orders some
+reasons by iterating sets), and only the `runDuration` values change between
+runs (and the round-trip and traced runs' uuids and timestamps).
 
 Then run `mix test test/deep_eval_ex/parity_test.exs
 test/deep_eval_ex/scripted_parity_test.exs
@@ -133,6 +140,24 @@ Only values that differ between two identical runs:
 Test-case `runDuration` is compared as is: deepeval's async executor records
 any test case that took under a second as the integer `0`, which these
 metrics always do.
+
+The [traced fixtures](#traced-fixtures) hold more such values, which
+`DeepEvalEx.Test.TracedFixtures.normalise/1` (`test/support/traced_fixtures.ex`)
+replaces in the JSON text of both sides, after checking them:
+
+- span and trace uuids (`uuid.uuid4()`), replaced by `<uuid-N>` numbered by
+  first appearance, so `parentUuid` links are still compared
+- span and trace `startTime` and `endTime` (wall-clock times), first checked
+  against `^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$` and for the start not
+  being after the end, then replaced by `<timestamp>`; `tokenIntervals` keys
+  (perf_counter values converted with the current clock) are checked
+  against the same pattern with six digits and replaced by
+  `<timestamp-us-N>`. A time anywhere else, or in any other format, fails
+  the check
+- every `runDuration`, test cases' included: the iterators time each test
+  case with `perf_counter` and record the float
+
+Exact time formatting is covered by `traced/iso_table.json` instead.
 
 ## Round-trip test runs
 
@@ -966,3 +991,78 @@ test's name, `test_unnamed` against `test unnamed`, aside) and the cache
 file, byte for byte, the exit status (non-zero on failure; mix exits with
 `2`, pytest with `1`) and the skipped lines. deepeval prints an empty skip
 reason; DeepEvalEx prints ExUnit's.
+
+## Traced fixtures
+
+`scripts/parity/generate_fixtures.py traced` runs agent scripts through
+deepeval's tracing, with nothing patched, and rewrites `traced/` (only):
+
+```sh
+devcontainer exec --workspace-folder . \
+  env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_fixtures.py traced
+```
+
+A scenario's `input.json` is a declarative agent script that both sides
+interpret into the same call tree: `goldens`, trace-level `metrics`, the
+iterator `modes` it runs in, `functions` (each an `@observe`'d function:
+span `type`, `params` as `[name]` or `[name, default]`, `observe` keyword
+arguments, span `metrics` and `metric_collection`, a `body` of steps and
+what it `returns`) and `app`, the steps user code runs for each golden.
+Steps call a function (`call`, `args`, `kwargs`, `as`, `catch`), call
+`update_current_span`, `update_current_trace` or a typed `update_*_span`,
+stage values with a `next_*_span` around a `body` (`with`), drop the
+current span (`drop_current_span`) or raise (`raise`). A string value
+`"$name"` is that argument or bound result, and any other string is
+formatted with them (`str.format`); the generator's comment above
+`TRACED_SCENARIOS` has the details. Metric specs are the export
+scenarios' (`stub`, `exact_match`), `agent_loop_detection` and a
+ScriptedJudge-backed `task_completion`.
+
+Each scenario directory also holds:
+
+- `trace_api.json` - outside evaluation, for every trace the app started
+  (one per top-level call, goldens in order): the body deepeval would post
+  to Confident AI, as `end_trace` hands it to `trace_testing_manager`
+  (`create_trace_api(trace)` dumped by alias without `None` values)
+- `nested.json` - for the same traces, `create_nested_spans_dict` of the
+  root span, made JSON-serialisable as `serialize_to_json` does: the
+  `_trace_dict` the trace metrics read. `serialize_to_json(item, indent=2)`
+  of an item is the text they put in their prompts
+- `compact.json` - `compact_trace` of each nested dict, as System One gets
+  it. It runs on the dict itself, so `tools_called` holds each `ToolCall`'s
+  Python `str()`
+- `test_run_sync.json`, `test_run_async.json` - the test run
+  `evals_iterator` wrote with `AsyncConfig(run_async=False)` or
+  `run_async=True`, for each of the scenario's `modes`
+- `prompts_sync.json`, `prompts_async.json` - when a metric has a
+  ScriptedJudge, every prompt it was sent in that run, with its step
+
+| Scenario | What it covers |
+| --- | --- |
+| `nested_spans` | An agent calling a retriever, a tool and an LLM over two goldens: every span type's fields, `toolsCalled` filled from the tool span, trace attributes, span and trace metrics |
+| `function_kwargs` | Default span inputs: `{}` for a zero-argument function, arguments bound in signature order whatever the call order, defaults applied |
+| `metrics_without_input` | Span metrics on a span whose input is `{}`: sync judges it (`is not None`), async reports the missing `LLMTestCase` (truthiness) |
+| `raised_caught` | A raising tool caught by its agent: the tool span ERRORED with `str(exception)`, its metrics skipped, the trace SUCCESS |
+| `errored_trace` | A raising root caught by the app: the trace ERRORED and its metrics skipped in async (and outside evaluation); in sync the root is the wrapper's child and the trace stays SUCCESS |
+| `raised_uncaught` | The app's coroutine raising out of the root: async marks the trace and root ERRORED with `format_error_text` (async only: in sync the exception leaves the user's loop) |
+| `span_test_case` | `update_current_span(test_case=...)` and `update_current_trace(test_case=...)` |
+| `next_span_staging` | `next_span`, `next_llm_span` and `next_tool_span`: one-shot, typed over base, staged metrics |
+| `dropped_span` | A span that drops itself: re-parented children outside evaluation, kept by the walkers |
+| `two_top_level` | Two top-level spans per golden: sync keeps `root_spans[0].children[0]`, async makes a test case of each trace |
+| `requires_trace` | AgentLoopDetection on the trace, a span and a `{}`-input span (the `input="None"` placeholder in async), and TaskCompletion judged from the nested dict |
+| `llm_prompt_fields` | LlmSpan prompt fields from `observe(prompt=...)`, `update_llm_span(prompt=...)` and `next_llm_span(prompt=...)`; `tokenIntervals` |
+| `provider_normalisation` | Providers normalised to deepeval's `Provider` values outside evaluation, exported raw by the walkers |
+
+Async runs use only metrics that never suspend, so asyncio walks spans in a
+deterministic order. The OFF-mode captures run before any evaluation: a
+sync evaluation sets the trace manager's environment to `testing` for the
+rest of the process, and `create_trace_api` exports it.
+
+`traced/iso_table.json` maps epoch times in microseconds (`epoch_us`) to
+what `to_zod_compatible_iso` makes of them, truncated to `milliseconds`
+(span and trace times) and in `microseconds` (`tokenIntervals` keys),
+including truncation edges such as `x.9995` and the last `datetime`.
+
+`test/deep_eval_ex/traced_fixtures_test.exs` checks that the fixtures are
+consistent and that every file normalises. The tracing units compare
+DeepEvalEx's traces, exports and test runs with them.

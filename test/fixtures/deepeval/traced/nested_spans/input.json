@@ -1,0 +1,197 @@
+{
+  "description": "An agent calling a retriever, a tool and an LLM, over two goldens: span types and their fields, the tool's call auto-filled into the agent's toolsCalled, trace attributes, span and trace metrics",
+  "goldens": [
+    {
+      "input": "How do I reset my password?",
+      "expected_output": "Use the 'Forgot password' link.",
+      "name": "password-reset"
+    },
+    {
+      "input": "Wo ist meine Rechnung?",
+      "expected_output": "Unter Konto › Rechnungen."
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    }
+  ],
+  "modes": [
+    "sync",
+    "async"
+  ],
+  "functions": {
+    "answer": {
+      "type": "agent",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "observe": {
+        "available_tools": [
+          "search_docs"
+        ],
+        "agent_handoffs": [
+          "billing"
+        ]
+      },
+      "body": [
+        {
+          "call": "retrieve",
+          "args": [
+            "$query"
+          ],
+          "as": "documents"
+        },
+        {
+          "call": "search_docs",
+          "kwargs": {
+            "query": "$query"
+          }
+        },
+        {
+          "call": "generate",
+          "args": [
+            "$query",
+            "$documents"
+          ],
+          "as": "answer"
+        },
+        {
+          "update_current_trace": {
+            "name": "support",
+            "tags": [
+              "parity"
+            ],
+            "metadata": {
+              "channel": "chat"
+            },
+            "thread_id": "thread-1",
+            "user_id": "user-1"
+          }
+        }
+      ],
+      "returns": "$answer"
+    },
+    "retrieve": {
+      "type": "retriever",
+      "params": [
+        [
+          "query"
+        ],
+        [
+          "k",
+          2
+        ]
+      ],
+      "observe": {
+        "embedder": "text-embedding-3-small"
+      },
+      "metrics": [
+        {
+          "kind": "stub",
+          "name": "Span Judge",
+          "score": 0.75,
+          "reason": "Three of the four statements are supported. café ✓",
+          "threshold": 0.7,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 1234,
+          "output_tokens": 56
+        }
+      ],
+      "body": [
+        {
+          "update_retriever_span": {
+            "top_k": 2,
+            "chunk_size": 512
+          }
+        },
+        {
+          "update_current_span": {
+            "retrieval_context": [
+              "FAQ: {query}"
+            ],
+            "metadata": {
+              "index": "faq"
+            }
+          }
+        }
+      ],
+      "returns": [
+        "FAQ: {query}",
+        "Policy: answers cite the help centre."
+      ]
+    },
+    "search_docs": {
+      "type": "tool",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "observe": {
+        "description": "Searches the help centre"
+      },
+      "returns": {
+        "hits": 2,
+        "query": "$query"
+      }
+    },
+    "generate": {
+      "type": "llm",
+      "params": [
+        [
+          "query"
+        ],
+        [
+          "documents"
+        ]
+      ],
+      "observe": {
+        "model": "gpt-4o-mini",
+        "cost_per_input_token": 1.5e-07
+      },
+      "body": [
+        {
+          "update_llm_span": {
+            "input_token_count": 42,
+            "output_token_count": 7,
+            "cost_per_output_token": 6e-07
+          }
+        }
+      ],
+      "returns": "Answer to {query}",
+      "metrics": [
+        {
+          "kind": "stub",
+          "name": "Strict Judge",
+          "score": 0.5,
+          "reason": "Half of the claims are supported.",
+          "threshold": 0.9,
+          "evaluation_model": "gpt-4o",
+          "evaluation_cost": 0.0025,
+          "input_tokens": 2048,
+          "output_tokens": 128
+        }
+      ]
+    }
+  },
+  "app": [
+    {
+      "call": "answer",
+      "args": [
+        "{input}"
+      ]
+    }
+  ]
+}

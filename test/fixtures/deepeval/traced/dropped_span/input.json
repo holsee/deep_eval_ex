@@ -1,0 +1,88 @@
+{
+  "description": "A span that drops itself: outside evaluation create_trace_api skips it and re-parents its children; the evaluation walkers keep it",
+  "goldens": [
+    {
+      "input": "How do I reset my password?",
+      "expected_output": "Use the 'Forgot password' link.",
+      "name": "password-reset"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    }
+  ],
+  "modes": [
+    "sync",
+    "async"
+  ],
+  "functions": {
+    "agent": {
+      "type": "agent",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "body": [
+        {
+          "call": "plan",
+          "args": [
+            "$query"
+          ]
+        }
+      ],
+      "returns": "planned"
+    },
+    "plan": {
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "body": [
+        {
+          "drop_current_span": true
+        },
+        {
+          "call": "search",
+          "args": [
+            "$query"
+          ]
+        },
+        {
+          "call": "search",
+          "args": [
+            "more {query}"
+          ]
+        }
+      ],
+      "returns": "plan"
+    },
+    "search": {
+      "type": "tool",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "returns": "hit for {query}"
+    }
+  },
+  "app": [
+    {
+      "call": "agent",
+      "args": [
+        "{input}"
+      ]
+    }
+  ]
+}

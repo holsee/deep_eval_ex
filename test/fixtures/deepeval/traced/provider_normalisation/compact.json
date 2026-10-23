@@ -1,0 +1,47 @@
+[
+  {
+    "name": "agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "called",
+    "children": [
+      {
+        "name": "call_openai",
+        "type": "llm",
+        "input": {},
+        "output": "a",
+        "model": "gpt-4o"
+      },
+      {
+        "name": "call_anthropic",
+        "type": "llm",
+        "input": {},
+        "output": "b",
+        "model": "claude-3-haiku"
+      },
+      {
+        "name": "call_vertex",
+        "type": "llm",
+        "input": {},
+        "output": "c",
+        "model": "gemini-1.5"
+      },
+      {
+        "name": "call_custom",
+        "type": "llm",
+        "input": {},
+        "output": "d",
+        "model": "local"
+      },
+      {
+        "name": "call_updated",
+        "type": "llm",
+        "input": {},
+        "output": "e",
+        "model": "grok-2"
+      }
+    ]
+  }
+]

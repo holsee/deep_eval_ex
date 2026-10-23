@@ -1,0 +1,131 @@
+{
+  "description": "LlmSpan prompt fields: from observe(prompt=...), from update_llm_span(prompt=...) over it, and from next_llm_span(prompt=...); token_intervals keys as microsecond timestamps",
+  "goldens": [
+    {
+      "input": "How do I reset my password?",
+      "expected_output": "Use the 'Forgot password' link.",
+      "name": "password-reset"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    }
+  ],
+  "modes": [
+    "sync",
+    "async"
+  ],
+  "functions": {
+    "agent": {
+      "type": "agent",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "body": [
+        {
+          "call": "draft",
+          "args": [
+            "$query"
+          ]
+        },
+        {
+          "call": "polish",
+          "args": [
+            "$query"
+          ]
+        },
+        {
+          "with": "next_llm_span",
+          "kwargs": {
+            "prompt": {
+              "alias": "staged-prompt",
+              "version": "00.00.02",
+              "label": "staging",
+              "hash": "bbb222"
+            }
+          },
+          "body": [
+            {
+              "call": "draft",
+              "args": [
+                "staged"
+              ]
+            }
+          ]
+        }
+      ],
+      "returns": "drafted"
+    },
+    "draft": {
+      "type": "llm",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "observe": {
+        "model": "claude-3-5-sonnet",
+        "prompt": {
+          "alias": "draft-prompt",
+          "version": "00.00.01",
+          "label": "production",
+          "hash": "aaa111"
+        }
+      },
+      "returns": "draft of {query}"
+    },
+    "polish": {
+      "type": "llm",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "observe": {
+        "model": "gpt-4o",
+        "prompt": {
+          "alias": "draft-prompt",
+          "version": "00.00.01",
+          "label": "production",
+          "hash": "aaa111"
+        }
+      },
+      "body": [
+        {
+          "update_llm_span": {
+            "prompt": {
+              "alias": "polish-prompt",
+              "version": "00.00.07",
+              "hash": "ccc333"
+            },
+            "token_intervals": {
+              "1.25": "Hel",
+              "1.5": "lo",
+              "2.000001": "!"
+            }
+          }
+        }
+      ],
+      "returns": "polished {query}"
+    }
+  },
+  "app": [
+    {
+      "call": "agent",
+      "args": [
+        "{input}"
+      ]
+    }
+  ]
+}
