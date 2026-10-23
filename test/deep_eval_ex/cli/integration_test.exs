@@ -24,7 +24,7 @@ defmodule DeepEvalEx.CLI.IntegrationTest do
              |> Enum.sort()
 
   setup_all do
-    {output, status} = mix(["compile"], [])
+    {output, status} = mix(["compile"], [], System.tmp_dir!())
     assert status == 0, output
     :ok
   end
@@ -43,7 +43,8 @@ defmodule DeepEvalEx.CLI.IntegrationTest do
         {output, status} =
           mix(
             ["deep_eval.test", @test_file | args] ++ ["--color", "no", "--", "--seed", "0"],
-            [{"DEEPEVAL_CACHE_FOLDER", dir}]
+            [{"DEEPEVAL_CACHE_FOLDER", dir}],
+            dir
           )
 
         assert status != 0 == (exit_code != 0), output
@@ -80,7 +81,8 @@ defmodule DeepEvalEx.CLI.IntegrationTest do
       mix(
         ["deep_eval.test", @test_file, "--", "--seed", "0"],
         [{"DEEPEVAL_CACHE_FOLDER", dir}] ++
-          Enum.map(~w(COLUMNS LINES FORCE_COLOR TTY_COMPATIBLE NO_COLOR), &{&1, nil})
+          Enum.map(~w(COLUMNS LINES FORCE_COLOR TTY_COMPATIBLE NO_COLOR), &{&1, nil}),
+        dir
       )
 
     [_exunit, report] = String.split(output, "Test Results", parts: 2)
@@ -91,16 +93,57 @@ defmodule DeepEvalEx.CLI.IntegrationTest do
 
   test "mix deep_eval.test rejects a path that does not exist", %{tmp_dir: dir} do
     {output, status} =
-      mix(["deep_eval.test", "test/missing_test.exs"], [{"DEEPEVAL_CACHE_FOLDER", dir}])
+      mix(["deep_eval.test", "test/missing_test.exs"], [{"DEEPEVAL_CACHE_FOLDER", dir}], dir)
 
     assert status != 0
     assert output =~ "Provided path is neither a valid file nor a directory."
   end
 
-  defp mix(args, env) do
+  # A run cut off before mix exits (the test process killed, or this VM
+  # stopped) closes the pipe mix writes to, and the next write crashes mix's
+  # VM, which writes erl_crash.dump to its working directory: the fixture
+  # project. The dump belongs with the run's other files.
+  test "a mix run cut off mid-way leaves its crash dump in the run's folder", %{tmp_dir: dir} do
+    project_dump = Path.join(@project, "erl_crash.dump")
+    File.rm(project_dump)
+    on_exit(fn -> File.rm(project_dump) end)
+
+    {:ok, runner} =
+      Task.start(fn ->
+        mix(["run", "--no-start", "-e", "Process.sleep(1_000); IO.puts(:done)"], [], dir)
+      end)
+
+    Process.sleep(100)
+    Process.exit(runner, :kill)
+
+    run_dump = Path.join(dir, "erl_crash.dump")
+    assert wait_for_any([run_dump, project_dump], 60_000), "mix did not crash"
+    assert File.exists?(run_dump)
+    refute File.exists?(project_dump)
+  end
+
+  defp wait_for_any(paths, timeout) do
+    cond do
+      Enum.any?(paths, &File.exists?/1) ->
+        true
+
+      timeout <= 0 ->
+        false
+
+      true ->
+        Process.sleep(100)
+        wait_for_any(paths, timeout - 100)
+    end
+  end
+
+  # ERL_CRASH_DUMP puts a crashed run's dump in `dump_dir` rather than the
+  # fixture project.
+  defp mix(args, env, dump_dir) do
     System.cmd("mix", args,
       cd: @project,
-      env: [{"MIX_ENV", "test"} | env],
+      env:
+        [{"MIX_ENV", "test"}, {"ERL_CRASH_DUMP", Path.join(dump_dir, "erl_crash.dump")}] ++
+          env,
       stderr_to_stdout: true
     )
   end

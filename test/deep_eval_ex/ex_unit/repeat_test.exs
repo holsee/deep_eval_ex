@@ -30,8 +30,10 @@ defmodule DeepEvalEx.ExUnit.RepeatTest do
   test "not implemented yet"
   """
 
+  # A fresh module per call: a fixed name would be redefined, with a warning,
+  # when the VM runs this file again (mix test --repeat-until-failure).
   defp compile_tests(name) do
-    module = Module.concat(__MODULE__, name)
+    module = Module.concat([__MODULE__, name, "Run#{System.unique_integer([:positive])}"])
     [{^module, _binary}] = Code.compile_string("defmodule #{inspect(module)} do\n#{@source}\nend")
     module.__ex_unit__().tests
   end

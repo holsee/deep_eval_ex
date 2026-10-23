@@ -55,16 +55,28 @@ defmodule DeepEvalEx.TelemetryTest do
       test_pid = self()
       handler_id = {__MODULE__, make_ref()}
 
+      # Async tests in other modules measure their own metrics meanwhile, and
+      # :telemetry detaches a handler that raises, so other metrics' events
+      # are ignored rather than left unmatched.
       :telemetry.attach(
         handler_id,
         [:deep_eval_ex, :metric, :stop],
-        fn _event, measurements, %{metric: "Telemetry Usage Metric"}, _config ->
-          send(test_pid, {:stop, measurements})
+        fn
+          _event, measurements, %{metric: "Telemetry Usage Metric"}, _config ->
+            send(test_pid, {:stop, measurements})
+
+          _event, _measurements, _metadata, _config ->
+            :ok
         end,
         nil
       )
 
       on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      :telemetry.execute([:deep_eval_ex, :metric, :stop], %{duration: 0}, %{
+        metric: "Another Metric",
+        test_case_id: nil
+      })
     end
 
     test "include token counts when the metric made LLM calls" do

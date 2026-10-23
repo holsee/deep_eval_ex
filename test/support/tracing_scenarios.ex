@@ -4,7 +4,7 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   `scripts/parity/generate_fixtures.py traced`) as `deftraced` functions,
   the Elixir side of the generator's `@observe`'d interpreter.
 
-  `compile/1` defines a module with one `deftraced` function per script
+  `compile/2` defines a module with one `deftraced` function per script
   function: its parameters (with their defaults) in order, its span type,
   its `observe` keyword arguments as options. Each body runs the script's
   steps with `run/3`, and `run_app/2` runs the app's steps for each golden,
@@ -55,17 +55,29 @@ defmodule DeepEvalEx.Test.TracingScenarios do
   @supported_steps ["call", "raise", "with", "drop_current_span" | Map.keys(@updates)]
 
   @doc """
-  The module of a scenario's functions, compiled on first use.
+  The module of a scenario's functions, compiled on first use, under
+  `namespace`.
+
+  Async tests ask for the same scenario at once, so the first use is taken
+  under a lock: a module defined twice at the same time fails to compile.
   """
-  @spec compile(String.t()) :: module()
-  def compile(scenario) do
-    module = Module.concat(__MODULE__, Macro.camelize(scenario))
+  @spec compile(String.t(), module()) :: module()
+  def compile(scenario, namespace \\ __MODULE__) do
+    module = Module.concat(namespace, Macro.camelize(scenario))
 
     # The script's span types and option names become existing atoms once
     # the modules defining them are loaded, which a test that has not used
     # them yet may not have done.
     Enum.each([Tracing.Span, Tracing.Update, Tracing], &Code.ensure_loaded!/1)
 
+    unless Code.ensure_loaded?(module) do
+      :global.trans({{__MODULE__, module}, self()}, fn -> define(module, scenario) end, [node()])
+    end
+
+    module
+  end
+
+  defp define(module, scenario) do
     unless Code.ensure_loaded?(module) do
       functions = TracedFixtures.load!(scenario, "input.json")["functions"]
       definitions = Enum.map(functions.values, &definition/1)
@@ -82,8 +94,6 @@ defmodule DeepEvalEx.Test.TracingScenarios do
 
       Module.create(module, body, Macro.Env.location(__ENV__))
     end
-
-    module
   end
 
   defp definition({name, spec}) do

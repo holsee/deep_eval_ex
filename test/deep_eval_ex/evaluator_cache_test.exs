@@ -108,11 +108,6 @@ defmodule DeepEvalEx.EvaluatorCacheTest do
     assert File.read!(Path.join(dir, Cache.cache_file())) == ~s({"test_cases_lookup_map": {}})
   end
 
-  test "Evaluator.run/3 caches nothing without a store", %{tmp_dir: dir} do
-    File.cd!(dir, fn -> Evaluator.run([@test_case], [@stub], use_cache: true) end)
-    assert File.ls!(dir) == []
-  end
-
   test "a System One result never serves the same metric judged by the LLM" do
     jev = Mock.new(answer_fn: Mock.noul_answers(0.8), model: "fake-jev")
 
@@ -123,5 +118,34 @@ defmodule DeepEvalEx.EvaluatorCacheTest do
 
     assert system_one.evaluation_model == "fake-jev"
     refute Cache.same_metric_config?(llm, system_one)
+  end
+end
+
+defmodule DeepEvalEx.EvaluatorCacheTest.WorkingDirectoryTest do
+  # Not async: the working directory is VM-wide, and async tests (and mix
+  # test, still loading test files) resolve relative paths against it.
+  use ExUnit.Case, async: false
+
+  alias DeepEvalEx.{Evaluator, TestCase}
+  alias DeepEvalEx.Test.ParityMetrics.CacheStub
+
+  @moduletag :tmp_dir
+
+  test "Evaluator.run/3 caches nothing without a store", %{tmp_dir: dir} do
+    test_case = %TestCase{input: "What is the capital of France?", actual_output: "Paris."}
+
+    stub = %CacheStub{
+      name: "Relevance",
+      score: 0.8,
+      reason: "Relevant.",
+      threshold: 0.5,
+      evaluation_model: "gpt-4o-mini",
+      evaluation_cost: 0.25,
+      input_tokens: 120,
+      output_tokens: 12
+    }
+
+    File.cd!(dir, fn -> Evaluator.run([test_case], [stub], use_cache: true) end)
+    assert File.ls!(dir) == []
   end
 end
