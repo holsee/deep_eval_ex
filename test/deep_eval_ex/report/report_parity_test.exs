@@ -10,12 +10,17 @@ defmodule DeepEvalEx.Report.ReportParityTest do
   - `report.md` - `export_to_markdown`, byte for byte
   - `tables.json` - what `display_results_table` printed
   - `summary.txt` - what `wrap_up_test_run` printed, byte for byte
+  - `table_<width>.txt` - what `display_results_table` printed, drawn by
+    Rich without colour on a console `<width>` columns wide, without the
+    Confident AI note row (never drawn, ADR-0010 decision 6): drawn by
+    `DeepEvalEx.Report.Terminal` at the same width, byte for byte, so
+    column widths, wrapping and alignment all match Rich's
   """
 
   use ExUnit.Case, async: true
 
   alias DeepEvalEx.{Classification, Report, TestResult, TestRun}
-  alias DeepEvalEx.Report.{Console, Markdown, Panel, ResultsTable, Summary, Table, Tree}
+  alias DeepEvalEx.Report.{Console, Markdown, Panel, ResultsTable, Summary, Table, Terminal, Tree}
   alias DeepEvalEx.Schemas.ToolCall
 
   @moduletag :parity
@@ -23,9 +28,16 @@ defmodule DeepEvalEx.Report.ReportParityTest do
   @fixtures Path.expand("../../fixtures/deepeval/report", __DIR__)
   @scenarios @fixtures |> File.ls!() |> Enum.sort()
 
+  # The console widths the generator draws the Test Results table at.
+  @table_widths [60, 80, 100, 120, 160]
+
   for scenario <- @scenarios,
       file <- ~w(input.json sections.json report.md tables.json summary.txt) do
     @external_resource Path.join([@fixtures, scenario, file])
+  end
+
+  for scenario <- @scenarios, width <- @table_widths do
+    @external_resource Path.join([@fixtures, scenario, "table_#{width}.txt"])
   end
 
   test "covers every scenario" do
@@ -68,6 +80,23 @@ defmodule DeepEvalEx.Report.ReportParityTest do
           |> Enum.map(&to_fixture/1)
 
         assert printed == read_json(scenario, "tables.json")
+      end
+
+      for width <- @table_widths do
+        @tag width: width
+        test "Terminal draws display_results_table as Rich does at #{width} columns",
+             %{scenario: scenario, width: width} do
+          input = read_json(scenario, "input.json")
+          {:ok, test_run} = TestRun.load(Path.join([@fixtures, scenario, "test_run.json"]))
+
+          drawn =
+            test_run
+            |> ResultsTable.build(String.to_existing_atom(input["display"]), width: width)
+            |> Terminal.render(width: width, color: false)
+            |> IO.iodata_to_binary()
+
+          assert drawn == File.read!(Path.join([@fixtures, scenario, "table_#{width}.txt"]))
+        end
       end
 
       test "Summary.wrap_up/3 is wrap_up_test_run's text", %{scenario: scenario} do

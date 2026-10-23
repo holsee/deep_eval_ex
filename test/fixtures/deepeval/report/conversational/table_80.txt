@@ -1,0 +1,54 @@
+                   Conversation - conversational_test_case_0                    
+┏━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃   # ┃ Role       ┃ Details                      ┃ Tools                      ┃
+┡━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│   0 │ user       │ I want to change my flight.  │                            │
+│   1 │ assistant  │ Sure, which booking?         │ lookup_booking, list_flig… │
+│     │            │       ↳ ctx[0]: Changes are  │                            │
+│     │            │ free up to 24 hours before   │                            │
+│     │            │ departure.                   │                            │
+│     │            │       ↳ ctx[1]: A fare       │                            │
+│     │            │ difference may apply.        │                            │
+│     │            │       ↳ ctx: (+1 more)       │                            │
+│   2 │ user       │ ABC123                       │                            │
+│     │            │       ↳ comment: Booking     │                            │
+│     │            │ reference.                   │                            │
+└─────┴────────────┴──────────────────────────────┴────────────────────────────┘
+No turns recorded for empty conversation.
+                                  Test Results                                  
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
+┃                 ┃                ┃                ┃        ┃ Overall Success ┃
+┃ Test case       ┃ Metric         ┃ Score          ┃ Status ┃ Rate            ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
+│ test_case_0     │                │                │        │ 100.0% |        │
+│                 │                │                │        │ passed=1 |      │
+│                 │                │                │        │ failed=0        │
+│                 │ Faithfulness   │ 1.0            │ PASSED │                 │
+│                 │                │ (threshold=0.… │        │                 │
+│                 │                │ evaluation     │        │                 │
+│                 │                │ model=gpt-4o-… │        │                 │
+│                 │                │ reason=No      │        │                 │
+│                 │                │ contradiction… │        │                 │
+│                 │                │ error=None)    │        │                 │
+│ conversational… │                │                │        │ 0.0% | passed=0 │
+│                 │                │                │        │ | failed=1      │
+│                 │ Turn Relevancy │ 0.4            │ FAILED │                 │
+│                 │                │ (threshold=0.… │        │                 │
+│                 │                │ evaluation     │        │                 │
+│                 │                │ model=gpt-4o-… │        │                 │
+│                 │                │ reason=One     │        │                 │
+│                 │                │ turn is off    │        │                 │
+│                 │                │ topic.,        │        │                 │
+│                 │                │ error=None)    │        │                 │
+│                 │                │                │        │                 │
+│ empty           │                │                │        │ 100.0% |        │
+│ conversation    │                │                │        │ passed=1 |      │
+│                 │                │                │        │ failed=0        │
+│                 │ Turn Relevancy │ 1.0            │ PASSED │                 │
+│                 │                │ (threshold=0.… │        │                 │
+│                 │                │ evaluation     │        │                 │
+│                 │                │ model=gpt-4o-… │        │                 │
+│                 │                │ reason=All     │        │                 │
+│                 │                │ relevant.,     │        │                 │
+│                 │                │ error=None)    │        │                 │
+└─────────────────┴────────────────┴────────────────┴────────┴─────────────────┘

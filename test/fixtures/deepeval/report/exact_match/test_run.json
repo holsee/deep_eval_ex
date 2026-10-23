@@ -1,0 +1,63 @@
+{
+  "testCases": [
+    {
+      "name": "test exact match passes",
+      "input": "2 + 2?",
+      "actualOutput": "4",
+      "expectedOutput": "4",
+      "flaky": false,
+      "success": true,
+      "metricsData": [
+        {
+          "name": "Exact Match",
+          "threshold": 1.0,
+          "success": true,
+          "score": 1.0,
+          "reason": "The actual and expected outputs are exact matches.",
+          "strictMode": false,
+          "flaky": false
+        }
+      ],
+      "runDuration": 0.0,
+      "order": 0
+    },
+    {
+      "name": "test exact match fails",
+      "input": "2 + 3?",
+      "actualOutput": "6",
+      "expectedOutput": "5",
+      "flaky": false,
+      "success": false,
+      "metricsData": [
+        {
+          "name": "Exact Match",
+          "threshold": 1.0,
+          "success": false,
+          "score": 0.0,
+          "reason": "The actual and expected outputs are different.",
+          "strictMode": false,
+          "flaky": false
+        }
+      ],
+      "runDuration": 0.0,
+      "order": 1
+    }
+  ],
+  "conversationalTestCases": [],
+  "metricsScores": [
+    {
+      "metric": "Exact Match",
+      "scores": [
+        1.0,
+        0.0
+      ],
+      "passes": 1,
+      "fails": 1,
+      "errors": 0
+    }
+  ],
+  "testPassed": 1,
+  "testFailed": 1,
+  "runDuration": 0.11,
+  "official": false
+}

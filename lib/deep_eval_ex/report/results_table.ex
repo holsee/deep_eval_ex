@@ -33,7 +33,7 @@ defmodule DeepEvalEx.Report.ResultsTable do
 
   alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.{Report, TestRun}
-  alias DeepEvalEx.Report.{Console, Table}
+  alias DeepEvalEx.Report.{Console, Table, Terminal}
 
   # deepeval's len_tiny, len_short, len_medium and len_long defaults.
   @len_tiny 40
@@ -41,19 +41,21 @@ defmodule DeepEvalEx.Report.ResultsTable do
   @len_medium 120
   @len_long 240
 
-  # Rich's console width in the turns table's column limits.
-  @console_width 80
-
   @columns ["Test case", "Metric", "Score", "Status", "Overall Success Rate"]
 
   @doc """
   The tables and lines `display_results_table` prints for `test_run`,
   showing the test cases `display` selects (`:all`, `:failing` or
   `:passing`).
+
+  deepeval limits the turn tables' Details and Tools columns by the
+  console's width: `opts` gives it as `DeepEvalEx.Report.Terminal.width/1`
+  reads it (`:width`, else `COLUMNS`, else the terminal's, else 80).
   """
-  @spec build(TestRun.t(), Console.display()) :: [Table.t() | Report.text()]
-  def build(%TestRun{} = test_run, display \\ :all) do
+  @spec build(TestRun.t(), Console.display(), keyword()) :: [Table.t() | Report.text()]
+  def build(%TestRun{} = test_run, display \\ :all, opts \\ []) do
     display = Console.display!(display)
+    console_width = Terminal.width(opts)
     last_case = length(test_run.test_cases) - 1
     last_conversation = length(test_run.conversational_test_cases) - 1
 
@@ -71,7 +73,7 @@ defmodule DeepEvalEx.Report.ResultsTable do
       |> Enum.with_index()
       |> Enum.reject(fn {test_case, _index} -> Console.skip?(test_case, display) end)
       |> Enum.map(fn {test_case, index} ->
-        {turns_output(test_case),
+        {turns_output(test_case, console_width),
          case_rows(test_case) ++
            separator(index < last_conversation) ++ separator(index < last_case)}
       end)
@@ -172,10 +174,10 @@ defmodule DeepEvalEx.Report.ResultsTable do
       "reason=#{Report.py_str(metric_data.reason)}, error=#{Report.py_str(metric_data.error)})"
   end
 
-  defp turns_output(%{turns: [], name: name}),
+  defp turns_output(%{turns: [], name: name}, _console_width),
     do: {:style, "dim", "No turns recorded for #{name}."}
 
-  defp turns_output(%{turns: turns, name: name}) do
+  defp turns_output(%{turns: turns, name: name}, console_width) do
     rows =
       turns
       |> Enum.sort_by(& &1.order)
@@ -190,11 +192,16 @@ defmodule DeepEvalEx.Report.ResultsTable do
       columns: [
         %{header: "#", justify: :right, width: 3},
         %{header: "Role", width: 10},
-        %{header: "Details", max_width: max(48, min(120, @console_width - 3 - 10 - 20))},
+        %{
+          header: "Details",
+          overflow: :fold,
+          max_width: max(48, min(120, console_width - 3 - 10 - 20))
+        },
         %{
           header: "Tools",
           no_wrap: true,
-          max_width: min(60, max(24, div(@console_width, 3)))
+          overflow: :ellipsis,
+          max_width: min(60, max(24, div(console_width, 3)))
         }
       ],
       rows: rows

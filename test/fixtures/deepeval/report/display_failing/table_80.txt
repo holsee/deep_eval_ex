@@ -1,0 +1,60 @@
+                                  Test Results                                  
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━┓
+┃                 ┃                ┃                 ┃        ┃ Overall        ┃
+┃ Test case       ┃ Metric         ┃ Score           ┃ Status ┃ Success Rate   ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━┩
+│ refund question │                │                 │        │ 0.0% |         │
+│                 │                │                 │        │ passed=0 |     │
+│                 │                │                 │        │ failed=2       │
+│                 │ Answer         │ 0.33            │ FAILED │                │
+│                 │ Relevancy      │ (threshold=0.7, │        │                │
+│                 │                │ evaluation      │        │                │
+│                 │                │ model=gpt-4o-m… │        │                │
+│                 │                │ reason=Off      │        │                │
+│                 │                │ topic.,         │        │                │
+│                 │                │ error=None)     │        │                │
+│                 │ Faithfulness   │ 0.25            │ FAILED │                │
+│                 │                │ (threshold=0.5, │        │                │
+│                 │                │ evaluation      │        │                │
+│                 │                │ model=gpt-4o-m… │        │                │
+│                 │                │ reason=The      │        │                │
+│                 │                │ answer          │        │                │
+│                 │                │ contradicts the │        │                │
+│                 │                │ retrieval       │        │                │
+│                 │                │ context on the  │        │                │
+│                 │                │ refund window,  │        │                │
+│                 │                │ which is 30     │        │                │
+│                 │                │ days.,          │        │                │
+│                 │                │ error=None)     │        │                │
+│                 │                │                 │        │                │
+│ test_case_2     │                │                 │        │ 50.0% |        │
+│                 │                │                 │        │ passed=1 |     │
+│                 │                │                 │        │ failed=1       │
+│                 │ Answer         │ 0.91            │ PASSED │                │
+│                 │ Relevancy      │ (threshold=0.7, │        │                │
+│                 │                │ evaluation      │        │                │
+│                 │                │ model=gpt-4o-m… │        │                │
+│                 │                │ reason=The      │        │                │
+│                 │                │ answer states   │        │                │
+│                 │                │ the policy      │        │                │
+│                 │                │ accurately and  │        │                │
+│                 │                │ names every     │        │                │
+│                 │                │ condition the   │        │                │
+│                 │                │ context lists,  │        │                │
+│                 │                │ so it is        │        │                │
+│                 │                │ relevant.,      │        │                │
+│                 │                │ error=None)     │        │                │
+│                 │ Faithfulness   │ 0.25            │ FAILED │                │
+│                 │                │ (threshold=0.5, │        │                │
+│                 │                │ evaluation      │        │                │
+│                 │                │ model=gpt-4o-m… │        │                │
+│                 │                │ reason=The      │        │                │
+│                 │                │ answer          │        │                │
+│                 │                │ contradicts the │        │                │
+│                 │                │ retrieval       │        │                │
+│                 │                │ context on the  │        │                │
+│                 │                │ refund window,  │        │                │
+│                 │                │ which is 30     │        │                │
+│                 │                │ days.,          │        │                │
+│                 │                │ error=None)     │        │                │
+└─────────────────┴────────────────┴─────────────────┴────────┴────────────────┘

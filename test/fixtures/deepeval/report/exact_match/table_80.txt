@@ -1,0 +1,32 @@
+                                  Test Results                                  
+┏━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
+┃                  ┃             ┃                 ┃        ┃ Overall Success  ┃
+┃ Test case        ┃ Metric      ┃ Score           ┃ Status ┃ Rate             ┃
+┡━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
+│ test exact match │             │                 │        │ 100.0% |         │
+│ passes           │             │                 │        │ passed=1 |       │
+│                  │             │                 │        │ failed=0         │
+│                  │ Exact Match │ 1.0             │ PASSED │                  │
+│                  │             │ (threshold=1.0, │        │                  │
+│                  │             │ evaluation      │        │                  │
+│                  │             │ model=n/a,      │        │                  │
+│                  │             │ reason=The      │        │                  │
+│                  │             │ actual and      │        │                  │
+│                  │             │ expected        │        │                  │
+│                  │             │ outputs are     │        │                  │
+│                  │             │ exact matches., │        │                  │
+│                  │             │ error=None)     │        │                  │
+│                  │             │                 │        │                  │
+│ test exact match │             │                 │        │ 0.0% | passed=0  │
+│ fails            │             │                 │        │ | failed=1       │
+│                  │ Exact Match │ 0.0             │ FAILED │                  │
+│                  │             │ (threshold=1.0, │        │                  │
+│                  │             │ evaluation      │        │                  │
+│                  │             │ model=n/a,      │        │                  │
+│                  │             │ reason=The      │        │                  │
+│                  │             │ actual and      │        │                  │
+│                  │             │ expected        │        │                  │
+│                  │             │ outputs are     │        │                  │
+│                  │             │ different.,     │        │                  │
+│                  │             │ error=None)     │        │                  │
+└──────────────────┴─────────────┴─────────────────┴────────┴──────────────────┘

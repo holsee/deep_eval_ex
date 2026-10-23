@@ -1,0 +1,21 @@
+                                            Test Results                                            
+┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Test case              ┃ Metric      ┃ Score                   ┃ Status ┃ Overall Success Rate   ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ test exact match       │             │                         │        │ 100.0% | passed=1 |    │
+│ passes                 │             │                         │        │ failed=0               │
+│                        │ Exact Match │ 1.0 (threshold=1.0,     │ PASSED │                        │
+│                        │             │ evaluation model=n/a,   │        │                        │
+│                        │             │ reason=The actual and   │        │                        │
+│                        │             │ expected outputs are    │        │                        │
+│                        │             │ exact matches.,         │        │                        │
+│                        │             │ error=None)             │        │                        │
+│                        │             │                         │        │                        │
+│ test exact match fails │             │                         │        │ 0.0% | passed=0 |      │
+│                        │             │                         │        │ failed=1               │
+│                        │ Exact Match │ 0.0 (threshold=1.0,     │ FAILED │                        │
+│                        │             │ evaluation model=n/a,   │        │                        │
+│                        │             │ reason=The actual and   │        │                        │
+│                        │             │ expected outputs are    │        │                        │
+│                        │             │ different., error=None) │        │                        │
+└────────────────────────┴─────────────┴─────────────────────────┴────────┴────────────────────────┘

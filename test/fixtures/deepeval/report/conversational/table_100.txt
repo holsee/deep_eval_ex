@@ -1,0 +1,42 @@
+                             Conversation - conversational_test_case_0                              
+┏━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃   # ┃ Role       ┃ Details                                        ┃ Tools                        ┃
+┡━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│   0 │ user       │ I want to change my flight.                    │                              │
+│   1 │ assistant  │ Sure, which booking?                           │ lookup_booking, list_flights │
+│     │            │       ↳ ctx[0]: Changes are free up to 24      │                              │
+│     │            │ hours before departure.                        │                              │
+│     │            │       ↳ ctx[1]: A fare difference may apply.   │                              │
+│     │            │       ↳ ctx: (+1 more)                         │                              │
+│   2 │ user       │ ABC123                                         │                              │
+│     │            │       ↳ comment: Booking reference.            │                              │
+└─────┴────────────┴────────────────────────────────────────────────┴──────────────────────────────┘
+No turns recorded for empty conversation.
+                                            Test Results                                            
+┏━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Test case             ┃ Metric         ┃ Score                  ┃ Status ┃ Overall Success Rate  ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━┩
+│ test_case_0           │                │                        │        │ 100.0% | passed=1 |   │
+│                       │                │                        │        │ failed=0              │
+│                       │ Faithfulness   │ 1.0 (threshold=0.5,    │ PASSED │                       │
+│                       │                │ evaluation             │        │                       │
+│                       │                │ model=gpt-4o-mini,     │        │                       │
+│                       │                │ reason=No              │        │                       │
+│                       │                │ contradictions.,       │        │                       │
+│                       │                │ error=None)            │        │                       │
+│ conversational_test_… │                │                        │        │ 0.0% | passed=0 |     │
+│                       │                │                        │        │ failed=1              │
+│                       │ Turn Relevancy │ 0.4 (threshold=0.5,    │ FAILED │                       │
+│                       │                │ evaluation             │        │                       │
+│                       │                │ model=gpt-4o-mini,     │        │                       │
+│                       │                │ reason=One turn is off │        │                       │
+│                       │                │ topic., error=None)    │        │                       │
+│                       │                │                        │        │                       │
+│ empty conversation    │                │                        │        │ 100.0% | passed=1 |   │
+│                       │                │                        │        │ failed=0              │
+│                       │ Turn Relevancy │ 1.0 (threshold=0.5,    │ PASSED │                       │
+│                       │                │ evaluation             │        │                       │
+│                       │                │ model=gpt-4o-mini,     │        │                       │
+│                       │                │ reason=All relevant.,  │        │                       │
+│                       │                │ error=None)            │        │                       │
+└───────────────────────┴────────────────┴────────────────────────┴────────┴───────────────────────┘

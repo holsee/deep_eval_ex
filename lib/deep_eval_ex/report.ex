@@ -27,8 +27,8 @@ defmodule DeepEvalEx.Report do
   - `DeepEvalEx.Report.Terminal` draws any of them with box-drawing
     characters and ANSI colours
 
-  The strings match deepeval's byte for byte; the drawing only resembles
-  Rich's layout.
+  The strings match deepeval's byte for byte. Tables are drawn with Rich's
+  column widths and wrapping; panels and trees only resemble Rich's.
   """
 
   alias DeepEvalEx.TestRun.JSON
@@ -60,7 +60,10 @@ defmodule DeepEvalEx.Report do
 
     `:box` is `:heavy_head` (Rich's default) or `:none`; `:show_edge`,
     `:show_header`, `:expand`, `:title_justify`, `:header_style` and
-    `:padding` (spaces either side of a cell) are Rich's options.
+    `:padding` (spaces either side of a cell) are Rich's options, as are a
+    column's `:width`, `:max_width`, `:no_wrap` and `:overflow` (what a
+    word wider than its column does: `:ellipsis`, Rich's default, cuts it
+    with `…`, `:fold` breaks it across lines, `:crop` cuts it).
     """
 
     @typedoc "A column: its header and Rich's column options."
@@ -70,7 +73,8 @@ defmodule DeepEvalEx.Report do
             optional(:style) => DeepEvalEx.Report.style() | nil,
             optional(:width) => pos_integer() | nil,
             optional(:max_width) => pos_integer() | nil,
-            optional(:no_wrap) => boolean()
+            optional(:no_wrap) => boolean(),
+            optional(:overflow) => :fold | :crop | :ellipsis
           }
 
     @type row :: [DeepEvalEx.Report.text()] | {:confident_ai, [DeepEvalEx.Report.text()]}

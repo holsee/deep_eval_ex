@@ -1,0 +1,42 @@
+                                            Test Results                                            
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Test case       ┃ Metric           ┃ Score                   ┃ Status ┃ Overall Success Rate     ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ refund question │                  │                         │        │ 0.0% | passed=0 |        │
+│                 │                  │                         │        │ failed=2                 │
+│                 │ Answer Relevancy │ 0.33 (threshold=0.7,    │ FAILED │                          │
+│                 │                  │ evaluation              │        │                          │
+│                 │                  │ model=gpt-4o-mini,      │        │                          │
+│                 │                  │ reason=Off topic.,      │        │                          │
+│                 │                  │ error=None)             │        │                          │
+│                 │ Faithfulness     │ 0.25 (threshold=0.5,    │ FAILED │                          │
+│                 │                  │ evaluation              │        │                          │
+│                 │                  │ model=gpt-4o-mini,      │        │                          │
+│                 │                  │ reason=The answer       │        │                          │
+│                 │                  │ contradicts the         │        │                          │
+│                 │                  │ retrieval context on    │        │                          │
+│                 │                  │ the refund window,      │        │                          │
+│                 │                  │ which is 30 days.,      │        │                          │
+│                 │                  │ error=None)             │        │                          │
+│                 │                  │                         │        │                          │
+│ test_case_2     │                  │                         │        │ 50.0% | passed=1 |       │
+│                 │                  │                         │        │ failed=1                 │
+│                 │ Answer Relevancy │ 0.91 (threshold=0.7,    │ PASSED │                          │
+│                 │                  │ evaluation              │        │                          │
+│                 │                  │ model=gpt-4o-mini,      │        │                          │
+│                 │                  │ reason=The answer       │        │                          │
+│                 │                  │ states the policy       │        │                          │
+│                 │                  │ accurately and names    │        │                          │
+│                 │                  │ every condition the     │        │                          │
+│                 │                  │ context lists, so it is │        │                          │
+│                 │                  │ relevant., error=None)  │        │                          │
+│                 │ Faithfulness     │ 0.25 (threshold=0.5,    │ FAILED │                          │
+│                 │                  │ evaluation              │        │                          │
+│                 │                  │ model=gpt-4o-mini,      │        │                          │
+│                 │                  │ reason=The answer       │        │                          │
+│                 │                  │ contradicts the         │        │                          │
+│                 │                  │ retrieval context on    │        │                          │
+│                 │                  │ the refund window,      │        │                          │
+│                 │                  │ which is 30 days.,      │        │                          │
+│                 │                  │ error=None)             │        │                          │
+└─────────────────┴──────────────────┴─────────────────────────┴────────┴──────────────────────────┘

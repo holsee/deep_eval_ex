@@ -889,6 +889,12 @@ evaluated. Under `report/<scenario>/`:
   `No turns recorded` lines and the `Test Results` table
 - `summary.txt` - what `wrap_up_test_run()` printed (without the table),
   recorded by a Rich console without colour or wrapping
+- `table_<width>.txt` - what `display_results_table()` printed, drawn by Rich
+  14 without colour on a console 60, 80, 100, 120 and 160 columns wide (the
+  turn tables' column limits following that width, as deepeval's do),
+  without the Confident AI note row: DeepEvalEx keeps it in its row model
+  but never draws it (ADR-0010 decision 6), and Rich would widen the first
+  column for it
 
 | Scenario | What it covers |
 | --- | --- |
@@ -902,6 +908,7 @@ evaluated. Under `report/<scenario>/`:
 | `flaky` | Flaky metrics: their verdicts with `(flaky=N)` sub-counts, never failing the test case |
 | `conversational` | A conversation's turns (tools, retrieval context cut to two, a comment), one without turns, separator rows |
 | `classifiers`, `classifiers_untruncated` | Classifications with and without expected labels, errored and declined (`none`), label distributions, classifier-only test cases left out of the run |
+| `exact_match` | A passing and a failing ExactMatch test case named as `mix deep_eval.test` names them: long Score cells that must shrink to fit 80 columns |
 | `natural_sort` | Sorting by index, then naturally by name |
 | `unicode` | Emoji and CJK cut by code point, a multi-line reason as `<br>` in Markdown |
 
@@ -911,8 +918,13 @@ results and loads the test run, then compares
 `DeepEvalEx.Report.ResultsTable.build/2` with `tables.json` (each string
 as its Rich markup), and `DeepEvalEx.Report.Markdown.render/1` and
 `DeepEvalEx.Report.Summary.wrap_up/3` (with `confident_ai: true`) with
-`report.md` and `summary.txt`, byte for byte. How the terminal draws them
-is DeepEvalEx's own and not compared.
+`report.md` and `summary.txt`, byte for byte. It also draws
+`ResultsTable.build/3` with `DeepEvalEx.Report.Terminal` at each width
+without colour and compares it with `table_<width>.txt` byte for byte:
+column widths, line breaks, ellipses, alignment and borders. How the
+terminal draws the console report's panels and trees is DeepEvalEx's own
+and not compared. `generate_runner_fixtures.py report` rewrites only these
+fixtures.
 
 ## CLI fixtures
 

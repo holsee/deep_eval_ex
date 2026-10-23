@@ -1,0 +1,72 @@
+                        Test Results                        
+┏━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━┓
+┃           ┃            ┃           ┃        ┃ Overall    ┃
+┃           ┃            ┃           ┃        ┃ Success    ┃
+┃ Test case ┃ Metric     ┃ Score     ┃ Status ┃ Rate       ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━┩
+│ refund    │            │           │        │ 0.0% |     │
+│ question  │            │           │        │ passed=0 | │
+│           │            │           │        │ failed=2   │
+│           │ Answer     │ 0.33      │ FAILED │            │
+│           │ Relevancy  │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=O… │        │            │
+│           │            │ topic.,   │        │            │
+│           │            │ error=No… │        │            │
+│           │ Faithfuln… │ 0.25      │ FAILED │            │
+│           │            │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=T… │        │            │
+│           │            │ answer    │        │            │
+│           │            │ contradi… │        │            │
+│           │            │ the       │        │            │
+│           │            │ retrieval │        │            │
+│           │            │ context   │        │            │
+│           │            │ on the    │        │            │
+│           │            │ refund    │        │            │
+│           │            │ window,   │        │            │
+│           │            │ which is  │        │            │
+│           │            │ 30 days., │        │            │
+│           │            │ error=No… │        │            │
+│           │            │           │        │            │
+│ test_cas… │            │           │        │ 50.0% |    │
+│           │            │           │        │ passed=1 | │
+│           │            │           │        │ failed=1   │
+│           │ Answer     │ 0.91      │ PASSED │            │
+│           │ Relevancy  │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=T… │        │            │
+│           │            │ answer    │        │            │
+│           │            │ states    │        │            │
+│           │            │ the       │        │            │
+│           │            │ policy    │        │            │
+│           │            │ accurate… │        │            │
+│           │            │ and names │        │            │
+│           │            │ every     │        │            │
+│           │            │ condition │        │            │
+│           │            │ the       │        │            │
+│           │            │ context   │        │            │
+│           │            │ lists, so │        │            │
+│           │            │ it is     │        │            │
+│           │            │ relevant… │        │            │
+│           │            │ error=No… │        │            │
+│           │ Faithfuln… │ 0.25      │ FAILED │            │
+│           │            │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=T… │        │            │
+│           │            │ answer    │        │            │
+│           │            │ contradi… │        │            │
+│           │            │ the       │        │            │
+│           │            │ retrieval │        │            │
+│           │            │ context   │        │            │
+│           │            │ on the    │        │            │
+│           │            │ refund    │        │            │
+│           │            │ window,   │        │            │
+│           │            │ which is  │        │            │
+│           │            │ 30 days., │        │            │
+│           │            │ error=No… │        │            │
+└───────────┴────────────┴───────────┴────────┴────────────┘

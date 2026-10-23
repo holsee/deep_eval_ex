@@ -109,6 +109,11 @@ without metric data is left out, as `update_test_run` leaves it):
 - summary.txt   - the text `wrap_up_test_run()` printed (`display_table`
                   off), recorded by a Rich console without colour or
                   wrapping
+- table_<width>.txt - what `display_results_table()` printed, drawn by Rich
+                  without colour on a console `<width>` columns wide (each
+                  of `TABLE_WIDTHS`), without the Confident AI note row,
+                  which DeepEvalEx keeps in its row model but never draws
+                  (ADR-0010 decision 6)
 
 `deepeval test run` (`cli/test/command.py`) is written under
 test/fixtures/deepeval/cli/: `args/cases.json` (the pytest arguments,
@@ -123,6 +128,8 @@ source checked out at _ref/deepeval (tag v4.3.1):
 
     devcontainer exec --workspace-folder . \
       env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_runner_fixtures.py
+
+`... generate_runner_fixtures.py report` writes only the report fixtures.
 
 See test/fixtures/deepeval/README.md.
 """
@@ -151,7 +158,11 @@ REPORT = os.path.join(ROOT, "test", "fixtures", "deepeval", "report")
 if sys.flags.hash_randomization:
     env = {k: v for k, v in os.environ.items() if not k.startswith("PYTHON")}
     env["PYTHONHASHSEED"] = "0"
-    os.execve(sys.executable, [sys.executable, "-s", "-P", os.path.abspath(__file__)], env)
+    os.execve(
+        sys.executable,
+        [sys.executable, "-s", "-P", os.path.abspath(__file__), *sys.argv[1:]],
+        env,
+    )
 
 
 def _load(name, path):
@@ -1633,6 +1644,41 @@ def renderable_json(item):
     raise TypeError(f"unexpected renderable {type(item).__name__}")
 
 
+# The console widths the `Test Results` table is drawn at (table_<width>.txt).
+TABLE_WIDTHS = [60, 80, 100, 120, 160]
+
+
+def write_table_layouts(out_dir, manager, test_run, display):
+    """display_results_table() drawn by Rich at each of TABLE_WIDTHS, without
+    colour, as a console with no terminal attached and COLUMNS set to the
+    width would draw it. The turn tables' column limits follow the console's
+    width, as deepeval's do. The Confident AI note row, deepeval's last, is
+    dropped before the table is drawn: DeepEvalEx never draws it (ADR-0010
+    decision 6), and it would widen the first column."""
+    for width in TABLE_WIDTHS:
+        recorder = Console(
+            record=True,
+            file=io.StringIO(),
+            width=width,
+            color_system=None,
+            force_terminal=False,
+            legacy_windows=False,
+        )
+
+        def print_table(table, recorder=recorder):
+            table.rows.pop()
+            for column in table.columns:
+                column._cells.pop()
+            recorder.print(table)
+
+        test_run_module.console = recorder
+        test_run_module.print = print_table
+        manager.display_results_table(test_run, display)
+        path = os.path.join(out_dir, f"table_{width}.txt")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(recorder.export_text())
+
+
 class _TableCapture:
     """Stands in for test_run.py's console and rich print in
     display_results_table: records what it prints."""
@@ -1705,6 +1751,8 @@ def run_report_scenario(name, scenario):
         test_run_module.print = capture.print
         manager.display_results_table(test_run, display)
         gf.write_json(os.path.join(out_dir, "tables.json"), capture.printed)
+
+        write_table_layouts(out_dir, manager, test_run, display)
     finally:
         test_run_module.console, test_run_module.print = original_console, original_print
         manager.reset()
@@ -1825,7 +1873,28 @@ CONVERSATION_TURNS = [
     {"role": "user", "content": "ABC123", "order": 2, "comments": "Booking reference."},
 ]
 
+EXACT_MATCH_PASSED = metric(
+    "Exact Match", 1.0, 1.0, "The actual and expected outputs are exact matches.",
+    evaluationModel=None, evaluationCost=None,
+)
+EXACT_MATCH_FAILED = metric(
+    "Exact Match", 0.0, 1.0, "The actual and expected outputs are different.",
+    evaluationModel=None, evaluationCost=None,
+)
+
 REPORT_SCENARIOS = {
+    "exact_match": {
+        "description": "A passing and a failing ExactMatch test case, as `mix deep_eval.test` "
+                       "names them: no evaluation model, long Score cells",
+        "test_results": [
+            result("test exact match passes", 0, [EXACT_MATCH_PASSED],
+                   input="2 + 2?", actual_output="4", expected_output="4"),
+            result("test exact match fails", 1, [EXACT_MATCH_FAILED],
+                   input="2 + 3?", actual_output="6", expected_output="5"),
+        ],
+        "display": "all", "truncate": True, "run_duration": 0.11,
+        "hyperparameters": None, "identifier": None,
+    },
     "all_passing": {
         "description": "Two passing test cases, truncated to one line each; a long reason",
         "test_results": PASSING,
@@ -2189,9 +2258,23 @@ def write_cli():
 
 
 
+def write_report():
+    if os.path.isdir(REPORT):
+        shutil.rmtree(REPORT)
+    for name, scenario in REPORT_SCENARIOS.items():
+        run_report_scenario(name, scenario)
+        print(f"wrote {os.path.relpath(os.path.join(REPORT, name), ROOT)}")
+
+
 def main():
     if gf.deepeval.__version__ != gf.DEEPEVAL_VERSION:
         sys.exit(f"expected deepeval {gf.DEEPEVAL_VERSION}, found {gf.deepeval.__version__}")
+    if sys.argv[1:] == ["report"]:
+        try:
+            write_report()
+        finally:
+            shutil.rmtree(gf.WORK_DIR, ignore_errors=True)
+        return
     try:
         if os.path.isdir(CLASSIFIERS):
             shutil.rmtree(CLASSIFIERS)
@@ -2216,11 +2299,7 @@ def main():
         for name, scenario in CACHE_SCENARIOS.items():
             run_cache_scenario(name, scenario)
             print(f"wrote {os.path.relpath(os.path.join(CACHE, name), ROOT)}")
-        if os.path.isdir(REPORT):
-            shutil.rmtree(REPORT)
-        for name, scenario in REPORT_SCENARIOS.items():
-            run_report_scenario(name, scenario)
-            print(f"wrote {os.path.relpath(os.path.join(REPORT, name), ROOT)}")
+        write_report()
         write_cli()
     finally:
         shutil.rmtree(gf.WORK_DIR, ignore_errors=True)

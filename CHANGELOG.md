@@ -1953,8 +1953,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - `DeepEvalEx.Report.Terminal` draws all of them with box-drawing
     characters and ANSI colours, honouring `COLUMNS`, the terminal width,
     `NO_COLOR` and `IO.ANSI.enabled?/0`, and counting emoji and East Asian
-    wide characters as two columns. Its layout resembles Rich's without
-    being byte-identical. Rows and lines advertising Confident AI are kept
+    wide characters as two columns. Tables take Rich's column widths and
+    wrapping; panels and trees resemble Rich's without being
+    byte-identical. Rows and lines advertising Confident AI are kept
     in the data but not drawn, and warnings print without their links.
   - `DeepEvalEx.TestRun.Manager`, deepeval's `TestRunManager`: `new/1` and
     `add/2` collect evaluated test cases (leaving classifier-only ones
@@ -2405,6 +2406,22 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Fixed
 
+- `mix deep_eval.test` printed an unreadable `Test Results` table on a
+  narrow console, such as 80 columns when no terminal is attached and
+  `COLUMNS` is unset: the widest column took the whole overflow and
+  collapsed to one character, printing `Score` and its cells a character
+  per line. `DeepEvalEx.Report.Terminal` now lays tables out as Rich does
+  (`Table._calculate_column_widths`): the widest columns narrow together
+  towards the next widest, cells wrap at word boundaries, a word wider than
+  its column is cut with `…` (or folded, with the new column option
+  `overflow: :fold`), and headers align to the bottom of their row. Without
+  colour the `Test Results` table and the turn tables now match deepeval's
+  output byte for byte at any width, checked against Rich's own renders at
+  60, 80, 100, 120 and 160 columns. `ResultsTable.build/3` takes the
+  console width (`:width`, as `Terminal.width/1` reads it) for the turn
+  tables' Details and Tools limits, which were fixed at 80 columns, and
+  `Terminal.width/1` reads `COLUMNS` only when it is all digits, as Rich
+  does.
 - `DeepEvalEx.evaluate/3` raised `FunctionClauseError` for
   `DeepEvalEx.ConversationalTestCase`s: `DeepEvalEx.TestResult.new/4` now
   builds a conversational test result (`conversational: true`, named

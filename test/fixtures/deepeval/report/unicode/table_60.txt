@@ -1,0 +1,31 @@
+                        Test Results                        
+┏━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━┓
+┃            ┃           ┃            ┃        ┃ Overall   ┃
+┃            ┃           ┃            ┃        ┃ Success   ┃
+┃ Test case  ┃ Metric    ┃ Score      ┃ Status ┃ Rate      ┃
+┡━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━┩
+│ café ☕    │           │            │        │ 50.0% |   │
+│ 测试       │           │            │        │ passed=1  │
+│            │           │            │        │ |         │
+│            │           │            │        │ failed=1  │
+│            │ Answer    │ 0.88       │ PASSED │           │
+│            │ Relevancy │ (threshol… │        │           │
+│            │           │ evaluation │        │           │
+│            │           │ model=gpt… │        │           │
+│            │           │ reason=回… │        │           │
+│            │           │ The answer │        │           │
+│            │           │ is fully   │        │           │
+│            │           │ relevant   │        │           │
+│            │           │ and covers │        │           │
+│            │           │ every      │        │           │
+│            │           │ point.,    │        │           │
+│            │           │ error=Non… │        │           │
+│            │ Faithful… │ 0.12       │ FAILED │           │
+│            │           │ (threshol… │        │           │
+│            │           │ evaluation │        │           │
+│            │           │ model=gpt… │        │           │
+│            │           │ reason=Li… │        │           │
+│            │           │ one.       │        │           │
+│            │           │ Line two., │        │           │
+│            │           │ error=Non… │        │           │
+└────────────┴───────────┴────────────┴────────┴───────────┘

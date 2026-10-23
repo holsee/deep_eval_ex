@@ -164,7 +164,7 @@ defmodule DeepEvalEx.TestRun.Manager do
     if cache = opts[:cache], do: Store.wrap_up(cache)
 
     if Keyword.get(opts, :display_table, true) and print?(opts) do
-      table = ResultsTable.build(test_run, Keyword.get(opts, :display, :all))
+      table = ResultsTable.build(test_run, Keyword.get(opts, :display, :all), opts)
       IO.write(device(opts), Terminal.render(table, opts))
     end
 

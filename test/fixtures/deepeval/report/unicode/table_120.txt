@@ -1,0 +1,14 @@
+                                                      Test Results                                                      
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Test case    ┃ Metric           ┃ Score                                       ┃ Status ┃ Overall Success Rate        ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ café ☕ 测试 │                  │                                             │        │ 50.0% | passed=1 | failed=1 │
+│              │ Answer Relevancy │ 0.88 (threshold=0.5, evaluation             │ PASSED │                             │
+│              │                  │ model=gpt-4o-mini,                          │        │                             │
+│              │                  │ reason=回答完全相关，并且涵盖了所有要点。 … │        │                             │
+│              │                  │ The answer is fully relevant and covers     │        │                             │
+│              │                  │ every point., error=None)                   │        │                             │
+│              │ Faithfulness     │ 0.12 (threshold=0.5, evaluation             │ FAILED │                             │
+│              │                  │ model=gpt-4o-mini, reason=Line one.         │        │                             │
+│              │                  │ Line two., error=None)                      │        │                             │
+└──────────────┴──────────────────┴─────────────────────────────────────────────┴────────┴─────────────────────────────┘

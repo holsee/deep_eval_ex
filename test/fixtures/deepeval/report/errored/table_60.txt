@@ -1,0 +1,29 @@
+                        Test Results                        
+┏━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━┓
+┃           ┃           ┃           ┃         ┃ Overall    ┃
+┃           ┃           ┃           ┃         ┃ Success    ┃
+┃ Test case ┃ Metric    ┃ Score     ┃ Status  ┃ Rate       ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━┩
+│ test_cas… │           │           │         │ 0.0% |     │
+│           │           │           │         │ passed=0 | │
+│           │           │           │         │ failed=1   │
+│           │ Faithful… │ None      │ ERRORED │            │
+│           │           │ (thresho… │         │            │
+│           │           │ evaluati… │         │            │
+│           │           │ model=gp… │         │            │
+│           │           │ reason=N… │         │            │
+│           │           │ error=Va… │         │            │
+│           │           │ boom)     │         │            │
+│           │           │           │         │            │
+│ test_cas… │           │           │         │ 0.0% |     │
+│           │           │           │         │ passed=0 | │
+│           │           │           │         │ failed=1   │
+│           │ Faithful… │ None      │ ERRORED │            │
+│           │           │ (thresho… │         │            │
+│           │           │ evaluati… │         │            │
+│           │           │ model=gp… │         │            │
+│           │           │ reason=N… │         │            │
+│           │           │ error=Ti… │         │            │
+│           │           │ out after │         │            │
+│           │           │ 180s)     │         │            │
+└───────────┴───────────┴───────────┴─────────┴────────────┘

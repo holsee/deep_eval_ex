@@ -1,0 +1,66 @@
+                        Test Results                        
+┏━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━┓
+┃           ┃            ┃           ┃        ┃ Overall    ┃
+┃           ┃            ┃           ┃        ┃ Success    ┃
+┃ Test case ┃ Metric     ┃ Score     ┃ Status ┃ Rate       ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━┩
+│ test_cas… │            │           │        │ 100.0% |   │
+│           │            │           │        │ passed=2 | │
+│           │            │           │        │ failed=0   │
+│           │ Answer     │ 0.91      │ PASSED │            │
+│           │ Relevancy  │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=T… │        │            │
+│           │            │ answer    │        │            │
+│           │            │ states    │        │            │
+│           │            │ the       │        │            │
+│           │            │ policy    │        │            │
+│           │            │ accurate… │        │            │
+│           │            │ and names │        │            │
+│           │            │ every     │        │            │
+│           │            │ condition │        │            │
+│           │            │ the       │        │            │
+│           │            │ context   │        │            │
+│           │            │ lists, so │        │            │
+│           │            │ it is     │        │            │
+│           │            │ relevant… │        │            │
+│           │            │ error=No… │        │            │
+│           │ Faithfuln… │ 1.0       │ PASSED │            │
+│           │            │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=No │        │            │
+│           │            │ contradi… │        │            │
+│           │            │ error=No… │        │            │
+│           │            │           │        │            │
+│ test_cas… │            │           │        │ 100.0% |   │
+│           │            │           │        │ passed=2 | │
+│           │            │           │        │ failed=0   │
+│           │ Answer     │ 0.91      │ PASSED │            │
+│           │ Relevancy  │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=T… │        │            │
+│           │            │ answer    │        │            │
+│           │            │ states    │        │            │
+│           │            │ the       │        │            │
+│           │            │ policy    │        │            │
+│           │            │ accurate… │        │            │
+│           │            │ and names │        │            │
+│           │            │ every     │        │            │
+│           │            │ condition │        │            │
+│           │            │ the       │        │            │
+│           │            │ context   │        │            │
+│           │            │ lists, so │        │            │
+│           │            │ it is     │        │            │
+│           │            │ relevant… │        │            │
+│           │            │ error=No… │        │            │
+│           │ Faithfuln… │ 1.0       │ PASSED │            │
+│           │            │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=No │        │            │
+│           │            │ contradi… │        │            │
+│           │            │ error=No… │        │            │
+└───────────┴────────────┴───────────┴────────┴────────────┘
