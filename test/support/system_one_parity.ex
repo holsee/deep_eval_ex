@@ -32,6 +32,7 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     ContextualRelevancy,
     ConversationalJevEval,
     ConversationCompleteness,
+    DAG,
     Faithfulness,
     GoalAccuracy,
     Hallucination,
@@ -92,7 +93,8 @@ defmodule DeepEvalEx.Test.SystemOneParity do
     "task_completion" => TaskCompletion,
     "step_efficiency" => StepEfficiency,
     "plan_quality" => PlanQuality,
-    "plan_adherence" => PlanAdherence
+    "plan_adherence" => PlanAdherence,
+    "dag" => DAG
   }
 
   @eval_modes %{"llm" => :llm, "hybrid" => :hybrid, "system_one" => :system_one}
@@ -306,6 +308,8 @@ defmodule DeepEvalEx.Test.SystemOneParity do
         Enum.map(params.values, fn
           # JsonCorrectness prints its schema in its key order.
           {"expected_schema", schema} -> {:expected_schema, schema}
+          # A DAG's roots are its first nodes no other node refers to.
+          {"dag", dag} -> {:dag, DAG.Graph.from_map(dag)}
           {key, value} -> option(key, plain(value))
         end)
 
@@ -329,6 +333,12 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   defp configured(ToolUse, opts) do
     {tools, opts} = Keyword.pop!(opts, :available_tools)
     {ToolUse.new(available_tools: tools), opts}
+  end
+
+  # A DAG's name and graph are its own, as deepeval's constructor params.
+  defp configured(DAG, opts) do
+    {own, opts} = Keyword.split(opts, [:name, :dag])
+    {DAG.new(own), opts}
   end
 
   defp configured(module, opts), do: {module, opts}

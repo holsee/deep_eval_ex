@@ -46,6 +46,8 @@ defmodule DeepEvalEx do
   - `DeepEvalEx.Metrics.JsonCorrectness` - Output is JSON matching an
     expected JSON Schema
   - `DeepEvalEx.Metrics.GEval` - Flexible criteria-based evaluation
+  - `DeepEvalEx.Metrics.DAG` - A decision tree of small LLM judgements,
+    scored at the leaf it reaches
   - `DeepEvalEx.Metrics.Faithfulness` - RAG: claims supported by context
   - `DeepEvalEx.Metrics.Hallucination` - Detects unsupported statements
   - `DeepEvalEx.Metrics.AnswerRelevancy` - Response relevance to question

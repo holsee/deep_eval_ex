@@ -43,6 +43,11 @@ index. Next to each script this writes:
 - test_run.json - the test run `deepeval.evaluate()` wrote for the same
                   metric and test case
 
+- dag.json      - for a DAGMetric (`kind` "dag", whose `params.dag` is the
+                  graph as `DeepAcyclicGraph.to_dict` writes it): the graph
+                  deepeval rebuilt from it, written back by `to_dict` with
+                  node ids numbered in its order instead of random uuids
+
 test/deep_eval_ex/scripted_parity_test.exs replays each script through
 DeepEvalEx.LLM.Adapters.Mock and compares all three.
 
@@ -150,6 +155,7 @@ from deepeval.metrics import (  # noqa: E402
     ContextualRelevancyMetric,
     ConversationalGEval,
     ConversationCompletenessMetric,
+    DAGMetric,
     ExactMatchMetric,
     FaithfulnessMetric,
     GEval,
@@ -177,6 +183,8 @@ from deepeval.metrics import (  # noqa: E402
     TurnRelevancyMetric,
 )
 from deepeval.metrics.base_metric import Verdict  # noqa: E402
+from deepeval.metrics.dag import DeepAcyclicGraph, NonBinaryJudgementNode  # noqa: E402
+from deepeval.metrics.dag.serialization import serialization as dag_serialization  # noqa: E402
 from deepeval.metrics.contextual_precision.contextual_precision import (  # noqa: E402
     _contextual_precision_verdict_fields,
 )
@@ -814,6 +822,7 @@ SCRIPTED_METRICS = {
     "plan_quality": PlanQualityMetric,
     "plan_adherence": PlanAdherenceMetric,
     "agent_loop_detection": AgentLoopDetectionMetric,
+    "dag": DAGMetric,
 }
 
 # Metrics that call no LLM and take no `model`.
@@ -837,10 +846,44 @@ def build_scripted_metric(script):
         params["available_tools"] = [ToolCall(**tool) for tool in params["available_tools"]]
     if kind == "json_correctness":
         params["expected_schema"] = build_expected_schema(params["expected_schema"])
+    if kind == "dag":
+        params["dag"] = build_dag(params["dag"])
     if kind in JUDGELESS_METRICS:
         return SCRIPTED_METRICS[kind](**params), None
     judge = ScriptedJudge(script["judge_model"], script["responses"].get(kind, {}))
     return SCRIPTED_METRICS[kind](model=judge, **params), judge
+
+
+def build_dag(spec):
+    """A DAGMetric's graph from its `to_dict` form, as `from_dict` builds it.
+
+    A NonBinaryJudgementNode offers its verdicts in the order a Python set of
+    them iterates (by string hash), DeepEvalEx in the order of its children.
+    The hash seed is fixed, so a script lists each node's verdicts in the
+    set's order, which this checks."""
+    dag = DeepAcyclicGraph.from_dict(spec)
+    for node in dag_serialization._walk_nodes(dag.root_nodes):
+        if isinstance(node, NonBinaryJudgementNode):
+            children = [child.verdict for child in node.children]
+            if node._verdict_options != children:
+                raise RuntimeError(
+                    f"list the verdicts of {node.criteria!r} as {node._verdict_options}, "
+                    "the order deepeval offers them in"
+                )
+    return dag
+
+
+def dag_dict(dag):
+    """`dag.to_dict()` with the nodes numbered "node_<i>" in its (breadth
+    first) order rather than given random uuids, so it can be committed."""
+    assign_ids = dag_serialization._assign_ids
+    dag_serialization._assign_ids = lambda nodes: {
+        id(node): f"node_{i}" for i, node in enumerate(nodes)
+    }
+    try:
+        return dag.to_dict()
+    finally:
+        dag_serialization._assign_ids = assign_ids
 
 
 def measured_state(metric):
@@ -917,6 +960,8 @@ def run_scripted_scenario(name):
     shutil.copyfile(path, os.path.join(out_dir, "test_run.json"))
     write_json(os.path.join(out_dir, "prompts.json"), prompts)
     write_json(os.path.join(out_dir, "measure.json"), measured_state(measured))
+    if script["metric"]["kind"] == "dag":
+        write_json(os.path.join(out_dir, "dag.json"), dag_dict(measured.dag))
 
 
 # Prompt goldens. Each renderer builds a prompt the way deepeval's metric does

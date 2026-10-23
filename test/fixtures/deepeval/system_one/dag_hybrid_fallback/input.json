@@ -1,0 +1,120 @@
+{
+  "description": "DAGMetric in hybrid mode with Jev down: the LLM takes both judgements",
+  "metrics": [
+    {
+      "kind": "dag",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5,
+        "name": "Format Correctness",
+        "dag": {
+          "nodes": {
+            "extract": {
+              "type": "TaskNode",
+              "instructions": "Extract all headings in `actual_output`.",
+              "output_label": "Summary headings",
+              "label": "Extract headings",
+              "evaluation_params": [
+                "actual_output"
+              ],
+              "children": [
+                "has_headings"
+              ]
+            },
+            "has_headings": {
+              "type": "BinaryJudgementNode",
+              "criteria": "Does the summary headings contain all three: 'intro', 'body', and 'conclusion'?",
+              "label": null,
+              "evaluation_params": null,
+              "children": [
+                "missing",
+                "complete"
+              ]
+            },
+            "missing": {
+              "type": "VerdictNode",
+              "verdict": false,
+              "score": 0
+            },
+            "complete": {
+              "type": "VerdictNode",
+              "verdict": true,
+              "child": {
+                "type": "node",
+                "ref": "order"
+              }
+            },
+            "order": {
+              "type": "NonBinaryJudgementNode",
+              "criteria": "Are the summary headings in the correct order: 'intro' => 'body' => 'conclusion'?",
+              "label": "Heading order",
+              "evaluation_params": [
+                "actual_output"
+              ],
+              "children": [
+                "out",
+                "partly_out",
+                "in_order"
+              ]
+            },
+            "out": {
+              "type": "VerdictNode",
+              "verdict": "Out of order",
+              "score": 2
+            },
+            "partly_out": {
+              "type": "VerdictNode",
+              "verdict": "Partly out of order",
+              "score": 4
+            },
+            "in_order": {
+              "type": "VerdictNode",
+              "verdict": "In order",
+              "score": 10
+            }
+          }
+        }
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Summarise the meeting transcript under intro, body and conclusion headings.",
+    "actual_output": "Intro: The team met to plan the launch.\nConclusion: The launch moves to May.\nBody: QA needs two more weeks."
+  },
+  "system_one": {
+    "model": "exploding-jev",
+    "raises": {
+      "type": "ConnectionError",
+      "message": "Jev is down"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "dag": {
+      "output": [
+        {
+          "output": [
+            "Intro",
+            "Conclusion",
+            "Body"
+          ]
+        }
+      ],
+      "reason,verdict": [
+        {
+          "reason": "All three headings are there.",
+          "verdict": true
+        },
+        {
+          "reason": "Body and conclusion are swapped.",
+          "verdict": "Partly out of order"
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.4 because the body and conclusion are swapped."
+        }
+      ]
+    }
+  }
+}

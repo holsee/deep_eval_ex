@@ -47,6 +47,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
     conversation_completeness_system_one
     conversational_jev_eval conversational_jev_eval_strict_not_applicable
     conversational_jev_eval_down
+    dag_hybrid dag_hybrid_fallback dag_system_one
     faithfulness_hybrid faithfulness_hybrid_fallback faithfulness_system_one
     faithfulness_system_one_strict
     goal_accuracy_hybrid goal_accuracy_hybrid_fallback goal_accuracy_system_one
@@ -116,7 +117,7 @@ defmodule DeepEvalEx.SystemOneFixturesTest do
              argument_correctness tool_correctness turn_relevancy conversation_completeness
              knowledge_retention role_adherence turn_faithfulness turn_contextual_precision
              turn_contextual_recall turn_contextual_relevancy goal_accuracy tool_use
-             task_completion step_efficiency plan_quality plan_adherence),
+             task_completion step_efficiency plan_quality plan_adherence dag),
         suffix <- ~w(system_one hybrid hybrid_fallback) do
       assert "#{kind}_#{suffix}" in @scenarios
     end

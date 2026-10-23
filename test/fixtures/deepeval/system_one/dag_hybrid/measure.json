@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.4,
+    "success": false,
+    "reason": "The score is 0.4 because the body and conclusion are swapped.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 2000,
+    "output_tokens": 0,
+    "verbose_logs": "______________________\n| TaskNode | Level == 0 |\n*******************************\nLabel: Extract headings\n\nInstructions:\nExtract all headings in `actual_output`.\n\nSummary headings:\n['Intro', 'Conclusion', 'Body']\n \n \n__________________________________\n| BinaryJudgementNode | Level == 1 |\n************************************************\nLabel: None\n\nCriteria:\nDoes the summary headings contain all three: 'intro', 'body', and 'conclusion'?\n\nVerdict: True\nReason: P(true)=0.92\n \n \n_____________________________________\n| NonBinaryJudgementNode | Level == 2 |\n*****************************************************\nLabel: Heading order\n\nCriteria:\nAre the summary headings in the correct order: 'intro' => 'body' => 'conclusion'?\n\nVerdict: Partly out of order\nReason: P=0.75, confidence=0.62\n \n \n________________________\n| VerdictNode | Level == 3 |\n**********************************\nVerdict: Partly out of order\nType: Deterministic",
+    "confidence": 0.62,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

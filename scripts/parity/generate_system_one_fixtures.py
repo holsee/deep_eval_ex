@@ -124,6 +124,7 @@ from deepeval.metrics import (  # noqa: E402
     ContextualRelevancyMetric,
     ConversationCompletenessMetric,
     ConversationalJevEval,
+    DAGMetric,
     FaithfulnessMetric,
     GoalAccuracyMetric,
     HallucinationMetric,
@@ -199,6 +200,7 @@ METRICS = {
     "step_efficiency": StepEfficiencyMetric,
     "plan_quality": PlanQualityMetric,
     "plan_adherence": PlanAdherenceMetric,
+    "dag": DAGMetric,
 }
 
 # Metrics that follow their eval mode but never build a System One model, so
@@ -305,6 +307,8 @@ def build_metric(spec, system_one_model, judge):
         return ConversationalJevEval(system_one_model=system_one_model, **params)
     if "available_tools" in params:
         params["available_tools"] = [ToolCall(**tool) for tool in params["available_tools"]]
+    if kind == "dag":
+        params["dag"] = gf.build_dag(params["dag"])
     if "expected_schema" in params:
         params["expected_schema"] = gf.build_expected_schema(params["expected_schema"])
     if kind in WITHOUT_SYSTEM_ONE_MODEL:
@@ -1158,6 +1162,56 @@ SUMMARIZATION_VERDICTS = {
         {"verdict": "no", "reason": "The original text says the park opens in May, not June."},
     ]}],
 }
+
+
+# A DAGMetric checking a meeting summary's headings: a TaskNode extracts
+# them, a BinaryJudgementNode checks all three are there and a
+# NonBinaryJudgementNode how well they are ordered. Under hybrid (and
+# system_one, which a DAG runs as hybrid) Jev takes both judgements, the LLM
+# the task and the reason.
+FORMAT_DAG = {"nodes": {
+    "extract": {"type": "TaskNode", "instructions": "Extract all headings in `actual_output`.",
+                "output_label": "Summary headings", "label": "Extract headings",
+                "evaluation_params": ["actual_output"], "children": ["has_headings"]},
+    "has_headings": {"type": "BinaryJudgementNode",
+                     "criteria": "Does the summary headings contain all three: 'intro', 'body', and 'conclusion'?",
+                     "label": None, "evaluation_params": None, "children": ["missing", "complete"]},
+    "missing": {"type": "VerdictNode", "verdict": False, "score": 0},
+    "complete": {"type": "VerdictNode", "verdict": True, "child": {"type": "node", "ref": "order"}},
+    "order": {"type": "NonBinaryJudgementNode",
+              "criteria": "Are the summary headings in the correct order: 'intro' => 'body' => 'conclusion'?",
+              "label": "Heading order", "evaluation_params": ["actual_output"],
+              "children": ["out", "partly_out", "in_order"]},
+    "out": {"type": "VerdictNode", "verdict": "Out of order", "score": 2},
+    "partly_out": {"type": "VerdictNode", "verdict": "Partly out of order", "score": 4},
+    "in_order": {"type": "VerdictNode", "verdict": "In order", "score": 10},
+}}
+
+MEETING = {
+    "input": "Summarise the meeting transcript under intro, body and conclusion headings.",
+    "actual_output": "Intro: The team met to plan the launch.\nConclusion: The launch moves to May.\n"
+                     "Body: QA needs two more weeks.",
+}
+
+DAG_JEV = {"model": JEV, "cost": JEV_COST, "answers": {
+    "nouls": {"verdict": noul(0.92)},
+    "choices": {"verdict": choice(
+        "Partly out of order",
+        {"Out of order": 0.1, "Partly out of order": 0.75, "In order": 0.15}, 0.62,
+    )},
+}}
+
+DAG_TASK = {"output": [{"output": ["Intro", "Conclusion", "Body"]}]}
+DAG_REASON = {"reason": [{"reason": "The score is 0.4 because the body and conclusion are swapped."}]}
+DAG_VERDICTS = {"reason,verdict": [
+    {"reason": "All three headings are there.", "verdict": True},
+    {"reason": "Body and conclusion are swapped.", "verdict": "Partly out of order"},
+]}
+
+
+def dag(eval_mode):
+    return metric("dag", eval_mode, name="Format Correctness", dag=FORMAT_DAG)
+
 
 SCENARIOS = {
     # Faithfulness
@@ -2124,6 +2178,32 @@ SCENARIOS = {
         }}],
         "test_case": SUPPORT,
         "system_one": DOWN,
+    },
+    # DAG: no whole-metric form, so system_one runs as hybrid.
+    "dag_hybrid": {
+        "description": "DAGMetric in hybrid mode: the LLM runs the task and explains, Jev takes the "
+                       "binary judgement as a Noul and the non-binary one as a Choice",
+        "metrics": [dag("hybrid")],
+        "test_case": MEETING,
+        "system_one": DAG_JEV,
+        "judge_model": JUDGE,
+        "responses": {"dag": {**DAG_TASK, **DAG_REASON}},
+    },
+    "dag_hybrid_fallback": {
+        "description": "DAGMetric in hybrid mode with Jev down: the LLM takes both judgements",
+        "metrics": [dag("hybrid")],
+        "test_case": MEETING,
+        "system_one": DOWN,
+        "judge_model": JUDGE,
+        "responses": {"dag": {**DAG_TASK, **DAG_VERDICTS, **DAG_REASON}},
+    },
+    "dag_system_one": {
+        "description": "DAGMetric under system_one: it has no whole-metric form, so it runs as hybrid",
+        "metrics": [dag("system_one")],
+        "test_case": MEETING,
+        "system_one": DAG_JEV,
+        "judge_model": JUDGE,
+        "responses": {"dag": {**DAG_TASK, **DAG_REASON}},
     },
     # Batched: evaluate() merges a test case's system_one metrics.
     "batch_system_one": {

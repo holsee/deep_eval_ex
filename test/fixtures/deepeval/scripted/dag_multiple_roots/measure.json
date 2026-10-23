@@ -1,0 +1,12 @@
+{
+  "score": 0.9,
+  "success": true,
+  "reason": null,
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "______________________\n| TaskNode | Level == 0 |\n*******************************\nLabel: None\n\nInstructions:\nExtract the text under the intro heading.\n\nIntro:\nThe team met to plan the launch.\n \n \n______________________\n| TaskNode | Level == 0 |\n*******************************\nLabel: Conclusion text\n\nInstructions:\nExtract the text under the conclusion heading.\n\nConclusion:\nThe launch moves to May.\n \n \n__________________________________\n| BinaryJudgementNode | Level == 1 |\n************************************************\nLabel: Consistency\n\nCriteria:\nDoes the conclusion follow from the intro?\n\nVerdict: True\nReason: Moving the launch follows from planning it.\n \n \n________________________\n| VerdictNode | Level == 2 |\n**********************************\nVerdict: True\nType: Deterministic"
+}

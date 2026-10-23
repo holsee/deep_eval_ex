@@ -2532,6 +2532,49 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     (Jido, LangChain) are left to separate packages.
   - ADR-0011 is now part of the HexDocs Architecture pages and linked
     from the ADR index.
+- **`DeepEvalEx.Metrics.DAG`, a decision tree of LLM judgements**, a port of
+  deepeval 4.3.1's `DAGMetric`. The score comes from the leaf a walk
+  through small judgements reaches, so the same answers always give the
+  same score. See the [DAG](wiki/metrics/DAG.md) metric page.
+  - The graph, `DeepEvalEx.Metrics.DAG.Graph`, is built from the node
+    structs `TaskNode` (the LLM produces something for the nodes after
+    it), `BinaryJudgementNode`, `NonBinaryJudgementNode` and `VerdictNode`
+    (a score from 0 to 10, or the node or metric to run next), under
+    `DeepEvalEx.Metrics.DAG`. Nodes take their children in `new/1` or
+    through `TaskNode.add_node/2` and the judgements' `add_verdict/3`.
+    Each node has an id, so a node placed under two parents is one node.
+    `Graph.new/1` checks the graph as deepeval does, with its messages:
+    each node's children, cycles, roots, and also two versions of one
+    node.
+  - A node runs once every node leading to it has run. Two verdicts of
+    one judgement leading to the same node count as one edge. Each
+    node is shown the outputs of the tasks before it, then its
+    `evaluation_params`. The verbose logs are deepeval's, node by node.
+    A verdict's score ends the walk and the LLM explains it.
+    A verdict can also hand over to a metric. A GEval is rebuilt
+    and judged by the DAG's LLM, as in deepeval. Any other metric is
+    measured with the run's options, and its usage adds to the DAG's.
+    Results are named `"<name> [DAG]"` (`include_dag_suffix: false`
+    drops the suffix). Strict mode forces the threshold to `1` and keeps
+    the score, as deepeval's DAG does.
+  - Under `:hybrid`, a System One model takes the judgements:
+    `SystemOneBinarySpec`, a Noul about the node's text, and
+    `SystemOneChoiceSpec`, a Choice over a non-binary node's options. The
+    LLM still runs the tasks and writes the reason, and covers a failed
+    request. A DAG has no whole-metric form, so `:system_one` runs as
+    `:hybrid`, as in deepeval.
+  - `Graph.to_map/1`, `to_json/2`, `from_map/1` and `from_json/1` read and
+    write deepeval's `DeepAcyclicGraph.to_dict`/`to_json` documents. Their
+    node, GEval and metric children follow deepeval's format; models,
+    adapters and keys are never written.
+  - Divergences: a non-binary node offers its options in its verdicts'
+    order, where deepeval follows a Python set's; nodes run one at a time.
+    Confident AI `upload()`/`pull()` and the conversational DAG are not
+    ported.
+  - Parity fixtures written by deepeval: five scripted-judge scenarios
+    (`dag_*`: prompts, measure, verbose logs, test run, and the graph as
+    `to_dict` writes it, `dag.json`) and three System One scenarios
+    (`dag_hybrid`, `dag_hybrid_fallback`, `dag_system_one`).
 
 ### Changed
 

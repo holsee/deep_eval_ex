@@ -22,6 +22,7 @@ Use an LLM to evaluate outputs based on criteria:
 |--------|---------|----------|
 | [GEval](GEval.md) | Flexible criteria-based evaluation | Custom evaluation criteria |
 | [ConversationalGEval](ConversationalGEval.md) | Criteria-based evaluation of a whole conversation | Custom criteria for multi-turn chatbots |
+| [DAG](DAG.md) | A decision tree of small judgements, scored at the leaf it reaches | Deterministic rubrics, format and structure checks |
 | [TurnRelevancy](TurnRelevancy.md) | Each assistant turn is relevant to the conversation so far | Multi-turn chatbots that drift off-topic |
 | [ConversationCompleteness](ConversationCompleteness.md) | The assistant satisfies every user intention | Multi-turn chatbots that leave requests unmet |
 | [KnowledgeRetention](KnowledgeRetention.md) | The assistant remembers what the user told it | Multi-turn chatbots that ask for the same thing twice |

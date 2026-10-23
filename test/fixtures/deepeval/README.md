@@ -9,7 +9,7 @@ Fixtures written by **deepeval 4.3.1**, in thirteen sets:
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
-  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's thirty-four
+  `test/deep_eval_ex/scripted_parity_test.exs` to check that DeepEvalEx's thirty-five
   metrics send the same prompts, measure the same results and export the same
   test run as deepeval's for the same judge responses
 - [prompt goldens](#prompt-goldens) (`prompts/`), used by
@@ -238,6 +238,12 @@ a missing or an unused response. Next to each script it writes:
   `output_tokens` and `verbose_logs`
 - `test_run.json` - the file `deepeval.evaluate()` wrote for the same metric
   and test case, unchanged
+- `dag.json` - for a DAGMetric only (`kind` `dag`, whose `params.dag` is the
+  graph in `DeepAcyclicGraph.to_dict`'s shape): the graph deepeval built from
+  it, written back by `to_dict` with its nodes numbered `node_<i>` in
+  `to_dict`'s order instead of random uuids. `test/deep_eval_ex/metrics/dag_test.exs`
+  checks that `DeepEvalEx.Metrics.DAG.Graph.to_map/1` writes the same, once
+  its uuids are numbered likewise
 
 The generator checks that `measure()` and `evaluate()` sent the same prompts.
 When `measure()` raises after setting the metric's `error` (as
@@ -289,6 +295,7 @@ per scenario: prompts (byte for byte, per step), measure (every field but
 | ToolCorrectness | `tool_correctness_pass`, `tool_correctness_fail`, `tool_correctness_available_tools` (LLM-scored tool selection), `tool_correctness_strict` |
 | PatternMatch | `pattern_match_pass` (a trimmed pattern and output, `\w` matching a non-ASCII letter), `pattern_match_fail` (a match of part of the output only), `pattern_match_ignore_case` (`ignore_case`, an alternation whose first branch matches a prefix only, and `verbose_mode`, whose printed logs the Elixir side captures); no judge |
 | JsonCorrectness | `json_correctness_pass` (an empty list, an omitted optional field, a key the schema does not declare; strict by default: the integer `1`, threshold `1`; no judge call), `json_correctness_fail` (valid JSON failing the schema: a string for an integer, a number in a list of strings, a nested `$defs` model missing a field), `json_correctness_invalid_json` (prose around an unterminated object), `json_correctness_not_strict` (`strict_mode=False`: threshold `0.5`; a JSON array for an object; `include_reason=False`: no judge call; `verbose_mode`); the reason prompt prints the schema as `json.dumps(indent=4)`, non-ASCII escaped |
+| DAG | `dag_pass` (a TaskNode's list output, a BinaryJudgementNode then a NonBinaryJudgementNode, scored `10/10` as the float `1.0`), `dag_fail` (a raw-text task output; the binary judgement's `false` verdict scores `0`), `dag_strict` (a task output that is a dict, printed as its `str()`; `4/10` kept as `0.4` under the strict threshold `1`), `dag_geval_child` (the in-order verdict hands over to a GEval, rebuilt with the DAG's judge: its steps and score after the DAG's prompts, its reason the DAG's), `dag_multiple_roots` (two root TaskNodes feeding one judgement, which waits for both and is shown both outputs; `include_reason=False`). A NonBinaryJudgementNode offers its options as a Python set iterates them, so each script lists them in that order (the generator checks it) |
 | ToolPermission | `tool_permission_pass`, `tool_permission_fail` (a denied tool that is also allowed, a denied tool, a tool off the allowlist), `tool_permission_no_tool_calls` (`tools_called: []`: the float `1.0`), `tool_permission_denylist_only` (`Allowed=ANY`, a repeated denied call, a lower threshold, `include_reason=False`), `tool_permission_strict` (the integer `0`, threshold the float `1.0`); no judge |
 
 ### Not covered
@@ -696,6 +703,8 @@ Each `system_one/<scenario>/` holds:
 | `plan_quality_hybrid`, `plan_adherence_hybrid` | `hybrid` with one `SystemOneScoreSpec` each, after the LLM extracts the task and plan (`prompts.json`): PlanQuality's about the `task` and `plan`, PlanAdherence's about the `task`, `plan` and compacted `trace` |
 | `plan_quality_hybrid_fallback`, `plan_adherence_hybrid_fallback` | The same with Jev down: the LLM scores, its reason kept, the error in `system_one_fallback_reason` |
 | `plan_adherence_hybrid_no_trace` | PlanAdherence in `hybrid` without a trace: no Score spec, so no `decide()` call and the LLM scores |
+| `dag_hybrid`, `dag_system_one` | DAGMetric in `hybrid`, and under `system_one`, which it runs as `hybrid` (it has no whole-metric form): the LLM runs the TaskNode and writes the reason, Jev takes the BinaryJudgementNode as a Noul (`SystemOneBinarySpec`, `true` from `0.5`, reason `P(true)=0.92`) and the NonBinaryJudgementNode as a Choice over its options (`SystemOneChoiceSpec`, reason `P=0.75, confidence=0.62`), each about `{"text": ...}`, the node's text |
+| `dag_hybrid_fallback` | The same with Jev down: the LLM takes both judgements, the reasons joined in `system_one_fallback_reason` |
 | `batch_system_one_retention_role` | KnowledgeRetention and RoleAdherence batched into one request by `evaluate()`, the state holding the turns and the `chatbot_role` |
 | `batch_system_one_down` | Two batched metrics with Jev down: no fallback, `measure()` raises and `evaluate()` records the error on each metric |
 | `refusal_classifier_system_one` | `RefusalClassifier` on Jev: one Choice over its labels, deterministic reason |

@@ -130,6 +130,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/JsonCorrectness.md",
         "wiki/metrics/GEval.md",
         "wiki/metrics/ConversationalGEval.md",
+        "wiki/metrics/DAG.md",
         "wiki/metrics/ConversationalJevEval.md",
         "wiki/metrics/TurnRelevancy.md",
         "wiki/metrics/ConversationCompleteness.md",

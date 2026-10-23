@@ -1,0 +1,78 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "text": "Summary headings:\n['Intro', 'Conclusion', 'Body']\n\n"
+        },
+        "questions": {
+          "verdict": {
+            "type": "noul",
+            "instructions": "Does the summary headings contain all three: 'intro', 'body', and 'conclusion'?"
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      },
+      {
+        "state": {
+          "text": "Actual Output:\nIntro: The team met to plan the launch.\nConclusion: The launch moves to May.\nBody: QA needs two more weeks.\n"
+        },
+        "questions": {
+          "verdict": {
+            "type": "choice",
+            "instructions": "Are the summary headings in the correct order: 'intro' => 'body' => 'conclusion'?",
+            "criteria": {
+              "Out of order": null,
+              "Partly out of order": null,
+              "In order": null
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "text": "Summary headings:\n['Intro', 'Conclusion', 'Body']\n\n"
+      },
+      "questions": {
+        "verdict": {
+          "type": "noul",
+          "instructions": "Does the summary headings contain all three: 'intro', 'body', and 'conclusion'?"
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    },
+    {
+      "state": {
+        "text": "Actual Output:\nIntro: The team met to plan the launch.\nConclusion: The launch moves to May.\nBody: QA needs two more weeks.\n"
+      },
+      "questions": {
+        "verdict": {
+          "type": "choice",
+          "instructions": "Are the summary headings in the correct order: 'intro' => 'body' => 'conclusion'?",
+          "criteria": {
+            "Out of order": null,
+            "Partly out of order": null,
+            "In order": null
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

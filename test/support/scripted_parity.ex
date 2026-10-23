@@ -30,6 +30,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     ContextualRelevancy,
     ConversationalGEval,
     ConversationCompleteness,
+    DAG,
     ExactMatch,
     Faithfulness,
     GEval,
@@ -57,6 +58,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     TurnRelevancy
   }
 
+  alias DeepEvalEx.Metrics.DAG.Graph
   alias DeepEvalEx.Metrics.GEval.Rubric
   alias DeepEvalEx.Schemas.ToolCall
   alias DeepEvalEx.Test.JSONDiff
@@ -317,7 +319,8 @@ defmodule DeepEvalEx.Test.ScriptedParity do
   defp load(scenario) do
     path = fixture(scenario, "script.json")
     # The test case keeps its JSON objects' key order, as the export does,
-    # and so does JsonCorrectness's expected schema, as its prompt prints it.
+    # and so does JsonCorrectness's expected schema, as its prompt prints it,
+    # and a DAG's nodes, whose order gives its roots'.
     script = path |> File.read!() |> Jason.decode!()
     %OrderedObject{} = ordered = path |> File.read!() |> decode()
 
@@ -325,6 +328,7 @@ defmodule DeepEvalEx.Test.ScriptedParity do
     |> Map.put("test_case", ordered["test_case"])
     |> Map.put("trace", ordered["trace"])
     |> keep_order(ordered, ["metric", "params", "expected_schema"])
+    |> keep_order(ordered, ["metric", "params", "dag"])
   end
 
   defp keep_order(script, ordered, path) do
@@ -391,6 +395,13 @@ defmodule DeepEvalEx.Test.ScriptedParity do
       |> update_present(:rubric, &Enum.map(&1, fn rubric -> rubric(rubric) end))
 
     {ConversationalGEval.new(opts), [adapter: :mock]}
+  end
+
+  # A DAG's graph is deepeval's to_dict form, which Graph.from_map/1 reads.
+  defp metric(%{"metric" => %{"kind" => "dag", "params" => params}}) do
+    {dag, params} = Map.pop!(params, "dag")
+    opts = params |> options(DAG) |> Keyword.put(:dag, Graph.from_map(dag))
+    {DAG.new(opts), [adapter: :mock]}
   end
 
   defp metric(%{"metric" => %{"kind" => kind, "params" => params}}) do
