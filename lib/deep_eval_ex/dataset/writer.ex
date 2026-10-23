@@ -6,7 +6,6 @@ defmodule DeepEvalEx.Dataset.Writer do
   # arguments, picks the goldens and documents the behaviour.
 
   alias DeepEvalEx.Dataset.{Golden, Utils}
-  alias DeepEvalEx.Schemas.ToolCall
   alias DeepEvalEx.TestRun.JSON
 
   # save_as's keys and CSV columns, in its order
@@ -53,8 +52,8 @@ defmodule DeepEvalEx.Dataset.Writer do
         golden.name,
         golden.comments,
         golden.source_file,
-        dump_tools(golden.tools_called),
-        dump_tools(golden.expected_tools),
+        Utils.dump_tool_calls(golden.tools_called),
+        Utils.dump_tool_calls(golden.expected_tools),
         golden.token_cost,
         golden.input_token_count,
         golden.output_token_count,
@@ -75,8 +74,8 @@ defmodule DeepEvalEx.Dataset.Writer do
       golden.name,
       golden.comments,
       golden.source_file,
-      golden.tools_called |> dump_tools() |> json_cell(),
-      golden.expected_tools |> dump_tools() |> json_cell(),
+      golden.tools_called |> Utils.dump_tool_calls() |> json_cell(),
+      golden.expected_tools |> Utils.dump_tool_calls() |> json_cell(),
       golden.token_cost,
       golden.input_token_count,
       golden.output_token_count,
@@ -96,25 +95,6 @@ defmodule DeepEvalEx.Dataset.Writer do
 
   defp compact_json(nil), do: nil
   defp compact_json(term), do: Jason.encode!(term)
-
-  # ToolCall.model_dump(by_alias=True, exclude_none=True, mode="json"), in
-  # its field order; nil or no tool calls are None
-  defp dump_tools(nil), do: nil
-  defp dump_tools([]), do: nil
-  defp dump_tools(tools), do: Enum.map(tools, &dump_tool/1)
-
-  defp dump_tool(%ToolCall{} = tool) do
-    [
-      {"name", tool.name},
-      {"type", tool.type |> Atom.to_string() |> String.upcase()},
-      {"description", tool.description},
-      {"reasoning", tool.reasoning},
-      {"output", tool.output},
-      {"inputParameters", tool.input_parameters}
-    ]
-    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
-    |> Jason.OrderedObject.new()
-  end
 
   # Expectations.model_dump(), in its field order
   defp dump_expectations(nil), do: nil

@@ -34,9 +34,10 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
   ## Single-turn only
 
   deepeval's dataset holds either single-turn goldens and test cases or
-  multi-turn (conversational) ones, never both. DeepEvalEx has no
-  conversational goldens or test cases yet, so a dataset is single-turn and
-  takes only `DeepEvalEx.Dataset.Golden` and `DeepEvalEx.TestCase`.
+  multi-turn (conversational) ones, never both. A DeepEvalEx dataset is
+  single-turn for now and takes only `DeepEvalEx.Dataset.Golden` and
+  `DeepEvalEx.TestCase`; `DeepEvalEx.Dataset.ConversationalGolden` converts
+  to and from `DeepEvalEx.ConversationalTestCase` on its own.
 
   ## Loading files
 
@@ -64,7 +65,7 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
   A file that cannot be read raises `File.Error`. Where deepeval raises
   `ValueError` (with its message), `TypeError` or a validation error, the
   loaders raise `ArgumentError`. A golden with a scenario is a multi-turn
-  golden in deepeval; those are not supported yet and raise
+  golden in deepeval; the loaders do not read those yet and raise
   `ArgumentError`.
 
   Differences from deepeval: a text cell of digits stays a string, where

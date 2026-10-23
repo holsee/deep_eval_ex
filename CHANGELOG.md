@@ -1756,6 +1756,35 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   GoalAccuracy and a batched pair) check their prompts, decisions, scores,
   verbose logs and exported `conversationalTestCases` byte for byte against
   deepeval's.
+- **Conversational goldens: `DeepEvalEx.Dataset.ConversationalGolden` and
+  `DeepEvalEx.Dataset.Persona`**, ports of deepeval 4.3.1's
+  `ConversationalGolden` and `Persona` (`dataset/golden.py`).
+  - `ConversationalGolden.new/1` takes the `scenario` (required),
+    `expected_outcome`, `persona`, `user_description`, `context`,
+    `additional_metadata`, `comments`, `name`, `custom_column_key_values`,
+    `expectations`, `expected_labels` (or `expectedLabels`) and `turns`
+    (`DeepEvalEx.Turn`s or maps), dropping unknown keys as deepeval does.
+  - As deepeval's `resolve_persona`, a persona sets `user_description` to
+    its `characteristics`; a `user_description` alone becomes a persona,
+    with a deprecation warning; a conflicting pair is an error with
+    deepeval's message.
+  - `to_test_case/1`, `from_test_case/1`, `convert_goldens_to_test_cases/1`
+    and `convert_test_cases_to_goldens/1` port deepeval's
+    `convert_convo_goldens_to_convo_test_cases` (ranking test cases by
+    position; a golden without turns raises `ArgumentError`) and
+    `convert_convo_test_cases_to_convo_goldens` (a test case without a
+    scenario raises `ArgumentError` with deepeval's message).
+  - `Persona` has `name`, `characteristics` (required) and `metadata`, and
+    `Persona.prompt_block/1` renders it for a simulator prompt as deepeval.
+    The voice-only settings (`voice`, `speaks_first`,
+    `interruption_behavior`, `background_noise`, ...) are not ported and
+    are dropped.
+  - `DeepEvalEx.Dataset.Utils` gains deepeval's `parse_turns` (as
+    `parse_turns/1`, returning `{:error, message}` with deepeval's messages,
+    and `parse_turns!/1`), `format_turns/1` (byte for byte deepeval's JSON)
+    and `serialize_persona/1`, for the loaders and `save_as`.
+  - `EvaluationDataset` still holds single-turn goldens only, and its
+    loaders still raise on goldens with a scenario.
 
 ### Changed
 

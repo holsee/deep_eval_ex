@@ -98,8 +98,31 @@ does.
 ## Single-turn only
 
 deepeval's datasets hold single-turn or multi-turn (conversational) goldens,
-never both. DeepEvalEx has no conversational goldens or test cases yet, so
-its datasets are single-turn.
+never both. DeepEvalEx's datasets are single-turn for now. Conversational
+goldens exist on their own: `DeepEvalEx.Dataset.ConversationalGolden` holds
+a `scenario`, an `expected_outcome`, a `DeepEvalEx.Dataset.Persona` (who the
+simulated user is) and the turns so far, and converts to and from
+`DeepEvalEx.ConversationalTestCase`:
+
+```elixir
+alias DeepEvalEx.Dataset.ConversationalGolden
+
+golden =
+  ConversationalGolden.new!(
+    scenario: "A customer asks for a refund",
+    expected_outcome: "The refund is issued",
+    persona: %{name: "Ann", characteristics: "A busy parent"},
+    turns: [
+      %{role: :user, content: "I'd like a refund."},
+      %{role: :assistant, content: "Done!"}
+    ]
+  )
+
+test_case = ConversationalGolden.to_test_case(golden)
+```
+
+The deprecated `user_description` still works, with a warning, and is kept
+equal to the persona's `characteristics`.
 
 ## Loading goldens and test cases from files
 
@@ -137,8 +160,8 @@ itself contains the delimiter comes back split.
 
 A file that does not load raises: `File.Error` when it cannot be read,
 `ArgumentError` otherwise. Goldens with a `scenario` are deepeval's
-conversational goldens, which DeepEvalEx does not support yet, so they
-raise too.
+conversational goldens, which the loaders do not read yet, so they raise
+too.
 
 ## Saving a dataset to a file
 
