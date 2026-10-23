@@ -2053,6 +2053,34 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     run matches but for times and the unnamed test's name, and the cache
     file byte for byte. The [ExUnit Integration](wiki/guides/ExUnit-Integration.md)
     guide covers it, and ADR-0010 is now part of the documentation.
+- **Span and trace data model** (ADR-0011), the first tracing unit and a
+  port of deepeval 4.3.1's `tracing/types.py`. Nothing records spans yet;
+  capture comes in a later unit.
+  - `DeepEvalEx.Tracing.Span` is one struct for deepeval's `BaseSpan`,
+    `AgentSpan`, `LlmSpan`, `RetrieverSpan` and `ToolSpan`, told apart by
+    `:type` (`:base`, `:agent`, `:llm`, `:retriever` or `:tool`; `type/1`).
+    `Span.new/1` validates each type with its own Peri schema: it requires
+    `:name` on agent and tool spans, as deepeval does, and rejects a field
+    of another type (a `:model` on an agent span), which deepeval would
+    silently ignore. Token counts and costs given as integers become
+    floats, as pydantic's `float` fields make them (`42` exports as
+    `42.0`). Metrics are specs (a module, `{module, opts}` or a metric
+    struct), and times are epoch microseconds. `status_value/1` and
+    `type_value/1` give deepeval's `TraceSpanStatus` and `SpanApiType`
+    values.
+  - `DeepEvalEx.Tracing.Trace` ports `Trace`, validated the same way.
+  - `DeepEvalEx.Tracing.Time.to_zod_iso/2` ports `to_zod_compatible_iso`:
+    UTC ISO 8601 ending in `Z`, truncated rather than rounded to
+    milliseconds, or to microseconds for `tokenTimes` keys; it matches
+    every row of the `traced/iso_table.json` fixture. `now_us/0` reads the
+    clock, which `config :deep_eval_ex, :tracing, clock: ...` can replace.
+  - `DeepEvalEx.Tracing.JSON.make_serializable/1` ports
+    `make_json_serializable` (atoms become strings, tuples and sets lists,
+    map keys Python `str()` text, structs go through
+    `DeepEvalEx.SystemOne.Dumpable`, `String.Chars` or their public fields,
+    and pids, refs and funs their `inspect/1` text), and `mask/1` applies
+    `config :deep_eval_ex, :tracing, mask: ...`, as `trace_manager.mask`.
+    The modules are grouped under "Tracing" in the documentation.
 
 ### Changed
 

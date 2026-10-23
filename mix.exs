@@ -205,6 +205,7 @@ defmodule DeepEvalEx.MixProject do
         "System One": ~r/DeepEvalEx\.SystemOne(\..*)?$/,
         Datasets: ~r/DeepEvalEx\.Dataset(\..*)?$/,
         Reports: ~r/DeepEvalEx\.Report(\..*)?$/,
+        Tracing: ~r/DeepEvalEx\.Tracing(\..*)?$/,
         "Test Runner": [
           DeepEvalEx.ExUnit,
           DeepEvalEx.ExUnit.Collector,
