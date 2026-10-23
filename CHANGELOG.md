@@ -3317,6 +3317,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - Updated `hpax` (EEF-CVE-2026-58226), `mint`, `finch` and `req` to versions
   without known advisories, and dropped stale `ecto` and `decimal` lock
   entries. `mix hex.audit` is clean.
+- Updated `plug_crypto` to 2.2.1, past EEF-CVE-2026-105963 (a secret key base
+  exposed in stack trace arguments when a `Plug.Crypto` function is given
+  wrong-typed arguments). It is only a test dependency, through `plug` for
+  `Req.Test`. `mix hex.audit` is clean again.
 - The dev container's resolved credentials file is written with mode 600 and
   gitignored, along with its temp files, and is cleaned up if resolution is
   interrupted.
