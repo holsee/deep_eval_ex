@@ -2294,8 +2294,11 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - It returns the golden's `DeepEvalEx.TestRun.TestCase`, with its trace
     export, trace-level metric data and cost, and a success that span
     metrics can fail; the golden's `DeepEvalEx.TestResult` followed by one
-    per span with metric data, bucket by bucket, without duplicates; and
-    the walked LLM spans' prompts.
+    per span with metric data, bucket by bucket, without duplicates (a
+    span result whose input, output and metric data equal the golden's,
+    compared as deepeval's `MetricData` rows, so a differing latency,
+    confidence or metadata does not keep it); and the walked LLM spans'
+    prompts.
   - Every traced scenario but `raised_uncaught` (the iterator marks it)
     and `requires_trace` (its metrics come later) evaluates, in both
     modes, to the test cases, `metricsScores`, `traceMetricsScores`,

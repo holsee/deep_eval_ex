@@ -529,7 +529,7 @@ defmodule DeepEvalEx.Evaluator.Agentic do
           %{api: api, results: [_ | _] = results} <- entries,
           bucket_of(api) == bucket,
           result = span_result(api, results),
-          not duplicate?(result, main),
+          not duplicate?(result, main, api_test_case.metrics_data),
           do: result
 
     [main | span_results]
@@ -550,9 +550,13 @@ defmodule DeepEvalEx.Evaluator.Agentic do
     }
   end
 
-  defp duplicate?(result, main) do
+  # filter_duplicate_results compares deepeval's MetricData rows: the
+  # span's against the golden API test case's (its expectation row split
+  # out). A result's latency, confidence and metadata are no part of them,
+  # and differ between two measurements of the same metric.
+  defp duplicate?(result, main, main_rows) do
     result.input == main.input and result.actual_output == main.actual_output and
-      result.metrics_data == main.metrics_data
+      Enum.map(result.metrics_data, &MetricData.from_result/1) == main_rows
   end
 
   # log_prompt: each walked LLM span's prompt, once per key (its alias; the

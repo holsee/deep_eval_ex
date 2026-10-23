@@ -11,7 +11,15 @@ defmodule DeepEvalEx.Evaluator.AgenticTest do
     # Reports each measure to the test, with its test case.
     use DeepEvalEx.Metrics.BaseMetric
 
-    defstruct [:name, :pid, :raise, score: 1.0, threshold: 0.5, requires_trace: false]
+    defstruct [
+      :name,
+      :pid,
+      :raise,
+      score: 1.0,
+      threshold: 0.5,
+      requires_trace: false,
+      fresh_metadata: false
+    ]
 
     @impl true
     def metric_name, do: "Probe"
@@ -29,7 +37,17 @@ defmodule DeepEvalEx.Evaluator.AgenticTest do
       send(opts[:pid], {:measured, opts[:name], test_case})
       if opts[:raise], do: raise(opts[:raise])
 
-      {:ok, Result.new(metric: opts[:name], score: opts[:score], threshold: opts[:threshold])}
+      # fresh_metadata differs between two measurements, as their latency
+      # does, outside the metric data deepeval compares.
+      metadata = if opts[:fresh_metadata], do: %{measurement: make_ref()}
+
+      {:ok,
+       Result.new(
+         metric: opts[:name],
+         score: opts[:score],
+         threshold: opts[:threshold],
+         metadata: metadata
+       )}
     end
   end
 
@@ -392,6 +410,30 @@ defmodule DeepEvalEx.Evaluator.AgenticTest do
       outcome = Agentic.evaluate(trace([root]), @golden)
 
       assert Enum.map(outcome.test_results, & &1.name) == ["password-reset", "step", "agent"]
+    end
+
+    for mode <- [:async, :sync] do
+      test "#{mode}: a span result identical to the golden's is dropped" do
+        judge = probe("Judge", fresh_metadata: true)
+        root = span("echo", input: "hi", output: "hi", metrics: [judge])
+        traced = trace([root], input: "hi", output: "hi", metrics: [judge])
+
+        outcome = Agentic.evaluate(traced, %Golden{input: "hi"}, mode: unquote(mode))
+
+        assert [%TestResult{name: "test_case_0", input: "hi", actual_output: "hi"}] =
+                 outcome.test_results
+
+        assert bucket(outcome, "baseSpans") == ["echo"]
+      end
+    end
+
+    test "a span result whose metric data differs from the golden's is kept" do
+      root = span("echo", input: "hi", output: "hi", metrics: [probe("Judge", score: 0.1)])
+      traced = trace([root], input: "hi", output: "hi", metrics: [probe("Judge")])
+
+      outcome = Agentic.evaluate(traced, %Golden{input: "hi"})
+
+      assert Enum.map(outcome.test_results, & &1.name) == ["test_case_0", "echo"]
     end
 
     test "the prompts of the walked LLM spans, once per alias" do
