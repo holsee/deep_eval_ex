@@ -98,6 +98,39 @@ defmodule DeepEvalEx.Telemetry do
   Together these replace deepeval's Jev progress indicator; the default
   logger logs each request and fallback.
 
+  ### Tracing Events
+
+  `DeepEvalEx.Tracing` notifies these events; spans are recorded in its
+  store whether or not anyone listens. The span events are shaped like
+  `:telemetry.span/3`'s:
+
+  - `[:deep_eval_ex, :span, :start]` - A span opened
+    - Measurements: `%{system_time: integer(), monotonic_time: integer()}`
+    - Metadata: `%{span: DeepEvalEx.Tracing.Span.t(), trace_uuid: String.t(),
+      parent_uuid: String.t() | nil, type: atom(), telemetry_span_context:
+      reference()}`
+
+  - `[:deep_eval_ex, :span, :stop]` - A span closed, successful or with an
+    error set by hand
+    - Measurements: `%{duration: integer(), monotonic_time: integer()}`
+    - Metadata: the start metadata, with the closed span
+
+  - `[:deep_eval_ex, :span, :exception]` - A span's code raised, threw or
+    exited; the span is `:errored`
+    - Measurements: `%{duration: integer(), monotonic_time: integer()}`
+    - Metadata: the stop metadata, plus `kind`, `reason` and `stacktrace`
+
+  - `[:deep_eval_ex, :trace, :stop]` - A trace closed
+    - Measurements: `%{duration: integer()}`, in native time units
+    - Metadata: `%{trace: DeepEvalEx.Tracing.Trace.t(), route: :capture |
+      :off}`, `:capture` when a `DeepEvalEx.Tracing.capture/2` collects it
+
+  - `[:deep_eval_ex, :trace, :timeout]` - `DeepEvalEx.Tracing.capture/2`
+    stopped waiting for a trace still open after its `:await_open`, and
+    returned it `:in_progress`
+    - Measurements: `%{system_time: integer()}`
+    - Metadata: `%{trace: DeepEvalEx.Tracing.Trace.t()}`
+
   ## Example: Logging Handler
 
       :telemetry.attach_many(

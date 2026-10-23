@@ -118,6 +118,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/guides/Custom-Metrics.md",
         "wiki/guides/Custom-LLM-Adapters.md",
         "wiki/guides/Telemetry.md",
+        "wiki/guides/Tracing.md",
         "wiki/guides/Datasets.md",
         "wiki/guides/Classifiers.md",
         "wiki/guides/Expectations.md",

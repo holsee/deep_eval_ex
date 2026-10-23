@@ -48,6 +48,8 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
     are started with `DeepEvalEx.LLM.Usage.async/1`. The usage of a
     measurement that errors is passed on to the caller's usage scope, where
     `DeepEvalEx.Evaluator` puts it on the errored result
+  - No tracing while measuring (`DeepEvalEx.Tracing.suppress/1`): the
+    judge's LLM calls never appear as spans in a user's trace
 
   ## LLM-judged metrics
 
@@ -131,7 +133,7 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   """
 
   alias DeepEvalEx.LLM.{Adapter, Usage}
-  alias DeepEvalEx.{Result, TestCase}
+  alias DeepEvalEx.{Result, TestCase, Tracing}
   alias DeepEvalEx.SystemOne.{Context, Ledger, Model}
 
   @type test_case :: TestCase.t()
@@ -520,12 +522,16 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   @doc false
   # Runs a measurement with a fresh System One ledger (deepeval's
   # `reset_system_one_state`) in its own usage scope (see `track_usage/1`),
-  # and returns `{outcome, usages, ledger}`.
+  # and returns `{outcome, usages, ledger}`. Nothing it does is traced
+  # (`DeepEvalEx.Tracing.suppress/1`), so the judge's calls stay out of a
+  # user's trace, as deepeval's internal `observe`.
   @spec track_measure((-> outcome)) ::
           {outcome | {:raised, Exception.t(), Exception.stacktrace()}, [Usage.t()], Ledger.t()}
         when outcome: term()
   def track_measure(fun) do
-    {{outcome, usages}, ledger} = Ledger.track(fn -> track_usage(fun) end)
+    {{outcome, usages}, ledger} =
+      Tracing.suppress(fn -> Ledger.track(fn -> track_usage(fun) end) end)
+
     {outcome, usages, ledger}
   end
 

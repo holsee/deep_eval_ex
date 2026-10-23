@@ -149,6 +149,57 @@ Emitted for each LLM API request.
 | `adapter` | atom | Adapter used |
 | `model` | string | Model name |
 
+### Tracing Events
+
+Emitted by `DeepEvalEx.Tracing` (see the [Tracing](Tracing.md) guide).
+They notify; spans are recorded whether or not a handler is attached.
+
+#### `[:deep_eval_ex, :span, :start | :stop | :exception]`
+
+Emitted when a span opens, closes, or its code raises, throws or exits,
+shaped like `:telemetry.span/3`'s events.
+
+| Measurement | Type | Description |
+|-------------|------|-------------|
+| `system_time` | integer | System time at start (`:start` only) |
+| `monotonic_time` | integer | Monotonic time of the event |
+| `duration` | integer | Native time since the start (`:stop` and `:exception`) |
+
+| Metadata | Type | Description |
+|----------|------|-------------|
+| `span` | `DeepEvalEx.Tracing.Span` | The span |
+| `trace_uuid` | string | Its trace |
+| `parent_uuid` | string \| nil | Its parent span |
+| `type` | atom | `:base`, `:agent`, `:llm`, `:retriever` or `:tool` |
+| `telemetry_span_context` | reference | Pairs a span's events |
+| `kind`, `reason`, `stacktrace` | | What was raised (`:exception` only) |
+
+#### `[:deep_eval_ex, :trace, :stop]`
+
+Emitted when a trace closes.
+
+| Measurement | Type | Description |
+|-------------|------|-------------|
+| `duration` | integer | Native time from the trace's start to its end |
+
+| Metadata | Type | Description |
+|----------|------|-------------|
+| `trace` | `DeepEvalEx.Tracing.Trace` | The closed trace |
+| `route` | atom | `:capture` when a `DeepEvalEx.Tracing.capture/2` collects it, else `:off` |
+
+#### `[:deep_eval_ex, :trace, :timeout]`
+
+Emitted when `DeepEvalEx.Tracing.capture/2` stops waiting for a trace still
+open after its `:await_open` and returns it `:in_progress`.
+
+| Measurement | Type | Description |
+|-------------|------|-------------|
+| `system_time` | integer | System time |
+
+| Metadata | Type | Description |
+|----------|------|-------------|
+| `trace` | `DeepEvalEx.Tracing.Trace` | The trace as it stood |
+
 ## Attaching Handlers
 
 ### Basic Handler

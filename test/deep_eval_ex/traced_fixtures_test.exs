@@ -6,10 +6,11 @@ defmodule DeepEvalEx.TracedFixturesTest do
   TraceApi it would post, the nested trace dict and compact trace its trace
   metrics read, and the test runs of its sync and async `evals_iterator`.
 
-  DeepEvalEx has no tracing yet, so nothing is compared with DeepEvalEx
-  here: these tests keep the fixtures loadable and consistent, and check
-  `DeepEvalEx.Test.TracedFixtures.normalise/1`, until the tracing units
-  (ADR-0011) consume them.
+  Nothing is compared with DeepEvalEx here: these tests keep the fixtures
+  loadable and consistent, and check
+  `DeepEvalEx.Test.TracedFixtures.normalise/1`.
+  `DeepEvalEx.Tracing.CaptureParityTest` compares DeepEvalEx's captured
+  span trees with them.
   """
 
   use ExUnit.Case, async: true

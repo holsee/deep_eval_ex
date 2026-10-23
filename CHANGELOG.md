@@ -2081,8 +2081,89 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     and pids, refs and funs their `inspect/1` text), and `mask/1` applies
     `config :deep_eval_ex, :tracing, mask: ...`, as `trace_manager.mask`.
     The modules are grouped under "Tracing" in the documentation.
+- **Recording traces: `deftraced`, `span/3` and `capture/2`** (ADR-0011),
+  ports of deepeval 4.3.1's `@observe`, `Observer`, `trace_manager` and
+  `trace()` context manager. Exporting traces and evaluating them come in
+  later units. The new [Tracing](wiki/guides/Tracing.md) guide covers it.
+  - `use DeepEvalEx.Tracing` imports `deftraced` and `defptraced`
+    (`DeepEvalEx.Tracing.Observe`), which define a function whose every
+    call is a span named after it. The span's default input is the call's
+    arguments as a `Jason.OrderedObject`, in head order with defaults
+    applied, as deepeval's `apply_defaults()` (a zero-argument function
+    records `{}`), and its default output is the result. An underscored
+    argument loses its underscore, and any other pattern is named
+    `arg<position>`. Guards, defaults, `@doc`, `@spec` and
+    `rescue`/`catch`/`after` work, and a multi-clause function lists its
+    clauses under one head, so a call is one span.
+  - `DeepEvalEx.Tracing.span/3` records a block, and `open_span/2`,
+    `close_span/2` and `record_span/2` are the primitives for adapters.
+    Options: `:name`, `:input`, `:metrics`, `:metric_collection`,
+    `:metadata`, `:integration` (inherited from the parent),
+    `:drop_if_root` (deepeval's `_drop_if_root`) and each type's own
+    (`:available_tools`, `:model`, `:prompt`, `:embedder`,
+    `:description`, ...); an option of another type raises
+    `ArgumentError`. A span whose code raises, throws or exits is
+    `:errored` with the exception's message (Python's `str(exc)`) or the
+    inspected reason, and the error is re-raised with its stacktrace; an
+    `{:error, _}` result is not an error, as in deepeval. Default inputs and
+    outputs go through `make_serializable/1` and the configured mask.
+  - A trace closes when its last open span closes. It takes its input and
+    output from the first root span to close unless set, is `:errored`
+    when a root span errored, and its spans' `tools_called` are filled
+    from their tool children (`DeepEvalEx.Tracing.Tree.build/3`, which
+    also has the sync iterator's wrapper strip as `mode: :sync`).
+  - `DeepEvalEx.Tracing.trace/2` ports `trace()`: it joins the open trace
+    or starts one, sets its attributes when truthy in Python's sense, and
+    keeps `:llm_span_context` and `:agent_span_context` for the block. As
+    in deepeval, the trace ends when its first root span closes, so two
+    calls in a row inside one `trace/2` make two traces.
+  - The context lives in the process dictionary
+    (`DeepEvalEx.Tracing.Ctx`). `Task`, `Task.async_stream` and
+    `Task.Supervisor` children join their caller's trace through
+    `$callers`; `DeepEvalEx.Tracing.async/1` and `await/2` take a snapshot
+    when the task starts and also carry LLM usage and the System One
+    ledger; other processes (a `GenServer`, a bare `spawn`) hand the
+    context over with `context/0` and `with_context/2`. A span opened
+    under a parent that has since closed joins the nearest open ancestor.
+  - `DeepEvalEx.Tracing.capture/2` returns `{result, traces}`, every trace
+    the function and the processes that find its context started, in
+    start order, without sending the caller a message. A trace still open
+    after `:await_open` (5,000 ms by default) is returned `:in_progress`.
+    Outside a capture a closed trace goes only to telemetry.
+  - `DeepEvalEx.Tracing.Store`, a supervised ETS table, holds open traces:
+    each span row is written only by the process that opened it. Unlike
+    deepeval, which would keep the trace open forever, a process that dies
+    with spans open has them marked `:errored` with its exit reason, and
+    their trace closes.
+  - `DeepEvalEx.Tracing.suppress/1` records nothing, in the process or its
+    tasks.
+  - Telemetry: `[:deep_eval_ex, :span, :start | :stop | :exception]`,
+    shaped like `:telemetry.span/3`'s events, `[:deep_eval_ex, :trace,
+    :stop]` (with `route: :capture | :off`) and `[:deep_eval_ex, :trace,
+    :timeout]`; see `DeepEvalEx.Telemetry` and the
+    [Telemetry](wiki/guides/Telemetry.md) guide. Spans are recorded
+    whether or not a handler is attached.
+  - `config :deep_eval_ex, :tracing, uuid: ...` replaces the span and
+    trace uuid generator, for tests.
+  - The capture is checked against the traced fixtures: the agent scripts
+    of six scenarios, run through `deftraced`, give deepeval's span trees,
+    default inputs and outputs, `toolsCalled`, statuses, errors and trace
+    input and output.
+  - `.formatter.exs` exports `deftraced` and `defptraced` as
+    `locals_without_parens`, for projects that import its formatter
+    configuration.
 
 ### Changed
+
+- `DeepEvalEx.Metrics.BaseMetric`'s `measure/2` runs inside
+  `DeepEvalEx.Tracing.suppress/1`, so the LLM calls of a metric's judge
+  never appear as spans in a user's trace, as deepeval's internal
+  `observe`; their usage is still recorded.
+
+- `DeepEvalEx.LLM.Usage.async/1` and `await/2` now also hand the caller's
+  trace context to the task, and are the same functions as
+  `DeepEvalEx.Tracing.async/1` and `await/2` (one internal carrier for
+  usage, the System One ledger and the trace context, ADR-0011).
 
 - `DeepEvalEx.evaluate_run/3` now prints deepeval's evaluation report, its
   warnings and its summary after every run, as deepeval's `evaluate()`

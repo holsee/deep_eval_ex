@@ -87,6 +87,16 @@ defmodule DeepEvalEx.Tracing.Fields do
   end
 
   @doc false
+  # Python truthiness: None, False, zero, and empty strings, lists and dicts
+  # are false.
+  def truthy?(value) when value in [nil, false, "", []], do: false
+  def truthy?(value) when is_number(value) and value == 0, do: false
+  def truthy?(%Jason.OrderedObject{values: []}), do: false
+  def truthy?(%MapSet{} = set), do: MapSet.size(set) > 0
+  def truthy?(value) when is_map(value) and not is_struct(value), do: map_size(value) > 0
+  def truthy?(_value), do: true
+
+  @doc false
   # A keyword list or map as an atom-keyed map.
   def to_map(attrs) when is_list(attrs), do: Map.new(attrs)
   def to_map(attrs) when is_map(attrs), do: attrs
