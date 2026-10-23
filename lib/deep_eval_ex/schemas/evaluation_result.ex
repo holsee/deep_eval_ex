@@ -18,7 +18,7 @@ defmodule DeepEvalEx.EvaluationResult do
       Enum.all?(test_results, & &1.success)
   """
 
-  alias DeepEvalEx.{Result, TestCase, TestResult}
+  alias DeepEvalEx.{Classification, Result, TestCase, TestResult}
 
   @type t :: %__MODULE__{
           test_results: [TestResult.t()],
@@ -32,16 +32,24 @@ defmodule DeepEvalEx.EvaluationResult do
   Builds an evaluation result from test cases and their results.
 
   `results` holds one result list per test case, as `DeepEvalEx.evaluate_run/3`
-  returns them; each test case becomes a `DeepEvalEx.TestResult` (see
-  `DeepEvalEx.TestResult.new/4`) with its position as `:index`.
+  returns them, and `classifications`, when given, one list of
+  `DeepEvalEx.Classification`s per test case; each test case becomes a
+  `DeepEvalEx.TestResult` (see `DeepEvalEx.TestResult.new/4`) with its
+  position as `:index`.
   """
-  @spec from_results([TestCase.t()], [[Result.t()]]) :: t()
-  def from_results(test_cases, results) do
+  @spec from_results(
+          [TestCase.t() | DeepEvalEx.ConversationalTestCase.t()],
+          [[Result.t()]],
+          [[Classification.t()]] | nil
+        ) :: t()
+  def from_results(test_cases, results, classifications \\ nil) do
+    classifications = classifications || Enum.map(test_cases, fn _ -> [] end)
+
     test_results =
-      test_cases
-      |> Enum.zip(results)
-      |> Enum.with_index(fn {test_case, case_results}, index ->
-        TestResult.new(test_case, case_results, index)
+      [test_cases, results, classifications]
+      |> Enum.zip()
+      |> Enum.with_index(fn {test_case, case_results, case_classifications}, index ->
+        TestResult.new(test_case, case_results, index, case_classifications)
       end)
 
     %__MODULE__{test_results: test_results}

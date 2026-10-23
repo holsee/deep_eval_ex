@@ -73,6 +73,23 @@ defmodule DeepEvalEx.EvaluationResultTest do
                TestResult.new(test_case(), [skipped, passed()], 0)
     end
 
+    test "builds a conversational test case's result, as deepeval's conversational TestResult" do
+      conversation =
+        DeepEvalEx.ConversationalTestCase.new!(
+          turns: [%{role: :user, content: "Hi"}],
+          metadata: %{"k" => "v"}
+        )
+
+      assert %TestResult{
+               name: "conversational_test_case_2",
+               conversational: true,
+               index: 2,
+               success: false,
+               input: nil,
+               metadata: %{"k" => "v"}
+             } = TestResult.new(conversation, [failed()], 2)
+    end
+
     test "without classifications, a test case no metric ran on is successful" do
       assert %TestResult{metrics_data: [], success: true} = TestResult.new(test_case(), [], 0)
     end

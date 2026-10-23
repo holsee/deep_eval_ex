@@ -1,0 +1,38 @@
+{
+  "description": "allow_none: the judge declines (NONE), no label and no error; the expected label fails",
+  "classifier": {
+    "kind": "classifier",
+    "eval_mode": "llm",
+    "params": {
+      "name": "ticket_type",
+      "labels": [
+        {
+          "name": "billing",
+          "description": "Questions about invoices, charges or refunds."
+        },
+        "technical",
+        {
+          "name": "Account Access",
+          "description": "Logging in, passwords and two-factor codes."
+        }
+      ],
+      "allow_none": true
+    }
+  },
+  "test_case": {
+    "input": "What's the weather like?",
+    "actual_output": "Sunny, 24C.",
+    "expected_labels": {
+      "ticket_type": "technical"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "label,reason": [
+      {
+        "label": "none",
+        "reason": "Not a support ticket."
+      }
+    ]
+  }
+}

@@ -86,6 +86,29 @@ defmodule DeepEvalEx.SystemOne.Context do
     end
   end
 
+  @doc """
+  Resolves the context a `DeepEvalEx.Classifier` classifies with under
+  `opts`, as deepeval's `Classifier` builds its models when it is created.
+
+  The mode is `DeepEvalEx.SystemOne.Mode.for_classifier/1` (`:hybrid` runs
+  as `:llm`): under `:llm` no System One model is built, under
+  `:system_one` the System One model is resolved and initialised and the
+  classifier has no LLM. A resolved context in `opts[:system_one]` is
+  returned as it is. Raises as `resolve!/2` does.
+
+  ## Examples
+
+      iex> DeepEvalEx.SystemOne.Context.resolve_classifier!(eval_mode: :hybrid)
+      %DeepEvalEx.SystemOne.Context{mode: :llm, model: nil, llm?: true}
+  """
+  @spec resolve_classifier!(keyword()) :: t()
+  def resolve_classifier!(opts) when is_list(opts) do
+    case Keyword.get(opts, :system_one) do
+      %__MODULE__{} = context -> context
+      _ -> opts |> Mode.for_classifier() |> build(Keyword.get(opts, :system_one_model))
+    end
+  end
+
   # A metric whose system_one_model?/0 returns false (JsonCorrectness)
   # follows its eval mode but never calls initialize_system_one_model.
   defp model_spec(metric, opts) do

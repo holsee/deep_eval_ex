@@ -639,8 +639,8 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
   @spec evaluate(t(), (Golden.t() -> task_output()), [module() | struct()], keyword()) ::
           {:ok, EvaluationResult.t()}
   def evaluate(%__MODULE__{} = dataset, task, metrics, opts \\ []) do
-    {test_cases, results, _test_run, _path} = evaluate_run(dataset, task, metrics, opts)
-    {:ok, EvaluationResult.from_results(test_cases, results)}
+    {test_cases, results, classifications, _test_run, _path} = run(dataset, task, metrics, opts)
+    {:ok, EvaluationResult.from_results(test_cases, results, classifications)}
   end
 
   @doc """
@@ -654,9 +654,14 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
   path of the run file written, or `nil`.
   """
   @spec evaluate_run(t(), (Golden.t() -> task_output()), [module() | struct()], keyword()) ::
-          {[TestCase.t()], [[Result.t()]], TestRun.t(), Path.t() | nil}
-  def evaluate_run(%__MODULE__{goldens: goldens} = dataset, task, metrics, opts \\ [])
-      when is_function(task, 1) and is_list(metrics) do
+          {[TestCase.t()], [[Result.t()]], TestRun.t() | nil, Path.t() | nil}
+  def evaluate_run(%__MODULE__{} = dataset, task, metrics, opts \\ []) do
+    {test_cases, results, _classifications, test_run, path} = run(dataset, task, metrics, opts)
+    {test_cases, results, test_run, path}
+  end
+
+  defp run(%__MODULE__{goldens: goldens} = dataset, task, metrics, opts)
+       when is_function(task, 1) and is_list(metrics) do
     if goldens == [], do: raise(ArgumentError, "Unable to evaluate dataset with no goldens.")
 
     concurrency = Evaluator.max_concurrency!(opts)
@@ -672,8 +677,8 @@ defmodule DeepEvalEx.Dataset.EvaluationDataset do
         dataset_version: dataset.version
       )
 
-    {results, test_run, path} = DeepEvalEx.evaluate_run(test_cases, metrics, opts)
-    {test_cases, results, test_run, path}
+    {results, classifications, test_run, path} = DeepEvalEx.run(test_cases, metrics, opts)
+    {test_cases, results, classifications, test_run, path}
   end
 
   # Calls the task on every golden, in order, catching what it raises so

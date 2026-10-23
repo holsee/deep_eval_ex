@@ -1,0 +1,94 @@
+{
+  "classify": [
+    {
+      "state": {
+        "test_case": {
+          "input": "What's the weather like?",
+          "actual_output": "Sunny, 24C.",
+          "tools_called": [
+            "ToolCall(\n    name=\"weather\",\n    type=\"FUNCTION\",\n    input_parameters={\n        \"city\": \"Paris\"\n    }\n)"
+          ]
+        }
+      },
+      "questions": {
+        "label": {
+          "type": "choice",
+          "instructions": "Which option best describes `test_case`? Each option is a label; where a description is given it is the authoritative boundary for that label. Pick `NONE` only when no other label fits.",
+          "criteria": {
+            "billing": "Questions about invoices, charges or refunds.",
+            "technical": null,
+            "Account Access": "Logging in, passwords and two-factor codes.",
+            "NONE": "None of the other labels apply."
+          }
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {
+          "label": {
+            "choice": "NONE",
+            "probabilities": {
+              "billing": 0.05,
+              "technical": 0.1,
+              "Account Access": 0.05,
+              "NONE": 0.8
+            },
+            "confidence": 0.7
+          }
+        },
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "input": "What's the weather like?",
+          "actual_output": "Sunny, 24C.",
+          "tools_called": [
+            "ToolCall(\n    name=\"weather\",\n    type=\"FUNCTION\",\n    input_parameters={\n        \"city\": \"Paris\"\n    }\n)"
+          ]
+        }
+      },
+      "questions": {
+        "label": {
+          "type": "choice",
+          "instructions": "Which option best describes `test_case`? Each option is a label; where a description is given it is the authoritative boundary for that label. Pick `NONE` only when no other label fits.",
+          "criteria": {
+            "billing": "Questions about invoices, charges or refunds.",
+            "technical": null,
+            "Account Access": "Logging in, passwords and two-factor codes.",
+            "NONE": "None of the other labels apply."
+          }
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {
+          "label": {
+            "choice": "NONE",
+            "probabilities": {
+              "billing": 0.05,
+              "technical": 0.1,
+              "Account Access": 0.05,
+              "NONE": 0.8
+            },
+            "confidence": 0.7
+          }
+        },
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

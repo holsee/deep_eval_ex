@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "classifications": [
+    {
+      "name": "refusal",
+      "label": "refused",
+      "expectedLabel": "refused",
+      "success": true,
+      "reason": null,
+      "evaluationModel": "fake-jev",
+      "error": null,
+      "evaluationCost": null,
+      "inputTokenCount": 0,
+      "outputTokenCount": 0
+    }
+  ]
+}

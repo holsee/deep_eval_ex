@@ -1,9 +1,9 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in six sets:
+Fixtures written by **deepeval 4.3.1**, in seven sets:
 
 - export scenarios (the directories below, except `scripted/`, `prompts/`,
-  `round_trip/`, `system_one/` and `datasets/`), used by
+  `round_trip/`, `system_one/`, `datasets/` and `classifiers/`), used by
   `test/deep_eval_ex/parity_test.exs` to check that DeepEvalEx writes the same
   `test_run_<timestamp>.json` files as deepeval, down to the bytes
 - [scripted-judge scenarios](#scripted-judge-scenarios) (`scripted/`), used by
@@ -28,6 +28,10 @@ Fixtures written by **deepeval 4.3.1**, in six sets:
   from them, used by `test/deep_eval_ex/dataset/loader_parity_test.exs`,
   and by `test/deep_eval_ex/dataset/save_as_parity_test.exs` to check that
   DeepEvalEx's `save_as` writes the same files
+- [classifier fixtures](#classifier-fixtures) (`classifiers/`), what
+  deepeval's classifiers ask, label and report under the `llm` and
+  `system_one` eval modes, used by
+  `test/deep_eval_ex/classifier_parity_test.exs`
 
 ## Export scenarios
 
@@ -639,3 +643,78 @@ scenarios, JsonCorrectness's `system_one` and `hybrid`, and
 `jev_eval_strict_not_applicable`), `DeepEvalEx.Metrics.ConversationalJevEval`
 (`conversational_jev_eval`, `conversational_jev_eval_strict_not_applicable`
 and `conversational_jev_eval_down`), and the batched scenarios.
+
+The `refusal_classifier_system_one` scenario is also run through
+`DeepEvalEx.Classifier` by `test/deep_eval_ex/classifier_parity_test.exs`
+(see [Classifier fixtures](#classifier-fixtures)).
+
+## Classifier fixtures
+
+deepeval's classifiers (`deepeval.classifiers`) label a test case with one
+label from a closed set, and pass or fail only against the test case's
+`expected_labels`. Under `llm` a classifier is one schema call (`label`,
+`reason`) to the judge, here deepeval's scripted-judge generator's
+`ScriptedJudge`; under `system_one` it is one Jev Choice over its labels
+(`label`), here deepeval's `FakeSystemOneModel`, as in the System One
+fixtures.
+
+`scripts/parity/generate_runner_fixtures.py` writes them, from the
+scenarios in its `CLASSIFIER_SCENARIOS`, and will also write the other P8
+sets (cache, report, expectations, CLI):
+
+```sh
+devcontainer exec --workspace-folder . \
+  env DEEPEVAL_TELEMETRY_OPT_OUT=1 python3 -I scripts/parity/generate_runner_fixtures.py
+```
+
+Each `classifiers/<scenario>/` holds:
+
+- `input.json` - the `classifier` (`kind`: a built-in's name or
+  `classifier`, `eval_mode`, constructor `params`), one `test_case` with its
+  `expected_labels`, the judge's `judge_model` and `responses` (by step,
+  then call index) or the fake's `system_one`, and optionally a stub
+  `metric` evaluated alongside
+- `measure.json` - the classifier after `classify()`: label, reason, error,
+  evaluation model, cost, tokens, confidence, fallback reason, and `raised`
+  when `classify()` raised
+- `prompts.json` (`llm`) - every prompt the judge got
+- `decide.json` (`system_one`) - the `decide()` calls of `classify()` and of
+  `evaluate()`
+- `evaluate.json` - `evaluate(..., classifiers=[...])`'s test result:
+  `success` and the `classifications`, by alias
+- `test_run.json` (with a `metric`) - the test run, which holds no
+  classification; a classifiers-only `evaluate()` writes none
+- `assert_test.json` - what `assert_test(..., classifiers=[...])` raised,
+  or `null`
+
+| Scenario | What it covers |
+| --- | --- |
+| `llm_exact_label` | `RefusalClassifier`: the judge's exact label, matching the expected one |
+| `llm_case_insensitive` | A padded upper-case answer resolves to the declared label; a wrong expected label fails |
+| `llm_no_expected_label` | No expected label: no verdict; `include_reason=False` |
+| `llm_none_allowed` | `allow_none`: `none` is no label and no error, and fails an expected label |
+| `llm_none_disallowed` | `NONE` without `allow_none`: the undeclared-label error |
+| `llm_undeclared_label` | An undeclared label with `allow_none`: the error lists the labels, "or no classification" |
+| `llm_raw_text` | A raw text answer loaded by `trimAndLoadJson`; every single-turn field in the prompt, tool calls as their `repr()` |
+| `llm_invalid_json` | No JSON: `classify()` and `assert_test` raise, `evaluate()` records the error |
+| `llm_multi_turn` | `ResolutionClassifier` on a conversation: scenario, expected outcome, context and turns (with a tool call) in the prompt |
+| `llm_multi_turn_allow_none` | A conversation with turns only, `allow_none` |
+| `llm_with_metric` | A stub metric and a failing classifier: the test result fails, the test run's test case passes |
+| `llm_with_failing_metric` | A failing metric and a failing classifier: "Metrics and classifiers" |
+| `system_one_single_turn_allow_none` | One Choice over the labels plus `NONE`, tool calls as `repr()` strings in the state; `NONE` chosen |
+| `system_one_multi_turn` | A conversation's turns (a tool call as pydantic's `str()`) and fields as state |
+| `system_one_no_reason` | `include_reason=False`, an unpriced request voiding the cost |
+| `system_one_down` | Jev down: `classify()` raises, nothing falls back |
+
+`classifiers/builtins/builtins.json` lists the thirteen built-ins' names and
+labels, with and without their parameter (`scope`, `tone`, `disclosures`).
+`classifiers/validation/cases.json` holds `Classifier(...)` and
+`validate_classifiers(...)` inputs with the `ValueError` they raised or the
+warning they logged.
+
+`test/deep_eval_ex/classifier_parity_test.exs` replays each scenario through
+`DeepEvalEx.Classifier` (the judge answered by the Mock adapter's script, Jev
+by `DeepEvalEx.SystemOne.Adapters.Mock.from_fixture/2`) and compares the
+prompts and `decide()` calls byte for byte, the classification (or the
+error message raised), `DeepEvalEx.evaluate/3`'s test result and
+classifications, the test run, and `assert_evaluation/3`'s failure message.

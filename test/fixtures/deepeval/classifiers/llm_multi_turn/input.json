@@ -1,0 +1,52 @@
+{
+  "description": "A conversation: the multi-turn prompt with its scenario, context and turns",
+  "classifier": {
+    "kind": "resolution",
+    "eval_mode": "llm",
+    "params": {}
+  },
+  "test_case": {
+    "scenario": "A customer cannot log in after a password reset.",
+    "expected_outcome": "The assistant walks the customer through recovery.",
+    "context": [
+      "Accounts lock after 5 failed attempts."
+    ],
+    "turns": [
+      {
+        "role": "user",
+        "content": "I reset my password but still can't log in."
+      },
+      {
+        "role": "assistant",
+        "content": "Your account is locked; I've sent an unlock link to your email.",
+        "retrieval_context": [
+          "Unlock links expire after 1 hour."
+        ],
+        "tools_called": [
+          {
+            "name": "unlock_account",
+            "input_parameters": {
+              "user": "c-42"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Got it, I'm in. Thanks!"
+      }
+    ],
+    "expected_labels": {
+      "resolution": "resolved"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "label,reason": [
+      {
+        "label": "resolved",
+        "reason": "The customer got back in."
+      }
+    ]
+  }
+}

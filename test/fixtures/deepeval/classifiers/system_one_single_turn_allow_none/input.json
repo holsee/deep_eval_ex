@@ -1,0 +1,59 @@
+{
+  "description": "Jev, allow_none: one Choice over the labels plus NONE; NONE is no label",
+  "classifier": {
+    "kind": "classifier",
+    "eval_mode": "system_one",
+    "params": {
+      "name": "ticket_type",
+      "labels": [
+        {
+          "name": "billing",
+          "description": "Questions about invoices, charges or refunds."
+        },
+        "technical",
+        {
+          "name": "Account Access",
+          "description": "Logging in, passwords and two-factor codes."
+        }
+      ],
+      "allow_none": true
+    }
+  },
+  "test_case": {
+    "input": "What's the weather like?",
+    "actual_output": "Sunny, 24C.",
+    "tools_called": [
+      {
+        "name": "weather",
+        "input_parameters": {
+          "city": "Paris"
+        }
+      }
+    ],
+    "expected_labels": {
+      "ticket_type": "technical"
+    }
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "choices": {
+        "label": {
+          "choice": "NONE",
+          "probabilities": {
+            "billing": 0.05,
+            "technical": 0.1,
+            "Account Access": 0.05,
+            "NONE": 0.8
+          },
+          "confidence": 0.7
+        }
+      }
+    }
+  }
+}

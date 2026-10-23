@@ -1,0 +1,17 @@
+{
+  "success": false,
+  "classifications": [
+    {
+      "name": "ticket_type",
+      "label": null,
+      "expectedLabel": "technical",
+      "success": false,
+      "reason": "Decided by fake-jev. Label \"NONE\" (P=0.80, confidence=0.70). Alternatives: technical 0.10, billing 0.05, Account Access 0.05.",
+      "evaluationModel": "fake-jev",
+      "error": null,
+      "evaluationCost": 4.2e-05,
+      "inputTokenCount": 1000,
+      "outputTokenCount": 0
+    }
+  ]
+}

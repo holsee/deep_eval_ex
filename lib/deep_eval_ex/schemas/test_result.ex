@@ -16,25 +16,33 @@ defmodule DeepEvalEx.TestResult do
     order of the metrics (DeepEvalEx's counterpart of deepeval's
     `MetricData`). Skipped results are left out, as deepeval leaves out
     skipped metrics; `[]` where deepeval has `None`
-  - `:conversational` - Always `false`: DeepEvalEx has no conversational
-    test cases yet
+  - `:conversational` - Whether the test case is a
+    `DeepEvalEx.ConversationalTestCase`, whose test result is named
+    `"conversational_test_case_<index>"` by default and leaves the
+    single-turn fields `nil`
   - `:index` - The test case's `:dataset_rank`, else its position in the
     evaluated list (deepeval's `order`)
   - `:input`, `:actual_output`, `:expected_output`, `:context`,
     `:retrieval_context`, `:metadata` - The test case's own fields; of a
     `DeepEvalEx.Schemas.RetrievedContextData` in `:retrieval_context` only
     its `:context` is kept, as deepeval does
-  - `:classifications` - Classifier results, maps with a `:success` of
-    `true`, `false` or `nil`; `[]` where deepeval has `None`. DeepEvalEx has
-    no classifiers yet, so `DeepEvalEx.evaluate/3` always leaves this empty
+  - `:classifications` - One `DeepEvalEx.Classification` per classifier
+    run (`DeepEvalEx.evaluate/3`'s `:classifiers`), in their order; `[]`
+    where deepeval has `None`
 
   deepeval's `multimodal`, `turns` and `expectations` are not modelled.
   """
 
-  alias DeepEvalEx.{Result, TestCase}
+  alias DeepEvalEx.{Classification, ConversationalTestCase, Result, TestCase}
   alias DeepEvalEx.Schemas.RetrievedContextData
 
-  @type classification :: %{required(:success) => boolean() | nil, optional(atom()) => term()}
+  @typedoc """
+  A classifier's result: a `DeepEvalEx.Classification`, or any map with a
+  `:success` of `true`, `false` or `nil`.
+  """
+  @type classification ::
+          Classification.t()
+          | %{required(:success) => boolean() | nil, optional(atom()) => term()}
 
   @type t :: %__MODULE__{
           name: String.t(),
@@ -81,8 +89,30 @@ defmodule DeepEvalEx.TestResult do
   classifications alone decide, so the success is `nil` if none of them has
   a verdict.
   """
-  @spec new(TestCase.t(), [Result.t()], non_neg_integer(), [classification()]) :: t()
-  def new(%TestCase{} = test_case, results, index, classifications \\ []) do
+  @spec new(
+          TestCase.t() | ConversationalTestCase.t(),
+          [Result.t()],
+          non_neg_integer(),
+          [classification()]
+        ) :: t()
+  def new(test_case, results, index, classifications \\ [])
+
+  def new(%ConversationalTestCase{} = test_case, results, index, classifications) do
+    metrics_data = Enum.reject(results, & &1.skipped)
+    index = test_case.dataset_rank || index
+
+    %__MODULE__{
+      name: test_case.name || "conversational_test_case_#{index}",
+      success: local_success(metrics_success(metrics_data), metrics_data, classifications),
+      metrics_data: metrics_data,
+      conversational: true,
+      index: index,
+      metadata: test_case.metadata,
+      classifications: classifications
+    }
+  end
+
+  def new(%TestCase{} = test_case, results, index, classifications) do
     metrics_data = Enum.reject(results, & &1.skipped)
     index = test_case.dataset_rank || index
 

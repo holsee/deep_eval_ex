@@ -1,0 +1,38 @@
+{
+  "description": "An undeclared label with allow_none: an error naming the declared labels",
+  "classifier": {
+    "kind": "classifier",
+    "eval_mode": "llm",
+    "params": {
+      "name": "ticket_type",
+      "labels": [
+        {
+          "name": "billing",
+          "description": "Questions about invoices, charges or refunds."
+        },
+        "technical",
+        {
+          "name": "Account Access",
+          "description": "Logging in, passwords and two-factor codes."
+        }
+      ],
+      "allow_none": true
+    }
+  },
+  "test_case": {
+    "input": "My card was charged twice.",
+    "actual_output": "I've refunded the duplicate charge.",
+    "expected_labels": {
+      "ticket_type": "billing"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "label,reason": [
+      {
+        "label": "payments",
+        "reason": "About a charge."
+      }
+    ]
+  }
+}

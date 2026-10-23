@@ -43,7 +43,7 @@ defmodule DeepEvalEx.ExUnit do
   - Like `assert_test`, they raise `ArgumentError` unless at least one
     metric has a threshold and is not flaky (see
     `DeepEvalEx.Evaluator.check_at_least_one_metric_has_threshold!/2`).
-    With no metrics at all, `assert_evaluation(test_case, [])` raises
+    With no metrics and no classifiers, `assert_evaluation(test_case, [])` raises
     `ArgumentError` with the message of the `ValueError` `assert_test`
     raises for a test case without metrics or expectations:
     `"1 test case is missing expectations. ..."`.
@@ -65,6 +65,16 @@ defmodule DeepEvalEx.ExUnit do
 
     An errored metric has `score: None` and `reason: None`, as deepeval's
     `MetricData` for an errored metric.
+  - With a `classifiers:` option (`DeepEvalEx.Classifier`s), as
+    `assert_test(..., classifiers=[...])`, the test case is also
+    classified, and a classification that misses the test case's expected
+    label fails it too (see `DeepEvalEx.TestResult.new/4`). The message
+    then names the subject that failed, `"Metrics"`, `"Classifiers"` or
+    `"Metrics and classifiers"`, and lists each failed classification
+    after the metrics, as
+    `name (label: ..., expected: ..., error: ..., reason: ...)`.
+    `assert_evaluation(test_case, [], classifiers: [...])` checks
+    classifiers alone, and needs no metric with a threshold.
   - A failing test case marked `flaky: true` does not flunk: as
     `assert_test`'s `warnings.warn`, it prints a warning (`IO.warn/1`)
     reading `"Flaky test case failed (no assertion raised): "` followed by
@@ -106,7 +116,7 @@ defmodule DeepEvalEx.ExUnit do
   option wins over both.
   """
 
-  alias DeepEvalEx.{Config, Evaluator, Result, TestResult}
+  alias DeepEvalEx.{Classification, Config, Evaluator, Result, TestResult}
   alias DeepEvalEx.Metrics.Utils.Verbose
 
   # Settings the assertions read, as deepeval's assert_test.
@@ -260,7 +270,7 @@ defmodule DeepEvalEx.ExUnit do
   end
 
   defp run_metric(test_case, metric, opts) do
-    [result] = evaluate(test_case, [metric], assert_opts(opts))
+    {[result], _classifications} = evaluate(test_case, [metric], assert_opts(opts))
     result
   end
 
@@ -272,8 +282,9 @@ defmodule DeepEvalEx.ExUnit do
     end)
   end
 
-  # The test case's results, evaluated with assert_test's AsyncConfig unless
-  # the options say otherwise (`:concurrency` is `:max_concurrent`'s alias).
+  # The test case's results and classifications, evaluated with
+  # assert_test's AsyncConfig unless the options say otherwise
+  # (`:concurrency` is `:max_concurrent`'s alias).
   defp evaluate(test_case, metrics, opts) do
     opts =
       if Keyword.has_key?(opts, :max_concurrent) or Keyword.has_key?(opts, :concurrency),
@@ -282,23 +293,24 @@ defmodule DeepEvalEx.ExUnit do
 
     opts = Keyword.put_new(opts, :throttle_value, @throttle_value)
 
-    [results] = Evaluator.evaluate([test_case], metrics, opts)
-    results
+    {[results], [classifications], _durations} = Evaluator.run([test_case], metrics, opts)
+    {results, classifications}
   end
 
   # deepeval's assert_test: the test case fails as its TestResult does, and
   # a flaky test case only warns.
   defp assert_test(test_case, metrics, opts) do
     opts = assert_opts(opts)
-    check_metrics!(metrics, opts)
+    check_metrics!(metrics, Keyword.get(opts, :classifiers, []), opts)
 
-    results = evaluate(test_case, metrics, opts)
+    {results, classifications} = evaluate(test_case, metrics, opts)
     # deepeval's assert_test builds its TestResult with index=None; only
-    # :success and :metrics_data are read here, so the index is immaterial.
-    test_result = TestResult.new(test_case, results, 0)
+    # :success, :metrics_data and :classifications are read here, so the
+    # index is immaterial.
+    test_result = TestResult.new(test_case, results, 0, classifications)
 
     if test_result.success == false do
-      message = assert_test_message(test_result.metrics_data)
+      message = assert_test_message(test_result.metrics_data, test_result.classifications)
 
       if test_case.flaky,
         do: IO.warn("Flaky test case failed (no assertion raised): " <> message),
@@ -308,17 +320,19 @@ defmodule DeepEvalEx.ExUnit do
     results
   end
 
-  # deepeval's validate_assert_test_inputs: with no metrics (and no
-  # classifiers) it requires the test case to have expectations, which
-  # DeepEvalEx test cases do not have, so it raises with deepeval's ValueError
-  # message.
-  defp check_metrics!([], _opts) do
+  # deepeval's validate_assert_test_inputs: with no metrics and no
+  # classifiers it requires the test case to have expectations, which
+  # DeepEvalEx does not evaluate yet, so it raises with deepeval's ValueError
+  # message. Classifiers alone need no threshold.
+  defp check_metrics!([], [], _opts) do
     raise ArgumentError,
           "1 test case is missing expectations. Fill in non-empty expectations for " <>
             "these test cases and/or provide at least one metric and/or classifier."
   end
 
-  defp check_metrics!(metrics, opts),
+  defp check_metrics!([], _classifiers, _opts), do: :ok
+
+  defp check_metrics!(metrics, _classifiers, opts),
     do: Evaluator.check_at_least_one_metric_has_threshold!(metrics, opts)
 
   defp validate_score!(result, score_opts) do
@@ -393,14 +407,24 @@ defmodule DeepEvalEx.ExUnit do
 
   # deepeval's assert_test message: every errored or unsuccessful metric
   # (`not metric_data.success`, so score-only ones too), each as
-  # MetricData's fields in an f-string.
-  defp assert_test_message(metrics_data) do
-    failed =
-      metrics_data
-      |> Enum.filter(&(Result.errored?(&1) or &1.success != true))
-      |> Enum.map_join(", ", &format_metric_data/1)
+  # MetricData's fields in an f-string, then every failed classification;
+  # the subject names what failed.
+  defp assert_test_message(metrics_data, classifications) do
+    failed_metrics = Enum.filter(metrics_data, &(Result.errored?(&1) or &1.success != true))
+    failed_classifications = Enum.filter(classifications, &(&1.success == false))
 
-    "Metrics: #{failed} failed."
+    subject =
+      cond do
+        failed_metrics != [] and failed_classifications != [] -> "Metrics and classifiers"
+        failed_classifications != [] -> "Classifiers"
+        true -> "Metrics"
+      end
+
+    failed =
+      Enum.map(failed_metrics, &format_metric_data/1) ++
+        Enum.map(failed_classifications, &Classification.describe/1)
+
+    "#{subject}: #{Enum.join(failed, ", ")} failed."
   end
 
   # create_metric_data leaves an errored metric's score and reason None.

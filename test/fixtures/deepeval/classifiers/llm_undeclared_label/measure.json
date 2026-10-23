@@ -1,0 +1,12 @@
+{
+  "label": null,
+  "reason": "About a charge.",
+  "error": "Judge returned 'payments', which is not one of the declared labels (billing, technical, Account Access, or no classification).",
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "confidence": null,
+  "system_one_fallback_reason": null,
+  "raised": null
+}

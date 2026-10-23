@@ -210,6 +210,23 @@ in the order given:
 Metrics: Faithfulness (score: 0.4, threshold: 0.5, strict: False, error: None, reason: Not all claims are supported), Answer Relevancy (score: 0.3, threshold: 0.5, strict: False, error: None, reason: Response contains irrelevant information) failed.
 ```
 
+### Classifiers
+
+Pass `classifiers:` to also classify the test case, as deepeval's
+`assert_test(..., classifiers=[...])` (see the [Classifiers](Classifiers.md)
+guide). A classification that misses the test case's expected label fails it,
+and the message names the subject that failed:
+
+```elixir
+assert_evaluation(test_case, [Faithfulness],
+  classifiers: [DeepEvalEx.Classifiers.refusal()]
+)
+```
+
+```
+Metrics and classifiers: Faithfulness (score: 0.4, ...), refusal (label: complied, expected: refused, error: None, reason: ...) failed.
+```
+
 ### Flaky Metrics and Test Cases
 
 A failing metric marked `flaky` never fails the test case on its own. A test

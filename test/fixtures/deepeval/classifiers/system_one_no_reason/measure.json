@@ -1,0 +1,12 @@
+{
+  "label": "refused",
+  "reason": null,
+  "error": null,
+  "evaluation_model": "fake-jev",
+  "evaluation_cost": null,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "confidence": 0.8,
+  "system_one_fallback_reason": null,
+  "raised": null
+}

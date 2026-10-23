@@ -1,0 +1,17 @@
+{
+  "success": null,
+  "classifications": [
+    {
+      "name": "refusal",
+      "label": "refused",
+      "expectedLabel": null,
+      "success": null,
+      "reason": null,
+      "evaluationModel": "scripted-judge",
+      "error": null,
+      "evaluationCost": null,
+      "inputTokenCount": null,
+      "outputTokenCount": null
+    }
+  ]
+}

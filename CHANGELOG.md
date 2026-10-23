@@ -1787,6 +1787,66 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - `EvaluationDataset` still holds single-turn goldens only, and its
     loaders still raise on goldens with a scenario.
 
+- **Classifiers: `DeepEvalEx.Classifier`, `DeepEvalEx.Classifiers` and
+  `DeepEvalEx.Classification`** (ADR-0010), ports of deepeval 4.3.1's
+  `Classifier`, `BaseClassifier`, its thirteen built-ins and
+  `Classification`. A classifier labels a test case with exactly one label
+  from a closed set, and passes or fails only against the test case's
+  `expected_labels[name]`.
+  - `Classifier.new!/1` takes a `:name` and `:labels` (names, or
+    `{name, description}` pairs), `:allow_none`, `:include_reason`, the
+    judge (`:model`, `:adapter`, `:system_one_model`, `:eval_mode`), a
+    `:template` overriding the prompts and an `:impl` module for a custom
+    classifier (the optional `classify/3` callback, deepeval's
+    `BaseClassifier` subclass). Labels are validated with deepeval's
+    messages: none, blank, `NONE` (reserved for `allow_none`) and
+    case-insensitive duplicates raise `ArgumentError`.
+  - `Classifier.classify/3` returns a `DeepEvalEx.Classification` (name,
+    label, expected label, success, reason, evaluation model, error, cost,
+    tokens). Under `:llm` it is one schema call over
+    `DeepEvalEx.Prompts.Classifier`'s `classify_single_turn` or
+    `classify_multi_turn`; under `:system_one` one Choice question, keyed
+    `"label"`, over the labels (plus `NONE` with `allow_none`), with the
+    reason from `DeepEvalEx.SystemOne.Scoring.classification_reason/2` and
+    no fallback. `:hybrid` runs as `:llm`
+    (`DeepEvalEx.SystemOne.Context.resolve_classifier!/1`). The answer is
+    resolved onto the labels (exactly, then ignoring case); anything else is
+    the classification's error, `"Judge returned 'x', which is not one of
+    the declared labels (...)."`. Usage is seeded as a metric's.
+  - `DeepEvalEx.Classifiers` builds the built-ins: `refusal/1`,
+    `escalation/1`, `scope_adherence/1` (`:scope`), `clarification/1`,
+    `abstention/1`, `prompt_injection/1`, `data_leakage/1`,
+    `forbidden_commitments/1`, `tone_adherence/1` (`:tone`),
+    `required_disclosure/1` (`:disclosures`), `response_language/1`,
+    `instruction_completeness/1` and `resolution/1`, with deepeval's names
+    and label texts.
+  - `DeepEvalEx.Classifier.Utils` ports `classifiers/utils.py`:
+    `normalize_labels!/1`, `resolve_label/3`, `format_labels/1`, the prompt
+    content and System One state builders, and `validate!/2`
+    (`validate_classifiers`): unique names and valid expected labels raise
+    `ArgumentError`, unknown `expected_labels` keys log one warning.
+  - A `:classifiers` option on `DeepEvalEx.evaluate/3`, `evaluate_run/3`,
+    `DeepEvalEx.Dataset.EvaluationDataset.evaluate/4` and
+    `DeepEvalEx.Evaluator`: classifiers run on each test case after its
+    metrics, validated and their System One context resolved before any
+    test case, erroring as metrics do under `:ignore_errors` and the
+    timeouts. Their classifications are each `DeepEvalEx.TestResult`'s
+    `:classifications` and fold into its success, but are never written to
+    the test run. `DeepEvalEx.Evaluator.run/3` returns them alongside the
+    results.
+  - `assert_evaluation/3` and `assert_passes/3` take `classifiers:`, as
+    deepeval's `assert_test(..., classifiers=[...])`: a missed expected
+    label fails the assertion with `"Classifiers: ..."` or `"Metrics and
+    classifiers: ..."`, listing `name (label: ..., expected: ..., error:
+    ..., reason: ...)`, and classifiers alone need no metric.
+  - Parity fixtures from deepeval (`test/fixtures/deepeval/classifiers/`,
+    `scripts/parity/generate_runner_fixtures.py`) pin the prompts, System One
+    requests, classifications, `evaluate()` results, test runs and
+    `assert_test` messages of 16 scenarios, the built-ins' labels and the
+    validation errors; the `refusal_classifier_system_one` System One
+    fixture now runs through the real classifier. A new
+    [Classifiers](wiki/guides/Classifiers.md) guide covers them.
+
 ### Changed
 
 - A test case's `:dataset_rank`, when set, is its `order` and default
@@ -2084,6 +2144,13 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - Module docs describe only what has shipped. The roadmap sets out the phased
   plan to deepeval 4.3.1 parity, including System One (Jev) support, and links
   to this changelog for shipped work.
+- `DeepEvalEx.TestResult`'s `:classifications` are now
+  `DeepEvalEx.Classification` structs (maps with a `:success` still fold
+  into its success), and `DeepEvalEx.EvaluationResult.from_results/3`
+  takes each test case's classifications.
+- `DeepEvalEx.evaluate_run/3` with classifiers and no metrics returns
+  `{results, nil, nil}` and writes no test run, as deepeval's
+  classifier-only `evaluate()`; its spec now allows a `nil` test run.
 
 ### Deprecated
 
@@ -2109,6 +2176,11 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Fixed
 
+- `DeepEvalEx.evaluate/3` raised `FunctionClauseError` for
+  `DeepEvalEx.ConversationalTestCase`s: `DeepEvalEx.TestResult.new/4` now
+  builds a conversational test result (`conversational: true`, named
+  `"conversational_test_case_<index>"` by default), as deepeval's
+  `create_test_result`.
 - `DeepEvalEx.Prompts.Python.repr/1` printed a tool call's empty
   `input_parameters` as `input_parameters={}` when they were an empty
   `Jason.OrderedObject` (as loaded from JSON with ordered objects); it now

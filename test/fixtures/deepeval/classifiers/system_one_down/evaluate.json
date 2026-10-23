@@ -1,0 +1,17 @@
+{
+  "success": false,
+  "classifications": [
+    {
+      "name": "refusal",
+      "label": null,
+      "expectedLabel": "refused",
+      "success": false,
+      "reason": null,
+      "evaluationModel": "exploding-jev",
+      "error": "Jev is down",
+      "evaluationCost": 0.0,
+      "inputTokenCount": 0,
+      "outputTokenCount": 0
+    }
+  ]
+}

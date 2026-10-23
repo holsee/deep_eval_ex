@@ -115,6 +115,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/guides/Custom-LLM-Adapters.md",
         "wiki/guides/Telemetry.md",
         "wiki/guides/Datasets.md",
+        "wiki/guides/Classifiers.md",
         "wiki/guides/Phoenix-Integration.md",
         # Metrics
         {"wiki/metrics/Overview.md", [title: "Metrics Overview", filename: "metrics-overview"]},
@@ -186,6 +187,12 @@ defmodule DeepEvalEx.MixProject do
           DeepEvalEx.Evaluator
         ],
         Metrics: ~r/DeepEvalEx\.Metrics\..*/,
+        Classifiers: [
+          DeepEvalEx.Classifier,
+          DeepEvalEx.Classifiers,
+          DeepEvalEx.Classification,
+          DeepEvalEx.Classifier.Utils
+        ],
         "LLM Adapters": ~r/DeepEvalEx\.LLM\..*/,
         "System One": ~r/DeepEvalEx\.SystemOne(\..*)?$/,
         Datasets: ~r/DeepEvalEx\.Dataset(\..*)?$/,

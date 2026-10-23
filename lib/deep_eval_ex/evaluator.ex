@@ -47,6 +47,8 @@ defmodule DeepEvalEx.Evaluator do
     raising it (default: `false`), see "Errors"
   - `:skip_on_missing_params` - Skip a metric whose test case lacks its
     required params instead of erroring (default: `false`), see "Errors"
+  - `:classifiers` - `DeepEvalEx.Classifier`s to run on every test case
+    after its metrics (default: `[]`), see "Classifiers"
 
   Run-level options are defaults only: when a metric is passed as a struct,
   any non-nil field on that struct overrides the run-level option of the
@@ -79,6 +81,28 @@ defmodule DeepEvalEx.Evaluator do
   raised. A metric whose test case lacks its params errors the same way
   (`"MissingTestCaseParamsError: ..."`), or is skipped with
   `skip_on_missing_params: true`.
+
+  ## Classifiers
+
+  With `:classifiers`, each test case is classified by every classifier
+  once its metrics are done, as deepeval's `evaluate(classifiers=...)`
+  runs them after the metrics: concurrently, each in its own process, under
+  the test case's deadline and `:metric_timeout`. Before any test case
+  starts the classifiers are checked against the test cases
+  (`DeepEvalEx.Classifier.Utils.validate!/2`) and each one's
+  `DeepEvalEx.SystemOne.Context` is resolved, as for metrics. Run-level
+  `:model`, `:adapter`, `:eval_mode` and `:system_one_model` are defaults
+  for the classifiers' unset fields.
+
+  A classifier that errors (its judge fails, or it times out) follows
+  `:ignore_errors` as a metric does: recorded as its
+  `DeepEvalEx.Classification`'s error (deepeval's `str(exception)`), or
+  raised, the exception it raised or a `DeepEvalEx.DeepEvalError`. Classifiers
+  have no required params, so `:skip_on_missing_params` never skips one.
+
+  `run/3` returns the classifications; `evaluate/3`,
+  `evaluate_with_durations/3` and `evaluate_single/3` run the classifiers
+  but return only the metrics' results.
 
   ## Concurrency
 
@@ -191,13 +215,28 @@ defmodule DeepEvalEx.Evaluator do
       ]
   """
 
-  alias DeepEvalEx.{Config, MetricError, MissingTestCaseParamsError, Result, TestCase}
+  alias DeepEvalEx.{
+    Classification,
+    Classifier,
+    Config,
+    DeepEvalError,
+    MetricError,
+    MissingTestCaseParamsError,
+    Result,
+    TestCase
+  }
+
+  alias DeepEvalEx.Classifier.Utils, as: ClassifierUtils
   alias DeepEvalEx.Metrics.BaseMetric
   alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.SystemOne.{Batch, Context}
 
   # Where the run keeps each metric's resolved System One context.
   @contexts_key :__system_one_contexts__
+  # ... and each classifier's.
+  @classifier_contexts_key :__classifier_contexts__
+  # Run-level keys never passed on to a metric.
+  @run_keys [@contexts_key, @classifier_contexts_key, :classifiers]
 
   # deepeval's AsyncConfig defaults.
   @default_max_concurrent 20
@@ -247,7 +286,23 @@ defmodule DeepEvalEx.Evaluator do
   @spec evaluate_with_durations([TestCase.t()], [module() | struct()], keyword()) ::
           {[[Result.t()]], [float()]}
   def evaluate_with_durations(test_cases, metrics, opts \\ []) do
+    {results, _classifications, durations} = run(test_cases, metrics, opts)
+    {results, durations}
+  end
+
+  @doc """
+  Evaluates test cases like `evaluate_with_durations/3`, also returning
+  each test case's classifications (see "Classifiers").
+
+  Returns `{results, classifications, durations}`: `classifications` holds
+  one list of `DeepEvalEx.Classification`s per test case, in the order of
+  the `:classifiers` option (`[]` each without classifiers).
+  """
+  @spec run([TestCase.t()], [module() | struct()], keyword()) ::
+          {[[Result.t()]], [[Classification.t()]], [float()]}
+  def run(test_cases, metrics, opts \\ []) do
     {opts, throttle_value} = async_config!(opts)
+    ClassifierUtils.validate!(test_cases, Keyword.get(opts, :classifiers, []))
     metrics = copy_metrics(metrics, opts)
     opts = preflight(metrics, opts)
     concurrency = Keyword.fetch!(opts, :concurrency)
@@ -264,7 +319,7 @@ defmodule DeepEvalEx.Evaluator do
 
     start_time = System.monotonic_time(:millisecond)
 
-    {results, durations} =
+    outcomes =
       test_cases
       |> throttled(throttle_value)
       |> Task.async_stream(
@@ -277,24 +332,28 @@ defmodule DeepEvalEx.Evaluator do
         timeout: with_grace(timeout),
         on_timeout: :kill_task
       )
+
+    {results, classifications, durations} =
+      test_cases
+      |> Stream.zip(outcomes)
       |> Enum.reduce_while([], fn
-        {:ok, {outcome, seconds}}, acc ->
+        {_test_case, {:ok, {outcome, seconds}}}, acc ->
           collect(timed(outcome, seconds), acc)
 
-        {:exit, :timeout}, acc ->
+        {test_case, {:exit, :timeout}}, acc ->
           @cancelled_message
-          |> error_outcomes(metrics, opts)
+          |> error_outcomes(test_case, metrics, opts)
           |> timed(timeout / 1000)
           |> collect(acc)
 
-        {:exit, reason}, acc ->
+        {test_case, {:exit, reason}}, acc ->
           "Evaluation failed: #{inspect(reason)}"
-          |> error_outcomes(metrics, opts)
+          |> error_outcomes(test_case, metrics, opts)
           |> timed(0.0)
           |> collect(acc)
       end)
       |> unwrap!()
-      |> Enum.unzip()
+      |> unzip3()
 
     duration = System.monotonic_time(:millisecond) - start_time
 
@@ -304,7 +363,16 @@ defmodule DeepEvalEx.Evaluator do
       %{}
     )
 
-    {results, durations}
+    {results, classifications, durations}
+  end
+
+  defp unzip3(triples) do
+    {results, classifications, durations} =
+      Enum.reduce(triples, {[], [], []}, fn {{results, classifications}, seconds}, {r, c, d} ->
+        {[results | r], [classifications | c], [seconds | d]}
+      end)
+
+    {Enum.reverse(results), Enum.reverse(classifications), Enum.reverse(durations)}
   end
 
   @doc """
@@ -320,7 +388,12 @@ defmodule DeepEvalEx.Evaluator do
   @spec evaluate_single(TestCase.t(), [module() | struct()], keyword()) :: [Result.t()]
   def evaluate_single(test_case, metrics, opts \\ []) do
     {opts, _throttle_value} = async_config!(opts)
-    test_case |> run_single(metrics, preflight(metrics, opts)) |> unwrap!()
+    ClassifierUtils.validate!([test_case], Keyword.get(opts, :classifiers, []))
+
+    {results, _classifications} =
+      test_case |> run_single(metrics, preflight(metrics, opts)) |> unwrap!()
+
+    results
   end
 
   @doc false
@@ -354,16 +427,124 @@ defmodule DeepEvalEx.Evaluator do
         timeout: :infinity
       )
 
-    metrics
-    |> Stream.zip(outcomes)
-    |> Enum.reduce_while([], fn
-      {_metric, {:ok, outcome}}, acc ->
-        collect(outcome, acc)
+    measured =
+      metrics
+      |> Stream.zip(outcomes)
+      |> Enum.reduce_while([], fn
+        {_metric, {:ok, outcome}}, acc ->
+          collect(outcome, acc)
 
-      {metric, {:exit, reason}}, acc ->
-        collect(error_outcome("Metric failed: #{inspect(reason)}", metric, opts), acc)
-    end)
-    |> collected()
+        {metric, {:exit, reason}}, acc ->
+          collect(error_outcome("Metric failed: #{inspect(reason)}", metric, opts), acc)
+      end)
+      |> collected()
+
+    with {:ok, results} <- measured,
+         {:ok, classifications} <- classify(test_case, deadline, opts) do
+      {:ok, {results, classifications}}
+    end
+  end
+
+  # The test case's classifications, once its metrics are done (see
+  # "Classifiers"): every classifier at once (one at a time with
+  # run_async: false), each until its :metric_timeout or the deadline.
+  defp classify(test_case, deadline, opts) do
+    case Keyword.get(opts, :classifiers, []) do
+      [] ->
+        {:ok, []}
+
+      classifiers ->
+        outcomes =
+          Task.async_stream(
+            classifiers,
+            &classify_until(test_case, &1, deadline, opts),
+            ordered: true,
+            max_concurrency:
+              if(Keyword.get(opts, :run_async, true), do: length(classifiers), else: 1),
+            timeout: :infinity
+          )
+
+        classifiers
+        |> Stream.zip(outcomes)
+        |> Enum.reduce_while([], fn
+          {_classifier, {:ok, outcome}}, acc ->
+            collect(outcome, acc)
+
+          {classifier, {:exit, reason}}, acc ->
+            "Classifier failed: #{inspect(reason)}"
+            |> classifier_error_outcome(classifier, test_case, opts)
+            |> collect(acc)
+        end)
+        |> collected()
+    end
+  end
+
+  defp classify_until(test_case, classifier, deadline, opts) do
+    case remaining(deadline) do
+      0 ->
+        classifier_error_outcome(unstarted_message(opts), classifier, test_case, opts)
+
+      remaining ->
+        classify_within(test_case, classifier, remaining, opts)
+    end
+  end
+
+  defp classify_within(test_case, classifier, remaining, opts) do
+    metric_timeout = metric_timeout(opts)
+    classify_opts = classify_opts(classifier, opts)
+    task = Task.async(fn -> Classifier.run(classifier, test_case, classify_opts) end)
+
+    case Task.yield(task, min_timeout(metric_timeout, remaining)) ||
+           Task.shutdown(task, :brutal_kill) do
+      {:ok, {:ok, classification}} ->
+        {:ok, classification}
+
+      {:ok, {:error, reason, stacktrace, classification}} ->
+        classification_outcome(reason, stacktrace, classification, opts)
+
+      {:exit, reason} ->
+        "Classifier failed: #{inspect(reason)}"
+        |> classifier_error_outcome(classifier, test_case, opts)
+
+      nil ->
+        bound = if shorter?(metric_timeout, remaining), do: metric_timeout, else: :case
+
+        bound
+        |> timeout_message(opts)
+        |> classifier_error_outcome(classifier, test_case, opts)
+    end
+  end
+
+  # The options a classifier classifies with: the run's, and its resolved
+  # System One context.
+  defp classify_opts(classifier, opts) do
+    context = opts |> Keyword.get(@classifier_contexts_key, %{}) |> Map.get(classifier)
+
+    opts
+    |> Keyword.drop(@run_keys)
+    |> then(fn opts -> if context, do: Keyword.put(opts, :system_one, context), else: opts end)
+  end
+
+  # deepeval's safe_a_classify: with ignore_errors the error is recorded on
+  # the classification, otherwise raised.
+  defp classifier_error_outcome(reason, classifier, test_case, opts) do
+    classification =
+      Classifier.error_classification(
+        classifier,
+        test_case,
+        reason,
+        classify_opts(classifier, opts)
+      )
+
+    classification_outcome(reason, nil, classification, opts)
+  end
+
+  defp classification_outcome(reason, stacktrace, classification, opts) do
+    cond do
+      Keyword.get(opts, :ignore_errors, false) -> {:ok, classification}
+      is_exception(reason) -> {:raise, reason, stacktrace || []}
+      true -> {:raise, %DeepEvalError{message: classification.error}, nil}
+    end
   end
 
   # The test case's :system_one metrics' System One answers, asked in as
@@ -496,7 +677,18 @@ defmodule DeepEvalEx.Evaluator do
         end)
       end)
 
-    Keyword.put(opts, @contexts_key, contexts)
+    classifier_contexts =
+      opts
+      |> Keyword.get(:classifiers, [])
+      |> Enum.reduce(Keyword.get(opts, @classifier_contexts_key, %{}), fn classifier, contexts ->
+        Map.put_new_lazy(contexts, classifier, fn ->
+          Classifier.resolve_context!(classifier, Keyword.drop(opts, @run_keys))
+        end)
+      end)
+
+    opts
+    |> Keyword.put(@contexts_key, contexts)
+    |> Keyword.put(@classifier_contexts_key, classifier_contexts)
   end
 
   defp put_context(merged_opts, metric, opts) do
@@ -593,11 +785,26 @@ defmodule DeepEvalEx.Evaluator do
 
   defp original_stacktrace(_original, _stacktrace), do: nil
 
-  # Every metric of a killed test case errors with `reason`.
-  defp error_outcomes(reason, metrics, opts) do
-    metrics
-    |> Enum.reduce_while([], &collect(error_outcome(reason, &1, opts), &2))
-    |> collected()
+  # Every metric and classifier of a killed test case errors with `reason`.
+  defp error_outcomes(reason, test_case, metrics, opts) do
+    measured =
+      metrics
+      |> Enum.reduce_while([], &collect(error_outcome(reason, &1, opts), &2))
+      |> collected()
+
+    classified =
+      opts
+      |> Keyword.get(:classifiers, [])
+      |> Enum.reduce_while(
+        [],
+        &collect(classifier_error_outcome(reason, &1, test_case, opts), &2)
+      )
+      |> collected()
+
+    with {:ok, results} <- measured,
+         {:ok, classifications} <- classified do
+      {:ok, {results, classifications}}
+    end
   end
 
   # An Enum.reduce_while/3 step: accumulates results, in reverse, until an
@@ -826,11 +1033,11 @@ defmodule DeepEvalEx.Evaluator do
   defp metric_module(%{__struct__: module}), do: module
 
   defp metric_opts(metric, opts) when is_atom(metric),
-    do: opts |> Keyword.delete(@contexts_key) |> BaseMetric.with_default_opts(metric)
+    do: opts |> Keyword.drop(@run_keys) |> BaseMetric.with_default_opts(metric)
 
   defp metric_opts(metric, opts) do
     opts
-    |> Keyword.delete(@contexts_key)
+    |> Keyword.drop(@run_keys)
     |> BaseMetric.with_default_opts(metric_module(metric))
     |> Keyword.merge(struct_to_opts(metric))
   end

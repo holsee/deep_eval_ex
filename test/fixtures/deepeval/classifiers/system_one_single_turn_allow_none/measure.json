@@ -1,0 +1,12 @@
+{
+  "label": null,
+  "reason": "Decided by fake-jev. Label \"NONE\" (P=0.80, confidence=0.70). Alternatives: technical 0.10, billing 0.05, Account Access 0.05.",
+  "error": null,
+  "evaluation_model": "fake-jev",
+  "evaluation_cost": 4.2e-05,
+  "input_tokens": 1000,
+  "output_tokens": 0,
+  "confidence": 0.7,
+  "system_one_fallback_reason": null,
+  "raised": null
+}

@@ -168,6 +168,11 @@ defmodule DeepEvalEx do
     raising them (default: `false`)
   - `:skip_on_missing_params` - Skip metrics whose test case lacks their
     required params (default: `false`)
+  - `:classifiers` - `DeepEvalEx.Classifier`s to run on every test case
+    after its metrics (see `DeepEvalEx.Classifiers` for deepeval's
+    built-ins); their `DeepEvalEx.Classification`s are each
+    `DeepEvalEx.TestResult`'s `:classifications`, and decide its success
+    with the metrics (see "Classifiers" in `evaluate_run/3`)
   - `:results_folder`, `:results_subfolder`, `:identifier`,
     `:hyperparameters` - Save the run in deepeval's format, see
     `evaluate_run/3`
@@ -200,8 +205,8 @@ defmodule DeepEvalEx do
   def evaluate(test_cases, metrics, opts \\ [])
 
   def evaluate(test_cases, metrics, opts) when is_list(test_cases) do
-    {results, _test_run, _path} = evaluate_run(test_cases, metrics, opts)
-    {:ok, EvaluationResult.from_results(test_cases, results)}
+    {results, classifications, _test_run, _path} = run(test_cases, metrics, opts)
+    {:ok, EvaluationResult.from_results(test_cases, results, classifications)}
   end
 
   def evaluate(%TestCase{} = test_case, metrics, opts) do
@@ -282,6 +287,19 @@ defmodule DeepEvalEx do
 
   These options are not passed on to the metrics.
 
+  ## Classifiers
+
+  With `:classifiers` every test case is also classified (see
+  "Classifiers" in `DeepEvalEx.Evaluator`). The classifiers are checked
+  against the test cases' `expected_labels` before anything is evaluated
+  (`DeepEvalEx.Classifier.Utils.validate!/2`). Classifications are local,
+  as deepeval's: `evaluate/3` folds them into each
+  `DeepEvalEx.TestResult`'s success, but they are never part of the
+  `DeepEvalEx.TestRun`, whose test cases' success comes from the metrics
+  alone. A run with classifiers and no metrics has no test run, as
+  deepeval's classifier-only `evaluate()`: it returns `{results, nil, nil}`
+  (each result list empty) and writes nothing.
+
   ## Thresholds
 
   As deepeval's `evaluate()`, raises `ArgumentError` before evaluating when
@@ -306,8 +324,22 @@ defmodule DeepEvalEx do
           [module() | struct()],
           keyword()
         ) ::
-          {[[Result.t()]], TestRun.t(), Path.t() | nil}
+          {[[Result.t()]], TestRun.t() | nil, Path.t() | nil}
   def evaluate_run(test_cases, metrics, opts \\ []) do
+    {results, _classifications, test_run, path} = run(test_cases, metrics, opts)
+    {results, test_run, path}
+  end
+
+  @doc false
+  # evaluate_run/3, also returning the classifications:
+  # {results, classifications, test_run, path}.
+  @spec run(
+          [TestCase.t() | DeepEvalEx.ConversationalTestCase.t()],
+          [module() | struct()],
+          keyword()
+        ) ::
+          {[[Result.t()]], [[DeepEvalEx.Classification.t()]], TestRun.t() | nil, Path.t() | nil}
+  def run(test_cases, metrics, opts) do
     {export_opts, eval_opts} = Keyword.split(opts, @export_opts)
     hyperparameters = TestRun.process_hyperparameters(export_opts[:hyperparameters])
 
@@ -319,24 +351,34 @@ defmodule DeepEvalEx do
     export_opts = Keyword.put(export_opts, :read_only, Config.read_only?())
 
     started = System.monotonic_time()
-    {results, durations} = Evaluator.evaluate_with_durations(test_cases, metrics, eval_opts)
+    {results, classifications, durations} = Evaluator.run(test_cases, metrics, eval_opts)
 
     run_duration =
       System.convert_time_unit(System.monotonic_time() - started, :native, :microsecond) /
         1_000_000
 
-    test_run =
-      TestRun.from_results(test_cases, results,
-        run_durations: durations,
-        run_duration: run_duration,
-        identifier: export_opts[:identifier],
-        hyperparameters: hyperparameters,
-        dataset_alias: export_opts[:dataset_alias],
-        dataset_id: export_opts[:dataset_id],
-        dataset_version: export_opts[:dataset_version]
-      )
+    if metrics == [] and Keyword.get(eval_opts, :classifiers, []) != [] do
+      # deepeval's classifier-only run: classifications are local only, so
+      # there is no test run to finalize or save.
+      {results, classifications, nil, nil}
+    else
+      test_run =
+        export(test_cases, results, durations, run_duration, hyperparameters, export_opts)
 
-    {results, test_run, save_test_run(test_run, export_opts)}
+      {results, classifications, test_run, save_test_run(test_run, export_opts)}
+    end
+  end
+
+  defp export(test_cases, results, durations, run_duration, hyperparameters, export_opts) do
+    TestRun.from_results(test_cases, results,
+      run_durations: durations,
+      run_duration: run_duration,
+      identifier: export_opts[:identifier],
+      hyperparameters: hyperparameters,
+      dataset_alias: export_opts[:dataset_alias],
+      dataset_id: export_opts[:dataset_id],
+      dataset_version: export_opts[:dataset_version]
+    )
   end
 
   defp save_test_run(%TestRun{test_cases: [], conversational_test_cases: []}, _opts), do: nil

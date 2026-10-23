@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "classifications": [
+    {
+      "name": "resolution",
+      "label": "resolved",
+      "expectedLabel": "resolved",
+      "success": true,
+      "reason": "The customer got back in.",
+      "evaluationModel": "scripted-judge",
+      "error": null,
+      "evaluationCost": null,
+      "inputTokenCount": null,
+      "outputTokenCount": null
+    }
+  ]
+}

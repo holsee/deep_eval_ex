@@ -1,0 +1,17 @@
+{
+  "success": false,
+  "classifications": [
+    {
+      "name": "ticket_type",
+      "label": null,
+      "expectedLabel": "billing",
+      "success": false,
+      "reason": null,
+      "evaluationModel": "scripted-judge",
+      "error": "Judge returned 'payments', which is not one of the declared labels (billing, technical, Account Access, or no classification).",
+      "evaluationCost": null,
+      "inputTokenCount": null,
+      "outputTokenCount": null
+    }
+  ]
+}

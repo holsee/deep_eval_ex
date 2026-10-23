@@ -1,0 +1,50 @@
+{
+  "description": "A judge without structured outputs: its text is loaded with trimAndLoadJson",
+  "classifier": {
+    "kind": "classifier",
+    "eval_mode": "llm",
+    "params": {
+      "name": "ticket_type",
+      "labels": [
+        {
+          "name": "billing",
+          "description": "Questions about invoices, charges or refunds."
+        },
+        "technical",
+        {
+          "name": "Account Access",
+          "description": "Logging in, passwords and two-factor codes."
+        }
+      ]
+    }
+  },
+  "test_case": {
+    "input": "I can't log in.",
+    "actual_output": "Try resetting your password.",
+    "context": [
+      "Password resets are self-service."
+    ],
+    "retrieval_context": [
+      "Reset at /account/reset.",
+      "It's free."
+    ],
+    "expected_output": "Points to the reset page.",
+    "tools_called": [
+      {
+        "name": "lookup_account",
+        "input_parameters": {
+          "email": "a@b.c"
+        }
+      }
+    ],
+    "expected_labels": {
+      "ticket_type": "Account Access"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "label,reason": [
+      "```json\n{\"label\": \"account access\", \"reason\": \"Login trouble.\",}\n```"
+    ]
+  }
+}

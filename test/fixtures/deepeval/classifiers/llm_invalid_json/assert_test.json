@@ -1,0 +1,6 @@
+{
+  "raised": {
+    "type": "ValueError",
+    "message": "Evaluation LLM outputted an invalid JSON. Please use a better evaluation model."
+  }
+}

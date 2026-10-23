@@ -1,0 +1,200 @@
+[
+  {
+    "description": "no labels",
+    "kind": "classifier",
+    "name": "c",
+    "labels": [],
+    "raised": {
+      "type": "ValueError",
+      "message": "A classifier needs at least one label."
+    },
+    "warnings": []
+  },
+  {
+    "description": "a blank label name",
+    "kind": "classifier",
+    "name": "c",
+    "labels": [
+      "a",
+      "  "
+    ],
+    "raised": {
+      "type": "ValueError",
+      "message": "Label names cannot be empty."
+    },
+    "warnings": []
+  },
+  {
+    "description": "NONE is reserved, whatever its case and padding",
+    "kind": "classifier",
+    "name": "c",
+    "labels": [
+      "a",
+      " none "
+    ],
+    "raised": {
+      "type": "ValueError",
+      "message": "' none ' cannot be used as a label name. If you want a 'no classification' outcome, set allow_none=True instead."
+    },
+    "warnings": []
+  },
+  {
+    "description": "duplicate labels, case-insensitive, sorted",
+    "kind": "classifier",
+    "name": "c",
+    "labels": [
+      "b",
+      "B",
+      "a",
+      {
+        "name": "A",
+        "description": "Again."
+      }
+    ],
+    "raised": {
+      "type": "ValueError",
+      "message": "Duplicate labels (case-insensitive): a, b."
+    },
+    "warnings": []
+  },
+  {
+    "description": "a blank classifier name",
+    "kind": "classifier",
+    "name": " ",
+    "labels": [
+      "a"
+    ],
+    "raised": {
+      "type": "ValueError",
+      "message": "Classifier 'name' cannot be empty."
+    },
+    "warnings": []
+  },
+  {
+    "description": "labels with and without descriptions",
+    "kind": "classifier",
+    "name": "c",
+    "labels": [
+      "a",
+      {
+        "name": "b",
+        "description": "The b one."
+      }
+    ],
+    "raised": null,
+    "warnings": []
+  },
+  {
+    "description": "duplicate classifier names, sorted",
+    "kind": "validate",
+    "classifiers": [
+      {
+        "name": "y",
+        "labels": [
+          "a"
+        ]
+      },
+      {
+        "name": "x",
+        "labels": [
+          "a"
+        ]
+      },
+      {
+        "name": "y",
+        "labels": [
+          "b"
+        ]
+      },
+      {
+        "name": "x",
+        "labels": [
+          "b"
+        ]
+      }
+    ],
+    "expected_labels": [],
+    "raised": {
+      "type": "ValueError",
+      "message": "Classifier names must be unique within a run, duplicated: x, y."
+    },
+    "warnings": []
+  },
+  {
+    "description": "an expected label that is not one of the classifier's labels",
+    "kind": "validate",
+    "classifiers": [
+      {
+        "name": "tone",
+        "labels": [
+          "on",
+          {
+            "name": "off",
+            "description": "Off."
+          }
+        ]
+      }
+    ],
+    "expected_labels": [
+      {
+        "tone": "on"
+      },
+      {
+        "tone": "OFF"
+      }
+    ],
+    "raised": {
+      "type": "ValueError",
+      "message": "expected_labels['tone'] = 'OFF' is not one of classifier 'tone' labels: on, off."
+    },
+    "warnings": []
+  },
+  {
+    "description": "expected_labels keys that match no classifier: one warning, counted",
+    "kind": "validate",
+    "classifiers": [
+      {
+        "name": "tone",
+        "labels": [
+          "on",
+          "off"
+        ]
+      }
+    ],
+    "expected_labels": [
+      {
+        "tone": "on",
+        "zeta": "x",
+        "alpha": "y"
+      },
+      {
+        "zeta": "z"
+      },
+      {}
+    ],
+    "raised": null,
+    "warnings": [
+      "expected_labels keys matched no classifier in this run: 'alpha' (1 test case), 'zeta' (2 test cases). These expectations were ignored."
+    ]
+  },
+  {
+    "description": "valid expected labels",
+    "kind": "validate",
+    "classifiers": [
+      {
+        "name": "tone",
+        "labels": [
+          "on",
+          "off"
+        ]
+      }
+    ],
+    "expected_labels": [
+      {
+        "tone": "off"
+      }
+    ],
+    "raised": null,
+    "warnings": []
+  }
+]
