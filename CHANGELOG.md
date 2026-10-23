@@ -2469,6 +2469,39 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     scenario, whose `evaluate_traced/3` test runs and judge prompts match
     deepeval's byte for byte in both modes. `generate_fixtures.py prompts
     [case ...]` regenerates only the prompt goldens.
+- **LLM spans from the adapters** (ADR-0011), the Elixir counterpart of
+  deepeval 4.3.1's `deepeval.openai` and `deepeval.anthropic` patchers. The
+  [Tracing](wiki/guides/Tracing.md) guide covers them.
+  - Inside a span, each call of `DeepEvalEx.LLM.Adapter.generate/2`,
+    `generate_with_schema/3` and `generate_raw_response/2` is an `:llm`
+    child span, whatever the adapter (`DeepEvalEx.LLM.Adapters.Mock` and
+    custom ones included), since the facade does the wrapping: named after
+    the function, with the adapter's `model_name/1`, the prompt as input,
+    the answer as output (a raw response's message text), and the token
+    counts of the usage the adapter recorded. The OpenAI and Anthropic
+    adapters set its `integration` and `provider` to `"OpenAI"` or
+    `"Anthropic"`. An `{:error, reason}` answer makes it `:errored` with the
+    exception's message or the inspected reason, as the Python clients
+    raise; a raise does too, and is re-raised.
+  - A call outside any span records nothing (deepeval's `_drop_if_root`).
+  - As the patchers, a successful call gives the trace its prompt and
+    answer as input and output when nothing set them yet, ahead of the root
+    span's arguments and result, and `DeepEvalEx.Tracing.trace/2`'s
+    `:llm_span_context` gives the span its `:metrics`,
+    `:metric_collection`, `:prompt`, `:expected_output`,
+    `:expected_tools`, `:context` and `:retrieval_context`.
+  - `DeepEvalEx.Classifier.classify/3` now judges inside
+    `DeepEvalEx.Tracing.suppress/1`, as metrics already did, so neither a
+    metric's nor a classifier's judge calls appear in a user's trace, as
+    with deepeval's internal `observe`.
+  - `DeepEvalEx.Tracing.ReqStep.attach/2` adds Req steps that record an
+    app's own `Req` requests to an LLM provider the same way: one
+    `"llm_generation"` span per request (retries and redirects included),
+    with the model, messages, answer text and token counts read from
+    OpenAI chat and Responses, Anthropic Messages and Ollama JSON, and
+    `:errored` on a status of 400 or above or a transport error. Options:
+    `:name`, `:provider`, `:integration`, `:model` and `:metadata`. Tool
+    calls in a response are not recorded.
 
 ### Changed
 

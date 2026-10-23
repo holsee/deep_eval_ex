@@ -104,6 +104,7 @@ defmodule DeepEvalEx.Classifier do
   alias DeepEvalEx.Prompts.{EvaluationTemplate, Python}
   alias DeepEvalEx.SystemOne
   alias DeepEvalEx.SystemOne.{Context, Question, Scoring}
+  alias DeepEvalEx.Tracing
 
   @typedoc "A label: its name and its description, if any."
   @type label :: {name :: String.t(), description :: String.t() | nil}
@@ -208,6 +209,9 @@ defmodule DeepEvalEx.Classifier do
   `ignore_errors: true` records the error instead (see
   `DeepEvalEx.Evaluator`).
 
+  The judge's calls are not traced (`DeepEvalEx.Tracing.suppress/1`), as
+  a metric's are not.
+
   ## Options
 
   Run-level defaults for the fields left `nil` (see "Fields"): `:model`,
@@ -243,10 +247,14 @@ defmodule DeepEvalEx.Classifier do
     context = context(classifier, opts)
     opts = Keyword.put(opts, :system_one, context)
 
+    # The judge's calls stay out of a user's trace, as deepeval's internal
+    # observe on a classifier's methods.
     {outcome, usages} =
-      BaseMetric.track_usage(fn ->
-        seed(classifier, context, opts)
-        decide(classifier, test_case, context, opts)
+      Tracing.suppress(fn ->
+        BaseMetric.track_usage(fn ->
+          seed(classifier, context, opts)
+          decide(classifier, test_case, context, opts)
+        end)
       end)
 
     base = %Classification{

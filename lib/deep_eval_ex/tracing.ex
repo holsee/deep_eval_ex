@@ -109,9 +109,15 @@ defmodule DeepEvalEx.Tracing do
 
       {_answer, [trace]} = DeepEvalEx.Tracing.capture([], fn -> MyApp.Support.answer("hi") end)
 
+  ## LLM calls
+
+  Calls through `DeepEvalEx.LLM.Adapter` record `:llm` spans inside a
+  span (see "Tracing" there), and `DeepEvalEx.Tracing.ReqStep` does the
+  same for an app's own `Req` client.
+
   `suppress/1` records nothing: `DeepEvalEx.Metrics.BaseMetric` measures
-  inside it, so a metric's judge calls never appear in a user's trace, as
-  deepeval's internal `observe`.
+  and `DeepEvalEx.Classifier` classifies inside it, so a judge's calls
+  never appear in a user's trace, as deepeval's internal `observe`.
 
   ## Telemetry
 

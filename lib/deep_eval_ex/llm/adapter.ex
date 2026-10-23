@@ -75,6 +75,34 @@ defmodule DeepEvalEx.LLM.Adapter do
   its cost is `nil` whatever its calls report, while their token counts
   are kept. See `DeepEvalEx.LLM.Usage.seed/1`.
 
+  ## Tracing
+
+  Inside a trace, each call of `generate/2`, `generate_with_schema/3` and
+  `generate_raw_response/2` is an `:llm` span (see `DeepEvalEx.Tracing`),
+  as deepeval 4.3.1's `deepeval.openai` and `deepeval.anthropic` patchers
+  record a client call. The wrapping happens once, here, so every adapter
+  (a custom one or `DeepEvalEx.LLM.Adapters.Mock` included) is traced:
+
+  - the span is named after the function, with the adapter's
+    `model_name/1` as its model, the prompt as its input and the answer
+    (a raw response's message text) as its output;
+  - its token counts are those of the usage the adapter recorded;
+  - the OpenAI and Anthropic adapters set its `integration` and
+    `provider` to `"OpenAI"` or `"Anthropic"`; other adapters set none,
+    so the span takes its parent's integration;
+  - an `{:error, reason}` answer makes it `:errored`, with the
+    exception's message or the inspected reason, as the Python clients
+    raise;
+  - the trace takes the prompt as its input and the answer as its output
+    when it has none yet, and `DeepEvalEx.Tracing.trace/2`'s
+    `:llm_span_context` gives the span its metrics, metric collection,
+    prompt and test-case fields, as in deepeval.
+
+  A call outside any span records nothing (deepeval's `_drop_if_root`),
+  and neither does a metric's judge: metrics and classifiers run inside
+  `DeepEvalEx.Tracing.suppress/1`. For an app's own Req-based client, see
+  `DeepEvalEx.Tracing.ReqStep`.
+
   ## Using a Custom Adapter
 
       DeepEvalEx.evaluate([test_case], [metric],
@@ -85,6 +113,14 @@ defmodule DeepEvalEx.LLM.Adapter do
 
   alias DeepEvalEx.LLM.Usage
   alias DeepEvalEx.Metrics.Utils.Generation
+  alias DeepEvalEx.Tracing.LLMSpan
+
+  # The integration and provider of an adapter's LLM spans, deepeval's
+  # `Integration` and `Provider` values.
+  @providers %{
+    DeepEvalEx.LLM.Adapters.OpenAI => [integration: "OpenAI", provider: "OpenAI"],
+    DeepEvalEx.LLM.Adapters.Anthropic => [integration: "Anthropic", provider: "Anthropic"]
+  }
 
   @type prompt :: String.t()
   @type schema :: module() | map()
@@ -379,7 +415,7 @@ defmodule DeepEvalEx.LLM.Adapter do
   def generate(prompt, opts \\ []) do
     {adapter, model} = resolve_adapter(opts)
     opts = Keyword.put_new(opts, :model, model)
-    with_usage(adapter, opts, fn -> adapter.generate(prompt, opts) end)
+    traced("generate", adapter, prompt, opts, fn -> adapter.generate(prompt, opts) end)
   end
 
   @doc """
@@ -397,7 +433,7 @@ defmodule DeepEvalEx.LLM.Adapter do
     {adapter, model} = resolve_adapter(opts)
     opts = Keyword.put_new(opts, :model, model)
 
-    with_usage(adapter, opts, fn ->
+    traced("generate_with_schema", adapter, prompt, opts, fn ->
       with {:ok, answer} <- ask_for_schema(adapter, prompt, schema, opts) do
         load_json(answer)
       end
@@ -459,7 +495,10 @@ defmodule DeepEvalEx.LLM.Adapter do
     opts = Keyword.put_new(opts, :model, model)
 
     if raw_response?(adapter),
-      do: with_usage(adapter, opts, fn -> adapter.generate_raw_response(prompt, opts) end),
+      do:
+        traced("generate_raw_response", adapter, prompt, opts, fn ->
+          adapter.generate_raw_response(prompt, opts)
+        end),
       else: {:error, {:log_probs_unsupported, adapter.model_name(opts)}}
   end
 
@@ -488,19 +527,62 @@ defmodule DeepEvalEx.LLM.Adapter do
     end
   end
 
-  # Passes on the usage the adapter recorded. A successful call that reported
-  # none still records the adapter's model, so the judge model is known even
-  # when its tokens and cost are not.
-  defp with_usage(adapter, opts, fun) do
+  # Runs one call of `adapter` as an LLM span (see "Tracing" above) and
+  # passes on the usage it recorded.
+  defp traced(name, adapter, prompt, opts, fun) do
+    model = adapter.model_name(opts)
+
+    span_opts =
+      [name: name, model: model, input: prompt] ++ Map.get(@providers, adapter, [])
+
+    LLMSpan.run(span_opts, fn ->
+      {result, usages} = with_usage(model, fun)
+      {result, outcome(name, result, usages, prompt)}
+    end)
+  end
+
+  # A successful call that reported no usage still records the adapter's
+  # model, so the judge model is known even when its tokens and cost are
+  # not.
+  defp with_usage(model, fun) do
     {result, usages} = Usage.track(fun)
 
     case {result, usages} do
-      {{:ok, _}, []} -> Usage.record(%Usage{model: adapter.model_name(opts)})
+      {{:ok, _}, []} -> Usage.record(%Usage{model: model})
       _ -> Usage.record_all(usages)
     end
 
-    result
+    {result, usages}
   end
+
+  defp outcome(name, result, usages, prompt) do
+    tokens = [
+      input_token_count: token_sum(usages, :input_tokens),
+      output_token_count: token_sum(usages, :output_tokens)
+    ]
+
+    case result do
+      {:ok, answer} -> [output: span_output(name, answer), trace_input: prompt] ++ tokens
+      {:error, reason} -> [error: error_text(reason)] ++ tokens
+      _other -> tokens
+    end
+  end
+
+  defp token_sum(usages, field) do
+    case usages |> Enum.map(&Map.fetch!(&1, field)) |> Enum.reject(&is_nil/1) do
+      [] -> nil
+      counts -> Enum.sum(counts)
+    end
+  end
+
+  # A raw response's output is its text, as the patchers' `message.content`.
+  defp span_output("generate_raw_response", %{"choices" => [%{"message" => message} | _]}),
+    do: Map.get(message, "content")
+
+  defp span_output(_name, answer), do: answer
+
+  defp error_text(reason) when is_exception(reason), do: Exception.message(reason)
+  defp error_text(reason), do: inspect(reason)
 
   defp resolve_adapter(opts) do
     case Keyword.get(opts, :adapter) do

@@ -379,11 +379,51 @@ Captured traces travel through the tracing store, not the capturer's
 mailbox, so a `GenServer` or LiveView can capture without receiving
 stray messages.
 
+## LLM calls
+
+Calls through `DeepEvalEx.LLM.Adapter` (`generate/2`,
+`generate_with_schema/3` and `generate_raw_response/2`) are recorded as
+`:llm` spans, as deepeval's `deepeval.openai` and `deepeval.anthropic`
+patchers record a client call. Any adapter is traced this way, a custom
+one or the Mock included:
+
+```elixir
+deftraced answer(query), type: :agent do
+  {:ok, text} = DeepEvalEx.LLM.Adapter.generate(query, adapter: :openai, model: "gpt-4o-mini")
+  text
+end
+```
+
+`answer/1`'s span gets an `:llm` child named `"generate"`, with the model,
+the prompt as input, the answer as output and the token counts the adapter
+reported. The OpenAI and Anthropic adapters also set its `integration` and
+`provider`. An `{:error, reason}` answer makes the span `:errored`. A call
+outside any span records nothing, so the adapter is not traced on its own.
+
+As in deepeval, the trace takes the call's prompt and answer as its input
+and output when nothing set them yet, which is before the root span
+closes. `trace/2`'s `:llm_span_context` gives the call's span its
+`:metrics`, `:metric_collection`, `:prompt`, `:expected_output`,
+`:expected_tools`, `:context` and `:retrieval_context`.
+
+An app that calls its provider with its own `Req` client can attach
+`DeepEvalEx.Tracing.ReqStep` to get the same spans:
+
+```elixir
+req =
+  Req.new(base_url: "https://api.openai.com/v1", auth: {:bearer, key})
+  |> DeepEvalEx.Tracing.ReqStep.attach(provider: "OpenAI", integration: "OpenAI")
+```
+
+It reads the model, messages, answer text and token counts from OpenAI,
+Anthropic and Ollama JSON. Each request is one span named
+`"llm_generation"`, retries included.
+
 ## Metrics are not traced
 
-Metrics measure inside `DeepEvalEx.Tracing.suppress/1`, so the LLM calls a
-judge makes never show up in your traces. Use `suppress/1` yourself for
-work you do not want recorded.
+Metrics and classifiers judge inside `DeepEvalEx.Tracing.suppress/1`, so
+the LLM calls a judge makes never show up in your traces. Use `suppress/1`
+yourself for work you do not want recorded.
 
 ## Configuration
 

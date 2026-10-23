@@ -61,6 +61,14 @@ All adapters implement the `DeepEvalEx.LLM.Adapter` behaviour:
 @callback generate_raw_response(prompt, opts) :: {:ok, map()} | {:error, term()}
 ```
 
+## Tracing
+
+Inside a trace, every call through `DeepEvalEx.LLM.Adapter` is an `:llm`
+span with the model, prompt, answer and token counts, whatever the
+adapter; the OpenAI and Anthropic adapters also set the span's
+`integration` and `provider`. Calls outside a trace, and a metric's judge
+calls, record nothing. See the [Tracing](../guides/Tracing.md) guide.
+
 ## OpenAI Adapter
 
 ### Configuration
