@@ -50,6 +50,49 @@ defmodule DeepEvalEx.Test.ParityMetrics do
     end
   end
 
+  defmodule CacheStub do
+    @moduledoc """
+    `Stub` for the test-run cache scenarios, as the fixture script's
+    `CacheStubMetric`: its judge model is configured, so a cache lookup
+    (made before measuring) sees it, as for every LLM metric. Each measure
+    sends `{:measured, name}` to the test process that started the run.
+    """
+
+    use DeepEvalEx.Metrics.BaseMetric
+
+    defstruct [
+      :name,
+      :score,
+      :reason,
+      :threshold,
+      :evaluation_model,
+      :evaluation_cost,
+      :input_tokens,
+      :output_tokens,
+      strict_mode: false
+    ]
+
+    @impl true
+    def metric_name, do: "Cache Stub"
+
+    @impl true
+    def metric_name(%__MODULE__{name: name}), do: name
+
+    @impl true
+    def required_params, do: [:input]
+
+    # A custom deepeval metric has no include_reason.
+    @impl true
+    def cache_configuration(opts, _result),
+      do: %{evaluation_model: Keyword.fetch!(opts, :evaluation_model), include_reason: false}
+
+    def do_measure(test_case, opts) do
+      test = :"$callers" |> Process.get([self()]) |> List.last()
+      send(test, {:measured, Keyword.fetch!(opts, :name)})
+      Stub.do_measure(test_case, opts)
+    end
+  end
+
   defmodule ConversationalStub do
     @moduledoc """
     `Stub` for conversational test cases, as the fixture script's
@@ -115,6 +158,10 @@ defmodule DeepEvalEx.Test.ParityMetrics do
     # BaseMetric's @spec promises.
     @dialyzer {:nowarn_function, do_measure: 2}
     def do_measure(_test_case, opts) do
+      # The cache scenarios log every measure, as the fixture script's
+      # CacheErrorMetric does.
+      test = :"$callers" |> Process.get([self()]) |> List.last()
+      send(test, {:measured, Keyword.fetch!(opts, :name)})
       exception = Map.fetch!(@exceptions, Keyword.fetch!(opts, :exception))
       raise exception, Keyword.fetch!(opts, :message)
     end

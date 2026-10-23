@@ -74,6 +74,21 @@ Emitted when a metric evaluation fails.
 | `metric` | string | Metric name |
 | `error` | term | Error reason |
 
+#### `[:deep_eval_ex, :metric, :cache_hit]`
+
+Emitted when a metric reuses its cached result from the test-run cache
+instead of measuring (see the [Test-Run Cache](Test-Run-Cache.md) guide).
+No `:start` or `:stop` event is emitted for it.
+
+| Measurement | Type | Description |
+|-------------|------|-------------|
+| `system_time` | integer | System time when the cached result was reused |
+
+| Metadata | Type | Description |
+|----------|------|-------------|
+| `metric` | string | Metric name |
+| `test_case` | string \| nil | Test case name |
+
 ### Evaluation Events
 
 #### `[:deep_eval_ex, :evaluation, :start]`

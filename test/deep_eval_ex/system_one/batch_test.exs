@@ -186,6 +186,39 @@ defmodule DeepEvalEx.SystemOne.BatchTest do
       assert [%Mock.Call{questions: [{"m0.q_0", _}]}] = Mock.calls(mock)
     end
 
+    test "leaves out a metric reusing a cached result; the others keep m<j>. by their place" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.8))
+
+      assert [nil, {:answers, _, _}, {:answers, _, _}] =
+               Batch.prefetch(
+                 @test_case,
+                 [
+                   entry(Judged, :system_one, mock, spec([:input], "S")),
+                   entry(Judged, :system_one, mock, spec([:input], "T")),
+                   entry(Judged, :system_one, mock, spec([:actual_output], "U"))
+                 ],
+                 cached: MapSet.new([0])
+               )
+
+      assert [%Mock.Call{questions: [{"m0.q_0", %{instructions: "T"}}, {"m1.q_0", _}]}] =
+               Mock.calls(mock)
+    end
+
+    test "batches nothing when a cached result leaves one :system_one metric" do
+      mock = Mock.new(answer_fn: Mock.noul_answers(0.8))
+
+      assert Batch.prefetch(
+               @test_case,
+               [
+                 entry(Judged, :system_one, mock, spec([:input], "S")),
+                 entry(Judged, :system_one, mock, spec([:input], "T"))
+               ],
+               cached: MapSet.new([1])
+             ) == [nil, nil]
+
+      assert Mock.calls(mock) == []
+    end
+
     test "sends one request per model name" do
       a = Mock.new(answer_fn: Mock.noul_answers(0.8), model: "jev-a")
       b = Mock.new(answer_fn: Mock.noul_answers(0.8), model: "jev-b")

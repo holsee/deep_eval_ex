@@ -33,7 +33,8 @@ defmodule DeepEvalEx.Classification do
   - `:error` - The error message, when the classifier errored
   - `:evaluation_cost`, `:input_tokens`, `:output_tokens` - Usage, seeded
     as a metric's (`0` for a native judge or System One, `nil` for a custom
-    judge)
+    judge); a classification this run cached (`DeepEvalEx.TestRun.Cache`)
+    costs the integer `0`, as deepeval caches it
   """
 
   alias DeepEvalEx.Prompts.Python
@@ -47,7 +48,7 @@ defmodule DeepEvalEx.Classification do
           reason: String.t() | nil,
           evaluation_model: String.t() | nil,
           error: String.t() | nil,
-          evaluation_cost: float() | nil,
+          evaluation_cost: number() | nil,
           input_tokens: non_neg_integer() | nil,
           output_tokens: non_neg_integer() | nil
         }

@@ -290,6 +290,17 @@ defmodule DeepEvalEx.Classifier do
   end
 
   @doc false
+  # The judge the classifier names before classifying under `opts`
+  # (run-level defaults), deepeval's classifier.evaluation_model: the LLM's
+  # name, or the System One model's under :system_one; nil for a custom
+  # classifier, whose judge is only known once it reports usage.
+  @spec configured_model(t(), keyword()) :: String.t() | nil
+  def configured_model(%__MODULE__{} = classifier, opts) do
+    opts = classify_opts(classifier, opts)
+    evaluation_model(classifier, context(classifier, opts), opts, [])
+  end
+
+  @doc false
   # The classifier's System One context under `opts` (run-level defaults),
   # resolved before any test case as the Evaluator's preflight does.
   @spec resolve_context!(t(), keyword()) :: Context.t()
@@ -353,7 +364,10 @@ defmodule DeepEvalEx.Classifier do
     end
   end
 
-  defp expected_label(test_case, name),
+  @doc false
+  # The test case's expected label for the classifier named `name`, if any.
+  @spec expected_label(struct(), String.t()) :: String.t() | nil
+  def expected_label(test_case, name),
     do: (Map.get(test_case, :expected_labels) || %{}) |> Map.get(name)
 
   # Asks the judge: {:ok, {raw_label, reason}} or {:error, reason}.

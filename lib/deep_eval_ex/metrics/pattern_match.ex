@@ -118,6 +118,13 @@ defmodule DeepEvalEx.Metrics.PatternMatch do
   @impl true
   def metric_name, do: "Pattern Match"
 
+  @doc """
+  `include_reason: false` in the metric's test-run cache configuration:
+  deepeval's metric takes no `include_reason`.
+  """
+  @impl true
+  def cache_configuration(_opts, _result), do: %{include_reason: false}
+
   @impl true
   def required_params, do: [:input, :actual_output]
 

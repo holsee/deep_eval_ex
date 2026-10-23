@@ -196,6 +196,19 @@ defmodule DeepEvalEx.Metrics.Summarization do
   defdelegate evaluation_model(opts), to: Adapter, as: :model_name
 
   @doc """
+  Summarization's test-run cache settings, as deepeval's attributes: `n`
+  and the assessment questions (the generated ones once measured).
+  """
+  @impl true
+  def cache_configuration(opts, result) do
+    questions =
+      Keyword.get(opts, :assessment_questions) ||
+        (result && Map.get(result.metadata || %{}, :assessment_questions))
+
+    %{n: Keyword.get(opts, :n, @default_n), assessment_questions: questions}
+  end
+
+  @doc """
   The whole metric as one System One request under the `:system_one` eval
   mode, deepeval's `_system_one_eval_spec`: its questions about the
   original text (`input`) and the summary (`actual_output`), the metric's

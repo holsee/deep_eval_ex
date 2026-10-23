@@ -1,0 +1,43 @@
+{
+  "files": [
+    ".deepeval-cache.json"
+  ],
+  "measured": [
+    "Relevance"
+  ],
+  "raised": null,
+  "test_results": [
+    {
+      "success": true,
+      "metrics_data": [
+        {
+          "name": "Relevance",
+          "threshold": 0.5,
+          "success": true,
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321,
+          "inputTokenCount": 120,
+          "outputTokenCount": 12
+        }
+      ],
+      "classifications": [
+        {
+          "name": "Topic",
+          "label": "geography",
+          "expectedLabel": "geography",
+          "success": true,
+          "reason": "About a capital.",
+          "evaluationModel": "scripted-judge",
+          "error": null,
+          "evaluationCost": null,
+          "inputTokenCount": null,
+          "outputTokenCount": null
+        }
+      ]
+    }
+  ]
+}

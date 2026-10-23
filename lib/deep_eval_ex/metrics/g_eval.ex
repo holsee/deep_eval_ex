@@ -341,6 +341,28 @@ defmodule DeepEvalEx.Metrics.GEval do
   end
 
   @doc """
+  GEval's test-run cache settings, as deepeval's `GEval` attributes: its
+  criteria, its evaluation steps (the generated ones once measured) and
+  its evaluation params; GEval takes no `include_reason`.
+  """
+  @impl true
+  def cache_configuration(opts, result) do
+    steps =
+      Keyword.get(opts, :evaluation_steps) ||
+        (result && Map.get(result.metadata || %{}, :evaluation_steps))
+
+    %{
+      criteria: Keyword.get(opts, :criteria),
+      evaluation_steps: steps,
+      evaluation_params: opts |> Keyword.get(:evaluation_params) |> param_names(),
+      include_reason: false
+    }
+  end
+
+  defp param_names(nil), do: nil
+  defp param_names(params), do: Enum.map(params, &Atom.to_string/1)
+
+  @doc """
   Measures a test case using the GEval metric configuration.
 
   ## With a metric struct (recommended):

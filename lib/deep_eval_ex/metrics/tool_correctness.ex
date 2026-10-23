@@ -119,6 +119,15 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   defdelegate evaluation_model(opts), to: Adapter, as: :model_name
 
   @doc """
+  ToolCorrectness's test-run cache settings: its evaluation params, as
+  deepeval's attribute (`[]` by default).
+  """
+  @impl true
+  def cache_configuration(opts, _result) do
+    %{evaluation_params: opts |> Keyword.get(:evaluation_params, []) |> Enum.map(&to_string/1)}
+  end
+
+  @doc """
   Always `nil`, deepeval's `_system_one_eval_spec`: the score is decided in
   code by matching the tools called against the expected tools, so there is
   no whole-metric System One request. Exporting it keeps the metric on

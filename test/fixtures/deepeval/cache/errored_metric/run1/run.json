@@ -1,0 +1,36 @@
+{
+  "files": [
+    ".deepeval-cache.json"
+  ],
+  "measured": [
+    "Failing"
+  ],
+  "raised": null,
+  "test_results": [
+    {
+      "success": false,
+      "metrics_data": [
+        {
+          "name": "Relevance",
+          "threshold": 0.5,
+          "success": true,
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0
+        },
+        {
+          "name": "Failing",
+          "threshold": 0.5,
+          "success": false,
+          "strictMode": false,
+          "flaky": false,
+          "error": "The judge is down."
+        }
+      ],
+      "classifications": []
+    }
+  ]
+}

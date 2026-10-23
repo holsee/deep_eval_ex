@@ -1,6 +1,6 @@
 # deepeval golden fixtures
 
-Fixtures written by **deepeval 4.3.1**, in eight sets:
+Fixtures written by **deepeval 4.3.1**, in nine sets:
 
 - export scenarios (the directories below, except `scripted/`, `prompts/`,
   `round_trip/`, `system_one/`, `datasets/`, `classifiers/` and
@@ -37,6 +37,10 @@ Fixtures written by **deepeval 4.3.1**, in eight sets:
   deepeval's expectation evaluator asks, decides and exports as
   `expectationsData` under the `llm` and `system_one` eval modes, used by
   `test/deep_eval_ex/expectations_parity_test.exs`
+- [cache fixtures](#cache-fixtures) (`cache/`), deepeval's test-run cache
+  keys, metric configurations and `.deepeval-cache.json` files over runs
+  that write and read it, used by
+  `test/deep_eval_ex/test_run/cache_parity_test.exs`
 
 ## Export scenarios
 
@@ -783,3 +787,76 @@ through `DeepEvalEx.evaluate/3`'s expectation evaluator and compares the
 prompts and `decide()` calls byte for byte, the evaluator's result (or the
 error it raised), the test result's metric data and `expectationsData`, the
 test run, and `assert_evaluation/3`'s failure message.
+
+## Cache fixtures
+
+deepeval's test-run cache (`test_run/cache.py`) keeps the error-free metric
+data and classifications of the last run in `.deepeval/.deepeval-cache.json`,
+keyed by `serialize()` of each single-turn test case's fields, the run's
+hyperparameters and its expectations with their evidence, each row with its
+metric's `MetricConfiguration` (or its classifier's
+`ClassifierConfiguration`). `evaluate(cache_config=CacheConfig(use_cache=True))`
+reuses a row whose name and configuration match (`same_metric_configs`), at
+cost 0, and leaves it out of the System One batch.
+
+`scripts/parity/generate_runner_fixtures.py` writes them, from its
+`KEY_CASES` and `CACHE_SCENARIOS`:
+
+- `cache/keys/keys.json` - each test case (and hyperparameters) with the key
+  deepeval's cache manager files it under
+- `cache/configurations/configurations.json` -
+  `create_metric_configuration` of every single-turn scripted scenario's
+  metric (`metrics`) before and after `measure()` (`null` after an error,
+  which is never cached), `same_metric_configs` of each fresh metric
+  against every stored configuration of its kind (`same`), and the
+  configurations of the System One scenarios' single-turn, unbatched
+  metrics (`system_one`)
+- `cache/<scenario>/input.json` - the scenario's `runs`, made one after the
+  other in one folder, each a fresh cache manager as a new process: its
+  `test_cases`, `metrics` (`cache_stub`, a `StubMetric` whose judge model is
+  set when it is built, as an LLM metric's is), `classifiers`, scripted
+  judge `responses`, System One fake and `use_cache`, `write_cache` and
+  `max_concurrent`
+- `cache/<scenario>/run<i>/run.json` - what run `i` left: the cache `files`,
+  the metrics `measured` (cache hits are not), what `evaluate()` `raised`,
+  its `test_results` (metric data and classifications) and the fake's
+  `decide` calls
+- `cache/<scenario>/run<i>/cache.json` - the cache file after run `i`, and
+  `test_run.json` its test run
+
+| Scenario | What it covers |
+| --- | --- |
+| `hits` | A warm run reads every metric of two test cases (non-ASCII text, unsorted context) at cost 0, measuring none |
+| `configuration_changed` | A raised threshold and another judge model miss and are measured again |
+| `test_case_changed` | A changed output misses; the cache keeps only the last run's entries |
+| `errored_metric` | An errored metric is never cached |
+| `without_use_cache` | Without `use_cache` everything is measured and the cache rewritten |
+| `write_cache_false` | `write_cache=False` never reads the cache, even with `use_cache`, and deletes it |
+| `duplicate_test_case` | One run, one test case twice, one at a time: the second reads the first's results |
+| `conversational` | Conversational test cases are never cached: the cache is written empty |
+| `classification` | A cached classification is read back and checked against a new expected label |
+| `expectations` | The expectation evaluator is cached with its `criteria`, keyed with the expectations and evidence |
+| `system_one_one_cached` | One of three `system_one` metrics cached: the other two batched as `m0.` and `m1.` |
+| `system_one_two_cached` | Two of three cached: the third is the only candidate and is not batched |
+
+`test/deep_eval_ex/test_run/cache_parity_test.exs` checks every key and
+configuration byte for byte and every `same` verdict, then makes each
+scenario's runs through `DeepEvalEx.evaluate_run/3`, each starting from
+deepeval's cache file of the run before: the cache file and test run must
+be deepeval's bytes, and the metrics measured, the System One calls and the
+classifications the same.
+
+The generator also rewrites the `test_run.json` of the classifier and
+expectation scenarios, whose `runDuration` changes on every run; only the
+cache fixtures need committing.
+
+### Known divergences
+
+- **A cached expectation evaluator.** deepeval 4.3.1 raises
+  `AttributeError` (`'_SingleTurnExpectations' object has no attribute
+  'verdicts'`) when it reads an Expectations row back (the warm run of
+  `expectations`). DeepEvalEx reuses the row, with its cached
+  `expectationsData`, at cost 0.
+- **Interrupted runs.** deepeval also files the error-free results of a
+  test case whose evaluation raised or was cancelled; DeepEvalEx files a
+  test case only once all its metrics and classifiers are done.

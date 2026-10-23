@@ -1,0 +1,104 @@
+{
+  "description": "Conversational test cases are never cached: the cache is written empty",
+  "runs": [
+    {
+      "test_cases": [
+        {
+          "scenario": "A customer cannot log in after a password reset.",
+          "expected_outcome": "The assistant walks the customer through recovery.",
+          "context": [
+            "Accounts lock after 5 failed attempts."
+          ],
+          "turns": [
+            {
+              "role": "user",
+              "content": "I reset my password but still can't log in."
+            },
+            {
+              "role": "assistant",
+              "content": "Your account is locked; I've sent an unlock link to your email.",
+              "retrieval_context": [
+                "Unlock links expire after 1 hour."
+              ],
+              "tools_called": [
+                {
+                  "name": "unlock_account",
+                  "input_parameters": {
+                    "user": "c-42"
+                  }
+                }
+              ]
+            },
+            {
+              "role": "user",
+              "content": "Got it, I'm in. Thanks!"
+            }
+          ]
+        }
+      ],
+      "metrics": [
+        {
+          "kind": "conversational_stub",
+          "name": "Stub Judge",
+          "score": 0.75,
+          "reason": "Three of the four statements are supported. café ✓",
+          "threshold": 0.7,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 1234,
+          "output_tokens": 56
+        }
+      ]
+    },
+    {
+      "test_cases": [
+        {
+          "scenario": "A customer cannot log in after a password reset.",
+          "expected_outcome": "The assistant walks the customer through recovery.",
+          "context": [
+            "Accounts lock after 5 failed attempts."
+          ],
+          "turns": [
+            {
+              "role": "user",
+              "content": "I reset my password but still can't log in."
+            },
+            {
+              "role": "assistant",
+              "content": "Your account is locked; I've sent an unlock link to your email.",
+              "retrieval_context": [
+                "Unlock links expire after 1 hour."
+              ],
+              "tools_called": [
+                {
+                  "name": "unlock_account",
+                  "input_parameters": {
+                    "user": "c-42"
+                  }
+                }
+              ]
+            },
+            {
+              "role": "user",
+              "content": "Got it, I'm in. Thanks!"
+            }
+          ]
+        }
+      ],
+      "metrics": [
+        {
+          "kind": "conversational_stub",
+          "name": "Stub Judge",
+          "score": 0.75,
+          "reason": "Three of the four statements are supported. café ✓",
+          "threshold": 0.7,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 1234,
+          "output_tokens": 56
+        }
+      ],
+      "use_cache": true
+    }
+  ]
+}

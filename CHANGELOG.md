@@ -1886,8 +1886,55 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     One requests, results, `evaluate()` metric data, test runs and
     `assert_test` messages of 12 scenarios, and the coverage errors. A new
     [Expectations](wiki/guides/Expectations.md) guide covers them.
+- **Test-run cache** (ADR-0010), a port of deepeval 4.3.1's
+  `test_run/cache.py`: metric results and classifications are reused
+  across runs instead of measured again.
+  - `DeepEvalEx.evaluate_run/3` and `DeepEvalEx.evaluate/3` take
+    `use_cache: true` to reuse cached results, `write_cache: false` to
+    neither read nor write the cache (and delete it), and `:cache_folder`.
+    A metric whose name and configuration (threshold, strict mode, judge,
+    `include_reason` and its own settings, such as GEval's criteria) match
+    a cached row of the same test case is not measured: its result is the
+    cached one at `evaluation_cost: 0.0`, without token counts. The judge
+    is part of the configuration, so a System One result never serves the
+    LLM, nor the other way round. A cached metric is left out of the
+    System One batch, and a classifier with a cached classification is not
+    asked; its verdict is checked against the test case's expected label.
+    Conversational test cases are never cached, as in deepeval.
+  - The cache is deepeval's `.deepeval/.deepeval-cache.json`, byte for
+    byte, so deepeval and DeepEvalEx reuse each other's results. Entries
+    are keyed by `serialize()` of the test case's input, outputs, context,
+    retrieval context, the run's hyperparameters and its expectations with
+    their evidence. As in deepeval, after a run the file holds only that
+    run's entries, and `.temp-deepeval-cache.json` holds the running run's.
+  - `DeepEvalEx.TestRun.Cache` (keys, the file's structs, encoding,
+    `metric_configuration/3` and `same_metric_config?/2`, a port of
+    `same_metric_configs` with its quirks) and
+    `DeepEvalEx.TestRun.Cache.Store`, one process per run, so concurrent
+    runs never share state.
+  - `c:DeepEvalEx.Metrics.BaseMetric.cache_configuration/2`, an optional
+    callback adding a metric's own settings to its cache configuration;
+    GEval, JevEval, Summarization, ToolCorrectness, ExactMatch and
+    PatternMatch implement it.
+  - `SystemOne.Batch.prefetch/3` takes `:cached`, the metrics left out of
+    the batch.
+  - The `[:deep_eval_ex, :metric, :cache_hit]` telemetry event.
+  - Parity fixtures from deepeval (`test/fixtures/deepeval/cache/`) pin the
+    keys, every scripted metric's configuration and `same_metric_configs`
+    verdicts, and the cache files, test runs, measured metrics and System
+    One requests of 12 multi-run scenarios. A new
+    [Test-Run Cache](wiki/guides/Test-Run-Cache.md) guide covers it.
+    deepeval raises reading a cached expectation evaluator back; DeepEvalEx
+    reuses it.
 
 ### Changed
+
+- `DeepEvalEx.evaluate_run/3` and `DeepEvalEx.evaluate/3` now write the
+  test-run cache, `.deepeval-cache.json`, in the cache folder on every run
+  with test cases, as deepeval's `evaluate()` does by default, replacing
+  the previous run's entries; pass `write_cache: false` to delete it
+  instead. `ENABLE_DEEPEVAL_CACHE` (`:use_cache`) is still not read by
+  them, as deepeval's `evaluate()` ignores it.
 
 - A test case's `:dataset_rank`, when set, is its `order` and default
   `"test_case_<order>"` name in `DeepEvalEx.TestRun.from_results/3` and its

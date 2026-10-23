@@ -19,7 +19,9 @@ defmodule DeepEvalEx.SystemOne.Batch do
   As deepeval's `_candidates`, a metric is a candidate when its effective
   eval mode (its `DeepEvalEx.SystemOne.Context`) is `:system_one`
   (deepeval also leaves out multimodal test cases, whose metrics all
-  decline them). With fewer than two candidates nothing is batched. A
+  decline them) and that reuses no cached result (the `:cached` option,
+  see `DeepEvalEx.TestRun.Cache`). With fewer than two candidates nothing
+  is batched. A
   `DeepEvalEx.ConversationalTestCase`'s conversational metrics are batched
   likewise, their states merged turn by turn. A candidate whose
   `c:DeepEvalEx.Metrics.BaseMetric.system_one_eval_spec/2` declines the test
@@ -107,6 +109,8 @@ defmodule DeepEvalEx.SystemOne.Batch do
     `:infinity` (default: `:infinity`). Metrics whose request is still
     running then are not prefetched
   - `:max_concurrency` - the most requests sent at once (default: all)
+  - `:cached` - the positions in `entries` of the metrics that reuse a
+    cached result, which are never candidates (default: none)
   """
   @spec prefetch(TestCase.t() | ConversationalTestCase.t(), [entry()], keyword()) ::
           [outcome()]
@@ -115,8 +119,11 @@ defmodule DeepEvalEx.SystemOne.Batch do
   def prefetch(test_case, entries, opts)
       when (is_struct(test_case, TestCase) or is_struct(test_case, ConversationalTestCase)) and
              is_list(entries) do
+    cached = Keyword.get(opts, :cached, MapSet.new())
+
     candidates =
       for {{module, metric_opts}, index} <- Enum.with_index(entries),
+          not MapSet.member?(cached, index),
           candidate?(module, test_case, metric_opts),
           do: {index, module, metric_opts}
 
@@ -130,8 +137,8 @@ defmodule DeepEvalEx.SystemOne.Batch do
 
   # deepeval's _candidates: metrics of the test case's kind (conversational
   # metrics for a conversational test case) whose effective eval mode is
-  # :system_one. DeepEvalEx has no result cache. A multimodal test case's
-  # metrics all decline it, so it is not batched.
+  # :system_one (and, checked by prefetch/3, with no cached result). A
+  # multimodal test case's metrics all decline it, so it is not batched.
   defp candidate?(_module, %ConversationalTestCase{multimodal: true}, _opts), do: false
 
   defp candidate?(module, test_case, opts) do

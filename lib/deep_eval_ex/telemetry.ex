@@ -24,6 +24,11 @@ defmodule DeepEvalEx.Telemetry do
       `output_tokens` and `cost` when LLM calls made before the error reported them
     - Metadata: `%{metric: String.t(), error: term()}`
 
+  - `[:deep_eval_ex, :metric, :cache_hit]` - A metric reused its cached
+    result instead of measuring (see "Cache" in `DeepEvalEx.Evaluator`)
+    - Measurements: `%{system_time: integer()}`
+    - Metadata: `%{metric: String.t(), test_case: String.t() | nil}`
+
   ### Evaluation Events
 
   - `[:deep_eval_ex, :evaluation, :start]` - Batch evaluation started

@@ -1,0 +1,90 @@
+{
+  "description": "A classification is cached with its labels and judge; the warm run reads it and checks it against the test case's new expected label",
+  "runs": [
+    {
+      "test_cases": [
+        {
+          "input": "What is the capital of France?",
+          "actual_output": "Paris.",
+          "expected_output": "Paris.",
+          "expected_labels": {
+            "Topic": "geography"
+          }
+        }
+      ],
+      "metrics": [
+        {
+          "kind": "cache_stub",
+          "name": "Relevance",
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "threshold": 0.5,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        }
+      ],
+      "classifiers": [
+        {
+          "kind": "classifier",
+          "eval_mode": "llm",
+          "params": {
+            "name": "Topic",
+            "labels": [
+              "geography",
+              "food"
+            ]
+          }
+        }
+      ],
+      "responses": {
+        "label,reason": [
+          {
+            "label": "geography",
+            "reason": "About a capital."
+          }
+        ]
+      }
+    },
+    {
+      "test_cases": [
+        {
+          "input": "What is the capital of France?",
+          "actual_output": "Paris.",
+          "expected_output": "Paris.",
+          "expected_labels": {
+            "Topic": "food"
+          }
+        }
+      ],
+      "metrics": [
+        {
+          "kind": "cache_stub",
+          "name": "Relevance",
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "threshold": 0.5,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        }
+      ],
+      "classifiers": [
+        {
+          "kind": "classifier",
+          "eval_mode": "llm",
+          "params": {
+            "name": "Topic",
+            "labels": [
+              "geography",
+              "food"
+            ]
+          }
+        }
+      ],
+      "use_cache": true
+    }
+  ]
+}

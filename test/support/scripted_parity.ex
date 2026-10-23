@@ -142,6 +142,19 @@ defmodule DeepEvalEx.Test.ScriptedParity do
   end
 
   @doc """
+  The scenario's test case, metric and evaluation options, with its judge
+  scripted (see `DeepEvalEx.LLM.Adapters.Mock.script/2`): what `measure/1`
+  measures.
+  """
+  @spec build(String.t()) :: {struct(), module() | struct(), keyword()}
+  def build(scenario) do
+    script = load(scenario)
+    {metric, opts} = metric(script)
+    load_script(script)
+    {test_case(script), metric, opts}
+  end
+
+  @doc """
   Evaluates the scenario with `DeepEvalEx.evaluate_run/3`, as deepeval's
   `evaluate()` did with `ignore_errors=True`, writing the test run to
   `results_folder`. Returns the file's contents.

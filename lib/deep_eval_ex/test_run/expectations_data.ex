@@ -135,6 +135,31 @@ defmodule DeepEvalEx.TestRun.ExpectationsData do
     |> OrderedObject.new()
   end
 
+  @doc false
+  # The expectations data of a decoded `expectationsData` object (as
+  # to_map/1 writes it), as DeepEvalEx.TestRun.Cache reads it back.
+  @spec from_map(map()) :: t()
+  def from_map(map) do
+    %__MODULE__{
+      success: map["success"],
+      score: map["score"],
+      reason: map["reason"],
+      verdicts:
+        Enum.map(map["verdicts"] || [], fn verdict ->
+          %Verdict{
+            kind: verdict["kind"],
+            condition: verdict["condition"],
+            status: verdict["status"],
+            reason: verdict["reason"],
+            evidence: verdict["evidence"]
+          }
+        end),
+      evaluation_model: map["evaluationModel"],
+      evaluation_cost: map["evaluationCost"],
+      error: map["error"]
+    }
+  end
+
   defp verdict_map(%Verdict{} = verdict) do
     OrderedObject.new([
       {"kind", verdict.kind},

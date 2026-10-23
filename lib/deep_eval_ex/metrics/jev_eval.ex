@@ -244,6 +244,16 @@ defmodule DeepEvalEx.Metrics.JevEval do
   def evaluation_model(opts), do: Model.resolve(Keyword.get(opts, :system_one_model)).name
 
   @doc """
+  JevEval's test-run cache settings: its evaluation params, as deepeval's
+  attribute.
+  """
+  @impl true
+  def cache_configuration(opts, _result) do
+    params = Keyword.get(opts, :evaluation_params)
+    %{evaluation_params: params && Enum.map(params, &Atom.to_string/1)}
+  end
+
+  @doc """
   Measures `test_case` with `metric`, plus `opts` (e.g. `:verbose_mode`).
   Same as `measure/2` with the metric's fields as options.
   """

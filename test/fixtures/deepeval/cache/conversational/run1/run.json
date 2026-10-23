@@ -1,0 +1,28 @@
+{
+  "files": [
+    ".deepeval-cache.json"
+  ],
+  "measured": [],
+  "raised": null,
+  "test_results": [
+    {
+      "success": true,
+      "metrics_data": [
+        {
+          "name": "Stub Judge",
+          "threshold": 0.7,
+          "success": true,
+          "score": 0.75,
+          "reason": "Three of the four statements are supported. café ✓",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321,
+          "inputTokenCount": 1234,
+          "outputTokenCount": 56
+        }
+      ],
+      "classifications": []
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "files": [
+    ".deepeval-cache.json"
+  ],
+  "measured": [],
+  "raised": {
+    "type": "AttributeError",
+    "message": "'_SingleTurnExpectations' object has no attribute 'verdicts'"
+  },
+  "test_results": null
+}

@@ -49,6 +49,8 @@ defmodule DeepEvalEx.Evaluator do
     required params instead of erroring (default: `false`), see "Errors"
   - `:classifiers` - `DeepEvalEx.Classifier`s to run on every test case
     after its metrics (default: `[]`), see "Classifiers"
+  - `:use_cache` - Reuse the cached results of an earlier run (default:
+    `false`), see "Cache"
 
   Run-level options are defaults only: when a metric is passed as a struct,
   any non-nil field on that struct overrides the run-level option of the
@@ -119,6 +121,20 @@ defmodule DeepEvalEx.Evaluator do
   `DeepEvalEx.TestRun.ExpectationsData` as `:expectations_data`.
 
   A test case without expectations gets no such result.
+
+  ## Cache
+
+  `DeepEvalEx.evaluate_run/3` (and `DeepEvalEx.evaluate/3`) evaluate with
+  a test-run cache, deepeval's `.deepeval/.deepeval-cache.json` (see
+  `DeepEvalEx.TestRun.Cache`). Each single-turn test case's error-free
+  results and classifications are filed under its key at cost `0`. With
+  `use_cache: true`, a metric whose name and configuration match a cached
+  row of its test case is not measured: its result is the cached one, at
+  `evaluation_cost: 0.0` and without token counts, and
+  `[:deep_eval_ex, :metric, :cache_hit]` is emitted. Such a metric is left
+  out of the System One batch. A classifier with a cached classification
+  is not asked either; its expected label and verdict come from the test
+  case. Conversational test cases are never cached, as in deepeval.
 
   ## Concurrency
 
@@ -247,13 +263,16 @@ defmodule DeepEvalEx.Evaluator do
   alias DeepEvalEx.Metrics.Expectations
   alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.SystemOne.{Batch, Context}
+  alias DeepEvalEx.TestRun.Cache
+  alias DeepEvalEx.TestRun.Cache.{CachedTestCase, Store}
 
   # Where the run keeps each metric's resolved System One context.
   @contexts_key :__system_one_contexts__
   # ... and each classifier's.
   @classifier_contexts_key :__classifier_contexts__
   # Run-level keys never passed on to a metric.
-  @run_keys [@contexts_key, @classifier_contexts_key, :classifiers]
+  @run_keys [@contexts_key, @classifier_contexts_key, :classifiers] ++
+              [:cache, :use_cache, :write_cache, :cache_hyperparameters]
 
   # deepeval's AsyncConfig defaults.
   @default_max_concurrent 20
@@ -340,11 +359,12 @@ defmodule DeepEvalEx.Evaluator do
 
     outcomes =
       test_cases
+      |> Enum.with_index()
       |> throttled(throttle_value)
       |> Task.async_stream(
-        fn test_case ->
+        fn {test_case, order} ->
           started = System.monotonic_time()
-          outcome = run_single(test_case, metrics, opts)
+          outcome = run_single(test_case, metrics, opts, order)
           {outcome, seconds_since(started)}
         end,
         max_concurrency: concurrency,
@@ -410,7 +430,7 @@ defmodule DeepEvalEx.Evaluator do
     ClassifierUtils.validate!([test_case], Keyword.get(opts, :classifiers, []))
     opts = preflight(metrics ++ expectation_evaluators([test_case], opts), opts)
 
-    {results, _classifications} = test_case |> run_single(metrics, opts) |> unwrap!()
+    {results, _classifications} = test_case |> run_single(metrics, opts, 0) |> unwrap!()
 
     results
   end
@@ -448,17 +468,24 @@ defmodule DeepEvalEx.Evaluator do
   # {:ok, results}, or the first metric error to raise in metrics order;
   # halting the stream stops the metrics still running. The test case's
   # deadline starts now: each metric runs until its own :metric_timeout or
-  # the deadline, whichever comes first.
-  defp run_single(test_case, metrics, opts) do
+  # the deadline, whichever comes first. A metric with a cached result
+  # (see "Cache") reuses it instead; `order` is the test case's place in
+  # the run, which orders the cache file.
+  defp run_single(test_case, metrics, opts, order) do
     metrics = case_metrics(test_case, metrics, opts)
     deadline = deadline(case_timeout(metrics, opts))
-    prefetched = prefetch(test_case, metrics, deadline, opts)
+    cache = cached(test_case, metrics, opts)
+    prefetched = prefetch(test_case, metrics, deadline, cache, opts)
 
     outcomes =
       Task.async_stream(
-        Enum.zip(metrics, prefetched),
-        fn {metric, prefetched} ->
-          measure_until(test_case, metric, prefetched, deadline, opts)
+        Enum.zip([metrics, prefetched, cache.hits]),
+        fn
+          {metric, _prefetched, %Result{} = hit} ->
+            reuse(test_case, metric, hit)
+
+          {metric, prefetched, nil} ->
+            measure_until(test_case, metric, prefetched, deadline, opts)
         end,
         ordered: true,
         max_concurrency: metric_concurrency(metrics, opts),
@@ -478,15 +505,114 @@ defmodule DeepEvalEx.Evaluator do
       |> collected()
 
     with {:ok, results} <- measured,
-         {:ok, classifications} <- classify(test_case, deadline, opts) do
+         {:ok, classifications} <- classify(test_case, deadline, cache.entry, opts) do
+      write_cache(metrics, results, classifications, cache, order, opts)
       {:ok, {results, classifications}}
     end
   end
 
+  # The test case's cache (see "Cache"): its key, the entry the store has
+  # for it when :use_cache is set, and per metric its configuration before
+  # measuring, the cached row it matches (which keeps it out of the System
+  # One batch) and the result it reuses (a row with a score). A
+  # conversational test case, or a run without a store, has none.
+  defp cached(test_case, metrics, opts) do
+    store = Keyword.get(opts, :cache)
+
+    if store && is_struct(test_case, TestCase) do
+      key = Cache.key(test_case, Keyword.get(opts, :cache_hyperparameters))
+      entry = if Keyword.get(opts, :use_cache, false), do: Store.lookup(store, key)
+
+      {configurations, rows} =
+        metrics
+        |> Enum.map(fn metric ->
+          configuration =
+            Cache.metric_configuration(metric_module(metric), measure_opts(metric, opts))
+
+          {configuration, Cache.metric_data(metric_name(metric), configuration, entry)}
+        end)
+        |> Enum.unzip()
+
+      hits =
+        Enum.zip_with(metrics, rows, fn
+          metric, %{metric_data: %{score: score}} = row when not is_nil(score) ->
+            Cache.cached_result(row, Keyword.get(measure_opts(metric, opts), :flaky, false))
+
+          _metric, _row ->
+            nil
+        end)
+
+      %{
+        store: store,
+        key: key,
+        entry: entry,
+        configurations: configurations,
+        rows: rows,
+        hits: hits
+      }
+    else
+      none = List.duplicate(nil, length(metrics))
+      %{store: nil, key: nil, entry: nil, configurations: none, rows: none, hits: none}
+    end
+  end
+
+  # A cached result reused instead of measuring (see "Cache").
+  defp reuse(test_case, metric, hit) do
+    :telemetry.execute(
+      [:deep_eval_ex, :metric, :cache_hit],
+      %{system_time: System.system_time()},
+      %{metric: metric_name(metric), test_case: Map.get(test_case, :name)}
+    )
+
+    {:ok, hit}
+  end
+
+  # Files the test case's error-free results and classifications in the
+  # run's cache, deepeval's cache_test_case: each with its configuration
+  # (a reused result with the configuration it was reused under), at cost 0.
+  defp write_cache(_metrics, _results, _classifications, %{store: nil}, _order, _opts), do: :ok
+
+  defp write_cache(metrics, results, classifications, cache, order, opts) do
+    cached_metrics_data =
+      [metrics, results, cache.configurations, cache.rows, cache.hits]
+      |> Enum.zip()
+      |> Enum.reject(fn {_metric, result, _conf, _row, _hit} ->
+        result.skipped or Result.errored?(result)
+      end)
+      |> Enum.map(fn
+        {_metric, result, configuration, row, %Result{}} ->
+          Cache.cached_metric_data(result, Cache.reused_configuration(configuration, row))
+
+        {metric, result, _configuration, _row, nil} ->
+          configuration =
+            Cache.metric_configuration(metric_module(metric), measure_opts(metric, opts), result)
+
+          Cache.cached_metric_data(result, configuration)
+      end)
+
+    cached_classifications =
+      opts
+      |> Keyword.get(:classifiers, [])
+      |> Enum.zip(classifications)
+      |> Enum.filter(fn {_classifier, classification} -> is_nil(classification.error) end)
+      |> Enum.map(fn {classifier, classification} ->
+        configuration =
+          Cache.classifier_configuration(classifier, classify_opts(classifier, opts))
+
+        Cache.cached_classification(classification, configuration)
+      end)
+
+    Store.put(cache.store, cache.key, order, %CachedTestCase{
+      cached_metrics_data: cached_metrics_data,
+      cached_classifications: cached_classifications
+    })
+  end
+
   # The test case's classifications, once its metrics are done (see
   # "Classifiers"): every classifier at once (one at a time with
-  # run_async: false), each until its :metric_timeout or the deadline.
-  defp classify(test_case, deadline, opts) do
+  # run_async: false), each until its :metric_timeout or the deadline. A
+  # classifier with a cached classification in `entry` reuses it.
+  defp classify(test_case, deadline, entry, opts) do
     case Keyword.get(opts, :classifiers, []) do
       [] ->
         {:ok, []}
@@ -495,7 +621,7 @@ defmodule DeepEvalEx.Evaluator do
         outcomes =
           Task.async_stream(
             classifiers,
-            &classify_until(test_case, &1, deadline, opts),
+            &classify_or_reuse(test_case, &1, deadline, entry, opts),
             ordered: true,
             max_concurrency:
               if(Keyword.get(opts, :run_async, true), do: length(classifiers), else: 1),
@@ -514,6 +640,18 @@ defmodule DeepEvalEx.Evaluator do
             |> collect(acc)
         end)
         |> collected()
+    end
+  end
+
+  defp classify_or_reuse(test_case, classifier, deadline, nil, opts),
+    do: classify_until(test_case, classifier, deadline, opts)
+
+  defp classify_or_reuse(test_case, classifier, deadline, entry, opts) do
+    configuration = Cache.classifier_configuration(classifier, classify_opts(classifier, opts))
+
+    case Cache.classification(classifier.name, configuration, entry) do
+      nil -> classify_until(test_case, classifier, deadline, opts)
+      cached -> {:ok, Cache.cached_classification_result(cached, test_case)}
     end
   end
 
@@ -588,12 +726,16 @@ defmodule DeepEvalEx.Evaluator do
   # The test case's :system_one metrics' System One answers, asked in as
   # few requests as possible before any metric starts (see "System One"),
   # one Batch outcome per metric. The requests run until the deadline.
-  defp prefetch(test_case, metrics, deadline, opts) do
+  defp prefetch(test_case, metrics, deadline, cache, opts) do
     entries = Enum.map(metrics, &{metric_module(&1), measure_opts(&1, opts)})
+
+    cached =
+      for {row, index} <- Enum.with_index(cache.rows), row != nil, into: MapSet.new(), do: index
 
     Batch.prefetch(test_case, entries,
       timeout: remaining(deadline),
-      max_concurrency: if(Keyword.get(opts, :run_async, true), do: length(metrics), else: 1)
+      max_concurrency: if(Keyword.get(opts, :run_async, true), do: length(metrics), else: 1),
+      cached: cached
     )
   end
 
@@ -703,6 +845,17 @@ defmodule DeepEvalEx.Evaluator do
   @spec evaluate_metric(TestCase.t(), module() | struct(), keyword()) :: Result.t()
   def evaluate_metric(test_case, metric, opts) do
     test_case |> measure_metric(metric, nil, preflight([metric], opts)) |> unwrap!()
+  end
+
+  @doc false
+  # The test-run cache configuration of `metric` under the run's `opts`, as
+  # the evaluation looks it up (`result` nil) or files it (the measured
+  # result); see DeepEvalEx.TestRun.Cache.metric_configuration/3.
+  @spec metric_configuration(module() | struct(), keyword(), Result.t() | nil) ::
+          Cache.MetricConfiguration.t()
+  def metric_configuration(metric, opts, result \\ nil) do
+    opts = preflight([metric], opts)
+    Cache.metric_configuration(metric_module(metric), measure_opts(metric, opts), result)
   end
 
   # Resolves every metric's System One context up front (see "System One"),

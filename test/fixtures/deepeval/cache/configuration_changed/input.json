@@ -1,0 +1,78 @@
+{
+  "description": "The warm run raises a threshold and changes a judge model: those metrics miss and are measured again",
+  "runs": [
+    {
+      "test_cases": [
+        {
+          "input": "What is the capital of France?",
+          "actual_output": "Paris.",
+          "expected_output": "Paris."
+        }
+      ],
+      "metrics": [
+        {
+          "kind": "cache_stub",
+          "name": "Relevance",
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "threshold": 0.5,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        },
+        {
+          "kind": "cache_stub",
+          "name": "Tone",
+          "score": 0.4,
+          "reason": "Tone reason.",
+          "threshold": 0.6,
+          "evaluation_model": "gpt-4o",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        },
+        {
+          "kind": "exact_match"
+        }
+      ]
+    },
+    {
+      "test_cases": [
+        {
+          "input": "What is the capital of France?",
+          "actual_output": "Paris.",
+          "expected_output": "Paris."
+        }
+      ],
+      "metrics": [
+        {
+          "kind": "cache_stub",
+          "name": "Relevance",
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "threshold": 0.7,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        },
+        {
+          "kind": "cache_stub",
+          "name": "Tone",
+          "score": 0.4,
+          "reason": "Tone reason.",
+          "threshold": 0.6,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        },
+        {
+          "kind": "exact_match"
+        }
+      ],
+      "use_cache": true
+    }
+  ]
+}

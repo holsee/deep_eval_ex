@@ -104,11 +104,13 @@ defmodule DeepEvalEx do
   require Logger
 
   alias DeepEvalEx.{Config, EvaluationResult, Evaluator, Result, TestCase, TestRun}
+  alias DeepEvalEx.TestRun.Cache.Store
   alias DeepEvalEx.TestRun.LocalStore
 
   @export_opts [
     :results_folder,
     :results_subfolder,
+    :cache_folder,
     :identifier,
     :hyperparameters,
     :dataset_alias,
@@ -177,6 +179,8 @@ defmodule DeepEvalEx do
   - `:results_folder`, `:results_subfolder`, `:identifier`,
     `:hyperparameters` - Save the run in deepeval's format, see
     `evaluate_run/3`
+  - `:use_cache`, `:write_cache`, `:cache_folder` - The test-run cache, see
+    "Cache" in `evaluate_run/3`
 
   ## Examples
 
@@ -270,6 +274,9 @@ defmodule DeepEvalEx do
   logs a warning. An invalid `DEEPEVAL_FILE_SYSTEM` raises `ArgumentError`
   before evaluating.
 
+  The run also writes the test-run cache, `.deepeval/.deepeval-cache.json`
+  (see "Cache").
+
   ## Options
 
   All `evaluate/3` options, including:
@@ -285,8 +292,33 @@ defmodule DeepEvalEx do
     test cases came from, written as `datasetAlias`, `datasetId` and
     `datasetVersion`, as deepeval takes them from its test cases (default:
     `nil`); `DeepEvalEx.Dataset.EvaluationDataset.evaluate_run/4` sets them
+  - `:cache_folder` - The folder of the `.deepeval` snapshots and the
+    test-run cache (default: the `:cache_folder` setting, see
+    `DeepEvalEx.Config`)
+  - `:use_cache` - Reuse cached results (default: `false`), see "Cache"
+  - `:write_cache` - Write the test-run cache (default: `true`); `false`
+    deletes it, see "Cache"
 
   These options are not passed on to the metrics.
+
+  ## Cache
+
+  As deepeval's `evaluate()` with its default `CacheConfig`, every run
+  writes the test-run cache, `.deepeval-cache.json` in the cache folder:
+  the error-free results and classifications of each single-turn test case,
+  keyed by the test case, with each metric's configuration (see
+  `DeepEvalEx.TestRun.Cache`). The file is deepeval's, so either can read
+  the other's. After a run it holds that run's entries only; while it runs,
+  `.temp-deepeval-cache.json` holds them too. A run with classifiers only
+  has no test run to wrap up, as in deepeval: its entries are added to the
+  cache file, and the temp file is left.
+
+  With `use_cache: true` a metric whose result is cached for the same test
+  case and configuration is not measured again: its result is the cached
+  one, at cost `0.0` (see "Cache" in `DeepEvalEx.Evaluator`). deepeval's
+  `evaluate()` does not read the `ENABLE_DEEPEVAL_CACHE` setting, and
+  neither does this. With `write_cache: false` the cache is neither read
+  nor written, and both files are deleted.
 
   ## Classifiers
 
@@ -378,6 +410,25 @@ defmodule DeepEvalEx do
     # deepeval fails to load its settings, rather than after the LLM calls.
     export_opts = Keyword.put(export_opts, :read_only, Config.read_only?())
 
+    {:ok, cache} =
+      Store.start_link(
+        write_cache: Keyword.get(eval_opts, :write_cache, true),
+        folder: presence(export_opts[:cache_folder]) || Config.get(:cache_folder),
+        read_only: export_opts[:read_only]
+      )
+
+    try do
+      evaluate_and_export(test_cases, metrics, eval_opts, export_opts, hyperparameters, cache)
+    after
+      Store.stop(cache)
+    end
+  end
+
+  defp evaluate_and_export(test_cases, metrics, eval_opts, export_opts, hyperparameters, cache) do
+    classifiers = Keyword.get(eval_opts, :classifiers, [])
+    expectations? = Enum.any?(test_cases, &Evaluator.has_expectations?/1)
+    eval_opts = Keyword.merge(eval_opts, cache: cache, use_cache: use_cache?(eval_opts))
+
     started = System.monotonic_time()
     {results, classifications, durations} = Evaluator.run(test_cases, metrics, eval_opts)
 
@@ -393,9 +444,16 @@ defmodule DeepEvalEx do
       test_run =
         export(test_cases, results, durations, run_duration, hyperparameters, export_opts)
 
-      {results, classifications, test_run, save_test_run(test_run, export_opts)}
+      {results, classifications, test_run, save_test_run(test_run, export_opts, cache)}
     end
   end
+
+  # deepeval's evaluate() reads the cache only when its CacheConfig says so.
+  defp use_cache?(eval_opts), do: Keyword.get(eval_opts, :use_cache, false) == true
+
+  defp presence(nil), do: nil
+  defp presence(""), do: nil
+  defp presence(value), do: value
 
   defp export(test_cases, results, durations, run_duration, hyperparameters, export_opts) do
     TestRun.from_results(test_cases, results,
@@ -409,12 +467,15 @@ defmodule DeepEvalEx do
     )
   end
 
-  defp save_test_run(%TestRun{test_cases: [], conversational_test_cases: []}, _opts), do: nil
+  defp save_test_run(%TestRun{test_cases: [], conversational_test_cases: []}, _opts, _cache),
+    do: nil
 
   # deepeval's save_test_run_locally (rolling snapshot, then the results
-  # folder), then wrap_up_test_run's LATEST_TEST_RUN_FILE_PATH.
-  defp save_test_run(test_run, opts) do
+  # folder), then wrap_up_test_run's cache wrap-up and
+  # LATEST_TEST_RUN_FILE_PATH.
+  defp save_test_run(test_run, opts, cache) do
     warn_on_error(LocalStore.write_rolling(test_run, opts), "write rolling snapshot to")
+    Store.wrap_up(cache)
     path = save_to_results_folder(test_run, opts)
     warn_on_error(LocalStore.write_latest(test_run, opts), "write")
     path

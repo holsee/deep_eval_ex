@@ -155,7 +155,8 @@ defmodule DeepEvalEx.TestRun do
     `:flaky` are the result's, and so are `:verbose_logs`, exported last as
     deepeval's `verboseLogs`. A score-only metric has neither `:threshold`
     nor `:success` (`nil`), and the export leaves both out, as deepeval's
-    `exclude_none` does.
+    `exclude_none` does. The cost is a float, but in a row this run cached
+    (`DeepEvalEx.TestRun.Cache`), which keeps deepeval's integer `0`.
 
     `:expectations_data` and `:extra` hold loaded JSON DeepEvalEx does not
     interpret (see "Raw JSON" in `DeepEvalEx.TestRun`).
@@ -171,7 +172,7 @@ defmodule DeepEvalEx.TestRun do
             flaky: boolean(),
             evaluation_model: String.t() | nil,
             error: String.t() | nil,
-            evaluation_cost: float() | nil,
+            evaluation_cost: number() | nil,
             input_tokens: non_neg_integer() | nil,
             output_tokens: non_neg_integer() | nil,
             verbose_logs: String.t() | nil,
@@ -1061,6 +1062,22 @@ defmodule DeepEvalEx.TestRun do
       ],
       turn.extra
     )
+  end
+
+  @doc false
+  # One metric data as deepeval dumps it (see to_map/1); also the
+  # metric_data of DeepEvalEx.TestRun.Cache's entries.
+  @spec metric_data_to_map(MetricData.t()) :: OrderedObject.t()
+  def metric_data_to_map(%MetricData{} = data), do: metric_data_map(data)
+
+  @doc false
+  # Parses one decoded metric data object, as load/1 does.
+  @spec metric_data_from_map(term()) ::
+          {:ok, MetricData.t()} | {:error, {:invalid_test_run, String.t()}}
+  def metric_data_from_map(map) do
+    {:ok, parse_metric_data(map, "metric_data")}
+  catch
+    {:invalid_test_run, _message} = reason -> {:error, reason}
   end
 
   defp metric_data_map(%MetricData{} = data) do

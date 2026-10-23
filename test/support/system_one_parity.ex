@@ -150,6 +150,29 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   end
 
   @doc """
+  The scenario's test case and its first metric with that metric's
+  options, against a fresh fake System One model, with the judge scripted:
+  what `measure/2` measures.
+  """
+  @spec build(String.t()) :: {struct(), module() | struct(), keyword()}
+  def build(scenario) do
+    input = load(scenario, "input.json")
+    mock = Mock.from_fixture(input["system_one"])
+    [{metric, opts} | _] = metrics(input, mock)
+    {test_case(input), metric, opts}
+  end
+
+  @doc """
+  A metric of a fixture's `metrics` list (`kind`, `eval_mode` and `params`)
+  with its options, deciding with the System One `mock`.
+  """
+  @spec metric(map(), term()) :: {module() | struct(), keyword()}
+  def metric(%Jason.OrderedObject{} = spec, mock), do: metric(Map.new(spec.values), mock)
+
+  def metric(%{"kind" => kind, "params" => params} = spec, mock),
+    do: metric(kind, spec["eval_mode"], params, mock)
+
+  @doc """
   Evaluates the scenario with `DeepEvalEx.evaluate_run/3`, as deepeval's
   `evaluate()` did with `ignore_errors=True`, writing the test run to
   `results_folder`. Returns `{test_run, calls}`: the file's contents and the

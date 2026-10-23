@@ -267,7 +267,9 @@ defmodule DeepEvalExTest do
       end
     end
 
-    test "writes only the .deepeval snapshots without a results folder", %{tmp_dir: dir} do
+    test "writes only the .deepeval snapshots and cache without a results folder", %{
+      tmp_dir: dir
+    } do
       without_cache_folder_config(fn ->
         File.cd!(dir, fn ->
           assert {:ok, %EvaluationResult{}} = DeepEvalEx.evaluate(test_cases(), [ExactMatch])
@@ -277,7 +279,7 @@ defmodule DeepEvalExTest do
       assert File.ls!(dir) == [".deepeval"]
 
       assert dir |> Path.join(".deepeval") |> File.ls!() |> Enum.sort() ==
-               [".latest_run_full.json", ".latest_test_run.json"]
+               [".deepeval-cache.json", ".latest_run_full.json", ".latest_test_run.json"]
     end
   end
 

@@ -181,6 +181,19 @@ defmodule DeepEvalEx.Metrics.Expectations do
   @impl true
   defdelegate evaluation_model(opts), to: Adapter, as: :model_name
 
+  # The evaluator's criteria (criteria/2) in its test-run cache
+  # configuration, as deepeval's.
+  @impl true
+  def cache_configuration(opts, _result) do
+    evaluator = %__MODULE__{
+      expectations: Keyword.get(opts, :expectations),
+      eval_mode: Keyword.get(opts, :eval_mode),
+      model: Keyword.get(opts, :model)
+    }
+
+    %{criteria: criteria(evaluator, opts)}
+  end
+
   # Any test case: deepeval has one evaluator class per kind.
   def validate_test_case(%TestCase{}), do: :ok
   def validate_test_case(%ConversationalTestCase{}), do: :ok

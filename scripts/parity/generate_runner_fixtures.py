@@ -1,5 +1,6 @@
 """Generate the golden fixtures of DeepEvalEx's test-runner phase (P8):
-classifiers and expectations for now; the cache, report and CLI sets follow.
+classifiers, expectations and the test-run cache for now; the report and CLI
+sets follow.
 
 Classifiers (`deepeval.classifiers`) assign exactly one label from a closed
 set to a test case, and only pass or fail when the test case declares the
@@ -76,6 +77,15 @@ It also writes:
   (`normalize_labels`) and `validate_classifiers` inputs with the error
   they raise or the warning they log
 
+The test-run cache (`test_run/cache.py`) is written under
+test/fixtures/deepeval/cache/: `keys/keys.json` (cache keys from
+`KEY_CASES`), `configurations/configurations.json` (every scripted and
+System One scenario's metric configuration, and `same_metric_configs`
+verdicts) and, for every scenario in `CACHE_SCENARIOS`, `input.json` with
+its runs and `run<i>/` with what each run left: `run.json` (cache files,
+metrics measured, what `evaluate()` raised or returned, `decide()` calls),
+`cache.json` (the cache file's bytes) and `test_run.json`.
+
 Run it inside the devcontainer, from the repository root, with deepeval's
 source checked out at _ref/deepeval (tag v4.3.1):
 
@@ -92,10 +102,12 @@ import logging
 import os
 import shutil
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 CLASSIFIERS = os.path.join(ROOT, "test", "fixtures", "deepeval", "classifiers")
+CACHE = os.path.join(ROOT, "test", "fixtures", "deepeval", "cache")
 EXPECTATIONS = os.path.join(ROOT, "test", "fixtures", "deepeval", "expectations")
 
 # Same fixed hash seed as generate_fixtures.py, which this script imports and
@@ -136,7 +148,21 @@ from deepeval.evaluate.expectations import (  # noqa: E402
     _ConversationExpectations,
     _SingleTurnExpectations,
 )
+from deepeval.evaluate.configs import (  # noqa: E402
+    AsyncConfig,
+    CacheConfig,
+    DisplayConfig,
+    ErrorConfig,
+)
 from deepeval.test_case import ConversationalTestCase  # noqa: E402
+from deepeval.test_run.cache import (  # noqa: E402
+    Cache,
+    CachedTestCase,
+    CustomEncoder,
+    MetricConfiguration,
+    TestRunCacheManager,
+    global_test_run_cache_manager,
+)
 
 # deepeval's package exports an `evaluate` function under the module's name.
 expectations_module = sys.modules["deepeval.evaluate.expectations"]
@@ -619,7 +645,7 @@ def build_expectations_case(spec, judge):
     expectations = spec.pop("expectations", None)
     test_case = gf.build_test_case(spec)
     if expectations is not None:
-        test_case.expectations = Expectations(model=judge, **expectations)
+        test_case.expectations = Expectations(**{"model": judge, **expectations})
     return test_case
 
 
@@ -971,6 +997,499 @@ EXPECTATION_SCENARIOS = {
 }
 
 
+# The test-run cache (test_run/cache.py): `.deepeval/.deepeval-cache.json`,
+# keyed by `serialize()` of the test case's fields and the run's
+# hyperparameters, each key holding the error-free metric data and
+# classifications of the run that wrote it with their configurations.
+
+
+def cache_key(test_case, hyperparameters):
+    """The key deepeval's cache manager files `test_case` under, from a
+    manager writing to a scratch folder; looking it up again must hit."""
+    folder = tempfile.mkdtemp(prefix="cache_key_", dir=gf.WORK_DIR)
+    manager = TestRunCacheManager()
+    manager.cache_file_name = os.path.join(folder, "cache.json")
+    manager.temp_cache_file_name = os.path.join(folder, "temp.json")
+    manager.disable_write_cache = False
+    manager.cache_test_case(test_case, CachedTestCase(), hyperparameters)
+    [key] = manager.get_cached_test_run().test_cases_lookup_map
+    if manager.get_cached_test_case(test_case, hyperparameters) is None:
+        raise RuntimeError(f"no hit for {key!r}")
+    return key
+
+
+KEY_CASES = [
+    {"description": "input and actual output only", "test_case": {"input": "Q", "actual_output": "A"}},
+    {
+        "description": "every keyed field, non-ASCII text and unsorted lists",
+        "test_case": {
+            "input": "Où est le café? \U0001f600",
+            "actual_output": "Line one\nline \"two\"\t\\ end",
+            "expected_output": "Ici.",
+            "context": ["b context", "a context", "C context"],
+            "retrieval_context": ["z", "y", "é"],
+            "name": "not keyed",
+            "tags": ["not", "keyed"],
+        },
+    },
+    {
+        "description": "RetrievedContextData flattened to its context, mixed with strings",
+        "test_case": {
+            "input": "Q",
+            "actual_output": "A",
+            "retrieval_context": [
+                {"context": "Section 3.2: 20 days.", "source": "hr.pdf"},
+                "Section 1: scope.",
+            ],
+        },
+    },
+    {
+        "description": "hyperparameters as log_hyperparameters stores them",
+        "test_case": {"input": "Q", "actual_output": "A"},
+        "hyperparameters": {"model": "gpt-4o", "temperature": "0.7", "k": "5"},
+    },
+    {
+        "description": "nested hyperparameters: dicts sorted, lists sorted by their JSON",
+        "test_case": {"input": "Q", "actual_output": "A"},
+        "hyperparameters": {
+            "b": [3, 1, {"z": 1, "a": [2, 1]}, "x", None, 2.5],
+            "a": {"y": 0.1, "x": None, "w": True},
+            "c": 1e-05,
+        },
+    },
+    {
+        "description": "expectations and their evidence",
+        "test_case": {
+            **REFUND_CASE,
+            "expectations": {"must": REFUND_MUST, "must_not": REFUND_MUST_NOT},
+        },
+    },
+    {
+        "description": "expectations with a model name and an eval mode",
+        "test_case": {
+            "input": "Q",
+            "actual_output": "A",
+            "expectations": {"must": ["Answers."], "model": "gpt-4o", "eval_mode": "system_one"},
+        },
+    },
+    {
+        "description": "empty expectations are not keyed",
+        "test_case": {"input": "Q", "actual_output": "A", "expectations": {}},
+    },
+]
+
+
+def write_keys():
+    out = []
+    for case in KEY_CASES:
+        test_case = build_expectations_case(case["test_case"], None)
+        out.append({**case, "key": cache_key(test_case, case.get("hyperparameters"))})
+    out_dir = os.path.join(CACHE, "keys")
+    os.makedirs(out_dir, exist_ok=True)
+    gf.write_json(os.path.join(out_dir, "keys.json"), out)
+
+
+def config_json(configuration):
+    """A MetricConfiguration as CachedTestRun.save writes it."""
+    return json.dumps(
+        configuration.model_dump(by_alias=True, exclude_none=True), cls=CustomEncoder
+    )
+
+
+def scripted_scenarios():
+    return sorted(
+        name
+        for name in os.listdir(gf.SCRIPTED)
+        if os.path.isfile(os.path.join(gf.SCRIPTED, name, "script.json"))
+    )
+
+
+def load_script(name):
+    with open(os.path.join(gf.SCRIPTED, name, "script.json"), encoding="utf-8") as f:
+        return json.load(f)
+
+
+def write_configurations():
+    """create_metric_configuration of every scripted scenario's metric before
+    and after measure() (what evaluate() stores), and same_metric_configs of
+    each fresh metric against every stored configuration of its kind."""
+    entries = []
+    for name in scripted_scenarios():
+        script = load_script(name)
+        if "turns" in script["test_case"]:
+            # Conversational test cases are never cached (and deepeval cannot
+            # build a MetricConfiguration of MultiTurnParams).
+            continue
+        metric, _judge = gf.build_scripted_metric(script)
+        before = config_json(Cache.create_metric_configuration(metric))
+        try:
+            metric.measure(gf.build_test_case(script["test_case"]), _show_indicator=False)
+            stored = metric.error is None
+        except Exception:  # noqa: BLE001 - an errored metric is not stored
+            stored = False
+        after = config_json(Cache.create_metric_configuration(metric)) if stored else None
+        entries.append(
+            {"scenario": name, "kind": script["metric"]["kind"], "before": before, "after": after}
+        )
+
+    same = []
+    for entry in entries:
+        for cached in entries:
+            if cached["kind"] != entry["kind"] or cached["after"] is None:
+                continue
+            metric, _judge = gf.build_scripted_metric(load_script(entry["scenario"]))
+            configuration = MetricConfiguration.model_validate(json.loads(cached["after"]))
+            same.append({
+                "metric": entry["scenario"],
+                "cached": cached["scenario"],
+                "same": Cache.same_metric_configs(metric, configuration),
+            })
+
+    # The System One scenarios' (single-turn, unbatched) metrics: their
+    # evaluation_model is the System One model's name under system_one.
+    system_one = []
+    for name in sorted(os.listdir(so.SYSTEM_ONE)):
+        path = os.path.join(so.SYSTEM_ONE, name, "input.json")
+        if not os.path.isfile(path):
+            continue
+        with open(path, encoding="utf-8") as f:
+            scenario = json.load(f)
+        if "metrics" not in scenario or scenario.get("batched") or "turns" in scenario["test_case"]:
+            continue
+        [spec] = scenario["metrics"]
+        model, _answers = so.build_system_one(scenario["system_one"])
+        metric = so.build_metric(spec, model, so.build_judge(scenario, spec["kind"]))
+        system_one.append(
+            {"scenario": name, "before": config_json(Cache.create_metric_configuration(metric))}
+        )
+
+    out_dir = os.path.join(CACHE, "configurations")
+    os.makedirs(out_dir, exist_ok=True)
+    gf.write_json(
+        os.path.join(out_dir, "configurations.json"),
+        {"metrics": entries, "same": same, "system_one": system_one},
+    )
+
+
+# The metrics a cache run measured (cache hits are not measured).
+MEASURED = []
+
+
+class CacheStubMetric(gf.StubMetric):
+    """StubMetric whose judge model is set when it is built, as every LLM
+    metric's is, so a lookup (made before measuring) can match the stored
+    configuration's `evaluation_model`; it logs every measure. Mirrored by
+    DeepEvalEx.Test.ParityMetrics.CacheStub."""
+
+    def __init__(self, name, fixed_score, fixed_reason, threshold, fixed_model,
+                 fixed_cost, fixed_input_tokens, fixed_output_tokens):
+        super().__init__(name, fixed_score, fixed_reason, threshold, fixed_model,
+                         fixed_cost, fixed_input_tokens, fixed_output_tokens)
+        self.evaluation_model = fixed_model
+
+    def measure(self, test_case, *args, **kwargs):
+        MEASURED.append(self.name)
+        return super().measure(test_case)
+
+
+class CacheErrorMetric(gf.ErrorMetric):
+    """ErrorMetric that logs every measure."""
+
+    def measure(self, test_case, *args, **kwargs):
+        MEASURED.append(self.name)
+        return super().measure(test_case)
+
+
+def cache_stub(name, score, threshold=0.5, model="gpt-4o-mini", cost=0.000321):
+    return {
+        "kind": "cache_stub", "name": name, "score": score, "reason": f"{name} reason.",
+        "threshold": threshold, "evaluation_model": model, "evaluation_cost": cost,
+        "input_tokens": 120, "output_tokens": 12,
+    }
+
+
+def build_cache_metric(spec, model):
+    kind = spec["kind"]
+    if kind == "cache_stub":
+        return CacheStubMetric(
+            spec["name"], spec["score"], spec["reason"], spec["threshold"],
+            spec["evaluation_model"], spec["evaluation_cost"],
+            spec["input_tokens"], spec["output_tokens"],
+        )
+    if kind == "error":
+        return CacheErrorMetric(spec["name"], spec["threshold"], spec["exception"], spec["message"])
+    if kind in so.METRICS:
+        return so.build_metric(spec, model, fakes.ExplodingLLM())
+    return gf.build_metric(spec)
+
+
+def reset_cache_manager():
+    """A fresh cache manager, as a new process starts with."""
+    global_test_run_cache_manager.cached_test_run = None
+    global_test_run_cache_manager.temp_cached_test_run = None
+    global_test_run_cache_manager.disable_write_cache = None
+
+
+CACHE_FILES = [".deepeval-cache.json", ".temp-deepeval-cache.json"]
+
+
+def run_cache_run(run, run_dir):
+    reset_cache_manager()
+    MEASURED.clear()
+    # The same judge (by name) in every run, so cached classifications and
+    # expectations match; one without responses raises when called.
+    judge = gf.ScriptedJudge(JUDGE, run.get("responses", {}))
+    model, answers = (None, None)
+    if "system_one" in run:
+        model, answers = so.build_system_one(run["system_one"])
+    metrics = [build_cache_metric(spec, model) for spec in run.get("metrics", [])]
+    classifiers = [
+        build_classifier(spec, judge, model) for spec in run.get("classifiers", [])
+    ]
+    test_cases = [build_expectations_case(spec, judge) for spec in run["test_cases"]]
+    results_folder = tempfile.mkdtemp(prefix="cache_run_", dir=gf.WORK_DIR)
+    try:
+        result = evaluate(
+            test_cases=test_cases,
+            metrics=metrics or None,
+            classifiers=classifiers or None,
+            async_config=AsyncConfig(run_async=True, max_concurrent=run.get("max_concurrent", 20)),
+            display_config=DisplayConfig(
+                show_indicator=False,
+                print_results=False,
+                inspect_after_run=False,
+                results_folder=results_folder,
+            ),
+            cache_config=CacheConfig(
+                write_cache=run.get("write_cache", True), use_cache=run.get("use_cache", False)
+            ),
+            error_config=ErrorConfig(ignore_errors=True),
+        )
+        raised = None
+    except Exception as e:  # noqa: BLE001 - recorded in run.json
+        result, raised = None, {"type": type(e).__name__, "message": str(e)}
+    paths = [
+        os.path.join(results_folder, f)
+        for f in os.listdir(results_folder)
+        if f.startswith("test_run_")
+    ]
+    if paths:
+        [path] = paths
+        shutil.copyfile(path, os.path.join(run_dir, "test_run.json"))
+    files = [f for f in CACHE_FILES if os.path.exists(os.path.join(".deepeval", f))]
+    if ".deepeval-cache.json" in files:
+        shutil.copyfile(
+            os.path.join(".deepeval", ".deepeval-cache.json"),
+            os.path.join(run_dir, "cache.json"),
+        )
+    if raised is None:
+        judge.assert_exhausted()
+    out = {
+        "files": files,
+        "measured": sorted(MEASURED),
+        "raised": raised,
+        "test_results": None if result is None else [
+            {
+                "success": test_result.success,
+                "metrics_data": [
+                    metric_data_json(m) for m in (test_result.metrics_data or [])
+                ],
+                "classifications": [
+                    classification_json(c) for c in (test_result.classifications or [])
+                ],
+            }
+            for test_result in result.test_results
+        ],
+    }
+    if model is not None:
+        out["decide"] = so.decide_calls(model, answers, so.build_cost(run["system_one"].get("cost")))
+        so.assert_exhausted(run["system_one"], answers)
+    gf.write_json(os.path.join(run_dir, "run.json"), out)
+
+
+def run_cache_scenario(name, scenario):
+    out_dir = os.path.join(CACHE, name)
+    os.makedirs(out_dir, exist_ok=True)
+    gf.write_json(os.path.join(out_dir, "input.json"), scenario)
+    work = tempfile.mkdtemp(prefix=f"cache_{name}_", dir=gf.WORK_DIR)
+    os.chdir(work)
+    try:
+        for i, run in enumerate(scenario["runs"]):
+            run_dir = os.path.join(out_dir, f"run{i}")
+            os.makedirs(run_dir, exist_ok=True)
+            run_cache_run(run, run_dir)
+    finally:
+        os.chdir(gf.WORK_DIR)
+        reset_cache_manager()
+
+
+VACATION = {
+    "input": "What is the vacation policy?",
+    "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+    "expected_output": "Employees get 20 days of PTO a year. Up to 5 days carry over.",
+    "retrieval_context": [
+        "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+        "Section 3.3: Up to 5 unused days can be carried over to the next year.",
+    ],
+}
+
+STUBS = [cache_stub("Relevance", 0.8), cache_stub("Tone", 0.4, threshold=0.6, model="gpt-4o")]
+TWO_CASES = [
+    {"input": "What is the capital of France?", "actual_output": "Paris.",
+     "expected_output": "Paris."},
+    {"input": "Où est le café?", "actual_output": "Ici.", "expected_output": "Là-bas.",
+     "context": ["b", "a"]},
+]
+EXACT_MATCH = {"kind": "exact_match"}
+FAILING = {"kind": "error", "name": "Failing", "threshold": 0.5, "exception": "ValueError",
+           "message": "The judge is down."}
+
+# Batched System One answers of three whole-form metrics (system_one
+# batch_system_one): Faithfulness (f), AnswerRelevancy (ar), ContextualRecall (cr).
+SO_ANSWERS = {
+    "f": {"nouls": {"q_0": so.noul(0.3), "q_1": so.noul(0.2)},
+          "scores": {"q_2": so.score(1, so.FOUR_LEVELS_LOW, 0.4)}},
+    "ar": {"nouls": {"q_0": so.noul(0.6), "q_1": so.noul(0.95)},
+           "scores": {"q_2": so.score(2, {"0": 0.0, "1": 0.2, "2": 0.7, "3": 0.1}, 0.5)}},
+    "cr": {"nouls": {"q_0": so.noul(0.4), "q_1": so.noul(0.7)},
+           "scores": {"q_2": so.score(3, so.FOUR_LEVELS_HIGH, 0.7)}},
+}
+SO_METRICS = {
+    "f": {"kind": "faithfulness", "eval_mode": "system_one", "params": {"threshold": 0.5}},
+    "ar": {"kind": "answer_relevancy", "eval_mode": "system_one", "params": {"threshold": 0.5}},
+    "cr": {"kind": "contextual_recall", "eval_mode": "system_one", "params": {"threshold": 0.5}},
+}
+
+
+def so_run(asked, metrics, use_cache):
+    """A System One run of `metrics` whose fake answers the metrics in
+    `asked`: under `m<j>.` keys when two or more are batched."""
+    answers = {}
+    for j, name in enumerate(asked):
+        prefix = f"m{j}." if len(asked) > 1 else ""
+        for kind, by_key in SO_ANSWERS[name].items():
+            for key, answer in by_key.items():
+                answers.setdefault(kind, {})[prefix + key] = answer
+    return {
+        "test_cases": [VACATION],
+        "metrics": [SO_METRICS[name] for name in metrics],
+        "system_one": {"model": JEV, "cost": so.JEV_COST, "answers": answers},
+        "use_cache": use_cache,
+    }
+
+
+LABEL = {"kind": "classifier", "eval_mode": "llm",
+         "params": {"name": "Topic", "labels": ["geography", "food"]}}
+
+CACHE_SCENARIOS = {
+    "hits": {
+        "description": "A cold run writes the cache; a warm run with use_cache reads every metric "
+                       "of both test cases from it at cost 0, measuring none",
+        "runs": [
+            {"test_cases": TWO_CASES, "metrics": STUBS + [EXACT_MATCH]},
+            {"test_cases": TWO_CASES, "metrics": STUBS + [EXACT_MATCH], "use_cache": True},
+        ],
+    },
+    "configuration_changed": {
+        "description": "The warm run raises a threshold and changes a judge model: those metrics "
+                       "miss and are measured again",
+        "runs": [
+            {"test_cases": TWO_CASES[:1], "metrics": STUBS + [EXACT_MATCH]},
+            {"test_cases": TWO_CASES[:1],
+             "metrics": [cache_stub("Relevance", 0.8, threshold=0.7),
+                         cache_stub("Tone", 0.4, threshold=0.6, model="gpt-4o-mini"),
+                         EXACT_MATCH],
+             "use_cache": True},
+        ],
+    },
+    "test_case_changed": {
+        "description": "The warm run's second test case has another output: it misses; the cache "
+                       "keeps only the warm run's entries",
+        "runs": [
+            {"test_cases": TWO_CASES, "metrics": STUBS},
+            {"test_cases": [TWO_CASES[0], {**TWO_CASES[1], "actual_output": "Là-bas."}],
+             "metrics": STUBS, "use_cache": True},
+        ],
+    },
+    "errored_metric": {
+        "description": "An errored metric is never cached: the warm run measures it again",
+        "runs": [
+            {"test_cases": TWO_CASES[:1], "metrics": [STUBS[0], FAILING]},
+            {"test_cases": TWO_CASES[:1], "metrics": [STUBS[0], FAILING], "use_cache": True},
+        ],
+    },
+    "without_use_cache": {
+        "description": "A second run without use_cache measures everything and rewrites the cache",
+        "runs": [
+            {"test_cases": TWO_CASES[:1], "metrics": STUBS},
+            {"test_cases": TWO_CASES[:1], "metrics": STUBS},
+        ],
+    },
+    "write_cache_false": {
+        "description": "write_cache=False never reads the cache, even with use_cache, and deletes it",
+        "runs": [
+            {"test_cases": TWO_CASES[:1], "metrics": STUBS},
+            {"test_cases": TWO_CASES[:1], "metrics": STUBS, "use_cache": True,
+             "write_cache": False},
+        ],
+    },
+    "duplicate_test_case": {
+        "description": "The same test case twice in one run, one at a time: the second reads the "
+                       "first's results",
+        "runs": [
+            {"test_cases": [TWO_CASES[0], TWO_CASES[0]], "metrics": STUBS, "use_cache": True,
+             "max_concurrent": 1},
+        ],
+    },
+    "conversational": {
+        "description": "Conversational test cases are never cached: the cache is written empty",
+        "runs": [
+            {"test_cases": [CONVERSATION], "metrics": [
+                {**gf.STUB_JUDGE, "kind": "conversational_stub"}]},
+            {"test_cases": [CONVERSATION], "metrics": [
+                {**gf.STUB_JUDGE, "kind": "conversational_stub"}], "use_cache": True},
+        ],
+    },
+    "classification": {
+        "description": "A classification is cached with its labels and judge; the warm run reads it "
+                       "and checks it against the test case's new expected label",
+        "runs": [
+            {"test_cases": [{**TWO_CASES[0], "expected_labels": {"Topic": "geography"}}],
+             "metrics": STUBS[:1], "classifiers": [LABEL],
+             "responses": {"label,reason": [{"label": "geography", "reason": "About a capital."}]}},
+            {"test_cases": [{**TWO_CASES[0], "expected_labels": {"Topic": "food"}}],
+             "metrics": STUBS[:1], "classifiers": [LABEL], "use_cache": True},
+        ],
+    },
+    "expectations": {
+        "description": "The expectation evaluator is cached like a metric, its key including the "
+                       "expectations and their evidence; reading it back, deepeval raises "
+                       "AttributeError (the evaluator it hydrates has no verdicts)",
+        "runs": [
+            {"test_cases": [refund()], "metrics": STUBS[:1],
+             "responses": judged(ALL_PASS, "The score is 1.0 because it states the policy.")},
+            {"test_cases": [refund()], "metrics": STUBS[:1], "use_cache": True},
+        ],
+    },
+    "system_one_one_cached": {
+        "description": "One of three system_one metrics is cached: the other two are batched, "
+                       "keyed m0. and m1.",
+        "runs": [
+            so_run(["f"], ["f"], False),
+            so_run(["ar", "cr"], ["f", "ar", "cr"], True),
+        ],
+    },
+    "system_one_two_cached": {
+        "description": "Two of three system_one metrics are cached: the third is the only "
+                       "candidate, so it is not batched",
+        "runs": [
+            so_run(["f", "ar"], ["f", "ar"], False),
+            so_run(["cr"], ["f", "ar", "cr"], True),
+        ],
+    },
+}
+
+
 def main():
     if gf.deepeval.__version__ != gf.DEEPEVAL_VERSION:
         sys.exit(f"expected deepeval {gf.DEEPEVAL_VERSION}, found {gf.deepeval.__version__}")
@@ -990,6 +1509,14 @@ def main():
             print(f"wrote {os.path.relpath(os.path.join(EXPECTATIONS, name), ROOT)}")
         write_coverage()
         print(f"wrote {os.path.relpath(EXPECTATIONS, ROOT)}/validation")
+        if os.path.isdir(CACHE):
+            shutil.rmtree(CACHE)
+        write_keys()
+        write_configurations()
+        print(f"wrote {os.path.relpath(CACHE, ROOT)}/keys and configurations")
+        for name, scenario in CACHE_SCENARIOS.items():
+            run_cache_scenario(name, scenario)
+            print(f"wrote {os.path.relpath(os.path.join(CACHE, name), ROOT)}")
     finally:
         shutil.rmtree(gf.WORK_DIR, ignore_errors=True)
 

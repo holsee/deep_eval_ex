@@ -256,13 +256,32 @@ defmodule DeepEvalEx.Metrics.BaseMetric do
   """
   @callback system_one_model?() :: boolean()
 
+  @doc """
+  Optional callback returning the metric's own settings for its test-run
+  cache configuration (see `DeepEvalEx.TestRun.Cache.metric_configuration/3`),
+  as fields of `DeepEvalEx.TestRun.Cache.MetricConfiguration` that replace
+  the defaults derived from `opts`: deepeval's
+  `create_metric_configuration` reads them from the metric's attributes.
+
+  `result` is `nil` before measuring (when the cache is looked up) and the
+  measured result after (when it is written), so settings a metric only
+  gets while measuring, such as GEval's generated evaluation steps, can be
+  stored as deepeval stores them.
+
+      @impl true
+      def cache_configuration(opts, _result),
+        do: %{criteria: Keyword.get(opts, :criteria)}
+  """
+  @callback cache_configuration(opts(), Result.t() | nil) :: map()
+
   @optional_callbacks [
     default_opts: 0,
     metric_name: 1,
     evaluation_model: 1,
     system_one_eval_spec: 2,
     system_one?: 0,
-    system_one_model?: 0
+    system_one_model?: 0,
+    cache_configuration: 2
   ]
 
   defmacro __using__(opts \\ []) do
