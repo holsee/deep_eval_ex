@@ -353,7 +353,7 @@ and gateway models (`GeminiModel`, `AzureOpenAIModel`, `LiteLLMModel`,
 ReqLLM is an optional dependency; add it to your own deps:
 
 ```elixir
-{:req_llm, "~> 1.26"}
+{:req_llm, "~> 1.29"}
 ```
 
 Without it, the adapter's calls raise an error naming the dependency.

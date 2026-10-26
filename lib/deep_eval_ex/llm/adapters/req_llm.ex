@@ -105,9 +105,14 @@ if Code.ensure_loaded?(ReqLLM) do
 
     ## Retries
 
-    ReqLLM retries transient network errors itself (`max_retries`, default
-    `3`); set `req_llm_options: [max_retries: 0]` to turn this off. Errors
-    are returned as ReqLLM's exceptions, e.g.
+    ReqLLM retries failed requests itself (`max_retries`, default `3`):
+    transient network errors and, since ReqLLM 1.29, HTTP 408, 429, 500,
+    502, 503, 504 and 529 responses, waiting for a response's `Retry-After`
+    when it has one and backing off exponentially (about 1s, 2s, 4s)
+    otherwise. That includes a `429` for an exhausted quota, which
+    DeepEvalEx's own adapters do not retry. Set
+    `req_llm_options: [max_retries: 0]` to turn this off. Errors are
+    returned as ReqLLM's exceptions, e.g.
     `{:error, %ReqLLM.Error.API.Request{status: 401}}`.
     """
 

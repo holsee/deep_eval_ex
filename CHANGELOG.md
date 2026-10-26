@@ -3356,7 +3356,12 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   sessions did not verify TLS certificates, exposing API keys and OAuth
   tokens to on-path attackers; fixed in 1.29.0). The adapter does not open
   WebSocket sessions, but an application that adds `req_llm` resolves a
-  patched version. `mix hex.audit` is clean again.
+  patched version. `mix hex.audit` is clean again. ReqLLM 1.29 also changes
+  behaviour the `:req_llm` adapter passes through: it retries HTTP 408,
+  429, 5xx and 529 responses (honouring `Retry-After`; turn off with
+  `req_llm_options: [max_retries: 0]`), no longer follows redirects, sends
+  Gemini keys in a header rather than `?key=`, and skips `.env` loading in
+  releases.
 - The dev container's resolved credentials file is written with mode 600 and
   gitignored, along with its temp files, and is cleaned up if resolution is
   interrupted.

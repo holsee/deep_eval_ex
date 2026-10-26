@@ -230,7 +230,7 @@ Providers beyond OpenAI, Anthropic and Ollama are reached through
 own deps:
 
 ```elixir
-{:req_llm, "~> 1.26"}
+{:req_llm, "~> 1.29"}
 ```
 
 Then name a ReqLLM model spec:
