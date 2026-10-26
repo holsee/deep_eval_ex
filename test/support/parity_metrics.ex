@@ -80,6 +80,10 @@ defmodule DeepEvalEx.Test.ParityMetrics do
     @impl true
     def required_params, do: [:role, :content]
 
+    # Stub ignores the test case, but its BaseMetric @spec only admits a
+    # TestCase, so dialyzer sees this call with a ConversationalTestCase as
+    # one that cannot succeed.
+    @dialyzer {:nowarn_function, do_measure: 2}
     def do_measure(test_case, opts), do: Stub.do_measure(test_case, opts)
   end
 
