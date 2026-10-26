@@ -241,7 +241,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
       stub_completion("hi")
 
       for model <-
-            ~w(openai/gpt-6-luna openai/gpt-5.4-mini aws-bedrock-runtime/openai/gpt-6.1-sol@global) do
+            ~w(openai/gpt-6-luna openai/gpt-5.4-mini my-gateway/openai/gpt-6.1-sol@us-east-1) do
         assert {:ok, "hi"} = OpenAI.generate("hello", [model: model] ++ @base_opts)
         assert_received {:request, _conn, body}
         refute Map.has_key?(body, "temperature"), "expected no temperature for #{model}"
@@ -532,7 +532,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
       assert OpenAI.supports_temperature?(model: "gpt-4o")
       assert OpenAI.supports_temperature?([])
       refute OpenAI.supports_temperature?(model: "o3-mini")
-      refute OpenAI.supports_temperature?(model: "aws-bedrock-runtime/openai/gpt-5@global")
+      refute OpenAI.supports_temperature?(model: "my-gateway/openai/gpt-5@us-east-1")
     end
 
     test "supports logprobs for the models deepeval's registry says do" do
@@ -541,7 +541,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAITest do
       end
 
       assert OpenAI.supports_log_probs?([])
-      assert OpenAI.supports_log_probs?(model: "aws-bedrock-runtime/openai/gpt-4.1@global")
+      assert OpenAI.supports_log_probs?(model: "my-gateway/openai/gpt-4.1@us-east-1")
 
       # Reasoning models, and models the registry does not know.
       for model <- ~w(o1 o3-mini gpt-5 gpt-5.4-mini gpt-4.5-preview gpt-audio my-gateway-model) do

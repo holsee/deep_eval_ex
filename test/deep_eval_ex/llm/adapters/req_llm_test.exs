@@ -16,7 +16,7 @@ defmodule DeepEvalEx.LLM.Adapters.ReqLLMTest do
   # A gateway speaking OpenAI Chat Completions, as an inline ReqLLM model spec.
   @gateway %{
     provider: :openai,
-    id: "aws-bedrock-runtime/openai/gpt-6.1-sol@global",
+    id: "my-gateway/openai/gpt-6.1-sol@us-east-1",
     base_url: "https://gateway.example.com/v1",
     extra: %{wire: %{protocol: "openai_chat"}}
   }
@@ -162,7 +162,7 @@ defmodule DeepEvalEx.LLM.Adapters.ReqLLMTest do
 
       assert_received {:request, conn, body}
       assert url(conn) == "https://gateway.example.com/v1/chat/completions"
-      assert body["model"] == "aws-bedrock-runtime/openai/gpt-6.1-sol@global"
+      assert body["model"] == "my-gateway/openai/gpt-6.1-sol@us-east-1"
       assert body["messages"] == [%{"role" => "user", "content" => "Capital of France?"}]
       assert body["temperature"] == 0.0
     end
@@ -325,7 +325,7 @@ defmodule DeepEvalEx.LLM.Adapters.ReqLLMTest do
 
     test "is provider:id for an inline model spec" do
       assert Adapters.model_name(model: @gateway) ==
-               "openai:aws-bedrock-runtime/openai/gpt-6.1-sol@global"
+               "openai:my-gateway/openai/gpt-6.1-sol@us-east-1"
     end
 
     test "requires a model" do
@@ -344,7 +344,7 @@ defmodule DeepEvalEx.LLM.Adapters.ReqLLMTest do
 
     test "lets GEval and ConversationalGEval judge with an inline model spec" do
       opts = [adapter: :req_llm, model: @gateway]
-      name = "openai:aws-bedrock-runtime/openai/gpt-6.1-sol@global"
+      name = "openai:my-gateway/openai/gpt-6.1-sol@us-east-1"
 
       assert GEval.evaluation_model(opts) == name
       assert ConversationalGEval.evaluation_model(opts) == name

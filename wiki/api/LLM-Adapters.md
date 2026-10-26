@@ -125,7 +125,7 @@ resolved in this order, with a trailing slash stripped:
   config, then defaults to `0.0` as in deepeval's `GPTModel`; it is never sent
   for reasoning models (`o1`, `o3`, `o4`, `gpt-5`, ...), which reject it.
   Reasoning models are recognised by the model name after any gateway provider
-  prefix and `@region` suffix, so `"aws-bedrock-runtime/openai/gpt-5@global"`
+  prefix and `@region` suffix, so `"my-gateway/openai/gpt-5@us-east-1"`
   is treated as `gpt-5`.
 
 ### Testing

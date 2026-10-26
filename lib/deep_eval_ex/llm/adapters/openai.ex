@@ -249,7 +249,7 @@ defmodule DeepEvalEx.LLM.Adapters.OpenAI do
   end
 
   # Gateways name models with a provider path and a region suffix, e.g.
-  # "aws-bedrock-runtime/openai/gpt-6.1-sol@global"; capabilities follow
+  # "my-gateway/openai/gpt-6.1-sol@us-east-1"; capabilities follow
   # the underlying model, "gpt-6.1-sol".
   defp base_model(model) do
     model

@@ -147,7 +147,7 @@ so judge calls are deterministic instead of running at OpenAI's default of
 `config :deep_eval_ex, openai_temperature: 0.3` (the option wins). Reasoning
 models (`o1`, `o3`, `o4`, `gpt-5`, ...) reject the parameter, so it is never
 sent for them. They are recognised by the model name after any gateway
-provider prefix and `@region` suffix: `aws-bedrock-runtime/openai/gpt-5@global`
+provider prefix and `@region` suffix: `my-gateway/openai/gpt-5@us-east-1`
 counts as `gpt-5`.
 
 ### Anthropic
