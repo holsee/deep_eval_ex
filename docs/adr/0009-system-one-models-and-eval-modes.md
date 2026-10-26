@@ -337,7 +337,7 @@ For `raised.type` parity, the name is `error.type` for a `SystemOne.Error`, othe
 - **Candidates** match deepeval's `_candidates` exactly:
   - the test case is an LLM test case and not multimodal;
   - the metric's effective mode is `:system_one`;
-  - it has no cached result. DeepEvalEx has no cache yet, so this check is always false.
+  - it has no cached result. DeepEvalEx has no cache yet, so this check is always false. (Since P8.3: the test run cache shipped, and `prefetch/3` takes a `:cached` option, the positions of the metrics that reuse a cached result, which are never candidates. `Evaluator` passes it.)
 
   Spec-less metrics such as ToolCorrectness **count toward the ≥ 2 threshold**, then drop out in `_setup` and run their own `measure`.
 - **`_setup`** validates the params, builds the spec and request, and resets the ledger. A setup failure is recorded with `Error.format/1` (deepeval's `_fail` uses `format_error_text`).

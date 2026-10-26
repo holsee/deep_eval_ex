@@ -50,7 +50,6 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 - [Expectations](guides/Expectations.md) - Must and must-not conditions on test cases
 - [Synthesizer](guides/Synthesizer.md) - Synthetic goldens from contexts, from scratch or from goldens
 - [Conversation Simulator](guides/Conversation-Simulator.md) - Simulate conversations from conversational goldens
-- [Phoenix LiveView Integration](guides/Phoenix-Integration.md) (planned)
 
 ## Attribution
 

@@ -487,6 +487,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   test case fields in `:evaluation_params`. One System One request answers
   them all (keyed `q_<i>`). The score is the weighted mean of the answers
   that applied, and the reason is deterministic text built from the answers.
+  A [JevEval](wiki/metrics/JevEval.md) metric guide covers it.
   - Results are named `"<name> [JevEval]"` (`include_jev_eval_suffix:
     false` drops the suffix). The threshold defaults to `0.5`. In strict
     mode the score is `1.0` only when every applicable question is answered
@@ -3244,6 +3245,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 ### Removed
 
 - The `ecto` dependency.
+- The Phoenix LiveView Integration guide, which described an API that was
+  never built and is not on the roadmap.
 - **BREAKING:** `get_retrieval_context/1` (on `DeepEvalEx.TestCase`), which fell
   back to `:context`. Read `test_case.retrieval_context` instead.
 

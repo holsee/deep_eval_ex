@@ -34,14 +34,15 @@ gives it.
 
 ### How parity is verified
 
-A unit is done only when all of its checks pass in CI:
+A unit is done only when all of its checks pass: the fixture checks in CI,
+the live checks by hand with provider credentials.
 
 | Check | What it compares |
 |---|---|
 | **Golden fixtures** | Real deepeval 4.3.1 runs in the dev container against a scripted judge that returns canned JSON. Fixtures record the rendered prompts, `MetricData` and the test run JSON; the Mock adapter replays the same responses and the export must be byte-equal. |
 | **Prompt goldens** | Each metric's 4.3.1 Jinja templates rendered by Python for fixed inputs; the Elixir prompt modules must produce identical strings. |
 | **System One goldens** | Generated with deepeval's own System One fakes (including outage, authentication-failure and context-overflow cases). They capture the request, deterministic reason, `verboseLogs`, confidence, fallback reason and batched cost split. No TypeSafe key is needed. |
-| **Live checks** | Opt-in, gated on provider keys and excluded by default, following the existing `:live` tag: OpenAI and Anthropic today, plus one `system_one` and one `hybrid` metric against Jev once System One lands. |
+| **Live checks** | Opt-in, gated on provider credentials, excluded by default and not run in CI. `:live` covers the OpenAI, Anthropic, ReqLLM and Ollama adapters; `:live_system_one` covers Jev: its answers and its own context-limit rejection, the System One fixture scenarios in `system_one` mode, and `hybrid` Faithfulness with an LLM judge, with and without a Jev fallback. |
 
 The unit tests and the existing byte-parity suite stay green throughout.
 
@@ -61,9 +62,10 @@ The unit tests and the existing byte-parity suite stay green throughout.
 below is done, which is parity with deepeval 4.3.1 as defined above. What
 each unit added, and the breaking changes on the way, are in the
 [Changelog](CHANGELOG.md) (its `[Unreleased]` section until the next
-release). The first release, 0.1.0, had eight metrics, the concurrent
-evaluator, the OpenAI, Anthropic, Ollama and Mock adapters and a
-deepeval-compatible test run export.
+release). The first release, 0.1.0, had seven metrics (ExactMatch,
+GEval, Faithfulness, Hallucination, AnswerRelevancy, ContextualPrecision
+and ContextualRecall), the concurrent evaluator, the OpenAI and Mock
+adapters and ExUnit assertions; it had no test run export.
 
 P11, the optional backlog, and the work [beyond parity](#beyond-parity)
 remain planned.
@@ -82,7 +84,15 @@ in.
 
 ### Known divergences from 4.3.1 today
 
-None known: the parity suites run with no `known_divergence` tag.
+None known: the parity suites run with no `known_divergence` tag. A few
+differences are deliberate and documented where they apply: a cached
+expectation evaluator is reused and interrupted runs file nothing (the
+"Known divergences" of `test/fixtures/deepeval/README.md`), the DAG metric's
+option order, sequential nodes and child models ([DAG](wiki/metrics/DAG.md)),
+traces that stay open while a task's span is
+([Tracing](wiki/guides/Tracing.md)), and the differences listed in the
+[Console Report](wiki/guides/Console-Report.md) and
+[Test-Run Cache](wiki/guides/Test-Run-Cache.md) guides.
 
 ---
 
@@ -374,7 +384,8 @@ Effort is described by what drives the cost of the work, not by calendar time:
 | P10 Remaining important | 8 | Mixed | Fixture + live | A ReqLLM provider for live checks; synthesizer and simulator included (decided) | 4 |
 | P11 Optional backlog | 8 | Port | Fixture | Which items, if any | Many |
 
-**Totals:** 102 units, 90 of them in parity scope (P0–P10).
+**Totals:** 102 units, 94 of them in parity scope (P0–P10), one of which
+(P10.3) was superseded rather than built.
 
 **Critical path:** P0 → P1 → P2 → P3 → P4. Once P4 lands, P5, P6, P7 and P9
 can run as parallel lanes.
@@ -424,7 +435,9 @@ Never built, with the Elixir alternative where there is one:
 
 - **Jev wire contract is only partly documented.** Contract tests are built
   from recorded payloads, the context-overflow error is matched defensively,
-  and the live Jev check runs in CI when a key is available.
+  and the opt-in live Jev suite (`mix test --only live_system_one`) checks
+  the contract against Jev itself. It needs a TypeSafe key and is run by
+  hand, not in CI, so drift in the API shows up only when someone runs it.
 - **System One fixtures depend on deepeval's test fakes**, which are not public
   API. An upgrade can change reason text, request shape or banding thresholds,
   so fixtures are pinned to 4.3.1 and regenerated deliberately.

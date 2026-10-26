@@ -128,7 +128,6 @@ defmodule DeepEvalEx.MixProject do
         "wiki/guides/Conversation-Simulator.md",
         "wiki/guides/Test-Run-Cache.md",
         "wiki/guides/Console-Report.md",
-        "wiki/guides/Phoenix-Integration.md",
         # Metrics
         {"wiki/metrics/Overview.md", [title: "Metrics Overview", filename: "metrics-overview"]},
         "wiki/metrics/ExactMatch.md",
@@ -137,6 +136,7 @@ defmodule DeepEvalEx.MixProject do
         "wiki/metrics/GEval.md",
         "wiki/metrics/ConversationalGEval.md",
         "wiki/metrics/DAG.md",
+        "wiki/metrics/JevEval.md",
         "wiki/metrics/ConversationalJevEval.md",
         "wiki/metrics/TurnRelevancy.md",
         "wiki/metrics/ConversationCompleteness.md",

@@ -253,8 +253,9 @@ async module calls the shared API.
 ### Live checks
 
 `test/deep_eval_ex/live_test.exs` runs structured output and a full
-deepeval-compatible export against the real OpenAI and Anthropic APIs. It is
-tagged `:live` and excluded by default; run it explicitly:
+deepeval-compatible export against the real OpenAI and Anthropic APIs, and
+optionally through the ReqLLM adapter and a local Ollama server (below). It
+is tagged `:live` and excluded by default; run it explicitly:
 
 ```sh
 devcontainer exec --workspace-folder . mix test --only live

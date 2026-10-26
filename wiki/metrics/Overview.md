@@ -35,6 +35,7 @@ Your own questions, answered by a System One model (Jev) with calibrated probabi
 
 | Metric | Purpose | Use Case |
 |--------|---------|----------|
+| [JevEval](JevEval.md) | Weighted Noul, Score and Choice questions about a test case's fields or an agent's trace | Cheap, deterministic checks without an LLM judge |
 | [ConversationalJevEval](ConversationalJevEval.md) | Weighted Noul, Score and Choice questions about a whole conversation | Cheap, deterministic checks of multi-turn chatbots |
 
 ### RAG Metrics

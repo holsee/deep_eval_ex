@@ -459,5 +459,4 @@ end
 ## See Also
 
 - [Evaluator API](../api/Evaluator.md) - Batch evaluation
-- [Phoenix Integration](Phoenix-Integration.md) - LiveView integration
 - [:telemetry documentation](https://hexdocs.pm/telemetry/) - Telemetry library
