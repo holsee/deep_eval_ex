@@ -137,13 +137,21 @@ defmodule DeepEvalEx.CLI.IntegrationTest do
   end
 
   # ERL_CRASH_DUMP puts a crashed run's dump in `dump_dir` rather than the
-  # fixture project.
+  # fixture project. The build and project variables this suite may run
+  # under are cleared: they override the fixture's own build_path and
+  # project, so it would otherwise rebuild deep_eval_ex, without
+  # test/support, over the suite's own build.
   defp mix(args, env, dump_dir) do
     System.cmd("mix", args,
       cd: @project,
       env:
-        [{"MIX_ENV", "test"}, {"ERL_CRASH_DUMP", Path.join(dump_dir, "erl_crash.dump")}] ++
-          env,
+        [
+          {"MIX_ENV", "test"},
+          {"MIX_BUILD_ROOT", nil},
+          {"MIX_BUILD_PATH", nil},
+          {"MIX_EXS", nil},
+          {"ERL_CRASH_DUMP", Path.join(dump_dir, "erl_crash.dump")}
+        ] ++ env,
       stderr_to_stdout: true
     )
   end

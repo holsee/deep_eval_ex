@@ -5,7 +5,8 @@ defmodule DeepEvalEx.Devcontainer.ResolveEnvTest do
   # the tools the script needs, plus a stub `op` where a test asks for one.
   use ExUnit.Case, async: true
 
-  @script Path.expand("../../../.devcontainer/resolve-env.sh", __DIR__)
+  @root Path.expand("../../..", __DIR__)
+  @script Path.join(@root, ".devcontainer/resolve-env.sh")
   @tools ~w(sh dirname touch grep cp mktemp chmod mv rm cat)
 
   @moduletag :tmp_dir
@@ -99,12 +100,42 @@ defmodule DeepEvalEx.Devcontainer.ResolveEnvTest do
     assert File.ls!(dir) |> Enum.sort() == [".env", "resolve-env.sh"]
   end
 
-  test "gitignores the resolved file and its temp files" do
+  test "gitignores the resolved file and its temp files", %{tmp_dir: tmp_dir} do
+    repo = ignore_repo(tmp_dir)
+
     for path <-
           ~w(.devcontainer/.env .devcontainer/.env.resolved .devcontainer/.env.resolved.Ab12Cd) do
-      assert {_, 0} = System.cmd("git", ["-c", "safe.directory=*", "check-ignore", "-q", path]),
-             "#{path} is not ignored"
+      assert {_, 0} = git(repo, ["check-ignore", "-q", path]), "#{path} is not ignored"
     end
+  end
+
+  # The repository itself when it is a git checkout. Outside one (a tarball
+  # or `git archive` copy) there is no .git to ask, so its .gitignore is
+  # checked in a fresh repository instead.
+  defp ignore_repo(tmp_dir) do
+    case git(@root, ["rev-parse", "--show-toplevel"]) do
+      {top, 0} when is_binary(top) ->
+        if Path.expand(String.trim(top)) == @root, do: @root, else: scratch_repo(tmp_dir)
+
+      _not_a_checkout ->
+        scratch_repo(tmp_dir)
+    end
+  end
+
+  defp scratch_repo(tmp_dir) do
+    repo = Path.join(tmp_dir, "repo")
+    File.mkdir_p!(repo)
+    {_, 0} = git(repo, ["init", "-q"])
+    File.cp!(Path.join(@root, ".gitignore"), Path.join(repo, ".gitignore"))
+    repo
+  end
+
+  # The developer's global excludes must not make an unignored path pass.
+  defp git(dir, args) do
+    System.cmd("git", ["-c", "safe.directory=*", "-c", "core.excludesFile=/dev/null" | args],
+      cd: dir,
+      stderr_to_stdout: true
+    )
   end
 
   defp run(%{dir: dir, bin: bin}) do
