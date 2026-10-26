@@ -23,6 +23,9 @@ defmodule DeepEvalEx.MixProject do
       source_url: @source_url,
       docs: docs(),
 
+      # The test support helpers call ExUnit.
+      dialyzer: [plt_add_apps: [:ex_unit]],
+
       # Test
       test_coverage: [tool: ExCoveralls]
     ]
