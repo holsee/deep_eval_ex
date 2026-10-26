@@ -2593,8 +2593,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   Groq, OpenRouter, xAI, ...), so DeepEvalEx reaches them without native
   adapters of its own beyond OpenAI, Anthropic and Ollama. It takes the
   place of deepeval's native Gemini, Azure and gateway models.
-  - `req_llm` is an optional dependency (`~> 1.26`): add
-    `{:req_llm, "~> 1.26"}` to your own deps to use the adapter. Without
+  - `req_llm` is an optional dependency (`~> 1.29`): add
+    `{:req_llm, "~> 1.29"}` to your own deps to use the adapter. Without
     it, its calls raise an error naming the dependency, and DeepEvalEx
     compiles as before.
   - Select it with `adapter: :req_llm` (or `{:req_llm, spec}`, also in
@@ -3351,6 +3351,12 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   exposed in stack trace arguments when a `Plug.Crypto` function is given
   wrong-typed arguments). It is only a test dependency, through `plug` for
   `Req.Test`. `mix hex.audit` is clean again.
+- Raised the optional `req_llm` dependency to `~> 1.29` (locked at 1.29.0),
+  past EEF-CVE-2026-107685 (CVE-2026-107685, critical: ReqLLM's WebSocket
+  sessions did not verify TLS certificates, exposing API keys and OAuth
+  tokens to on-path attackers; fixed in 1.29.0). The adapter does not open
+  WebSocket sessions, but an application that adds `req_llm` resolves a
+  patched version. `mix hex.audit` is clean again.
 - The dev container's resolved credentials file is written with mode 600 and
   gitignored, along with its temp files, and is cleaned up if resolution is
   interrupted.

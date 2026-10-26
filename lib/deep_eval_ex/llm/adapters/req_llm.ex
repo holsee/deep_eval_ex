@@ -8,7 +8,7 @@ if Code.ensure_loaded?(ReqLLM) do
     ReqLLM is an optional dependency. Add it to your own dependencies to use
     this adapter:
 
-        {:req_llm, "~> 1.26"}
+        {:req_llm, "~> 1.29"}
 
     Without it, the adapter's calls raise an error naming the dependency.
 
@@ -251,7 +251,7 @@ else
     supports.
 
     ReqLLM is an optional dependency and is not installed: add
-    `{:req_llm, "~> 1.26"}` to your dependencies to use this adapter.
+    `{:req_llm, "~> 1.29"}` to your dependencies to use this adapter.
     """
 
     use DeepEvalEx.LLM.Adapter
@@ -287,7 +287,7 @@ else
     defp missing_dependency! do
       raise RuntimeError,
             "DeepEvalEx.LLM.Adapters.ReqLLM requires the optional :req_llm dependency. " <>
-              ~s(Add {:req_llm, "~> 1.26"} to your mix.exs deps and run mix deps.get.)
+              ~s(Add {:req_llm, "~> 1.29"} to your mix.exs deps and run mix deps.get.)
     end
   end
 end

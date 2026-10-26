@@ -139,7 +139,7 @@ DeepEvalEx supports multiple LLM providers:
 - **Ollama** (`:ollama`) - Local models via Ollama's `/api/chat`
 - **ReqLLM** (`:req_llm`) - Gemini, Azure, Bedrock, Groq, OpenRouter and the
   other providers [ReqLLM](https://hexdocs.pm/req_llm) supports, with the
-  optional `{:req_llm, "~> 1.26"}` dependency
+  optional `{:req_llm, "~> 1.29"}` dependency
 - **Mock** (`:mock`) - Canned responses for tests, no network
 
 Every adapter records token usage and cost on the results.

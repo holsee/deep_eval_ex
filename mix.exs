@@ -77,7 +77,7 @@ defmodule DeepEvalEx.MixProject do
 
       # Optional: providers beyond the native adapters, through
       # DeepEvalEx.LLM.Adapters.ReqLLM
-      {:req_llm, "~> 1.26", optional: true},
+      {:req_llm, "~> 1.29", optional: true},
 
       # Dev/Test
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
