@@ -234,7 +234,8 @@ devcontainer exec --workspace-folder . mix test
 Provider credentials for live checks go in `.devcontainer/.env` (gitignored;
 copy `.devcontainer/.env.example`), which the container loads at creation:
 `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_BASE_URL`,
-`OLLAMA_HOST`, `TYPESAFE_API_KEY` and `TYPESAFE_MODEL_NAME`. Values may be 1Password secret references
+`OLLAMA_HOST`, `TYPESAFE_API_KEY` and `TYPESAFE_MODEL_NAME`, and the live
+checks' `DEEP_EVAL_LIVE_*` settings below. Values may be 1Password secret references
 (`op://vault/item/field`); `.devcontainer/resolve-env.sh` resolves them with
 `op inject` on the host into the gitignored `.devcontainer/.env.resolved`,
 which is what the container loads. Recreate the container after editing it
@@ -268,6 +269,25 @@ another, for example the provider-prefixed model IDs a gateway publishes
 (`OPENAI_BASE_URL` / `ANTHROPIC_BASE_URL` pointing at the gateway). Live
 checks cost real tokens and are not part of the gate.
 
+The same suite has two optional cases. The ReqLLM adapter runs when
+`DEEP_EVAL_LIVE_REQLLM_MODEL` names a ReqLLM model spec; through an
+OpenAI-compatible gateway, set it to `openai:` followed by the gateway's model
+ID, `DEEP_EVAL_LIVE_REQLLM_BASE_URL` to the gateway's base URL and
+`DEEP_EVAL_LIVE_REQLLM_WIRE` to `openai_responses` (or `openai_chat`), with the
+key in `OPENAI_API_KEY`. The Ollama adapter runs when both `OLLAMA_HOST` and
+`DEEP_EVAL_LIVE_OLLAMA_MODEL` are set; it checks structured output and free
+usage end to end rather than scores, so a very small model will do. A local
+server in Docker on the host serves it to the container:
+
+```sh
+docker run -d --name deepeval-ollama -p 11435:11434 ollama/ollama
+docker exec deepeval-ollama ollama pull qwen2.5:0.5b
+# .devcontainer/.env:
+#   OLLAMA_HOST=http://host.docker.internal:11435
+#   DEEP_EVAL_LIVE_OLLAMA_MODEL=qwen2.5:0.5b
+docker rm -f deepeval-ollama   # when done
+```
+
 `test/deep_eval_ex/live_system_one_test.exs` is the matching check for
 TypeSafe's System One model, Jev. It is tagged `:live_system_one`, excluded by
 default, and skipped unless `TYPESAFE_API_KEY` is set (a blank value counts as
@@ -284,7 +304,14 @@ checking each test run's shape, score range, model name and cost, and prints
 each scenario's token count and cost. Costs are checked at the price the
 adapter resolves (`TYPESAFE_COST_PER_INPUT_TOKEN`, else Jev's for a
 registered model); a model with no price, such as a pinned `jev-1.14.0`, is
-checked as unpriced.
+checked as unpriced. It also sends Jev a state of about 70,000 estimated tokens
+with the adapter's pre-check lifted (`context_budget: :unbounded`), checking
+Jev's own `max_tokens_exceeded` rejection comes back as a context-limit error.
+When `OPENAI_API_KEY` is set too, it runs Faithfulness in the `:hybrid` eval
+mode with Jev and the OpenAI judge (`OPENAI_BASE_URL`,
+`DEEP_EVAL_LIVE_OPENAI_MODEL`): once with Jev judging the claims, and once with
+Jev failing on a rejected key, checking the LLM's verdicts take over and the
+result's `:system_one_fallback_reason` says why.
 
 ### Gate
 

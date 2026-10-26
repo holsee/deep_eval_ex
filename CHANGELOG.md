@@ -791,7 +791,14 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - An opt-in live suite (`mix test --only live`) that runs real judge calls
   through each configured provider and checks the exported JSON. Judge models
   are selected with `DEEP_EVAL_LIVE_OPENAI_MODEL` and
-  `DEEP_EVAL_LIVE_ANTHROPIC_MODEL`.
+  `DEEP_EVAL_LIVE_ANTHROPIC_MODEL`. An Ollama case runs when `OLLAMA_HOST`
+  and the new `DEEP_EVAL_LIVE_OLLAMA_MODEL` are set: structured output
+  through Ollama's `format`, usage recorded at no cost and Faithfulness and
+  AnswerRelevancy measured through the adapter, checked for shape rather
+  than score so a very small model (such as `qwen2.5:0.5b` in a local
+  Docker container) will do. The ReqLLM case has been run through an
+  OpenAI-compatible gateway (`openai:` spec, `openai_responses` wire). The
+  live settings are listed in `.devcontainer/.env.example` and the README.
 - An opt-in TypeSafe Jev live suite (`mix test --only live_system_one`),
   excluded by default and skipped unless `TYPESAFE_API_KEY` is set;
   `TYPESAFE_MODEL_NAME` defaults to `jev-latest`. Both settings, named as in
@@ -801,7 +808,14 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   has deepeval's shape, scores in range, the TypeSafe model name and a cost
   priced from Jev's reported input tokens at the price the adapter resolves
   (a model with no price, such as a pinned `jev-1.14.0`, is checked as
-  unpriced), and prints each scenario's token count and cost.
+  unpriced), and prints each scenario's token count and cost. It also
+  checks Jev's own rejection of an oversized state (sent with
+  `context_budget: :unbounded`) comes back as a `:context_limit` error
+  (`SystemOneContextLimitError`), and, when `OPENAI_API_KEY` is set too,
+  runs Faithfulness in the `:hybrid` eval mode with Jev and a real OpenAI
+  judge: Jev decides the verdicts (a confidence, no fallback reason) while
+  the LLM writes the reason, and with Jev failing on a rejected key the
+  LLM's verdicts take over and `:system_one_fallback_reason` says why.
 - **ToolCorrectness metric** with full deepeval parity: exact, non-exact and
   ordered (weighted LCS) matching, parameter and output comparison, and
   LLM-scored tool selection when `available_tools` are given. Includes wiki

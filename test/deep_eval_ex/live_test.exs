@@ -50,12 +50,28 @@ defmodule DeepEvalEx.LiveTest do
         mix test --only live
 
   ReqLLM reads the key from `OPENAI_API_KEY`.
+
+  The `DeepEvalEx.LLM.Adapters.Ollama` case runs when both `OLLAMA_HOST` and
+  `DEEP_EVAL_LIVE_OLLAMA_MODEL` are set, and is skipped otherwise. It proves
+  the adapter end to end (structured output through Ollama's `format`,
+  usage at no cost), not the judge's quality, so it checks the shape of the
+  answers rather than scores a very small model may get wrong. A local
+  server in Docker on the host, reached from the dev container, will do
+  (published on port 11435 so it does not clash with an Ollama app already
+  listening on the host's 11434):
+
+      docker run -d --name deepeval-ollama -p 11435:11434 ollama/ollama
+      docker exec deepeval-ollama ollama pull qwen2.5:0.5b
+
+  with `OLLAMA_HOST=http://host.docker.internal:11435` and
+  `DEEP_EVAL_LIVE_OLLAMA_MODEL=qwen2.5:0.5b`. Remove it afterwards with
+  `docker rm -f deepeval-ollama`.
   """
 
   use ExUnit.Case, async: false
 
   alias DeepEvalEx.LLM.{Adapter, Pricing, Usage}
-  alias DeepEvalEx.Metrics.{ExactMatch, Faithfulness, GEval}
+  alias DeepEvalEx.Metrics.{AnswerRelevancy, ExactMatch, Faithfulness, GEval}
   alias DeepEvalEx.{TestCase, TestRun}
   alias DeepEvalEx.TestRun.JSON
 
@@ -200,6 +216,64 @@ defmodule DeepEvalEx.LiveTest do
 
         assert {:ok, loaded} = TestRun.load(path)
         assert loaded |> TestRun.to_map() |> JSON.encode!() == json
+      end
+    end
+  end
+
+  @ollama_model Adapter.env("DEEP_EVAL_LIVE_OLLAMA_MODEL")
+  @ollama_configured Adapter.env("OLLAMA_HOST") != nil and @ollama_model != nil
+
+  describe "ollama (#{@ollama_model})" do
+    @describetag skip:
+                   if(@ollama_configured,
+                     do: false,
+                     else: "OLLAMA_HOST or DEEP_EVAL_LIVE_OLLAMA_MODEL not set"
+                   )
+
+    test "returns schema-conforming structured output and records free usage" do
+      {result, usages} =
+        Usage.track(fn ->
+          Adapter.generate_with_schema(
+            "Is Paris the capital of France? Answer with the verdict field.",
+            @verdict_schema,
+            adapter: :ollama,
+            model: @ollama_model
+          )
+        end)
+
+      # A very small model may answer either way; the schema holds it to one.
+      assert {:ok, %{"verdict" => verdict}} = result
+      assert verdict in ["yes", "no"]
+
+      assert [
+               %Usage{
+                 model: @ollama_model,
+                 input_tokens: input,
+                 output_tokens: output,
+                 cost: cost
+               }
+             ] =
+               usages
+
+      assert input > 0 and output > 0
+      assert cost == 0.0
+    end
+
+    test "measures metrics through the adapter's structured outputs" do
+      [faithful | _] = test_cases()
+
+      for metric <- [Faithfulness, AnswerRelevancy] do
+        assert {:ok, result} =
+                 metric.measure(faithful, adapter: :ollama, model: @ollama_model)
+
+        label = inspect(metric)
+        assert result.error == nil, "#{label} errored: #{result.error}"
+        assert result.score >= 0 and result.score <= 1, label
+        assert is_boolean(result.success), label
+        assert is_binary(result.reason) and result.reason != "", label
+        assert result.evaluation_model == @ollama_model, label
+        assert result.input_tokens > 0, label
+        assert result.evaluation_cost == 0.0, label
       end
     end
   end

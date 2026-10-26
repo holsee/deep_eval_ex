@@ -26,19 +26,36 @@ defmodule DeepEvalEx.LiveSystemOneTest do
   model. A model with neither (such as a pinned `jev-1.14.0`) is unpriced:
   its costs are checked to be `nil`, and its token counts, which are not
   recorded, are not checked.
+
+  Jev's own context-limit rejection is checked by sending, with the
+  adapter's pre-check lifted (`context_budget: :unbounded`), a state of
+  about 70,000 estimated tokens, well over Jev's window. Jev rejects it
+  before answering anything.
+
+  The `:hybrid` eval mode is checked with a real LLM judge too when
+  `OPENAI_API_KEY` is also set: the OpenAI adapter, with
+  `OPENAI_BASE_URL` and `DEEP_EVAL_LIVE_OPENAI_MODEL` as in
+  `DeepEvalEx.LiveTest`. Faithfulness runs once with Jev judging the
+  claims, and once with Jev failing (a rejected API key) so the LLM
+  judges them instead.
   """
 
   use ExUnit.Case, async: false
 
   alias DeepEvalEx.LLM.Adapter
+  alias DeepEvalEx.Metrics.Faithfulness
   alias DeepEvalEx.SystemOne.Adapters.TypeSafe
-  alias DeepEvalEx.SystemOne.{Answers, Question}
+  alias DeepEvalEx.SystemOne.{Answers, Error, Question}
   alias DeepEvalEx.Test.SystemOneParity
+  alias DeepEvalEx.TestCase
 
   @moduletag :live_system_one
   @moduletag timeout: 600_000
 
   @configured Adapter.env("TYPESAFE_API_KEY") != nil
+  @llm_configured Adapter.env("OPENAI_API_KEY") != nil
+  @llm_model Adapter.env("DEEP_EVAL_LIVE_OPENAI_MODEL") ||
+               DeepEvalEx.LLM.Adapters.OpenAI.model_name([])
   @model Adapter.env("TYPESAFE_MODEL_NAME") || "jev-latest"
   # Jev's price per input token for its registered models (see the
   # adapter's "Usage and cost").
@@ -109,6 +126,31 @@ defmodule DeepEvalEx.LiveSystemOneTest do
       else
         assert usage == nil, "#{opts[:model]} has no price, so its usage is unpriced"
       end
+    end
+
+    test "decide/3 returns Jev's own rejection of a state too large for its context" do
+      # About 70,000 estimated tokens: over Jev's window, so it is rejected
+      # unanswered, yet small enough to keep the request cheap.
+      state =
+        String.duplicate("Record 1234: the river level was measured at noon and logged. ", 3_350)
+
+      questions = [{"river", %Question.Noul{instructions: "The `state` mentions a river."}}]
+
+      {:ok, opts} = TypeSafe.init([])
+
+      # The adapter's own pre-check stops it before sending ...
+      assert {:error, %Error{reason: :context_limit, limit_tokens: 32_000}} =
+               TypeSafe.decide(state, questions, opts)
+
+      # ... so, lifted, Jev itself answers max_tokens_exceeded.
+      assert {:error, %Error{} = error} =
+               TypeSafe.decide(state, questions, Keyword.put(opts, :context_budget, :unbounded))
+
+      assert error.reason == :context_limit
+      assert error.type == "SystemOneContextLimitError"
+      assert error.limit_tokens == nil
+      assert error.estimated_tokens > 64_000
+      assert error.message =~ "Jev rejected the request as too large"
     end
 
     for scenario <- @scenarios do
@@ -207,6 +249,63 @@ defmodule DeepEvalEx.LiveSystemOneTest do
         )
       end
     end
+  end
+
+  describe "hybrid Faithfulness with Jev and an LLM judge (#{@llm_model})" do
+    @describetag skip:
+                   (cond do
+                      not @configured -> "TYPESAFE_API_KEY not set"
+                      not @llm_configured -> "OPENAI_API_KEY not set"
+                      true -> false
+                    end)
+
+    test "Jev judges the claims and the LLM writes the reason" do
+      assert {:ok, result} = hybrid(:typesafe)
+
+      assert result.error == nil
+      assert result.system_one_fallback_reason == nil
+      assert is_float(result.confidence) and result.confidence >= 0 and result.confidence <= 1
+      # Jev's verdicts carry its P(yes) as their reason.
+      assert [_, _] = Regex.scan(~r/"reason": "P\(yes\)=\d\.\d\d"/, result.verbose_logs)
+      assert result.score >= 0 and result.score <= 1
+      assert is_boolean(result.success)
+      assert is_binary(result.reason) and result.reason =~ "The score is"
+      assert result.evaluation_model == @llm_model
+    end
+
+    test "falls back to the LLM's verdicts when Jev fails" do
+      assert {:ok, result} = hybrid({:typesafe, api_key: "deep-eval-ex-live-invalid"})
+
+      assert result.error == nil
+      assert result.system_one_fallback_reason =~ "TypeSafeAuthenticationError"
+      assert result.confidence == nil
+      refute result.verbose_logs =~ "P(yes)="
+      assert result.score >= 0 and result.score <= 1
+      assert is_boolean(result.success)
+      assert is_binary(result.reason) and result.reason =~ "The score is"
+      assert result.evaluation_model == @llm_model
+    end
+  end
+
+  # One claim the context supports, one it contradicts.
+  defp hybrid_case do
+    TestCase.new!(
+      input: "What is the boiling point of water at sea level?",
+      actual_output:
+        "Water boils at 100 degrees Celsius at sea level. It freezes at 50 degrees Celsius.",
+      retrieval_context: [
+        "At standard sea-level pressure, water boils at 100 °C (212 °F) and freezes at 0 °C."
+      ]
+    )
+  end
+
+  defp hybrid(system_one_model) do
+    Faithfulness.measure(hybrid_case(),
+      adapter: :openai,
+      model: @llm_model,
+      eval_mode: :hybrid,
+      system_one_model: system_one_model
+    )
   end
 
   # The adapter's price: the configured one, else Jev's for a registered
