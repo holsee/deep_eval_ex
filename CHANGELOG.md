@@ -7,8 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-26
+
 Brings DeepEvalEx to output parity with Python deepeval 4.3.1, so a run can be
 swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
+
+### Upgrading from 0.1
+
+This release breaks compatibility with 0.1; the **BREAKING** entries under
+Changed and Removed give the details. In brief:
+
+- `DeepEvalEx.evaluate/3` takes a list of test cases and returns
+  `{:ok, %DeepEvalEx.EvaluationResult{}}`; a single test case still works,
+  with a warning, for this release.
+- Metric errors raise by default, in `evaluate/3`, `evaluate_run/3` and the
+  `DeepEvalEx.ExUnit` assertions; pass `ignore_errors: true` to record them
+  as errored results instead (the assertions also read
+  `IGNORE_DEEPEVAL_ERRORS`).
+- Hallucination scores the fraction of aligned contexts, higher is better:
+  invert any `:threshold` you pass (0.2 becomes 0.8).
+- `:context` and `:retrieval_context` are separate: set `:retrieval_context`
+  for Faithfulness, ContextualPrecision and ContextualRecall, and `:context`
+  for Hallucination. `TestCase.get_retrieval_context/1` is removed.
+- The default timeout is deepeval's per-task timeout (180 seconds), and
+  timed-out metrics carry deepeval's messages.
+- `assert_passes` and `assert_evaluation` behave as deepeval's
+  `assert_test`, failure message included.
+- Thresholds, strict mode and `nil` (score-only) thresholds follow
+  deepeval's `BaseMetric`; QAG verdicts are `yes`/`no`/`borderline`; only
+  `nil` counts as a missing test case param.
+- GEval rubrics are `GEval.Rubric` entries, strict GEval scores the judge's
+  0 or 1, and `GEval.new/1` validates as deepeval's constructor.
+- `:tools_called` and `:expected_tools` default to `nil`; a custom judge's
+  cost is no longer reported; a loaded test case without `success` keeps
+  `success: nil`.
+- `DeepEvalEx.TestRun.from_results/3` no longer takes `:strict_mode` or
+  `:metrics`, and `MetricData.from_result/2` is now `from_result/1`.
+- The `ecto` dependency is gone; schemas are Peri and plain structs.
 
 ### Added
 
@@ -3358,5 +3393,6 @@ Initial release: a pure Elixir port of DeepEval's core LLM evaluation.
 - GitHub Actions CI running format, compile with warnings as errors, Credo and
   tests.
 
-[Unreleased]: https://github.com/holsee/deep_eval_ex/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/holsee/deep_eval_ex/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/holsee/deep_eval_ex/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/holsee/deep_eval_ex/releases/tag/v0.1.0

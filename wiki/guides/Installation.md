@@ -12,7 +12,7 @@ Add `deep_eval_ex` to your `mix.exs` dependencies:
 ```elixir
 def deps do
   [
-    {:deep_eval_ex, "~> 0.1.0"}
+    {:deep_eval_ex, "~> 0.2"}
   ]
 end
 ```
