@@ -1,0 +1,131 @@
+{
+  "testCases": [
+    {
+      "name": "test_case_0",
+      "input": "Question 0?",
+      "actualOutput": "Answer 0.",
+      "flaky": false,
+      "success": true,
+      "metricsData": [
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "No contradictions.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0012
+        }
+      ],
+      "runDuration": 0.0,
+      "evaluationCost": 0.0012,
+      "order": 0
+    }
+  ],
+  "conversationalTestCases": [
+    {
+      "name": "conversational_test_case_0",
+      "success": false,
+      "metricsData": [
+        {
+          "name": "Turn Relevancy",
+          "threshold": 0.5,
+          "success": false,
+          "score": 0.4,
+          "reason": "One turn is off topic.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ],
+      "runDuration": 0.0,
+      "evaluationCost": 0.000321,
+      "turns": [
+        {
+          "role": "user",
+          "content": "I want to change my flight.",
+          "order": 0
+        },
+        {
+          "role": "assistant",
+          "content": "Sure, which booking?",
+          "order": 1,
+          "retrievalContext": [
+            "Changes are free up to 24 hours before departure.",
+            "A fare difference may apply.",
+            "Basic fares cannot change."
+          ],
+          "toolsCalled": [
+            {
+              "name": "lookup_booking",
+              "type": "FUNCTION"
+            },
+            {
+              "name": "list_flights",
+              "type": "FUNCTION"
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": "ABC123",
+          "order": 2,
+          "comments": "Booking reference."
+        }
+      ],
+      "order": 0,
+      "flaky": false
+    },
+    {
+      "name": "empty conversation",
+      "success": true,
+      "metricsData": [
+        {
+          "name": "Turn Relevancy",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "All relevant.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ],
+      "runDuration": 0.0,
+      "evaluationCost": 0.000321,
+      "turns": [],
+      "order": 1,
+      "flaky": false
+    }
+  ],
+  "metricsScores": [
+    {
+      "metric": "Faithfulness",
+      "scores": [
+        1.0
+      ],
+      "passes": 1,
+      "fails": 0,
+      "errors": 0
+    },
+    {
+      "metric": "Turn Relevancy",
+      "scores": [
+        0.4,
+        1.0
+      ],
+      "passes": 1,
+      "fails": 1,
+      "errors": 0
+    }
+  ],
+  "testPassed": 2,
+  "testFailed": 1,
+  "runDuration": 6.0,
+  "evaluationCost": 0.0018419999999999999,
+  "official": false
+}

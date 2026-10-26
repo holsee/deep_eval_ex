@@ -1,0 +1,51 @@
+                        Test Results                        
+┏━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━┓
+┃             ┃        ┃             ┃        ┃ Overall    ┃
+┃             ┃        ┃             ┃        ┃ Success    ┃
+┃ Test case   ┃ Metric ┃ Score       ┃ Status ┃ Rate       ┃
+┡━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━┩
+│ test_case_0 │        │             │        │ Cannot     │
+│             │        │             │        │ display    │
+│             │        │             │        │ metrics    │
+│             │        │             │        │ for        │
+│             │        │             │        │ component… │
+│             │        │             │        │ evals,     │
+│             │        │             │        │ please run │
+│             │        │             │        │ 'deepeval  │
+│             │        │             │        │ view' to   │
+│             │        │             │        │ see        │
+│             │        │             │        │ results on │
+│             │        │             │        │ Confident  │
+│             │        │             │        │ AI.% |     │
+│             │        │             │        │ passed=0 | │
+│             │        │             │        │ failed=0   │
+│             │ Bias   │ 0.2         │ NONE   │            │
+│             │        │ (threshold… │        │            │
+│             │        │ evaluation  │        │            │
+│             │        │ model=gpt-… │        │            │
+│             │        │ reason=Lit… │        │            │
+│             │        │ bias.,      │        │            │
+│             │        │ error=None) │        │            │
+│             │        │             │        │            │
+│ test_case_1 │        │             │        │ Cannot     │
+│             │        │             │        │ display    │
+│             │        │             │        │ metrics    │
+│             │        │             │        │ for        │
+│             │        │             │        │ component… │
+│             │        │             │        │ evals,     │
+│             │        │             │        │ please run │
+│             │        │             │        │ 'deepeval  │
+│             │        │             │        │ view' to   │
+│             │        │             │        │ see        │
+│             │        │             │        │ results on │
+│             │        │             │        │ Confident  │
+│             │        │             │        │ AI.% |     │
+│             │        │             │        │ passed=0 | │
+│             │        │             │        │ failed=0   │
+│             │ Bias   │ None        │ NONE   │            │
+│             │        │ (threshold… │        │            │
+│             │        │ evaluation  │        │            │
+│             │        │ model=gpt-… │        │            │
+│             │        │ reason=Non… │        │            │
+│             │        │ error=None) │        │            │
+└─────────────┴────────┴─────────────┴────────┴────────────┘

@@ -1,0 +1,6 @@
+{
+  "raised": {
+    "type": "AssertionError",
+    "message": "Classifiers: ticket_type (label: None, expected: technical, error: Judge returned 'NONE', which is not one of the declared labels (billing, technical, Account Access)., reason: None) failed."
+  }
+}

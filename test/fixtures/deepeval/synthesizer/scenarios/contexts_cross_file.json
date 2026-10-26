@@ -1,0 +1,130 @@
+{
+  "method": "generate_goldens_from_contexts",
+  "synthesizer": {
+    "styling_config": null,
+    "evolution_config": {
+      "num_evolutions": 1,
+      "evolutions": {
+        "Concretizing": 1
+      }
+    },
+    "filtration_config": {
+      "synthetic_input_quality_threshold": 0.5,
+      "max_quality_retries": 0
+    }
+  },
+  "args": {
+    "contexts": [
+      [
+        "Alpha opens at 9.",
+        "Beta closes at 5."
+      ]
+    ],
+    "max_goldens_per_context": 2,
+    "include_expected_output": false,
+    "source_files": [
+      [
+        "alpha.md",
+        "beta.md"
+      ]
+    ],
+    "context_chunk_source_files": [
+      [
+        "alpha.md",
+        "beta.md"
+      ]
+    ],
+    "target_files_per_context": 2
+  },
+  "script": {
+    "data": [
+      {
+        "data": [
+          {
+            "input": "How long are Alpha and Beta both open?",
+            "used_source_files": [
+              "alpha.md",
+              "beta.md"
+            ]
+          },
+          {
+            "input": "When does Alpha open?"
+          }
+        ]
+      }
+    ],
+    "response": [
+      {
+        "response": "Alpha and Beta hours?"
+      },
+      {
+        "response": "Alpha at 9?"
+      }
+    ]
+  },
+  "prompts": [
+    {
+      "step": "data",
+      "prompt": "I want you act as a copywriter. Based on the given context, which is list of strings, please generate a list of JSON objects with a `input` key.\n        The `input` can either be a question or a statement that can be addressed by the given context.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'data' key as a list of JSON objects.\n        You MUST TRY to generate 2 data points, unless the `input` is getting repetitive.\n\n        Example context: [\"Einstein won the Nobel Prize for his discovery of penicillin.\", \"Einstein won the Nobel Prize in 1968.\"]\n        Example max goldens per context: 2\n        Example JSON:\n        {\n            \"data\": [\n                {\n                    \"input\": \"What was Einstein known for?\"\n                },\n                {\n                    \"input\": \"Einstein was a smart guy huh\"\n                }\n            ]  \n        }\n\n\n        You should NOT incorporate any prior knowledge you have and take each context at face value.\n        You MUST include at least one statement as the input.\n        `input` MUST be a STRING.\n        \n        \n        \n                This context is constructed from multiple files with these source labels: ['alpha.md', 'beta.md'].\n                Each chunk in the context is prefixed with its origin as `[SOURCE: <label>]`.\n                Your goal is to generate powerful, cross-file goldens that test reasoning across different files, not single-file recall.\n\n                Each generated `input` MUST meaningfully combine information from at least 2 different source files. Ensure ATLEAST 2 source files are used in the `input`.\n\n                For each generated item, include a `used_source_files` key listing only the source labels actually used to form that `input`.\n                `used_source_files` MUST be a JSON array of strings and each value MUST come from: ['alpha.md', 'beta.md'].\n\n                Example JSON when source files are provided:\n                {\n                    \"data\": [\n                        {\n                            \"input\": \"...\",\n                            \"used_source_files\": [\"alpha.md\", \"beta.md\"]\n                        }\n                    ]\n                }\n            \n        You MUST TRY to generate 2 data points, unless the generated `input` is getting repetitive.\n        **\n\n        Max Goldens Per Context:\n        2\n\n        Context:\n        ['[SOURCE: alpha.md] Alpha opens at 9.', '[SOURCE: beta.md] Beta closes at 5.']\n\n        JSON:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input` and must be factually correct according to the supporting information in `Context`.\n    You MUST complicate the given `Input` using the following method:\n            1. Rewrite `Input` by replacing general concepts/inquiries with more specific ones.\n            2. `Rewritten Input` should be concise and understandable by humans.\n            3. `Rewritten Input` should not contain phrases like  'based on the provided context' or 'according to the context'.\n            4. `Rewritten Input` must be fully answerable from information in `Context`.  \n            5. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n            Example context:\n            Rainforests are home to over half of the world's plant and animal species, making them key to maintaining global biodiversity. The variety of life found in these ecosystems contributes to genetic diversity, which is crucial for adaptation and survival amid changing environmental conditions. This biodiversity also supports ecosystem resilience, enabling forests to recover from disturbances.\n            The biodiversity in rainforests plays a significant role in human well-being, providing essential services such as air and water purification, disease control, and pollination of crops. Additionally, many medicines are derived from rainforest plants, highlighting the importance of these ecosystems for medical research and healthcare.\n            Example input: \n            Why is the biodiversity of rainforests important?\n            Example rewritten input:\n            How does the extensive biodiversity found in rainforests, encompassing over half of the world's plant and animal species, contribute to global biodiversity maintenance, and what role does this diversity play in enhancing ecosystem resilience, human health through disease control, crop pollination, and the development of medicines derived from rainforest plants?\n\n            --------------------------\n\n            Example context:\n            Bees play a critical role in pollinating flowering plants, including many fruits and vegetables, contributing to the diversity of plant life and the production of crops. Their activity supports the growth of trees, flowers, and other plants, which serve as food and shelter for numerous animals, thus maintaining ecosystem balance.\n            Beyond their impact on food crops, bees contribute to wild plant growth by pollinating a wide range of plants outside of agricultural settings. This pollination is vital for the reproduction of many plants, affecting entire ecosystems' health and sustainability.\n            Example input: \n            What is the role of bees in ecosystems?\n            Example rewritten input:\n            How do bees, through their pollination of flowering plants, including a multitude of fruits and vegetables, significantly influence the diversity of plant life and agricultural productivity, and in what ways do their activities extend beyond agricultural settings to support the growth of trees, flowers, and other plants, thereby providing essential resources for various animal species and contributing to the overall balance and sustainability of ecosystems?\n\n            --------------------------\n\n            Example context:\n            Solar power generation relies on photovoltaic cells to convert sunlight into electricity. These cells are made of materials that exhibit the photovoltaic effect, which occurs when light photons are absorbed by the material, causing the generation of electrical current.\n            Solar panels, composed of many photovoltaic cells, collect sunlight and convert it into electrical power. This energy can then be used directly or stored in batteries for later use, providing a renewable and sustainable source of power with minimal environmental impact.\n            Example input: \n            What are the principles behind solar power generation?\n            Example rewritten input:\n            How do photovoltaic cells work to convert sunlight into electrical power, and what role do solar panels play in this process, including energy storage for sustainable use?\n            **\n\n            Input:\n            How long are Alpha and Beta both open?\n            Context:\n            ['[SOURCE: alpha.md] Alpha opens at 9.', '[SOURCE: beta.md] Beta closes at 5.']\n            Rewritten Input:\n            "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input` and must be factually correct according to the supporting information in `Context`.\n    You MUST complicate the given `Input` using the following method:\n            1. Rewrite `Input` by replacing general concepts/inquiries with more specific ones.\n            2. `Rewritten Input` should be concise and understandable by humans.\n            3. `Rewritten Input` should not contain phrases like  'based on the provided context' or 'according to the context'.\n            4. `Rewritten Input` must be fully answerable from information in `Context`.  \n            5. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n            Example context:\n            Rainforests are home to over half of the world's plant and animal species, making them key to maintaining global biodiversity. The variety of life found in these ecosystems contributes to genetic diversity, which is crucial for adaptation and survival amid changing environmental conditions. This biodiversity also supports ecosystem resilience, enabling forests to recover from disturbances.\n            The biodiversity in rainforests plays a significant role in human well-being, providing essential services such as air and water purification, disease control, and pollination of crops. Additionally, many medicines are derived from rainforest plants, highlighting the importance of these ecosystems for medical research and healthcare.\n            Example input: \n            Why is the biodiversity of rainforests important?\n            Example rewritten input:\n            How does the extensive biodiversity found in rainforests, encompassing over half of the world's plant and animal species, contribute to global biodiversity maintenance, and what role does this diversity play in enhancing ecosystem resilience, human health through disease control, crop pollination, and the development of medicines derived from rainforest plants?\n\n            --------------------------\n\n            Example context:\n            Bees play a critical role in pollinating flowering plants, including many fruits and vegetables, contributing to the diversity of plant life and the production of crops. Their activity supports the growth of trees, flowers, and other plants, which serve as food and shelter for numerous animals, thus maintaining ecosystem balance.\n            Beyond their impact on food crops, bees contribute to wild plant growth by pollinating a wide range of plants outside of agricultural settings. This pollination is vital for the reproduction of many plants, affecting entire ecosystems' health and sustainability.\n            Example input: \n            What is the role of bees in ecosystems?\n            Example rewritten input:\n            How do bees, through their pollination of flowering plants, including a multitude of fruits and vegetables, significantly influence the diversity of plant life and agricultural productivity, and in what ways do their activities extend beyond agricultural settings to support the growth of trees, flowers, and other plants, thereby providing essential resources for various animal species and contributing to the overall balance and sustainability of ecosystems?\n\n            --------------------------\n\n            Example context:\n            Solar power generation relies on photovoltaic cells to convert sunlight into electricity. These cells are made of materials that exhibit the photovoltaic effect, which occurs when light photons are absorbed by the material, causing the generation of electrical current.\n            Solar panels, composed of many photovoltaic cells, collect sunlight and convert it into electrical power. This energy can then be used directly or stored in batteries for later use, providing a renewable and sustainable source of power with minimal environmental impact.\n            Example input: \n            What are the principles behind solar power generation?\n            Example rewritten input:\n            How do photovoltaic cells work to convert sunlight into electrical power, and what role do solar panels play in this process, including energy storage for sustainable use?\n            **\n\n            Input:\n            When does Alpha open?\n            Context:\n            ['[SOURCE: alpha.md] Alpha opens at 9.', '[SOURCE: beta.md] Beta closes at 5.']\n            Rewritten Input:\n            "
+    }
+  ],
+  "goldens": [
+    {
+      "input": "Alpha and Beta hours?",
+      "expected_output": null,
+      "context": [
+        "Alpha opens at 9.",
+        "Beta closes at 5."
+      ],
+      "source_file": "alpha.md",
+      "additional_metadata": {
+        "evolutions": [
+          "Concretizing"
+        ],
+        "synthetic_input_quality": 0.0,
+        "context_source_files": [
+          "alpha.md",
+          "beta.md"
+        ],
+        "used_source_files": [
+          "alpha.md",
+          "beta.md"
+        ]
+      }
+    },
+    {
+      "input": "Alpha at 9?",
+      "expected_output": null,
+      "context": [
+        "Alpha opens at 9.",
+        "Beta closes at 5."
+      ],
+      "source_file": "alpha.md",
+      "additional_metadata": {
+        "evolutions": [
+          "Concretizing"
+        ],
+        "synthetic_input_quality": 0.0,
+        "context_source_files": [
+          "alpha.md",
+          "beta.md"
+        ],
+        "used_source_files": []
+      }
+    }
+  ],
+  "styling_config": {
+    "scenario": null,
+    "task": null,
+    "input_format": null,
+    "expected_output_format": null
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "description": "A conversation with turns only, allow_none",
+  "classifier": {
+    "kind": "classifier",
+    "eval_mode": "llm",
+    "params": {
+      "name": "ticket_type",
+      "labels": [
+        {
+          "name": "billing",
+          "description": "Questions about invoices, charges or refunds."
+        },
+        "technical",
+        {
+          "name": "Account Access",
+          "description": "Logging in, passwords and two-factor codes."
+        }
+      ],
+      "allow_none": true
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "I reset my password but still can't log in."
+      },
+      {
+        "role": "assistant",
+        "content": "Your account is locked; I've sent an unlock link to your email.",
+        "retrieval_context": [
+          "Unlock links expire after 1 hour."
+        ],
+        "tools_called": [
+          {
+            "name": "unlock_account",
+            "input_parameters": {
+              "user": "c-42"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Got it, I'm in. Thanks!"
+      }
+    ]
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "label,reason": [
+      {
+        "label": "Account Access",
+        "reason": "Login trouble."
+      }
+    ]
+  }
+}

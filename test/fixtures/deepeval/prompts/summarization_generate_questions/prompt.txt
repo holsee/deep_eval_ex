@@ -1,0 +1,20 @@
+Based on the given text, generate 3 closed-ended questions that can be answered with either a 'yes' or 'no'. 
+The questions generated should ALWAYS result in a 'yes' based on the given text. 
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+
+
+** IMPORTANT
+Only return a JSON with a 'questions' key, which is a list of strings. 
+The questions have to be STRICTLY closed ended.
+The given text should be able to answer 'yes' for each question.
+**
+Text:
+The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.
+
+JSON:

@@ -1,0 +1,21 @@
+{
+  "template": "ContextualPrecisionMetric.generate_reason",
+  "inputs": {
+    "score": 0.8333,
+    "input": "What is the capital of France?",
+    "verdicts": [
+      {
+        "verdict": "yes",
+        "reason": "It says 'Paris is the capital'."
+      },
+      {
+        "verdict": "no",
+        "reason": "The Louvre is unrelated to the question."
+      },
+      {
+        "verdict": "yes",
+        "reason": "It mentions France."
+      }
+    ]
+  }
+}

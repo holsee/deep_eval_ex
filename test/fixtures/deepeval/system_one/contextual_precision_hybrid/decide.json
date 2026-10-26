@@ -1,0 +1,94 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "input": "What is the capital of France?",
+          "expected_output": "Paris is the capital of France.",
+          "nodes": [
+            "Rome is the capital of Italy.",
+            "Paris is the capital and largest city of France."
+          ]
+        },
+        "questions": {
+          "node_0": {
+            "type": "noul",
+            "instructions": {
+              "node": "Rome is the capital of Italy.",
+              "question": "Was the retrieval context `node` remotely useful in arriving at `expected_output` for `input`?"
+            }
+          },
+          "node_1": {
+            "type": "noul",
+            "instructions": {
+              "node": "Paris is the capital and largest city of France.",
+              "question": "Was the retrieval context `node` remotely useful in arriving at `expected_output` for `input`?"
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "node_0": {
+              "probability": 0.05
+            },
+            "node_1": {
+              "probability": 0.96
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "input": "What is the capital of France?",
+        "expected_output": "Paris is the capital of France.",
+        "nodes": [
+          "Rome is the capital of Italy.",
+          "Paris is the capital and largest city of France."
+        ]
+      },
+      "questions": {
+        "node_0": {
+          "type": "noul",
+          "instructions": {
+            "node": "Rome is the capital of Italy.",
+            "question": "Was the retrieval context `node` remotely useful in arriving at `expected_output` for `input`?"
+          }
+        },
+        "node_1": {
+          "type": "noul",
+          "instructions": {
+            "node": "Paris is the capital and largest city of France.",
+            "question": "Was the retrieval context `node` remotely useful in arriving at `expected_output` for `input`?"
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "node_0": {
+            "probability": 0.05
+          },
+          "node_1": {
+            "probability": 0.96
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

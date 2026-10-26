@@ -1,0 +1,85 @@
+{
+  "description": "JsonCorrectness: valid JSON that fails the schema (a string age, a number in a list of strings, a nested model missing a field); the judge writes the reason",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "json_correctness",
+    "params": {
+      "expected_schema": {
+        "$defs": {
+          "Address": {
+            "properties": {
+              "city": {
+                "title": "City",
+                "type": "string"
+              },
+              "postcode": {
+                "title": "Postcode",
+                "type": "string"
+              }
+            },
+            "required": [
+              "city",
+              "postcode"
+            ],
+            "title": "Address",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "name": {
+            "description": "Full name, e.g. José Saramago",
+            "title": "Name",
+            "type": "string"
+          },
+          "age": {
+            "title": "Age",
+            "type": "integer"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "address": {
+            "$ref": "#/$defs/Address"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Nickname"
+          }
+        },
+        "required": [
+          "name",
+          "age",
+          "tags",
+          "address"
+        ],
+        "title": "Person",
+        "type": "object"
+      }
+    }
+  },
+  "test_case": {
+    "input": "Return the customer's profile as JSON.",
+    "actual_output": "{\"name\": \"José Saramago\", \"age\": \"eighty-seven\", \"tags\": [\"writer\", 1998], \"address\": {\"city\": \"Lisbon\"}, \"nickname\": null}"
+  },
+  "responses": {
+    "json_correctness": {
+      "reason": [
+        {
+          "reason": "The generated Json is not valid because 'age' is a string where the schema expects an integer, 'tags' holds a number and 'address' lacks 'postcode'."
+        }
+      ]
+    }
+  }
+}

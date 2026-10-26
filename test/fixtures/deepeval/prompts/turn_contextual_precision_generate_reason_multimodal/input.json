@@ -1,0 +1,14 @@
+{
+  "template": "TurnContextualPrecisionMetric.generate_reason",
+  "inputs": {
+    "multimodal": true,
+    "input": "\nWhat is in the picture? ",
+    "score": 1,
+    "verdicts": [
+      {
+        "verdict": "yes",
+        "reason": "It describes the picture."
+      }
+    ]
+  }
+}

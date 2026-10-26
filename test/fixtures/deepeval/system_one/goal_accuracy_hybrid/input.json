@@ -1,0 +1,73 @@
+{
+  "description": "GoalAccuracy in hybrid mode: Jev scores each unit's goal, then each plan, one Score request each; the LLM writes the reason",
+  "metrics": [
+    {
+      "kind": "goal_accuracy",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Book a table for two at Café Odéon on Saturday."
+      },
+      {
+        "role": "assistant",
+        "content": "Booked: Saturday at 19:00, for two.",
+        "tools_called": [
+          {
+            "name": "book_table",
+            "input_parameters": {
+              "day": "Saturday",
+              "restaurant": "Café Odéon"
+            },
+            "output": "Booked for Saturday at 19:00"
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "What's the address?"
+      },
+      {
+        "role": "assistant",
+        "content": "12 Rue de l'Odéon, Paris."
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "scores": {
+        "verdict": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.05,
+            "1": 0.15,
+            "2": 0.4,
+            "3": 0.3,
+            "4": 0.1
+          },
+          "confidence": 0.35
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "goal_accuracy": {
+      "text": [
+        "The agent passed: both goals were met and its plans were clear."
+      ]
+    }
+  }
+}

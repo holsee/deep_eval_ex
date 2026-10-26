@@ -1,0 +1,11 @@
+{
+  "template": "ConversationCompletenessMetric.generate_reason",
+  "inputs": {
+    "multimodal": true,
+    "score": 1,
+    "incompletenesses": [],
+    "intentions": [
+      "User wants to know what is in the picture"
+    ]
+  }
+}

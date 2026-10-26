@@ -1,0 +1,10 @@
+{
+  "template": "AnswerRelevancyMetric.generate_verdicts",
+  "inputs": {
+    "input": "What is the capital of France?",
+    "statements": [
+      "Paris is the capital of France.",
+      "It's known for café culture."
+    ]
+  }
+}

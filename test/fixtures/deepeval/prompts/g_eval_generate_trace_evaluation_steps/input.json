@@ -1,0 +1,6 @@
+{
+  "template": "GEval.generate_trace_evaluation_steps",
+  "inputs": {
+    "criteria": "Determine whether the agent booked what the user asked for, using the tool results it got."
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "description": "JevEval in strict mode, without the JevEval suffix: a Choice judged not applicable",
+  "metrics": [
+    {
+      "kind": "jev_eval",
+      "params": {
+        "name": "Citations",
+        "evaluation_params": [
+          "actual_output",
+          "retrieval_context"
+        ],
+        "strict_mode": true,
+        "_include_jev_eval_suffix": false,
+        "questions": [
+          {
+            "type": "noul",
+            "statement": "Every fact in `actual_output` is in `retrieval_context`.",
+            "true": "All facts are sourced.",
+            "false": "Some fact is unsourced."
+          },
+          {
+            "type": "choice",
+            "question": "Does `actual_output` cite its sources?",
+            "options": {
+              "cites": 1.0,
+              "does_not_cite": 0.0,
+              "nothing_to_cite": null
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What is the vacation policy?",
+    "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+    "expected_output": "Employees get 20 days of PTO a year. Up to 5 days carry over.",
+    "retrieval_context": [
+      "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+      "Section 3.3: Up to 5 unused days can be carried over to the next year."
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": null,
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.7
+        }
+      },
+      "choices": {
+        "q_1": {
+          "choice": "nothing_to_cite",
+          "probabilities": {
+            "cites": 0.1,
+            "does_not_cite": 0.2,
+            "nothing_to_cite": 0.7
+          },
+          "confidence": 0.55
+        }
+      }
+    }
+  }
+}

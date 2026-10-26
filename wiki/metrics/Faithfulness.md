@@ -16,10 +16,12 @@ Faithfulness measures whether claims in an LLM's output are supported by the ret
 3. **Generate verdicts** - For each claim, determine if it's:
    - `yes` - Supported by the context
    - `no` - Contradicts the context
-   - `idk` - Cannot be verified (not mentioned in context)
-4. **Calculate score** - `(supported claims + idk claims) / total claims`
+   - `borderline` - Cannot be verified (not mentioned in context)
+4. **Calculate score** - `(supported claims + borderline claims) / total verdicts`, or `1` when there are no claims
 
-Note: `idk` verdicts are counted as faithful since they don't contradict the context.
+Note: `borderline` verdicts are counted as faithful since they don't contradict the context.
+
+As in deepeval 4.3.1, verdicts are normalised before scoring (`DeepEvalEx.Metrics.QAG`): a judge's reply is read by its first word, so `"No, the context says otherwise"` counts as `no`; the legacy `idk` reads as `borderline`; anything else is dropped rather than counted.
 
 ## Required Parameters
 
@@ -57,6 +59,7 @@ result.success # => true (score >= threshold)
 | `:threshold` | float | 0.5 | Pass/fail threshold |
 | `:include_reason` | boolean | true | Generate explanation |
 | `:truths_extraction_limit` | integer | nil | Max truths per doc |
+| `:penalize_ambiguous_claims` | boolean | false | Count borderline claims as unfaithful |
 | `:adapter` | atom | :openai | LLM adapter to use |
 | `:model` | string | default | Model name |
 
@@ -90,27 +93,32 @@ Claim directly contradicts information in the context.
 # Verdict: no (score impact: decreases faithfulness)
 ```
 
-### Idk - Unverifiable
+### Borderline - Unverifiable
 
 Claim cannot be verified from context (not mentioned).
 
 ```elixir
 # Context: "The API supports JSON responses"
 # Output: "The API also supports XML"
-# Verdict: idk (not contradicting, so counted as faithful)
+# Verdict: borderline (not contradicting, so counted as faithful)
 ```
 
-## Using Context Alias
-
-You can use `context` as an alias for `retrieval_context`:
+To count unverifiable claims against the score, as deepeval's
+`penalize_ambiguous_claims=True` does, pass `penalize_ambiguous_claims: true`.
+Borderline claims then fail, and the reason lists them as `(Ambiguous)`
+contradictions:
 
 ```elixir
-test_case = TestCase.new!(
-  input: "Question",
-  actual_output: "Answer",
-  context: ["Document 1", "Document 2"]  # Same as retrieval_context
-)
+{:ok, result} = Faithfulness.measure(test_case, penalize_ambiguous_claims: true)
+# One supported claim and one borderline claim: score 0.5 instead of 1.0
 ```
+
+## Context Is Not Retrieval Context
+
+Faithfulness reads `retrieval_context` only. As in deepeval 4.3.1, `context`
+(the ground truth Hallucination reads) does not stand in for it: a test case
+with only `context` errors with `'retrieval_context' cannot be None for the
+'Faithfulness' metric`.
 
 ## Limiting Truth Extraction
 
@@ -229,7 +237,7 @@ metrics = [
   ContextualPrecision
 ]
 
-results = DeepEvalEx.evaluate(test_case, metrics)
+{:ok, evaluation} = DeepEvalEx.evaluate([test_case], metrics)
 ```
 
 ### Performance Considerations
@@ -244,7 +252,7 @@ results = DeepEvalEx.evaluate(test_case, metrics)
 | Metric | Measures | Score Meaning |
 |--------|----------|---------------|
 | Faithfulness | Claims supported by context | Higher = more faithful |
-| Hallucination | Unsupported statements | Higher = more hallucinations |
+| Hallucination | Agreement with context | Higher = fewer contradictions |
 
 Faithfulness focuses on whether claims are grounded in context, while Hallucination detects fabricated information.
 

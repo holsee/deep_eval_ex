@@ -1,0 +1,6 @@
+{
+  "raised": {
+    "type": "AssertionError",
+    "message": "Classifiers: refusal (label: partial_refusal, expected: complied, error: None, reason: Declines part of it.) failed."
+  }
+}

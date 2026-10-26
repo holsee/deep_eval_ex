@@ -1,0 +1,18 @@
+{
+  "template": "GEval.generate_trace_evaluation_steps",
+  "inputs": {
+    "multimodal": true,
+    "images": [
+      {
+        "dataBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+        "mimeType": "image/png",
+        "_id": "red-dot"
+      },
+      {
+        "url": "https://example.com/charts/sales.png",
+        "_id": "sales-chart"
+      }
+    ],
+    "criteria": "Determine whether the agent booked the right table."
+  }
+}

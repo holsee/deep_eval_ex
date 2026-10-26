@@ -1,0 +1,8 @@
+{
+  "template": "RoleAdherenceMetric.generate_reason",
+  "inputs": {
+    "score": 1,
+    "role": "A pirate.",
+    "out_of_character_responses": []
+  }
+}

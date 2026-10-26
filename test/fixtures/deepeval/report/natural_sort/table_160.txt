@@ -1,0 +1,14 @@
+                                                                          Test Results                                                                          
+┏━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Test case ┃ Metric       ┃ Score                                                                                     ┃ Status ┃ Overall Success Rate         ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ case 1    │              │                                                                                           │        │ 100.0% | passed=1 | failed=0 │
+│           │ Faithfulness │ 1.0 (threshold=0.5, evaluation model=gpt-4o-mini, reason=No contradictions., error=None)  │ PASSED │                              │
+│           │              │                                                                                           │        │                              │
+│ Case 10   │              │                                                                                           │        │ 100.0% | passed=1 | failed=0 │
+│           │ Faithfulness │ 1.0 (threshold=0.5, evaluation model=gpt-4o-mini, reason=No contradictions., error=None)  │ PASSED │                              │
+│           │              │                                                                                           │        │                              │
+│ case 2    │              │                                                                                           │        │ 0.0% | passed=0 | failed=1   │
+│           │ Faithfulness │ 0.25 (threshold=0.5, evaluation model=gpt-4o-mini, reason=The answer contradicts the      │ FAILED │                              │
+│           │              │ retrieval context on the refund window, which is 30 days., error=None)                    │        │                              │
+└───────────┴──────────────┴───────────────────────────────────────────────────────────────────────────────────────────┴────────┴──────────────────────────────┘

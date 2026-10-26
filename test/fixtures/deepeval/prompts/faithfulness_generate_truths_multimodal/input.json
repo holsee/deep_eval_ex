@@ -1,0 +1,22 @@
+{
+  "template": "FaithfulnessMetric.generate_truths",
+  "inputs": {
+    "multimodal": true,
+    "images": [
+      {
+        "dataBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+        "mimeType": "image/png",
+        "_id": "red-dot"
+      },
+      {
+        "url": "https://example.com/charts/sales.png",
+        "_id": "sales-chart"
+      }
+    ],
+    "retrieval_context": [
+      "Sales doubled in 2024. [DEEPEVAL:IMAGE:sales-chart]",
+      "There was a cat."
+    ],
+    "truths_extraction_limit": null
+  }
+}

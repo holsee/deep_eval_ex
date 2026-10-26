@@ -1,0 +1,107 @@
+[
+  {
+    "panel": {
+      "border_style": "none",
+      "content": "[rgb(106,0,255) bold]🚀 DeepEval Evaluation Results[/rgb(106,0,255) bold]"
+    }
+  },
+  {
+    "panel": {
+      "border_style": "red",
+      "content": {
+        "tree": {
+          "label": "[red bold]❌ café ☕ 测试[/red bold]",
+          "children": [
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": null,
+                    "columns": [
+                      "Key",
+                      "Value"
+                    ],
+                    "rows": [
+                      [
+                        "Input:",
+                        "Où est le café ?"
+                      ],
+                      [
+                        "Actual Output:",
+                        "Ici 👉 ☕"
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Metrics",
+                    "columns": [
+                      "Status",
+                      "Metric",
+                      "Score",
+                      "Threshold",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold green]PASS[/bold green]",
+                        "Answer Relevancy",
+                        "0.88",
+                        "0.50",
+                        "回答完全相关，并且涵盖了所有要点。🎉 The answer is fully relevant and covers every point."
+                      ],
+                      [
+                        "[bold red]FAIL[/bold red]",
+                        "Faithfulness",
+                        "0.12",
+                        "0.50",
+                        "Line one.\nLine two."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(106,0,255)",
+      "content": {
+        "table": {
+          "title": "[bold]Aggregate Metrics[/bold]\n",
+          "columns": [
+            "Metric",
+            "Average Score",
+            "Pass Rate",
+            "Total"
+          ],
+          "rows": [
+            [
+              "Answer Relevancy",
+              "0.88",
+              "100.00% | passed=1 | failed=0",
+              "1"
+            ],
+            [
+              "Faithfulness",
+              "0.12",
+              "0.00% | passed=0 | failed=1",
+              "1"
+            ]
+          ]
+        }
+      }
+    }
+  }
+]

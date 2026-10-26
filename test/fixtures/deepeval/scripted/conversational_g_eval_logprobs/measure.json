@@ -1,0 +1,12 @@
+{
+  "score": 0.6869891525637003,
+  "success": false,
+  "reason": "Polite: 7 of the 8 replies resolve the request.",
+  "threshold": 0.7,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Criteria:\nDetermine whether the assistant resolves the user's request politely. \n \nEvaluation Steps:\n[\n    \"Check that the assistant answers with the order's status.\"\n] \n \nRubric:\nNone"
+}

@@ -14,7 +14,7 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
       DeepEvalEx.LLM.Adapters.Mock.set_response(~r/capital.*France/, "Paris")
 
       # Use the mock adapter
-      {:ok, result} = DeepEvalEx.evaluate(test_case, [metric],
+      {:ok, evaluation} = DeepEvalEx.evaluate([test_case], [metric],
         adapter: :mock
       )
 
@@ -24,26 +24,128 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
         ~r/extract claims/,
         %{"claims" => ["claim 1", "claim 2"]}
       )
+
+  ## Fake Token Usage
+
+  Pass `:mock_usage` (a keyword list or map with `:input_tokens` and
+  `:output_tokens`) to have every call record that usage, priced for
+  `"mock-model"` (unpriced unless set in the `:model_pricing` config):
+
+      DeepEvalEx.evaluate([test_case], [metric],
+        adapter: :mock,
+        mock_usage: [input_tokens: 100, output_tokens: 20]
+      )
+
+  Without it calls report no usage, so results carry the evaluation model
+  but `nil` token counts and cost.
+
+  ## Configured Responses and Recorded Prompts
+
+  Responses set with `set_response/2` and `set_schema_response/2`, and the
+  prompts `get_recorded_prompts/0` returns, are shared by every process on
+  the node: a response set in a test serves the Tasks its metric starts, and
+  their prompts are recorded in the order they were sent. They are kept in
+  an ETS table owned by a process of the `:deep_eval_ex` application, so
+  they outlive the process that set or sent them.
+
+  Being shared, they are also seen by every other test running at the same
+  time, and `clear_responses/0` and `clear_recorded_prompts/0` clear them
+  for all: one `async: true` module clearing or setting them changes what
+  another's metrics are answered, failing tests only at some seeds. Use
+  them only from `async: false` test modules, which ExUnit runs alone after
+  the async ones; an `async: true` module uses scripted mode below, whose
+  script and prompts are its own. DeepEvalEx's own suite enforces this in
+  `test/deep_eval_ex/llm/adapters/mock_async_guard_test.exs`, which fails
+  when an `async: true` test module, or a test support module, calls
+  `set_response/2`, `set_schema_response/2`, `clear_responses/0`,
+  `get_recorded_prompts/0` or `clear_recorded_prompts/0`.
+
+  ## Scripted Mode
+
+  `script/2` replays a judge script, the same one deepeval's scripted judge
+  answers from in `scripts/parity/generate_fixtures.py`: responses keyed by
+  step, then by call index. A call's step is named by the schema it asks
+  for, not by its prompt (see `step_key/1`), so a script replays the same
+  answers to DeepEvalEx and to deepeval even where their prompts differ:
+
+      DeepEvalEx.LLM.Adapters.Mock.script(
+        %{
+          "claims" => [%{"claims" => ["Paris is in France."]}],
+          "verdicts" => [%{"verdicts" => [%{"verdict" => "yes"}]}]
+        },
+        model: "scripted-judge"
+      )
+
+      DeepEvalEx.evaluate([test_case], [metric], adapter: :mock)
+
+      DeepEvalEx.LLM.Adapters.Mock.scripted_prompts()
+      #=> [%{step: "claims", prompt: "..."}, %{step: "verdicts", prompt: "..."}]
+
+  A script belongs to the process that loads it and serves every process it
+  starts (found through `$callers`, as with `Task`), so async tests each
+  replay their own script. Scripts are kept in a node-local `Registry`
+  started with the `:deep_eval_ex` application. A step with no response left returns
+  `{:error, {:no_scripted_response, step, index}}`. While a script is
+  loaded, `model_name/1` is the script's `:model` and the configured
+  responses above are not used.
   """
 
   use DeepEvalEx.LLM.Adapter
 
+  alias DeepEvalEx.LLM.Adapters.Mock.Table
+  alias DeepEvalEx.LLM.Usage
+
   @default_response "This is a mock response."
-  @ets_table :deep_eval_ex_mock_responses
+  # The step of generate_raw_response/2 calls, as deepeval's scripted judge
+  # names it.
+  @raw_response_step "raw_response"
+  # Registry of the processes that loaded a script, each with its script's
+  # agent as value; started by DeepEvalEx.Application.
+  @scripts __MODULE__.Scripts
 
   @impl true
   def generate(prompt, opts \\ []) do
+    case script_agent() do
+      nil -> configured_generate(prompt, opts)
+      agent -> scripted_call(agent, prompt, step_key(nil), opts)
+    end
+  end
+
+  @impl true
+  def generate_with_schema(prompt, schema, opts \\ []) do
+    case script_agent() do
+      nil -> configured_generate_with_schema(prompt, opts)
+      agent -> scripted_call(agent, prompt, step_key(schema), opts)
+    end
+  end
+
+  @doc """
+  Replays the next `"raw_response"` of the calling process's script: a chat
+  completion with logprobs (see `DeepEvalEx.LLM.Adapter.c:generate_raw_response/2`).
+
+  Without a script it is `{:error, {:log_probs_unsupported, model}}`; see
+  `supports_log_probs?/1`.
+  """
+  @impl true
+  def generate_raw_response(prompt, opts \\ []) do
+    case script_agent() do
+      nil -> {:error, {:log_probs_unsupported, model_name(opts)}}
+      agent -> scripted_call(agent, prompt, @raw_response_step, opts)
+    end
+  end
+
+  defp configured_generate(prompt, opts) do
     response =
       case get_configured_response(prompt) do
         nil -> Keyword.get(opts, :default_response, @default_response)
         response -> response
       end
 
+    record_usage(opts)
     {:ok, response}
   end
 
-  @impl true
-  def generate_with_schema(prompt, _schema, opts \\ []) do
+  defp configured_generate_with_schema(prompt, opts) do
     response =
       case get_configured_schema_response(prompt) do
         nil ->
@@ -53,17 +155,36 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
           response
       end
 
+    record_usage(opts)
     {:ok, response}
   end
 
   @impl true
-  def model_name(_opts), do: "mock-model"
+  def model_name(_opts) do
+    case script_agent() do
+      nil -> "mock-model"
+      agent -> Agent.get(agent, & &1.model)
+    end
+  end
 
   @impl true
   def supports_structured_outputs?, do: true
 
   @impl true
   def supports_log_probs?, do: false
+
+  @doc """
+  Whether the calling process's script has a `"raw_response"` step: only
+  then does the Mock judge offer logprobs, as deepeval's scripted judge only
+  answers `generate_raw_response` then.
+  """
+  @impl true
+  def supports_log_probs?(_opts) do
+    case script_agent() do
+      nil -> false
+      agent -> Agent.get(agent, &Map.has_key?(&1.responses, @raw_response_step))
+    end
+  end
 
   # Configuration API
 
@@ -77,8 +198,7 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   """
   @spec set_response(String.t() | Regex.t(), String.t()) :: :ok
   def set_response(pattern, response) do
-    ensure_table_exists()
-    :ets.insert(@ets_table, {{:response, pattern}, response})
+    :ets.insert(Table.ensure(), {{:response, pattern}, response})
     :ok
   end
 
@@ -87,70 +207,225 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
   """
   @spec set_schema_response(String.t() | Regex.t(), map()) :: :ok
   def set_schema_response(pattern, response) do
-    ensure_table_exists()
-    :ets.insert(@ets_table, {{:schema_response, pattern}, response})
+    :ets.insert(Table.ensure(), {{:schema_response, pattern}, response})
     :ok
   end
 
   @doc """
-  Clears all configured mock responses.
+  Clears all configured mock responses, and the recorded prompts with them,
+  for every process.
   """
   @spec clear_responses() :: :ok
   def clear_responses do
-    ensure_table_exists()
-    :ets.delete_all_objects(@ets_table)
+    :ets.delete_all_objects(Table.ensure())
     :ok
   end
 
   @doc """
-  Records all prompts sent to this adapter (for assertions).
+  Returns the prompts sent to this adapter outside scripted mode, by any
+  process, in the order they were sent (for assertions).
   """
   @spec get_recorded_prompts() :: [String.t()]
   def get_recorded_prompts do
-    ensure_table_exists()
-
-    @ets_table
+    Table.ensure()
     |> :ets.match({{:recorded_prompt, :"$1"}, :"$2"})
     |> Enum.sort_by(fn [idx, _] -> idx end)
     |> Enum.map(fn [_, prompt] -> prompt end)
   end
 
   @doc """
-  Clears recorded prompts.
+  Clears the recorded prompts of every process.
   """
   @spec clear_recorded_prompts() :: :ok
   def clear_recorded_prompts do
-    ensure_table_exists()
-    :ets.match_delete(@ets_table, {{:recorded_prompt, :_}, :_})
+    :ets.match_delete(Table.ensure(), {{:recorded_prompt, :_}, :_})
     :ok
+  end
+
+  # Scripted mode
+
+  @doc """
+  Loads a judge script for the calling process and the processes it starts.
+
+  `responses` maps a step (see `step_key/1`) to the responses of its
+  successive calls: maps for `generate_with_schema/3`, strings for
+  `generate/2` (step `"text"`), and chat completions with logprobs for
+  `generate_raw_response/2` (step `"raw_response"`, whose presence makes
+  `supports_log_probs?/1` true, so GEval weights its score by them). A
+  string for a schema step is returned as is, the raw text of a judge
+  without structured outputs, which
+  `DeepEvalEx.LLM.Adapter.generate_with_schema/3` loads with deepeval's
+  `trimAndLoadJson`, as deepeval does with the same script.
+
+  Replaces any script the process loaded before, along with its recorded
+  prompts. The script is dropped when the
+  process exits, or with `stop_script/0`.
+
+  ## Options
+
+  - `:model` - the judge model name `model_name/1` reports (default:
+    `"mock-model"`)
+  """
+  @spec script(%{String.t() => [map() | String.t()]}, keyword()) :: :ok
+  def script(responses, opts \\ []) when is_map(responses) do
+    stop_script()
+
+    state = %{
+      responses: responses,
+      model: Keyword.get(opts, :model, "mock-model"),
+      calls: %{},
+      prompts: []
+    }
+
+    owner = self()
+    {:ok, agent} = Agent.start(fn -> state end)
+    {:ok, _owner} = Registry.register(@scripts, owner, agent)
+    spawn(fn -> drop_script_with(owner, agent) end)
+    :ok
+  end
+
+  # Stops the script's agent when its owner exits, whatever the reason; ends
+  # quietly when the agent is stopped first.
+  defp drop_script_with(owner, agent) do
+    owner_ref = Process.monitor(owner)
+    agent_ref = Process.monitor(agent)
+
+    receive do
+      {:DOWN, ^owner_ref, :process, _pid, _reason} -> stop_agent(agent)
+      {:DOWN, ^agent_ref, :process, _pid, _reason} -> :ok
+    end
+  end
+
+  defp stop_agent(agent) do
+    Agent.stop(agent)
+  catch
+    :exit, _reason -> :ok
+  end
+
+  @doc """
+  Drops the calling process's script, if any.
+  """
+  @spec stop_script() :: :ok
+  def stop_script do
+    case Registry.lookup(@scripts, self()) do
+      [] ->
+        :ok
+
+      [{_owner, agent}] ->
+        Registry.unregister(@scripts, self())
+        stop_agent(agent)
+    end
+  end
+
+  @doc """
+  Returns the prompts sent under the calling process's script, in call
+  order, each with its step. Empty when no script is loaded.
+  """
+  @spec scripted_prompts() :: [%{step: String.t(), prompt: String.t()}]
+  def scripted_prompts do
+    case script_agent() do
+      nil -> []
+      agent -> agent |> Agent.get(& &1.prompts) |> Enum.reverse()
+    end
+  end
+
+  @doc """
+  Returns the step a call with `schema` is scripted under: the schema's
+  top-level property names, sorted and joined with commas, or `"text"` for a
+  call without a schema.
+
+  deepeval's scripted judge names a pydantic schema the same way, so
+  `"verdicts"` or `"reason,score"` name the same call in both.
+
+  ## Examples
+
+      iex> DeepEvalEx.LLM.Adapters.Mock.step_key(%{"properties" => %{"score" => %{}, "reason" => %{}}})
+      "reason,score"
+
+      iex> DeepEvalEx.LLM.Adapters.Mock.step_key(nil)
+      "text"
+  """
+  @spec step_key(map() | module() | nil) :: String.t()
+  def step_key(nil), do: "text"
+  def step_key(%{"properties" => properties}), do: join_keys(properties)
+  def step_key(%{properties: properties}), do: join_keys(properties)
+
+  def step_key(schema) when is_atom(schema) do
+    if Code.ensure_loaded?(schema) and function_exported?(schema, :json_schema, 0) do
+      step_key(schema.json_schema())
+    else
+      raise ArgumentError, "cannot name the step of schema #{inspect(schema)}"
+    end
+  end
+
+  defp join_keys(properties) do
+    properties |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort() |> Enum.join(",")
+  end
+
+  defp scripted_call(agent, prompt, step, opts) do
+    reply =
+      Agent.get_and_update(agent, fn state ->
+        index = Map.get(state.calls, step, 0)
+
+        reply =
+          case state.responses |> Map.get(step, []) |> Enum.at(index) do
+            nil -> {:error, {:no_scripted_response, step, index}}
+            response -> {:ok, response}
+          end
+
+        {reply,
+         %{
+           state
+           | calls: Map.put(state.calls, step, index + 1),
+             prompts: [%{step: step, prompt: prompt} | state.prompts]
+         }}
+      end)
+
+    with {:ok, _response} <- reply, do: record_usage(opts)
+    reply
+  end
+
+  # The script of the calling process or of the nearest process that
+  # started it.
+  defp script_agent do
+    Enum.find_value([self() | Process.get(:"$callers", [])], &live_script_agent/1)
+  end
+
+  # An exited owner's entry outlives it briefly, its agent already stopped.
+  defp live_script_agent(owner) do
+    with [{_owner, agent}] <- Registry.lookup(@scripts, owner),
+         true <- Process.alive?(agent) do
+      agent
+    else
+      _ -> nil
+    end
   end
 
   # Private helpers
 
-  defp ensure_table_exists do
-    case :ets.whereis(@ets_table) do
-      :undefined ->
-        :ets.new(@ets_table, [:named_table, :public, :set])
-
-      _ref ->
+  defp record_usage(opts) do
+    case Keyword.get(opts, :mock_usage) do
+      nil ->
         :ok
+
+      usage ->
+        usage = Map.new(usage)
+        Usage.record(Usage.new(model_name(opts), usage[:input_tokens], usage[:output_tokens]))
     end
   end
 
   defp get_configured_response(prompt) do
     record_prompt(prompt)
-    ensure_table_exists()
 
-    @ets_table
+    Table.ensure()
     |> :ets.match({{:response, :"$1"}, :"$2"})
     |> find_matching_response(prompt)
   end
 
   defp get_configured_schema_response(prompt) do
     record_prompt(prompt)
-    ensure_table_exists()
 
-    @ets_table
+    Table.ensure()
     |> :ets.match({{:schema_response, :"$1"}, :"$2"})
     |> find_matching_response(prompt)
   end
@@ -168,9 +443,11 @@ defmodule DeepEvalEx.LLM.Adapters.Mock do
     end)
   end
 
+  # Keyed by a node-wide monotonic integer, so concurrent callers never share
+  # a key and prompts sort in the order they were sent, whatever else the
+  # table holds or has had cleared.
   defp record_prompt(prompt) do
-    ensure_table_exists()
-    idx = :ets.info(@ets_table, :size)
-    :ets.insert(@ets_table, {{:recorded_prompt, idx}, prompt})
+    key = {:recorded_prompt, System.unique_integer([:monotonic, :positive])}
+    :ets.insert(Table.ensure(), {key, prompt})
   end
 end

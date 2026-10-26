@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.75,
+    "success": true,
+    "reason": "The lookup was needed; the reply was direct.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "verbose_logs": "Task: Find my latest invoice. \n \n \nEfficiency Score: 0.75",
+    "confidence": null,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

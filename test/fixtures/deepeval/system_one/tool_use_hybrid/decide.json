@@ -1,0 +1,266 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "user_messages": "Book a table for two at Café Odéon on Saturday. \n",
+          "assistant_messages": "Booked: Saturday at 19:00, for two. \n",
+          "tools_called": "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    input_parameters={\n        \"day\": \"Saturday\",\n        \"restaurant\": \"Café Odéon\"\n    },\n    output='Booked for Saturday at 19:00'\n)",
+          "available_tools": "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    description=\"Book a restaurant table\"\n),ToolCall(\n    name=\"search_web\",\n    type=\"FUNCTION\",\n    description=\"Search the web\"\n)"
+        },
+        "questions": {
+          "verdict": {
+            "type": "score",
+            "instructions": "How well do the tools in `tools_called`, which the assistant called while writing `assistant_messages`, match what `user_messages` asked for, given the tools in `available_tools`? Unnecessary, redundant or unrelated calls, and a better-suited available tool that was ignored, count against it.",
+            "criteria": [
+              "Irrelevant or unjustified",
+              "Poor selection",
+              "Mixed selection",
+              "Mostly correct",
+              "Perfectly matched"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {},
+          "scores": {
+            "verdict": {
+              "score": 4.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.05,
+                "2": 0.1,
+                "3": 0.25,
+                "4": 0.6
+              },
+              "confidence": 0.55
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "user_messages": "What's the address? \n",
+          "assistant_messages": "12 Rue de l'Odéon, Paris. \n",
+          "tools_called": "",
+          "available_tools": "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    description=\"Book a restaurant table\"\n),ToolCall(\n    name=\"search_web\",\n    type=\"FUNCTION\",\n    description=\"Search the web\"\n)"
+        },
+        "questions": {
+          "verdict": {
+            "type": "score",
+            "instructions": "How well do the tools in `tools_called`, which the assistant called while writing `assistant_messages`, match what `user_messages` asked for, given the tools in `available_tools`? Unnecessary, redundant or unrelated calls, and a better-suited available tool that was ignored, count against it.",
+            "criteria": [
+              "Irrelevant or unjustified",
+              "Poor selection",
+              "Mixed selection",
+              "Mostly correct",
+              "Perfectly matched"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {},
+          "scores": {
+            "verdict": {
+              "score": 4.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.05,
+                "2": 0.1,
+                "3": 0.25,
+                "4": 0.6
+              },
+              "confidence": 0.55
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "user_messages": "Book a table for two at Café Odéon on Saturday. \n",
+          "assistant_messages": "Booked: Saturday at 19:00, for two. \n",
+          "tools_called": "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    input_parameters={\n        \"day\": \"Saturday\",\n        \"restaurant\": \"Café Odéon\"\n    },\n    output='Booked for Saturday at 19:00'\n)",
+          "available_tools": "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    description=\"Book a restaurant table\"\n),ToolCall(\n    name=\"search_web\",\n    type=\"FUNCTION\",\n    description=\"Search the web\"\n)"
+        },
+        "questions": {
+          "verdict": {
+            "type": "score",
+            "instructions": "How correct are the arguments of the tool calls in `tools_called`, for what `user_messages` asked and for each tool's definition in `available_tools`? Missing, malformed, generic or unrelated arguments count against it.",
+            "criteria": [
+              "Nonsensical or unrelated",
+              "Poor arguments",
+              "Partially correct",
+              "Mostly correct",
+              "Fully correct"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {},
+          "scores": {
+            "verdict": {
+              "score": 4.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.05,
+                "2": 0.1,
+                "3": 0.25,
+                "4": 0.6
+              },
+              "confidence": 0.55
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "user_messages": "Book a table for two at Café Odéon on Saturday. \n",
+        "assistant_messages": "Booked: Saturday at 19:00, for two. \n",
+        "tools_called": "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    input_parameters={\n        \"day\": \"Saturday\",\n        \"restaurant\": \"Café Odéon\"\n    },\n    output='Booked for Saturday at 19:00'\n)",
+        "available_tools": "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    description=\"Book a restaurant table\"\n),ToolCall(\n    name=\"search_web\",\n    type=\"FUNCTION\",\n    description=\"Search the web\"\n)"
+      },
+      "questions": {
+        "verdict": {
+          "type": "score",
+          "instructions": "How well do the tools in `tools_called`, which the assistant called while writing `assistant_messages`, match what `user_messages` asked for, given the tools in `available_tools`? Unnecessary, redundant or unrelated calls, and a better-suited available tool that was ignored, count against it.",
+          "criteria": [
+            "Irrelevant or unjustified",
+            "Poor selection",
+            "Mixed selection",
+            "Mostly correct",
+            "Perfectly matched"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {},
+        "scores": {
+          "verdict": {
+            "score": 4.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.05,
+              "2": 0.1,
+              "3": 0.25,
+              "4": 0.6
+            },
+            "confidence": 0.55
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "user_messages": "What's the address? \n",
+        "assistant_messages": "12 Rue de l'Odéon, Paris. \n",
+        "tools_called": "",
+        "available_tools": "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    description=\"Book a restaurant table\"\n),ToolCall(\n    name=\"search_web\",\n    type=\"FUNCTION\",\n    description=\"Search the web\"\n)"
+      },
+      "questions": {
+        "verdict": {
+          "type": "score",
+          "instructions": "How well do the tools in `tools_called`, which the assistant called while writing `assistant_messages`, match what `user_messages` asked for, given the tools in `available_tools`? Unnecessary, redundant or unrelated calls, and a better-suited available tool that was ignored, count against it.",
+          "criteria": [
+            "Irrelevant or unjustified",
+            "Poor selection",
+            "Mixed selection",
+            "Mostly correct",
+            "Perfectly matched"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {},
+        "scores": {
+          "verdict": {
+            "score": 4.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.05,
+              "2": 0.1,
+              "3": 0.25,
+              "4": 0.6
+            },
+            "confidence": 0.55
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "user_messages": "Book a table for two at Café Odéon on Saturday. \n",
+        "assistant_messages": "Booked: Saturday at 19:00, for two. \n",
+        "tools_called": "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    input_parameters={\n        \"day\": \"Saturday\",\n        \"restaurant\": \"Café Odéon\"\n    },\n    output='Booked for Saturday at 19:00'\n)",
+        "available_tools": "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    description=\"Book a restaurant table\"\n),ToolCall(\n    name=\"search_web\",\n    type=\"FUNCTION\",\n    description=\"Search the web\"\n)"
+      },
+      "questions": {
+        "verdict": {
+          "type": "score",
+          "instructions": "How correct are the arguments of the tool calls in `tools_called`, for what `user_messages` asked and for each tool's definition in `available_tools`? Missing, malformed, generic or unrelated arguments count against it.",
+          "criteria": [
+            "Nonsensical or unrelated",
+            "Poor arguments",
+            "Partially correct",
+            "Mostly correct",
+            "Fully correct"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {},
+        "scores": {
+          "verdict": {
+            "score": 4.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.05,
+              "2": 0.1,
+              "3": 0.25,
+              "4": 0.6
+            },
+            "confidence": 0.55
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

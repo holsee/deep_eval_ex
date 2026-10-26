@@ -1,0 +1,38 @@
+{
+  "success": true,
+  "metrics_data": [
+    {
+      "name": "Expectations",
+      "threshold": 1.0,
+      "success": true,
+      "score": 1.0,
+      "reason": "The score is 1.0 because the account was unlocked.",
+      "strictMode": true,
+      "flaky": false,
+      "evaluationModel": "scripted-judge",
+      "verboseLogs": "{\"verdicts\":[{\"id\":\"must[0]\",\"status\":\"pass\",\"reason\":\"It sends an unlock link.\",\"evidence\":\"unlock_account\"},{\"id\":\"must_not[0]\",\"status\":\"pass\",\"reason\":\"No password is asked for.\",\"evidence\":\"\"}]}",
+      "expectationsData": {
+        "success": true,
+        "score": 1.0,
+        "reason": "The score is 1.0 because the account was unlocked.",
+        "verdicts": [
+          {
+            "kind": "MUST",
+            "condition": "Unlocks the account",
+            "status": "pass",
+            "reason": "It sends an unlock link.",
+            "evidence": "unlock_account"
+          },
+          {
+            "kind": "MUST_NOT",
+            "condition": "Asks for the password",
+            "status": "pass",
+            "reason": "No password is asked for.",
+            "evidence": ""
+          }
+        ],
+        "evaluationModel": "scripted-judge"
+      }
+    }
+  ]
+}

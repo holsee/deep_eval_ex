@@ -1,0 +1,7 @@
+{
+  "template": "TurnRelevancyMetric.generate_reason",
+  "inputs": {
+    "score": 1,
+    "irrelevancies": []
+  }
+}

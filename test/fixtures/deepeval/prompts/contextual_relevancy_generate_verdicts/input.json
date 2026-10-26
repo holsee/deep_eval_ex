@@ -1,0 +1,7 @@
+{
+  "template": "ContextualRelevancyMetric.generate_verdicts",
+  "inputs": {
+    "input": "What is the capital of France?",
+    "context": "Paris is the capital of France. There was a cat."
+  }
+}

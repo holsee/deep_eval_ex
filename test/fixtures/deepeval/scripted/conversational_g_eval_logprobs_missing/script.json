@@ -1,0 +1,59 @@
+{
+  "description": "ConversationalGEval with a raw response without logprobs: the raw score kept",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "conversational_g_eval",
+    "params": {
+      "name": "Helpfulness",
+      "evaluation_params": [
+        "content"
+      ],
+      "evaluation_steps": [
+        "Check that the assistant resolves the request."
+      ]
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order is late, I want a refund."
+      },
+      {
+        "role": "assistant",
+        "content": "Sorry about that! Could you give me the order number?"
+      },
+      {
+        "role": "user",
+        "content": "It's order 42."
+      },
+      {
+        "role": "assistant",
+        "content": "Thanks, I've started a refund for order 42. It takes 5 business days."
+      }
+    ]
+  },
+  "responses": {
+    "conversational_g_eval": {
+      "raw_response": [
+        {
+          "id": "chatcmpl-scripted",
+          "object": "chat.completion",
+          "created": 1761140000,
+          "model": "scripted-judge",
+          "choices": [
+            {
+              "index": 0,
+              "finish_reason": "stop",
+              "message": {
+                "role": "assistant",
+                "content": "{\"reason\": \"Resolved, with a short delay.\", \"score\": 6}"
+              },
+              "logprobs": null
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

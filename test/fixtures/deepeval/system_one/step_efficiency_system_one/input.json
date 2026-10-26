@@ -1,0 +1,98 @@
+{
+  "description": "StepEfficiency decided by Jev in one request about the compacted trace",
+  "metrics": [
+    {
+      "kind": "step_efficiency",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Where is my invoice?",
+    "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+  },
+  "trace": {
+    "name": "answer",
+    "type": "agent",
+    "input": {
+      "query": "Where is my invoice?"
+    },
+    "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+    "tools_called": [
+      {
+        "name": "lookup_invoice",
+        "type": "FUNCTION",
+        "description": "Finds the latest invoice",
+        "reasoning": null,
+        "output": "INV-42",
+        "input_parameters": {
+          "account": "acme"
+        }
+      }
+    ],
+    "available_tools": [
+      "lookup_invoice",
+      "escalate"
+    ],
+    "agent_handoffs": [],
+    "children": [
+      {
+        "name": "lookup_invoice",
+        "type": "tool",
+        "input": {
+          "account": "acme"
+        },
+        "output": "INV-42",
+        "description": "Finds the latest invoice",
+        "children": []
+      },
+      {
+        "name": "reply",
+        "type": "llm",
+        "input": {
+          "query": "Where is my invoice?",
+          "invoice": "INV-42"
+        },
+        "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+        "error": "",
+        "model": "gpt-4o-mini",
+        "input_token_count": 42.0,
+        "output_token_count": 12.0,
+        "children": []
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.7
+        },
+        "q_1": {
+          "probability": 0.85
+        }
+      },
+      "scores": {
+        "q_2": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.05,
+            "1": 0.15,
+            "2": 0.4,
+            "3": 0.3,
+            "4": 0.1
+          },
+          "confidence": 0.4
+        }
+      }
+    }
+  }
+}

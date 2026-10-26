@@ -1,0 +1,20 @@
+
+⚠ WARNING: All metrics errored across every test case — no metric scores were recorded. Posting the run anyway so you can inspect the trace + span errors on the Confident AI dashboard.
+
+
+⚠ WARNING: No hyperparameters logged.
+» Log hyperparameters to attribute prompts and models to your test runs.
+
+================================================================================
+
+
+✓ Evaluation completed 🎉! (time taken: 0.0s | token cost: 0.000321 USD)
+» Test Results (2 total tests):
+   » Pass Rate: 100.0% | Passed: 2 | Failed: 0
+
+ ================================================================================ 
+
+» Want to share evals with your team, or a place for your test cases to live? ❤️ 🏡
+  » Run 'deepeval view' to analyze and save testing results on Confident AI.
+
+

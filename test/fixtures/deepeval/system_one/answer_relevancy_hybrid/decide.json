@@ -1,0 +1,92 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "input": "What is the capital of France?",
+          "statements": [
+            "Paris is the capital of France.",
+            "Paris is known for café culture."
+          ]
+        },
+        "questions": {
+          "statement_0": {
+            "type": "noul",
+            "instructions": {
+              "statement": "Paris is the capital of France.",
+              "question": "Is `statement` relevant to addressing `input`?"
+            }
+          },
+          "statement_1": {
+            "type": "noul",
+            "instructions": {
+              "statement": "Paris is known for café culture.",
+              "question": "Is `statement` relevant to addressing `input`?"
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "statement_0": {
+              "probability": 0.97
+            },
+            "statement_1": {
+              "probability": 0.2
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "input": "What is the capital of France?",
+        "statements": [
+          "Paris is the capital of France.",
+          "Paris is known for café culture."
+        ]
+      },
+      "questions": {
+        "statement_0": {
+          "type": "noul",
+          "instructions": {
+            "statement": "Paris is the capital of France.",
+            "question": "Is `statement` relevant to addressing `input`?"
+          }
+        },
+        "statement_1": {
+          "type": "noul",
+          "instructions": {
+            "statement": "Paris is known for café culture.",
+            "question": "Is `statement` relevant to addressing `input`?"
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "statement_0": {
+            "probability": 0.97
+          },
+          "statement_1": {
+            "probability": 0.2
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

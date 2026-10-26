@@ -1,0 +1,18 @@
+                                                                          Test Results                                                                          
+┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Test case   ┃ Metric           ┃ Score                                                                               ┃ Status ┃ Overall Success Rate         ┃
+┡━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ test_case_0 │                  │                                                                                     │        │ 100.0% | passed=2 | failed=0 │
+│             │ Answer Relevancy │ 0.91 (threshold=0.7, evaluation model=gpt-4o-mini, reason=The answer states the     │ PASSED │                              │
+│             │                  │ policy accurately and names every condition the context lists, so it is relevant.,  │        │                              │
+│             │                  │ error=None)                                                                         │        │                              │
+│             │ Faithfulness     │ 1.0 (threshold=0.5, evaluation model=gpt-4o-mini, reason=No contradictions.,        │ PASSED │                              │
+│             │                  │ error=None)                                                                         │        │                              │
+│             │                  │                                                                                     │        │                              │
+│ test_case_1 │                  │                                                                                     │        │ 100.0% | passed=2 | failed=0 │
+│             │ Answer Relevancy │ 0.91 (threshold=0.7, evaluation model=gpt-4o-mini, reason=The answer states the     │ PASSED │                              │
+│             │                  │ policy accurately and names every condition the context lists, so it is relevant.,  │        │                              │
+│             │                  │ error=None)                                                                         │        │                              │
+│             │ Faithfulness     │ 1.0 (threshold=0.5, evaluation model=gpt-4o-mini, reason=No contradictions.,        │ PASSED │                              │
+│             │                  │ error=None)                                                                         │        │                              │
+└─────────────┴──────────────────┴─────────────────────────────────────────────────────────────────────────────────────┴────────┴──────────────────────────────┘

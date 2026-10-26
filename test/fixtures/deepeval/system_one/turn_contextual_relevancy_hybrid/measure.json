@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.7083333333333333,
+    "success": true,
+    "reason": "The score is 0.9 because the windows mostly pass.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 5000,
+    "output_tokens": 0,
+    "verbose_logs": "Window 1 \n \n \nVerdicts: [\n    {\n        \"statement\": \"Order 42 shipped on 1 October.\",\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.80\"\n    },\n    {\n        \"statement\": \"Rome is the capital of Italy.\",\n        \"verdict\": \"no\",\n        \"reason\": \"P(yes)=0.20\"\n    },\n    {\n        \"statement\": \"Our caf\\u00e9 is open late.\",\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.80\"\n    }\n] \n \n \nScore: 0.6666666666666666 \n \n \nReason: The score is 1.00 because the first window is fine. \n \n \nWindow 2 \n \n \nVerdicts: [\n    {\n        \"statement\": \"Order 42 shipped on 1 October.\",\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.80\"\n    },\n    {\n        \"statement\": \"Rome is the capital of Italy.\",\n        \"verdict\": \"no\",\n        \"reason\": \"P(yes)=0.20\"\n    },\n    {\n        \"statement\": \"Our caf\\u00e9 is open late.\",\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.80\"\n    },\n    {\n        \"statement\": \"Refunds take 5 business days.\",\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.80\"\n    }\n] \n \n \nScore: 0.75 \n \n \nReason: The score is 0.83 because of the second window. \n \n \nFinal Score: 0.7083333333333333\n",
+    "confidence": 0.6,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

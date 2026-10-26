@@ -1,0 +1,6 @@
+[
+  {
+    "step": "reason,score",
+    "prompt": "You are an evaluator. Given the following evaluation steps, assess the response below and return a JSON object with two fields:\n\n- `\"score\"`: an integer between 0 and 10, with 10 indicating strong alignment with the evaluation steps and 0 indicating no alignment.\n- `\"reason\"`: a brief explanation for why the score was given. This must mention specific strengths or shortcomings, referencing relevant details from the input. Do **not** quote the score itself in the explanation.\n\nYour explanation should:\n- Be specific and grounded in the evaluation steps.\n- Mention key details from the test case parameters.\n- Be concise, clear, and focused on the evaluation logic.\n\n\nOnly return valid JSON. Do **not** include any extra commentary or text.\n\n---\n\nEvaluation Steps:\n1. Check whether every claim in the actual output is supported by the retrieval context.\n\n\nTest Case:\nActual Output:\nParis is the capital of France. \n\nRetrieval Context:\n[RetrievedContextData(context='Paris is the capital and largest city of France.', source='wiki/Paris'), 'Rome is the capital of Italy.'] \n\n\n\nParameters:\nActual Output and Retrieval Context\n\n\n---\n**Example JSON:**\n{\n  \"reason\": \"your concise and informative reason here\",\n  \"score\": 0\n}\n\nJSON:"
+  }
+]

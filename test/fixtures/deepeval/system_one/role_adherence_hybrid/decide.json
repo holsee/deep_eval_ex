@@ -1,0 +1,152 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "chatbot_role": "A cheerful travel agent who keeps every reply short.",
+          "previous_turns": [
+            {
+              "content": "I'm flying to Lisbon on 3 May.",
+              "role": "user"
+            }
+          ],
+          "ai_message": "Lovely! Where are you flying to?"
+        },
+        "questions": {
+          "verdict": {
+            "type": "noul",
+            "instructions": "Does `ai_message`, the assistant's reply after `previous_turns`, stay in character as the role described in `chatbot_role`, in persona, tone and behaviour? Answer no if it breaks character or acts against the role."
+          }
+        },
+        "answers": {
+          "nouls": {
+            "verdict": {
+              "probability": 0.31
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "chatbot_role": "A cheerful travel agent who keeps every reply short.",
+          "previous_turns": [
+            {
+              "content": "I'm flying to Lisbon on 3 May.",
+              "role": "user"
+            },
+            {
+              "content": "Lovely! Where are you flying to?",
+              "role": "assistant"
+            },
+            {
+              "content": "Lisbon. I'm vegetarian, too.",
+              "role": "user"
+            }
+          ],
+          "ai_message": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!"
+        },
+        "questions": {
+          "verdict": {
+            "type": "noul",
+            "instructions": "Does `ai_message`, the assistant's reply after `previous_turns`, stay in character as the role described in `chatbot_role`, in persona, tone and behaviour? Answer no if it breaks character or acts against the role."
+          }
+        },
+        "answers": {
+          "nouls": {
+            "verdict": {
+              "probability": 0.31
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "chatbot_role": "A cheerful travel agent who keeps every reply short.",
+        "previous_turns": [
+          {
+            "content": "I'm flying to Lisbon on 3 May.",
+            "role": "user"
+          }
+        ],
+        "ai_message": "Lovely! Where are you flying to?"
+      },
+      "questions": {
+        "verdict": {
+          "type": "noul",
+          "instructions": "Does `ai_message`, the assistant's reply after `previous_turns`, stay in character as the role described in `chatbot_role`, in persona, tone and behaviour? Answer no if it breaks character or acts against the role."
+        }
+      },
+      "answers": {
+        "nouls": {
+          "verdict": {
+            "probability": 0.31
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "chatbot_role": "A cheerful travel agent who keeps every reply short.",
+        "previous_turns": [
+          {
+            "content": "I'm flying to Lisbon on 3 May.",
+            "role": "user"
+          },
+          {
+            "content": "Lovely! Where are you flying to?",
+            "role": "assistant"
+          },
+          {
+            "content": "Lisbon. I'm vegetarian, too.",
+            "role": "user"
+          }
+        ],
+        "ai_message": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!"
+      },
+      "questions": {
+        "verdict": {
+          "type": "noul",
+          "instructions": "Does `ai_message`, the assistant's reply after `previous_turns`, stay in character as the role described in `chatbot_role`, in persona, tone and behaviour? Answer no if it breaks character or acts against the role."
+        }
+      },
+      "answers": {
+        "nouls": {
+          "verdict": {
+            "probability": 0.31
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "description": "ToolCorrectness: wrong tool, input parameters compared",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "tool_correctness",
+    "params": {
+      "threshold": 0.5,
+      "evaluation_params": [
+        "input_parameters"
+      ]
+    }
+  },
+  "test_case": {
+    "input": "What's the weather in Paris?",
+    "actual_output": "It is 18°C in Paris.",
+    "tools_called": [
+      {
+        "name": "search_web",
+        "input_parameters": {
+          "query": "Paris weather"
+        }
+      }
+    ],
+    "expected_tools": [
+      {
+        "name": "get_weather",
+        "input_parameters": {
+          "city": "Paris"
+        }
+      },
+      {
+        "name": "format_answer"
+      }
+    ]
+  },
+  "responses": {}
+}

@@ -1,0 +1,128 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "What is the capital of France?",
+            "retrieval_context": [
+              "Rome is the capital of Italy.",
+              "Paris is the capital and largest city of France."
+            ],
+            "expected_output": "Paris is the capital of France."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "In `retrieval_context`, every document useful for arriving at `expected_output` for `input` is listed before every document that is not useful."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "The first document in `retrieval_context` is useful for arriving at `expected_output` for `input`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How well are the documents in `retrieval_context` ordered, with the ones useful for arriving at `expected_output` for `input` first?",
+            "criteria": [
+              "Useful documents are all at the end",
+              "Useful documents are mixed with irrelevant ones",
+              "Useful documents are mostly first",
+              "Useful documents are all first"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.1
+            },
+            "q_1": {
+              "probability": 0.05
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 1.0,
+              "probabilities": {
+                "0": 0.3,
+                "1": 0.5,
+                "2": 0.15,
+                "3": 0.05
+              },
+              "confidence": 0.33
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "input": "What is the capital of France?",
+          "retrieval_context": [
+            "Rome is the capital of Italy.",
+            "Paris is the capital and largest city of France."
+          ],
+          "expected_output": "Paris is the capital of France."
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "In `retrieval_context`, every document useful for arriving at `expected_output` for `input` is listed before every document that is not useful."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "The first document in `retrieval_context` is useful for arriving at `expected_output` for `input`."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "How well are the documents in `retrieval_context` ordered, with the ones useful for arriving at `expected_output` for `input` first?",
+          "criteria": [
+            "Useful documents are all at the end",
+            "Useful documents are mixed with irrelevant ones",
+            "Useful documents are mostly first",
+            "Useful documents are all first"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.1
+          },
+          "q_1": {
+            "probability": 0.05
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 1.0,
+            "probabilities": {
+              "0": 0.3,
+              "1": 0.5,
+              "2": 0.15,
+              "3": 0.05
+            },
+            "confidence": 0.33
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

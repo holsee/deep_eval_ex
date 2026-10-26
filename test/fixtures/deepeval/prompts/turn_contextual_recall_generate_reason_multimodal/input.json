@@ -1,0 +1,12 @@
+{
+  "template": "TurnContextualRecallMetric.generate_reason",
+  "inputs": {
+    "multimodal": true,
+    "expected_outcome": "A red bicycle.",
+    "score": 1,
+    "supportive_reasons": [
+      "The 1st node shows the bicycle."
+    ],
+    "unsupportive_reasons": []
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "test_cases": [
+    {
+      "input": "What's the weather in Paris?",
+      "actual_output": "It is 18°C and partly cloudy in Paris.",
+      "expected_output": "18°C, partly cloudy",
+      "retrieval_context": [
+        "Paris: 18°C, partly cloudy.",
+        "Lyon: 21°C, sunny."
+      ],
+      "context": [
+        "Weather API snapshot for France."
+      ],
+      "tools_called": [
+        {
+          "name": "get_weather",
+          "description": "Fetch current weather for a city",
+          "reasoning": "The user asked about current weather.",
+          "input_parameters": {
+            "city": "Paris",
+            "units": "metric",
+            "days": 1
+          },
+          "output": {
+            "temp_c": 18.0,
+            "conditions": "partly cloudy",
+            "alerts": []
+          }
+        },
+        {
+          "name": "format_answer",
+          "output": "18°C, partly cloudy"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "get_weather",
+          "input_parameters": {
+            "city": "Paris"
+          }
+        }
+      ],
+      "token_cost": 0.00042,
+      "completion_time": 1.25
+    },
+    {
+      "input": "Add 2 and 3",
+      "actual_output": "5",
+      "expected_output": "5",
+      "tools_called": [
+        {
+          "name": "add",
+          "input_parameters": {
+            "a": 2,
+            "b": 3
+          },
+          "output": 5
+        }
+      ],
+      "token_cost": 0.0001,
+      "completion_time": 0.5
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "exact_match"
+    },
+    {
+      "kind": "stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    }
+  ],
+  "identifier": null,
+  "hyperparameters": null,
+  "error_config": {
+    "ignore_errors": true,
+    "skip_on_missing_params": false
+  }
+}

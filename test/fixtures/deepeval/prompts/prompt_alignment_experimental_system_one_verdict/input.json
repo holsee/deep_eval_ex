@@ -1,0 +1,8 @@
+{
+  "template": "PromptAlignmentMetric._experimental_system_one_verdict",
+  "inputs": {
+    "prompt_instructions": [
+      "Reply in English."
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+[
+  {
+    "name": "first",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "first answer to How do I reset my password?",
+    "available_tools": [],
+    "agent_handoffs": [],
+    "children": []
+  },
+  {
+    "name": "second",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "second answer to How do I reset my password?",
+    "available_tools": [],
+    "agent_handoffs": [],
+    "children": []
+  }
+]

@@ -1,0 +1,65 @@
+[
+  {
+    "uuid": "cdb85123-6b54-4ffa-ac15-e6612ad2669b",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "b5e11b1a-71ac-48ff-82ae-4e4eab248b29",
+        "name": "agent",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.911Z",
+        "endTime": "2026-10-23T03:23:29.911Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "Recovered from a failed lookup",
+        "toolsCalled": [
+          {
+            "name": "flaky_tool",
+            "type": "FUNCTION",
+            "inputParameters": {
+              "query": "How do I reset my password?"
+            }
+          }
+        ],
+        "availableTools": [],
+        "agentHandoffs": []
+      }
+    ],
+    "llmSpans": [],
+    "retrieverSpans": [],
+    "toolSpans": [
+      {
+        "uuid": "ece1a84c-3ed6-494b-aaad-46c4bb2d68bf",
+        "name": "flaky_tool",
+        "status": "ERRORED",
+        "type": "tool",
+        "parentUuid": "b5e11b1a-71ac-48ff-82ae-4e4eab248b29",
+        "startTime": "2026-10-23T03:23:29.911Z",
+        "endTime": "2026-10-23T03:23:29.911Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "error": "upstream timeout",
+        "metricsData": [
+          {
+            "name": "Span Judge",
+            "threshold": 0.7,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "startTime": "2026-10-23T03:23:29.911Z",
+    "endTime": "2026-10-23T03:23:29.911Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "Recovered from a failed lookup",
+    "status": "SUCCESS"
+  }
+]

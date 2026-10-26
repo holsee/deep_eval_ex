@@ -12,17 +12,30 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 ### Metrics
 - [Overview](metrics/Overview.md)
 - [ExactMatch](metrics/ExactMatch.md)
+- [PatternMatch](metrics/PatternMatch.md) - Regular expression full match
+- [JsonCorrectness](metrics/JsonCorrectness.md) - JSON output against a schema
 - [GEval](metrics/GEval.md) - Flexible LLM-as-judge evaluation
 - [Faithfulness](metrics/Faithfulness.md) - RAG context verification
 - [Hallucination](metrics/Hallucination.md) - Unsupported claim detection
 - [AnswerRelevancy](metrics/AnswerRelevancy.md)
 - [ContextualPrecision](metrics/ContextualPrecision.md)
 - [ContextualRecall](metrics/ContextualRecall.md)
+- [ContextualRelevancy](metrics/ContextualRelevancy.md)
+- [Bias](metrics/Bias.md) - Bias in the output's opinions
+- [Toxicity](metrics/Toxicity.md) - Toxicity in the output's opinions
+- [PIILeakage](metrics/PIILeakage.md) - Personal data in the output
+- [PromptAlignment](metrics/PromptAlignment.md) - Following the prompt's instructions
+- [Summarization](metrics/Summarization.md) - Summary alignment and coverage
+- [ToolCorrectness](metrics/ToolCorrectness.md) - Agent tool call evaluation
+- [ArgumentCorrectness](metrics/ArgumentCorrectness.md) - Agent tool call arguments
+- [ToolPermission](metrics/ToolPermission.md) - Agent tool calls against a permission policy
 
 ### API Reference
 - [TestCase](api/TestCase.md)
 - [Result](api/Result.md)
+- [EvaluationResult](api/EvaluationResult.md) - what `evaluate/3` returns
 - [Evaluator](api/Evaluator.md)
+- [TestRun](api/TestRun.md) - deepeval-compatible test run export and import
 - [LLM Adapters](api/LLM-Adapters.md)
 
 ### Testing
@@ -32,7 +45,11 @@ Welcome to the DeepEvalEx documentation. DeepEvalEx is a pure Elixir LLM evaluat
 - [Custom Metrics](guides/Custom-Metrics.md)
 - [Custom LLM Adapters](guides/Custom-LLM-Adapters.md)
 - [Telemetry & Observability](guides/Telemetry.md)
-- [Phoenix LiveView Integration](guides/Phoenix-Integration.md)
+- [Tracing](guides/Tracing.md) - Record an agent's steps as spans
+- [Datasets](guides/Datasets.md) - Goldens and evaluation datasets
+- [Expectations](guides/Expectations.md) - Must and must-not conditions on test cases
+- [Synthesizer](guides/Synthesizer.md) - Synthetic goldens from contexts, from scratch or from goldens
+- [Conversation Simulator](guides/Conversation-Simulator.md) - Simulate conversations from conversational goldens
 
 ## Attribution
 

@@ -1,0 +1,155 @@
+[
+  {
+    "description": "input and actual output only",
+    "test_case": {
+      "input": "Q",
+      "actual_output": "A"
+    },
+    "key": "{\"actual_output\": \"A\", \"context\": null, \"expected_output\": null, \"hyperparameters\": null, \"input\": \"Q\", \"retrieval_context\": null}"
+  },
+  {
+    "description": "every keyed field, non-ASCII text and unsorted lists",
+    "test_case": {
+      "input": "Où est le café? 😀",
+      "actual_output": "Line one\nline \"two\"\t\\ end",
+      "expected_output": "Ici.",
+      "context": [
+        "b context",
+        "a context",
+        "C context"
+      ],
+      "retrieval_context": [
+        "z",
+        "y",
+        "é"
+      ],
+      "name": "not keyed",
+      "tags": [
+        "not",
+        "keyed"
+      ]
+    },
+    "key": "{\"actual_output\": \"Line one\\nline \\\"two\\\"\\t\\\\ end\", \"context\": [\"C context\", \"a context\", \"b context\"], \"expected_output\": \"Ici.\", \"hyperparameters\": null, \"input\": \"O\\u00f9 est le caf\\u00e9? \\ud83d\\ude00\", \"retrieval_context\": [\"\\u00e9\", \"y\", \"z\"]}"
+  },
+  {
+    "description": "RetrievedContextData flattened to its context, mixed with strings",
+    "test_case": {
+      "input": "Q",
+      "actual_output": "A",
+      "retrieval_context": [
+        {
+          "context": "Section 3.2: 20 days.",
+          "source": "hr.pdf"
+        },
+        "Section 1: scope."
+      ]
+    },
+    "key": "{\"actual_output\": \"A\", \"context\": null, \"expected_output\": null, \"hyperparameters\": null, \"input\": \"Q\", \"retrieval_context\": [\"Section 1: scope.\", \"Section 3.2: 20 days.\"]}"
+  },
+  {
+    "description": "hyperparameters as log_hyperparameters stores them",
+    "test_case": {
+      "input": "Q",
+      "actual_output": "A"
+    },
+    "hyperparameters": {
+      "model": "gpt-4o",
+      "temperature": "0.7",
+      "k": "5"
+    },
+    "key": "{\"actual_output\": \"A\", \"context\": null, \"expected_output\": null, \"hyperparameters\": {\"k\": \"5\", \"model\": \"gpt-4o\", \"temperature\": \"0.7\"}, \"input\": \"Q\", \"retrieval_context\": null}"
+  },
+  {
+    "description": "nested hyperparameters: dicts sorted, lists sorted by their JSON",
+    "test_case": {
+      "input": "Q",
+      "actual_output": "A"
+    },
+    "hyperparameters": {
+      "b": [
+        3,
+        1,
+        {
+          "z": 1,
+          "a": [
+            2,
+            1
+          ]
+        },
+        "x",
+        null,
+        2.5
+      ],
+      "a": {
+        "y": 0.1,
+        "x": null,
+        "w": true
+      },
+      "c": 1e-05
+    },
+    "key": "{\"actual_output\": \"A\", \"context\": null, \"expected_output\": null, \"hyperparameters\": {\"a\": {\"w\": true, \"x\": null, \"y\": 0.1}, \"b\": [\"x\", 1, 2.5, 3, null, {\"a\": [1, 2], \"z\": 1}], \"c\": 1e-05}, \"input\": \"Q\", \"retrieval_context\": null}"
+  },
+  {
+    "description": "expectations and their evidence",
+    "test_case": {
+      "input": "Can I get a refund on a used ticket?",
+      "actual_output": "Used tickets can't be refunded, but you can exchange it within 30 days.",
+      "retrieval_context": [
+        "Used tickets are non-refundable.",
+        {
+          "context": "Exchanges are free within 30 days.",
+          "source": "policy.md"
+        }
+      ],
+      "tools_called": [
+        {
+          "name": "lookup_policy",
+          "input_parameters": {
+            "topic": "refunds"
+          }
+        }
+      ],
+      "metadata": {
+        "channel": "chat",
+        "priority": null
+      },
+      "tags": [
+        "refunds"
+      ],
+      "expectations": {
+        "must": [
+          "States the refund policy",
+          "Offers the café exchange"
+        ],
+        "must_not": [
+          "Promises a refund"
+        ]
+      }
+    },
+    "key": "{\"actual_output\": \"Used tickets can't be refunded, but you can exchange it within 30 days.\", \"context\": null, \"expectation_evidence\": {\"actual_output\": \"Used tickets can't be refunded, but you can exchange it within 30 days.\", \"input\": \"Can I get a refund on a used ticket?\", \"metadata\": {\"channel\": \"chat\", \"priority\": null}, \"retrieval_context\": [\"Used tickets are non-refundable.\", \"policy.md: Exchanges are free within 30 days.\"], \"tags\": [\"refunds\"], \"tools_called\": [{\"input_parameters\": {\"topic\": \"refunds\"}, \"name\": \"lookup_policy\", \"type\": \"FUNCTION\"}]}, \"expectations\": {\"eval_mode\": null, \"model\": null, \"must\": [\"Offers the caf\\u00e9 exchange\", \"States the refund policy\"], \"must_not\": [\"Promises a refund\"]}, \"expected_output\": null, \"hyperparameters\": null, \"input\": \"Can I get a refund on a used ticket?\", \"retrieval_context\": [\"Exchanges are free within 30 days.\", \"Used tickets are non-refundable.\"]}"
+  },
+  {
+    "description": "expectations with a model name and an eval mode",
+    "test_case": {
+      "input": "Q",
+      "actual_output": "A",
+      "expectations": {
+        "must": [
+          "Answers."
+        ],
+        "model": "gpt-4o",
+        "eval_mode": "system_one"
+      }
+    },
+    "key": "{\"actual_output\": \"A\", \"context\": null, \"expectation_evidence\": {\"actual_output\": \"A\", \"input\": \"Q\"}, \"expectations\": {\"eval_mode\": \"system_one\", \"model\": \"gpt-4o\", \"must\": [\"Answers.\"], \"must_not\": []}, \"expected_output\": null, \"hyperparameters\": null, \"input\": \"Q\", \"retrieval_context\": null}"
+  },
+  {
+    "description": "empty expectations are not keyed",
+    "test_case": {
+      "input": "Q",
+      "actual_output": "A",
+      "expectations": {}
+    },
+    "key": "{\"actual_output\": \"A\", \"context\": null, \"expected_output\": null, \"hyperparameters\": null, \"input\": \"Q\", \"retrieval_context\": null}"
+  }
+]

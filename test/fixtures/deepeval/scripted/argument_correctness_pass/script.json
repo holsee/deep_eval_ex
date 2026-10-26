@@ -1,0 +1,55 @@
+{
+  "description": "ArgumentCorrectness: both tool calls' arguments address the input",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "argument_correctness",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "What's the weather in Paris in Fahrenheit?",
+    "tools_called": [
+      {
+        "name": "get_weather",
+        "description": "Fetch current weather for a city",
+        "input_parameters": {
+          "city": "Paris",
+          "units": "fahrenheit"
+        },
+        "output": {
+          "temp_f": 64
+        }
+      },
+      {
+        "name": "format_answer",
+        "reasoning": "Phrase the reading for the user.",
+        "input_parameters": {
+          "temperature": "64°F"
+        },
+        "output": "It is 64°F in Paris."
+      }
+    ]
+  },
+  "responses": {
+    "argument_correctness": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "yes"
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1.00 because every tool call asks for Paris in Fahrenheit."
+        }
+      ]
+    }
+  }
+}

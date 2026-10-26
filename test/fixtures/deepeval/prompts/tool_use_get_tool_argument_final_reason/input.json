@@ -1,0 +1,13 @@
+{
+  "template": "ToolUseMetric.get_tool_argument_final_reason",
+  "inputs": {
+    "final_score": 0.5,
+    "threshold": 0.5,
+    "scores": [
+      {
+        "score": 0.5,
+        "reason": "The 'day' argument is right, the time missing."
+      }
+    ]
+  }
+}

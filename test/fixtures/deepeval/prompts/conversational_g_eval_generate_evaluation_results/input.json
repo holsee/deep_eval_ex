@@ -1,0 +1,41 @@
+{
+  "template": "ConversationalGEval.generate_evaluation_results",
+  "inputs": {
+    "evaluation_steps": [
+      "Read the scenario and the tags.",
+      "Check that each assistant turn answers the user turn before it."
+    ],
+    "evaluation_params": [
+      "scenario",
+      "metadata",
+      "tags",
+      "content"
+    ],
+    "test_case": {
+      "scenario": "A customer asks for a refund on a late order. café ✓",
+      "metadata": {
+        "channel": "chat",
+        "priority": 2,
+        "escalated": false
+      },
+      "tags": [
+        "refunds",
+        "support"
+      ],
+      "turns": [
+        {
+          "role": "user",
+          "content": "My order is late, I want a refund."
+        },
+        {
+          "role": "assistant",
+          "content": "Sorry! I've started a refund for order 42."
+        },
+        {
+          "role": "user",
+          "content": "Thanks, that's all."
+        }
+      ]
+    }
+  }
+}

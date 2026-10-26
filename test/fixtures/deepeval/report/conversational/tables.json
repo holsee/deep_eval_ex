@@ -1,0 +1,104 @@
+[
+  {
+    "table": {
+      "title": "Conversation - conversational_test_case_0",
+      "columns": [
+        "#",
+        "Role",
+        "Details",
+        "Tools"
+      ],
+      "rows": [
+        [
+          "0",
+          "user",
+          "I want to change my flight.",
+          ""
+        ],
+        [
+          "1",
+          "assistant",
+          "Sure, which booking?\n      ↳ ctx[0]: Changes are free up to 24 hours before departure.\n      ↳ ctx[1]: A fare difference may apply.\n      ↳ ctx: (+1 more)",
+          "lookup_booking, list_flights"
+        ],
+        [
+          "2",
+          "user",
+          "ABC123\n      ↳ comment: Booking reference.",
+          ""
+        ]
+      ]
+    }
+  },
+  "[dim]No turns recorded for empty conversation.[/dim]",
+  {
+    "table": {
+      "title": "Test Results",
+      "columns": [
+        "Test case",
+        "Metric",
+        "Score",
+        "Status",
+        "Overall Success Rate"
+      ],
+      "rows": [
+        [
+          "test_case_0",
+          "",
+          "",
+          "",
+          "100.0% | passed=1 | failed=0"
+        ],
+        [
+          "",
+          "Faithfulness",
+          "1.0 (threshold=0.5, evaluation model=gpt-4o-mini, reason=No contradictions., error=None)",
+          "[green]PASSED[/green]",
+          ""
+        ],
+        [
+          "conversational_test_case_0",
+          "",
+          "",
+          "",
+          "0.0% | passed=0 | failed=1"
+        ],
+        [
+          "",
+          "Turn Relevancy",
+          "0.4 (threshold=0.5, evaluation model=gpt-4o-mini, reason=One turn is off topic., error=None)",
+          "[red]FAILED[/red]",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "empty conversation",
+          "",
+          "",
+          "",
+          "100.0% | passed=1 | failed=0"
+        ],
+        [
+          "",
+          "Turn Relevancy",
+          "1.0 (threshold=0.5, evaluation model=gpt-4o-mini, reason=All relevant., error=None)",
+          "[green]PASSED[/green]",
+          ""
+        ],
+        [
+          "[bold red]Note: Use Confident AI with DeepEval to analyze failed test cases for more details[/bold red]",
+          "",
+          "",
+          "",
+          ""
+        ]
+      ]
+    }
+  }
+]

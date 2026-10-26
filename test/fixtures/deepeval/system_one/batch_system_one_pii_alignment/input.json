@@ -1,0 +1,65 @@
+{
+  "description": "PIILeakage and PromptAlignment batched into one request by evaluate()",
+  "batched": true,
+  "metrics": [
+    {
+      "kind": "pii_leakage",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    },
+    {
+      "kind": "prompt_alignment",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5,
+        "prompt_instructions": [
+          "Reply in English.",
+          "Respond in all upper case.",
+          "Use the word 'welcome'."
+        ]
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Say hello to the new team member.",
+    "actual_output": "Hello and welcome to the team!"
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 8.4e-05,
+      "input_tokens": 2000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "m0.q_0": {
+          "probability": 0.96
+        },
+        "m1.q_0": {
+          "probability": 0.95
+        },
+        "m1.q_1": {
+          "probability": 0.1
+        },
+        "m1.q_2": {
+          "probability": 0.9
+        }
+      },
+      "scores": {
+        "m0.q_1": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.0,
+            "1": 0.05,
+            "2": 0.15,
+            "3": 0.8
+          },
+          "confidence": 0.8
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.5,
+    "success": null,
+    "reason": "The score is 0.5 because book_table was well chosen.\nThe score is 0.5 because the party size is missing.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "verbose_logs": "Tool Selection Scores: [\n    {\n        \"score\": 1.0,\n        \"reason\": \"book_table was the right tool.\"\n    },\n    {\n        \"score\": 0.75,\n        \"reason\": \"No tool was needed for the address.\"\n    }\n] \n \n \nArgument Correctness Scores: [\n    {\n        \"score\": 0.5,\n        \"reason\": \"The party size is missing.\"\n    }\n] \n \n \nFinal Score: 0.5",
+    "confidence": null,
+    "system_one_fallback_reason": "ConnectionError: Jev is down; ConnectionError: Jev is down; ConnectionError: Jev is down",
+    "score_breakdown": null,
+    "raised": null
+  }
+]

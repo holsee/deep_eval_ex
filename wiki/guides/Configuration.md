@@ -26,8 +26,87 @@ config :deep_eval_ex,
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `OPENAI_API_KEY` | OpenAI API key | `sk-...` |
+| `OPENAI_BASE_URL` | OpenAI-compatible API base URL | `https://gateway.example.com/v1` |
 | `ANTHROPIC_API_KEY` | Anthropic API key | `sk-ant-...` |
+| `ANTHROPIC_BASE_URL` | Anthropic API base URL | `https://gateway.example.com/anthropic` |
+| `OLLAMA_HOST` | Ollama server address | `http://localhost:11434` |
 | `DEEP_EVAL_DEFAULT_MODEL` | Override default model | `gpt-4o` |
+
+A variable set to an empty or whitespace-only value is treated as unset, as is
+a blank application config value (such as
+`openai_api_key: System.get_env("OPENAI_API_KEY")` when the variable is empty),
+so resolution falls through to the next source.
+
+## deepeval Settings
+
+DeepEvalEx reads the settings deepeval 4.3.1 defines in
+`deepeval/config/settings.py` under the same environment variable names, so a
+`.env` shared with a Python deepeval project configures both.
+`DeepEvalEx.Config.get/1` resolves each one: a run override first (see
+below), then `config :deep_eval_ex`, then the environment variable, then
+deepeval's default.
+
+```elixir
+config :deep_eval_ex,
+  results_folder: "eval_results",
+  verbose_mode: true,
+  retry_max_attempts: 3
+```
+
+| Config key | Environment variable | Type | Default | Read by |
+|------------|----------------------|------|---------|---------|
+| `:results_folder` | `DEEPEVAL_RESULTS_FOLDER` | string | unset | `DeepEvalEx.TestRun.LocalStore`: where `evaluate_run/3` writes `test_run_<timestamp>.json` |
+| `:verbose_mode` | `DEEPEVAL_VERBOSE_MODE` | boolean | `false` | `DeepEvalEx.ExUnit` assertions: verbose mode for every metric |
+| `:identifier` | `DEEPEVAL_IDENTIFIER` | string | unset | `mix deep_eval.test --identifier` sets it |
+| `:ignore_errors` | `IGNORE_DEEPEVAL_ERRORS` | boolean | `false` | `DeepEvalEx.ExUnit` assertions; `mix deep_eval.test -i` sets it |
+| `:skip_on_missing_params` | `SKIP_DEEPEVAL_MISSING_PARAMS` | boolean | `false` | `DeepEvalEx.ExUnit` assertions; `mix deep_eval.test -s` sets it |
+| `:use_cache` | `ENABLE_DEEPEVAL_CACHE` | boolean | `false` | `DeepEvalEx.ExUnit` assertions in a `mix deep_eval.test` run; `-c` sets it |
+| `:per_task_timeout_seconds_override` | `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE` | number >= 0 | unset | `DeepEvalEx.Evaluator`: the default per-test-case `:timeout` (`DeepEvalEx.Config.per_task_timeout_seconds/0`; 180 seconds when unset or `0`) |
+| `:retry_max_attempts` | `DEEPEVAL_RETRY_MAX_ATTEMPTS` | integer >= 1 | `2` | `DeepEvalEx.LLM.Retry`: attempts per judge or System One call, the first included |
+| `:retry_initial_seconds` | `DEEPEVAL_RETRY_INITIAL_SECONDS` | number >= 0 | `1.0` | `DeepEvalEx.LLM.Retry`: backoff |
+| `:retry_exp_base` | `DEEPEVAL_RETRY_EXP_BASE` | number >= 1 | `2.0` | `DeepEvalEx.LLM.Retry`: backoff |
+| `:retry_jitter` | `DEEPEVAL_RETRY_JITTER` | number >= 0 | `2.0` | `DeepEvalEx.LLM.Retry`: backoff |
+| `:retry_cap_seconds` | `DEEPEVAL_RETRY_CAP_SECONDS` | number >= 0 | `5.0` | `DeepEvalEx.LLM.Retry`: backoff cap (`0` means no sleeps) |
+| `:eval_mode` | `DEEPEVAL_EVAL_MODE` | `:llm`, `:hybrid` or `:system_one` | unset | `DeepEvalEx.SystemOne.Mode`: the System One eval mode of metrics that support it |
+| `:typesafe_api_key` | `TYPESAFE_API_KEY` | string | unset | `DeepEvalEx.SystemOne.Adapters.TypeSafe`: the API key |
+| `:typesafe_model_name` | `TYPESAFE_MODEL_NAME` | string | unset | `DeepEvalEx.SystemOne.Adapters.TypeSafe`: the model (default `jev-latest`) |
+| `:typesafe_cost_per_input_token` | `TYPESAFE_COST_PER_INPUT_TOKEN` | number >= 0 | unset | `DeepEvalEx.SystemOne.Adapters.TypeSafe`: the price per input token (default Jev's for a registered model) |
+| `:running` | `DEEPEVAL` | boolean | `false` | whether a `mix deep_eval.test` run is on (deepeval's `get_is_running_deepeval()`) |
+| `:repeat` | none | integer >= 1 | unset | `DeepEvalEx.ExUnit.Repeat`: `mix deep_eval.test --repeat` |
+| `:display` | none | `:all`, `:failing` or `:passing` | `:all` | `mix deep_eval.test --display`: the test cases its table shows |
+| `:test_file` | none | string | unset | `mix deep_eval.test`: the run's `testFile` |
+| `:show_warnings` | none | boolean | `false` | `mix deep_eval.test --show-warnings` |
+
+
+### Run overrides
+
+`mix deep_eval.test` sets its flags as run overrides
+(`DeepEvalEx.Config.put_run_overrides/1`), which win over `config
+:deep_eval_ex` and the environment until the run ends, as `deepeval test
+run`'s in-process settings win over `.env`. An override of `nil` reads as
+`nil`: without `--verbose` the run's `:verbose_mode` is `nil` whatever the
+config says.
+
+Values are parsed as deepeval parses them:
+
+- **Booleans** follow deepeval's `parse_bool`: `1`, `true`, `t`, `yes`, `y`,
+  `on`, `enable` and `enabled` are `true` (case, surrounding whitespace and
+  quotes are ignored); anything else is `false`. Application config may also
+  hold `true` or `false`.
+- **Numbers** follow pydantic: whitespace is ignored and an integer setting
+  accepts `"2.0"`. A value that is not a number or breaks the setting's bound
+  (such as `DEEPEVAL_RETRY_MAX_ATTEMPTS=0`) raises an `ArgumentError` naming
+  the variable when the setting is read, where deepeval fails to load its
+  settings.
+- **`DEEPEVAL_EVAL_MODE`** is case-insensitive; an unrecognised value counts as
+  unset, as in deepeval.
+
+Blank values are unset here too. Unlike deepeval, which rejects an empty
+numeric variable such as `DEEPEVAL_RETRY_MAX_ATTEMPTS=`, DeepEvalEx reads it as
+the default. `DEEPEVAL_RESULTS_FOLDER` is used as given (after trimming): `~`
+is not expanded, as deepeval's results writer does not expand it either.
+deepeval's retry log level settings (`DEEPEVAL_RETRY_BEFORE_LOG_LEVEL`,
+`DEEPEVAL_RETRY_AFTER_LOG_LEVEL`) are not read; configure `Logger` instead.
 
 ## LLM Providers
 
@@ -45,18 +124,70 @@ Available models:
 - `gpt-4-turbo` - Previous generation
 - `gpt-3.5-turbo` - Fastest, cheapest
 
+#### OpenAI-Compatible Endpoints
+
+Point the OpenAI adapter at a proxy, gateway or any OpenAI-compatible API by
+setting a base URL. The first one set wins (a trailing slash is stripped):
+
+1. `base_url:` runtime option
+2. `config :deep_eval_ex, openai_base_url: "..."`
+3. `OPENAI_BASE_URL` environment variable
+4. `https://api.openai.com/v1`
+
+```elixir
+config :deep_eval_ex,
+  openai_base_url: "https://gateway.example.com/v1"
+```
+
+#### Temperature
+
+The adapter sends `temperature: 0.0` by default, as deepeval's `GPTModel` does,
+so judge calls are deterministic instead of running at OpenAI's default of
+`1.0`. Override it with the `temperature:` option or
+`config :deep_eval_ex, openai_temperature: 0.3` (the option wins). Reasoning
+models (`o1`, `o3`, `o4`, `gpt-5`, ...) reject the parameter, so it is never
+sent for them. They are recognised by the model name after any gateway
+provider prefix and `@region` suffix: `my-gateway/openai/gpt-5@us-east-1`
+counts as `gpt-5`.
+
 ### Anthropic
 
 ```elixir
 config :deep_eval_ex,
-  default_model: {:anthropic, "claude-3-haiku-20240307"},
+  default_model: {:anthropic, "claude-haiku-4-5"},
   anthropic_api_key: "sk-ant-..."
 ```
 
-Available models:
-- `claude-3-opus-20240229` - Most capable
-- `claude-3-sonnet-20240229` - Balanced
-- `claude-3-haiku-20240307` - Fast and efficient
+The API key is taken from the `api_key:` option, then `:anthropic_api_key`,
+then `ANTHROPIC_API_KEY`. Without a model the adapter uses deepeval's default,
+`claude-opus-5`. Any model in deepeval's Anthropic registry is priced, e.g.:
+- `claude-opus-5` - Most capable (deepeval's default)
+- `claude-sonnet-4-6` - Balanced
+- `claude-haiku-4-5` - Fast and cost-effective
+
+#### Base URL
+
+The first one set wins (a trailing slash is stripped; requests go to
+`{base_url}/v1/messages`):
+
+1. `base_url:` runtime option
+2. `config :deep_eval_ex, anthropic_base_url: "..."`
+3. `ANTHROPIC_BASE_URL` environment variable
+4. `https://api.anthropic.com`
+
+A base URL ending in `/v1` (as some gateways publish it) also works; the
+adapter does not add a second `/v1`. Python deepeval and the Anthropic SDK
+expect the bare host, so use that form if both read the same
+`ANTHROPIC_BASE_URL`.
+
+#### Temperature and Token Limit
+
+As in deepeval's `AnthropicModel`, `temperature` is only sent when set with
+the `temperature:` option or `config :deep_eval_ex, anthropic_temperature:
+0.0` (the option wins), and never to models that reject it (`claude-opus-4-7`
+and later Opus models, `claude-sonnet-5`, `claude-fable-5`). `max_tokens`
+defaults to `8192`, or `4096` for Claude 3 models; override it with
+`max_tokens:`.
 
 ### Ollama (Local)
 
@@ -65,7 +196,75 @@ config :deep_eval_ex,
   default_model: {:ollama, "llama3.2"}
 ```
 
-Requires Ollama running locally on port 11434.
+Requires an Ollama server with the model pulled (`ollama pull llama3.2`). No
+API key is needed, and calls report an `evaluation_cost` of `0.0`, as in
+deepeval.
+
+#### Server URL
+
+The first one set wins (a trailing slash is stripped; requests go to
+`{base_url}/api/chat`):
+
+1. `base_url:` runtime option
+2. `config :deep_eval_ex, ollama_base_url: "..."`
+3. `OLLAMA_HOST` environment variable (`host` or `host:port` is read as
+   `http`, on port `11434` when none is given)
+4. `http://localhost:11434`
+
+#### Model and Temperature
+
+There is no default model, as in deepeval: give one in `default_model`, the
+`model:` option or `config :deep_eval_ex, ollama_model: "llama3.2"`.
+`temperature` comes from the `temperature:` option, then `config
+:deep_eval_ex, ollama_temperature: 0.0`, and defaults to `0.0`. Other model
+options can be passed with `options: %{num_ctx: 8192}`.
+
+### ReqLLM (Gemini, Azure, Bedrock, Groq, OpenRouter, ...)
+
+Providers beyond OpenAI, Anthropic and Ollama are reached through
+[ReqLLM](https://hexdocs.pm/req_llm), an optional dependency. Add it to your
+own deps:
+
+```elixir
+{:req_llm, "~> 1.29"}
+```
+
+Then name a ReqLLM model spec:
+
+```elixir
+config :deep_eval_ex,
+  default_model: {:req_llm, "google:gemini-2.5-flash"}
+```
+
+ReqLLM reads each provider's key itself (`GOOGLE_API_KEY`, `GROQ_API_KEY`,
+`config :req_llm, google_api_key: "..."`, ...); the `api_key:` option
+overrides it. `temperature` defaults to `0.0`, as for deepeval's gateway
+models, and ReqLLM drops it for models that reject it. `base_url:`
+overrides the provider's endpoint, and `req_llm_options:` passes any other
+ReqLLM option.
+
+For an OpenAI-compatible gateway, give an inline spec with the gateway's
+base URL and the OpenAI API it serves the model on (`"openai_responses"` or
+`"openai_chat"`), since ReqLLM's catalog does not know gateway model ids:
+
+```elixir
+config :deep_eval_ex,
+  default_model:
+    {:req_llm,
+     %{
+       provider: :openai,
+       id: "openai/gpt-6-luna",
+       base_url: "https://gateway.example.com/v1",
+       extra: %{wire: %{protocol: "openai_responses"}}
+     }}
+```
+
+ReqLLM warns about a `"provider:id"` string its catalog does not list;
+`config :req_llm, warn_unverified_models: false` turns this off.
+
+Costs come from DeepEvalEx's price table (or `:model_pricing`) for the spec
+or bare model id, else from ReqLLM's catalog. See
+`DeepEvalEx.LLM.Adapters.ReqLLM`.
 
 ## Runtime Options
 
@@ -89,6 +288,25 @@ Override configuration at evaluation time:
 )
 ```
 
+## Model Pricing
+
+Results report `evaluation_cost` from per-model token prices (USD per 1M
+tokens). DeepEvalEx ships deepeval's OpenAI and Anthropic price tables; models it does not
+know get a `nil` cost rather than a guess. Price other models, or override a
+built-in price, with `:model_pricing`:
+
+```elixir
+config :deep_eval_ex,
+  model_pricing: %{
+    "my-finetuned-model" => %{input: 0.30, output: 1.20},
+    "llama3.1" => %{input: 0.0, output: 0.0}
+  }
+```
+
+Each entry must be `%{input: number, output: number}` with non-negative
+prices. A malformed entry raises an `ArgumentError` naming the model as soon
+as that model is priced.
+
 ## Concurrency Settings
 
 Control parallel evaluation:
@@ -99,7 +317,7 @@ config :deep_eval_ex,
   max_concurrency: 20
 
 # At runtime
-results = DeepEvalEx.evaluate_batch(test_cases, metrics,
+{:ok, evaluation} = DeepEvalEx.evaluate(test_cases, metrics,
   concurrency: 50
 )
 ```
@@ -160,6 +378,6 @@ Or custom handler:
 ## Configuration Priority
 
 1. Runtime options (highest)
-2. Environment variables
-3. Application config
+2. Application config
+3. Environment variables
 4. Default values (lowest)

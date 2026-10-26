@@ -1,0 +1,7 @@
+{
+  "template": "TurnFaithfulnessMetric.generate_claims",
+  "inputs": {
+    "input": "\nMy order is late. \nWhere's my café au lait set? ",
+    "assistant_output": "\nIt's \"on its way\": order 42 shipped on 1 October.\nRefunds take 5 days."
+  }
+}

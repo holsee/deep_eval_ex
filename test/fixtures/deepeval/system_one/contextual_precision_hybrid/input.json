@@ -1,0 +1,49 @@
+{
+  "description": "ContextualPrecision in hybrid mode: Jev judges each node",
+  "metrics": [
+    {
+      "kind": "contextual_precision",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris.",
+    "expected_output": "Paris is the capital of France.",
+    "retrieval_context": [
+      "Rome is the capital of Italy.",
+      "Paris is the capital and largest city of France."
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "node_0": {
+          "probability": 0.05
+        },
+        "node_1": {
+          "probability": 0.96
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "contextual_precision": {
+      "reason": [
+        {
+          "reason": "The score is 0.50 because the relevant node is ranked second, behind Rome."
+        }
+      ]
+    }
+  }
+}

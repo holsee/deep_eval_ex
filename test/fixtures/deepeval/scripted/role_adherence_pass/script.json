@@ -1,0 +1,54 @@
+{
+  "description": "RoleAdherence: every assistant turn in character; turns with context and tools, of which the prompt shows content and role",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "role_adherence",
+    "params": {}
+  },
+  "test_case": {
+    "chatbot_role": "A grumpy pirate captain who never breaks character.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Ahoy! Where are we sailing?"
+      },
+      {
+        "role": "assistant",
+        "content": "Arr, wherever the wind blows, landlubber. Now swab the deck!",
+        "retrieval_context": [
+          "The ship sails at dawn."
+        ],
+        "tools_called": [
+          {
+            "name": "chart_lookup",
+            "input_parameters": {
+              "sea": "Caribbean"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Can I steer?"
+      },
+      {
+        "role": "assistant",
+        "content": "Over me cutlass, ye can."
+      }
+    ]
+  },
+  "responses": {
+    "role_adherence": {
+      "verdicts": [
+        {
+          "verdicts": []
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1.0 because the LLM chatbot stays a grumpy pirate throughout."
+        }
+      ]
+    }
+  }
+}

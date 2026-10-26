@@ -1,0 +1,6 @@
+{
+  "template": "StepEfficiencyMetric._experimental_system_one_questions",
+  "inputs": {
+    "has_trace": true
+  }
+}

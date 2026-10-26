@@ -1,0 +1,54 @@
+[
+  {
+    "uuid": "4c8464d5-1dbd-4e1f-811f-9084bbe92a4f",
+    "baseSpans": [
+      {
+        "uuid": "3dbf4389-13ba-4284-b2a7-73ce2970aecb",
+        "name": "ping",
+        "status": "SUCCESS",
+        "type": "base",
+        "parentUuid": "32979c64-8d4f-41f9-a6b1-68cfcbb76d22",
+        "startTime": "2026-10-23T03:23:29.908Z",
+        "endTime": "2026-10-23T03:23:29.908Z",
+        "input": {},
+        "output": "pong",
+        "metricsData": [
+          {
+            "name": "Span Judge",
+            "threshold": 0.7,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "agentSpans": [
+      {
+        "uuid": "32979c64-8d4f-41f9-a6b1-68cfcbb76d22",
+        "name": "agent",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.908Z",
+        "endTime": "2026-10-23T03:23:29.908Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "pong for How do I reset my password?",
+        "availableTools": [],
+        "agentHandoffs": []
+      }
+    ],
+    "llmSpans": [],
+    "retrieverSpans": [],
+    "toolSpans": [],
+    "startTime": "2026-10-23T03:23:29.908Z",
+    "endTime": "2026-10-23T03:23:29.908Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "pong for How do I reset my password?",
+    "status": "SUCCESS"
+  }
+]

@@ -1,0 +1,44 @@
+{
+  "test_cases": [
+    {
+      "input": "Ping",
+      "actual_output": "Pong",
+      "expected_output": "Pong"
+    },
+    {
+      "input": "Marco",
+      "actual_output": "Polo",
+      "expected_output": "Polo"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "exact_match"
+    },
+    {
+      "kind": "stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    }
+  ],
+  "identifier": "nightly-2026-10-22",
+  "hyperparameters": {
+    "model": "gpt-4o-mini",
+    "temperature": 0.7,
+    "max_tokens": 512,
+    "top_p": 1.0,
+    "streaming": false,
+    "prompt_version": "v3",
+    "seed": null
+  },
+  "error_config": {
+    "ignore_errors": true,
+    "skip_on_missing_params": false
+  }
+}

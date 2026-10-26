@@ -1,0 +1,90 @@
+{
+  "test_cases": [
+    {
+      "scenario": "Weather lookup",
+      "mcp_servers": [
+        {
+          "server_name": "weather",
+          "transport": "stdio",
+          "available_tools": [
+            {
+              "name": "get_weather",
+              "description": "Current weather for a city"
+            },
+            {
+              "name": "get_forecast"
+            }
+          ]
+        }
+      ],
+      "turns": [
+        {
+          "role": "user",
+          "content": "Weather in Paris?"
+        },
+        {
+          "role": "assistant",
+          "content": "18°C",
+          "tools_called": [
+            {
+              "name": "get_weather",
+              "input_parameters": {
+                "city": "Paris"
+              }
+            },
+            {
+              "name": "lookup_city"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": "Sums",
+      "turns": [
+        {
+          "role": "user",
+          "content": "2 + 3?"
+        },
+        {
+          "role": "assistant",
+          "content": "5",
+          "tools_called": [
+            {
+              "name": "add"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "conversational_stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    }
+  ],
+  "mcp_servers": [
+    {
+      "server_name": "calculator",
+      "available_tools": [
+        {
+          "name": "add"
+        }
+      ]
+    }
+  ],
+  "identifier": null,
+  "hyperparameters": null,
+  "error_config": {
+    "ignore_errors": true,
+    "skip_on_missing_params": false
+  }
+}

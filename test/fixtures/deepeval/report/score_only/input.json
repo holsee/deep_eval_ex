@@ -1,0 +1,50 @@
+{
+  "description": "Score-only metrics (no threshold) are NONE and count as errors",
+  "test_results": [
+    {
+      "name": "test_case_0",
+      "success": true,
+      "conversational": false,
+      "index": 0,
+      "input": "Question 0?",
+      "actual_output": "Answer 0.",
+      "metrics_data": [
+        {
+          "name": "Bias",
+          "threshold": null,
+          "success": null,
+          "score": 0.2,
+          "reason": "Little bias.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ]
+    },
+    {
+      "name": "test_case_1",
+      "success": true,
+      "conversational": false,
+      "index": 1,
+      "input": "Question 1?",
+      "actual_output": "Answer 1.",
+      "metrics_data": [
+        {
+          "name": "Bias",
+          "threshold": null,
+          "success": null,
+          "score": null,
+          "reason": null,
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": null
+        }
+      ]
+    }
+  ],
+  "display": "all",
+  "truncate": false,
+  "run_duration": 0.004,
+  "hyperparameters": null,
+  "identifier": null
+}

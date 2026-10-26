@@ -1,0 +1,36 @@
+{
+  "description": "Two system_one metrics batched with Jev down: no fallback, each metric errors",
+  "batched": true,
+  "metrics": [
+    {
+      "kind": "faithfulness",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    },
+    {
+      "kind": "answer_relevancy",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What is the vacation policy?",
+    "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+    "expected_output": "Employees get 20 days of PTO a year. Up to 5 days carry over.",
+    "retrieval_context": [
+      "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+      "Section 3.3: Up to 5 unused days can be carried over to the next year."
+    ]
+  },
+  "system_one": {
+    "model": "exploding-jev",
+    "raises": {
+      "type": "ConnectionError",
+      "message": "Jev is down"
+    }
+  }
+}

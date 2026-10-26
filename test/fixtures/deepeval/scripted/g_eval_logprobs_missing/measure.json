@@ -1,0 +1,12 @@
+{
+  "score": 0.8,
+  "success": true,
+  "reason": "Mostly correct: 8 of 10 details match.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Criteria:\nDetermine whether the actual output is factually correct based on the expected output. \n \nEvaluation Steps:\n[\n    \"Check whether the facts in the actual output contradict any facts in the expected output.\",\n    \"Heavily penalise omission of detail present in the expected output.\"\n] \n \nRubric:\nNone \n \nScore: 0.8"
+}

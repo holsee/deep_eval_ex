@@ -1,0 +1,18 @@
+
+
+[
+  {
+    "type": "noul",
+    "statement": "The agent run in `trace` fully accomplishes the user\u0027s task (the root span\u0027s input in `trace`).",
+    "weight": 2
+  },
+  {
+    "type": "noul",
+    "statement": "The final outcome of the agent run in `trace` is what the user\u0027s task (the root span\u0027s input in `trace`) asks for: not a partial result, a different result, or only a plan to get it."
+  },
+  {
+    "type": "score",
+    "question": "How completely does the agent run in `trace` accomplish the user\u0027s task (the root span\u0027s input in `trace`)?",
+    "levels": ["Not achieved", "Partly achieved", "Mostly achieved", "Fully achieved"]
+  }
+]

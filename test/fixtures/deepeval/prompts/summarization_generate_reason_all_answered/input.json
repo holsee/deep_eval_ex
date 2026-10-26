@@ -1,0 +1,9 @@
+{
+  "template": "SummarizationMetric.generate_reason",
+  "inputs": {
+    "score": 1,
+    "contradictions": [],
+    "redundancies": [],
+    "questions": []
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "description": "Summarization in strict mode with a truths extraction limit: alignment 1.0 meets the forced threshold of 1, coverage 2/3 is clamped to 0, and so is the score",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "summarization",
+    "params": {
+      "strict_mode": true,
+      "truths_extraction_limit": 2,
+      "n": 3
+    }
+  },
+  "test_case": {
+    "input": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+    "actual_output": "The council approved a riverside park with a lake. It opens in May."
+  },
+  "responses": {
+    "summarization": {
+      "truths": [
+        {
+          "truths": [
+            "The city council approved a new riverside park on Monday.",
+            "Construction starts in March."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": [
+            "The council approved a riverside park."
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "questions": [
+            "Did the council approve a riverside park?",
+            "Does the park open in May?",
+            "Will the park have a playground?"
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            }
+          ]
+        }
+      ],
+      "answers": [
+        {
+          "answers": [
+            "yes",
+            "yes",
+            "yes"
+          ]
+        },
+        {
+          "answers": [
+            "yes",
+            "yes",
+            "no"
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.00 because the summary leaves out the playground."
+        }
+      ]
+    }
+  }
+}

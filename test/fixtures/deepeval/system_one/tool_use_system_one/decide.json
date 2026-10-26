@@ -1,0 +1,152 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "role": "user",
+              "content": "Book a table for two at Café Odéon on Saturday."
+            },
+            {
+              "role": "assistant",
+              "content": "Booked: Saturday at 19:00, for two.",
+              "tools_called": [
+                {
+                  "name": "book_table",
+                  "type": "FUNCTION",
+                  "output": "Booked for Saturday at 19:00",
+                  "input_parameters": {
+                    "day": "Saturday",
+                    "restaurant": "Café Odéon"
+                  }
+                }
+              ]
+            },
+            {
+              "role": "user",
+              "content": "What's the address?"
+            },
+            {
+              "role": "assistant",
+              "content": "12 Rue de l'Odéon, Paris."
+            }
+          ],
+          "available_tools": [
+            {
+              "name": "book_table",
+              "type": "FUNCTION",
+              "description": "Book a restaurant table"
+            },
+            {
+              "name": "search_web",
+              "type": "FUNCTION",
+              "description": "Search the web"
+            }
+          ]
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "In every assistant turn of `turns`, the tools in `tools_called` are the most suitable of `available_tools` for what the user asked: no call is unnecessary, redundant or unrelated to the user's goal, and no better-suited tool in `available_tools` was ignored when one was needed."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "Every tool call in the `tools_called` of the assistant turns in `turns` passes arguments that are correct, specific and complete for what the user asked and for that tool's definition in `available_tools`, with no missing, malformed, generic or unrelated argument."
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.85
+            },
+            "q_1": {
+              "probability": 0.4
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "turns": [
+          {
+            "role": "user",
+            "content": "Book a table for two at Café Odéon on Saturday."
+          },
+          {
+            "role": "assistant",
+            "content": "Booked: Saturday at 19:00, for two.",
+            "tools_called": [
+              {
+                "name": "book_table",
+                "type": "FUNCTION",
+                "output": "Booked for Saturday at 19:00",
+                "input_parameters": {
+                  "day": "Saturday",
+                  "restaurant": "Café Odéon"
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": "What's the address?"
+          },
+          {
+            "role": "assistant",
+            "content": "12 Rue de l'Odéon, Paris."
+          }
+        ],
+        "available_tools": [
+          {
+            "name": "book_table",
+            "type": "FUNCTION",
+            "description": "Book a restaurant table"
+          },
+          {
+            "name": "search_web",
+            "type": "FUNCTION",
+            "description": "Search the web"
+          }
+        ]
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "In every assistant turn of `turns`, the tools in `tools_called` are the most suitable of `available_tools` for what the user asked: no call is unnecessary, redundant or unrelated to the user's goal, and no better-suited tool in `available_tools` was ignored when one was needed."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "Every tool call in the `tools_called` of the assistant turns in `turns` passes arguments that are correct, specific and complete for what the user asked and for that tool's definition in `available_tools`, with no missing, malformed, generic or unrelated argument."
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.85
+          },
+          "q_1": {
+            "probability": 0.4
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

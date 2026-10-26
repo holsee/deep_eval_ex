@@ -1,0 +1,76 @@
+{
+  "description": "ToolUse: one unit calls a tool, one does not, so only the first gets an argument score; the score is the lower mean",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "tool_use",
+    "params": {
+      "available_tools": [
+        {
+          "name": "get_weather",
+          "description": "Fetch current weather for a city"
+        },
+        {
+          "name": "search_web",
+          "description": "Search the web"
+        }
+      ]
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "What's the weather in Paris?"
+      },
+      {
+        "role": "assistant",
+        "content": "It is 18°C in Paris.",
+        "tools_called": [
+          {
+            "name": "get_weather",
+            "input_parameters": {
+              "city": "Paris"
+            },
+            "output": {
+              "temp_c": 18
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Thanks!"
+      },
+      {
+        "role": "assistant",
+        "content": "You're welcome!"
+      }
+    ]
+  },
+  "responses": {
+    "tool_use": {
+      "reason,score": [
+        {
+          "score": 1.0,
+          "reason": "get_weather was the right tool."
+        },
+        {
+          "score": 0.75,
+          "reason": "No tool was needed."
+        },
+        {
+          "score": 1,
+          "reason": "The city is right."
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.875 because the tools were well chosen."
+        },
+        {
+          "reason": "The score is 0.875 because the arguments were right."
+        }
+      ]
+    }
+  }
+}

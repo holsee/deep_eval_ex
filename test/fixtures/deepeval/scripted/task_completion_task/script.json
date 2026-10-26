@@ -1,0 +1,31 @@
+{
+  "description": "TaskCompletion with its own task, which replaces the extracted one, in strict mode: a verdict below 1 scores 0",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "task_completion",
+    "params": {
+      "task": "Book a table for four on Sunday.",
+      "strict_mode": true
+    }
+  },
+  "test_case": {
+    "input": "Book a table for two at Café Odéon on Saturday.",
+    "actual_output": "Booked: Saturday at 19:00, for two."
+  },
+  "responses": {
+    "task_completion": {
+      "outcome,task": [
+        {
+          "task": "Book a table for two on Saturday.",
+          "outcome": "The system booked a table for two on Saturday at 19:00."
+        }
+      ],
+      "reason,verdict": [
+        {
+          "verdict": 0.2,
+          "reason": "The booking is for two on Saturday, not four on Sunday."
+        }
+      ]
+    }
+  }
+}

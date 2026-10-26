@@ -1,0 +1,45 @@
+{
+  "description": "ContextualRelevancy: every statement of every context relevant",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "contextual_relevancy",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris is the capital of France.",
+    "retrieval_context": [
+      "Paris is the capital and largest city of France.",
+      "France's capital, Paris, is home to the national government."
+    ]
+  },
+  "responses": {
+    "contextual_relevancy": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "statement": "Paris is the capital and largest city of France.",
+              "verdict": "yes"
+            }
+          ]
+        },
+        {
+          "verdicts": [
+            {
+              "statement": "France's capital, Paris, is home to the national government.",
+              "verdict": "yes"
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1.00 because every statement names Paris as the capital of France."
+        }
+      ]
+    }
+  }
+}

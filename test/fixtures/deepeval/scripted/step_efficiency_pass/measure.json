@@ -1,0 +1,12 @@
+{
+  "score": 0.75,
+  "success": true,
+  "reason": "The web search was not needed to book the table.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Task: Book a table for two at Café Odéon on Saturday. \n \n \nEfficiency Score: 0.75"
+}

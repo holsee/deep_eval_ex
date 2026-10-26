@@ -1,0 +1,60 @@
+[
+  {
+    "name": "agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "drafted",
+    "available_tools": [],
+    "agent_handoffs": [],
+    "children": [
+      {
+        "name": "draft",
+        "type": "llm",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "draft of How do I reset my password?",
+        "model": "claude-3-5-sonnet",
+        "prompt_alias": "draft-prompt",
+        "prompt_version": "00.00.01",
+        "prompt_label": "production",
+        "prompt_commit_hash": "aaa111",
+        "children": []
+      },
+      {
+        "name": "polish",
+        "type": "llm",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "polished How do I reset my password?",
+        "model": "gpt-4o",
+        "token_intervals": {
+          "2026-10-22T08:44:13.072709Z": "Hel",
+          "2026-10-22T08:44:13.322709Z": "lo",
+          "2026-10-22T08:44:13.822710Z": "!"
+        },
+        "prompt_alias": "polish-prompt",
+        "prompt_version": "00.00.07",
+        "prompt_commit_hash": "ccc333",
+        "children": []
+      },
+      {
+        "name": "draft",
+        "type": "llm",
+        "input": {
+          "query": "staged"
+        },
+        "output": "draft of staged",
+        "model": "claude-3-5-sonnet",
+        "prompt_alias": "staged-prompt",
+        "prompt_version": "00.00.02",
+        "prompt_label": "staging",
+        "prompt_commit_hash": "bbb222",
+        "children": []
+      }
+    ]
+  }
+]

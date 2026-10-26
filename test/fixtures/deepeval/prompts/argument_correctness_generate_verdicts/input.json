@@ -1,0 +1,45 @@
+{
+  "template": "ArgumentCorrectnessMetric.generate_verdicts",
+  "inputs": {
+    "input": "Book a table for two in Zürich on Friday.",
+    "tools_called": [
+      {
+        "name": "restaurant_search",
+        "description": "Finds \"open\" restaurants",
+        "reasoning": "I need a restaurant in Zürich first.",
+        "input_parameters": {
+          "city": "Zürich",
+          "filters": {
+            "cuisine": [
+              "swiss",
+              "italian"
+            ],
+            "open": true
+          },
+          "party_size": 2
+        },
+        "output": {
+          "results": [
+            {
+              "name": "Café Odéon",
+              "rating": 4.5
+            }
+          ]
+        }
+      },
+      {
+        "name": "book_table",
+        "type": "MCP",
+        "input_parameters": {
+          "day": "Saturday",
+          "restaurant": "Café Odéon"
+        },
+        "output": "Booked for Saturday at 19:00"
+      },
+      {
+        "name": "get_time",
+        "output": 3
+      }
+    ]
+  }
+}

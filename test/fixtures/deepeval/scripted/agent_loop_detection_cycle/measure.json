@@ -1,0 +1,12 @@
+{
+  "score": 0.75,
+  "success": true,
+  "reason": "Cycle detected in execution path: agent:kb -> tool:delegate -> agent:kb.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": null,
+  "evaluation_cost": 0,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Tool Repetition Score: 1.0 (Tool calls are within acceptable repetition limits.) \n \nReasoning Stagnation Score: 1.0 (Not enough LLM spans to check for reasoning stagnation.) \n \nCall Graph Cycles Score: 0.0 (Cycle detected in execution path: agent:kb -> tool:delegate -> agent:kb.) \n \nCombined Loop Score: 0.75"
+}

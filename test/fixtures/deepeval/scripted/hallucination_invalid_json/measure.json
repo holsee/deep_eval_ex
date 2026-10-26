@@ -1,0 +1,12 @@
+{
+  "score": null,
+  "success": null,
+  "reason": null,
+  "threshold": 0.5,
+  "error": "Evaluation LLM outputted an invalid JSON. Please use a better evaluation model.",
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": null
+}

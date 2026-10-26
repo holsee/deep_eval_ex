@@ -1,0 +1,3630 @@
+[
+  {
+    "a": "",
+    "b": "",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 1.0,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "",
+    "b": "abc",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.0,
+    "matching_blocks": [
+      [
+        0,
+        3,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "abc",
+    "b": "",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.0,
+    "matching_blocks": [
+      [
+        3,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "abcd",
+    "b": "bcde",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.75,
+    "matching_blocks": [
+      [
+        1,
+        0,
+        3
+      ],
+      [
+        4,
+        4,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "abcd",
+    "b": "abcd",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 1.0,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        4
+      ],
+      [
+        4,
+        4,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "qabxcd",
+    "b": "abycdf",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.6666666666666666,
+    "matching_blocks": [
+      [
+        1,
+        0,
+        2
+      ],
+      [
+        4,
+        3,
+        2
+      ],
+      [
+        6,
+        6,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "private Thread currentThread;",
+    "b": "private volatile Thread currentThread;",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.8656716417910447,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        6
+      ],
+      [
+        6,
+        15,
+        23
+      ],
+      [
+        29,
+        38,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "private Thread currentThread;",
+    "b": "private volatile Thread currentThread;",
+    "isjunk": "space",
+    "autojunk": true,
+    "ratio": 0.8656716417910447,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        8
+      ],
+      [
+        8,
+        17,
+        21
+      ],
+      [
+        29,
+        38,
+        0
+      ]
+    ]
+  },
+  {
+    "a": " abcd",
+    "b": "abcd abcd",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.7142857142857143,
+    "matching_blocks": [
+      [
+        0,
+        4,
+        5
+      ],
+      [
+        5,
+        9,
+        0
+      ]
+    ]
+  },
+  {
+    "a": " abcd",
+    "b": "abcd abcd",
+    "isjunk": "space",
+    "autojunk": true,
+    "ratio": 0.5714285714285714,
+    "matching_blocks": [
+      [
+        1,
+        0,
+        4
+      ],
+      [
+        5,
+        9,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "café crème brûlée",
+    "b": "cafe creme brulee",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.7647058823529411,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        3
+      ],
+      [
+        4,
+        4,
+        3
+      ],
+      [
+        8,
+        8,
+        5
+      ],
+      [
+        14,
+        14,
+        1
+      ],
+      [
+        16,
+        15,
+        1
+      ],
+      [
+        17,
+        17,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "naïve é 😀 ok",
+    "b": "naive é 😀 ok",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.8,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        2
+      ],
+      [
+        3,
+        3,
+        3
+      ],
+      [
+        8,
+        7,
+        5
+      ],
+      [
+        13,
+        12,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "b": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 1.0,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        199
+      ],
+      [
+        199,
+        199,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "b": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 1.0,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        200
+      ],
+      [
+        200,
+        200,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "b": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "isjunk": null,
+    "autojunk": false,
+    "ratio": 1.0,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        200
+      ],
+      [
+        200,
+        200,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "b": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.005,
+    "matching_blocks": [
+      [
+        0,
+        199,
+        1
+      ],
+      [
+        200,
+        200,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "b": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.0,
+    "matching_blocks": [
+      [
+        200,
+        200,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "b": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "isjunk": null,
+    "autojunk": false,
+    "ratio": 0.75,
+    "matching_blocks": [
+      [
+        50,
+        0,
+        150
+      ],
+      [
+        200,
+        200,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "c",
+    "b": "ac",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.6666666666666666,
+    "matching_blocks": [
+      [
+        0,
+        1,
+        1
+      ],
+      [
+        1,
+        2,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "acabcababb",
+    "b": "accc",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.42857142857142855,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        2
+      ],
+      [
+        4,
+        2,
+        1
+      ],
+      [
+        10,
+        4,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "aaabbaaabbbbabaabaabbbbb",
+    "b": "aaababa",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.45161290322580644,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        4
+      ],
+      [
+        12,
+        4,
+        3
+      ],
+      [
+        24,
+        7,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "aabcccacaabccbcaabbabbbabaaccc",
+    "b": "bbcbbb",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.2777777777777778,
+    "matching_blocks": [
+      [
+        2,
+        1,
+        2
+      ],
+      [
+        20,
+        3,
+        3
+      ],
+      [
+        30,
+        6,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "cc",
+    "b": "aabcacbccccaabacca",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.2,
+    "matching_blocks": [
+      [
+        0,
+        7,
+        2
+      ],
+      [
+        2,
+        18,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "abbabaaababbaaaaabb",
+    "b": "a",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.1,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        19,
+        1,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "cbabcabcbbcbacabbaacaccbaaaa",
+    "b": "cabaabbacbcbbbcb",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.5,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        1,
+        2,
+        2
+      ],
+      [
+        3,
+        5,
+        1
+      ],
+      [
+        4,
+        8,
+        1
+      ],
+      [
+        6,
+        9,
+        4
+      ],
+      [
+        10,
+        14,
+        2
+      ],
+      [
+        28,
+        16,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "babaabaabbbbabaabbbaabbaaabbababba",
+    "b": "",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.0,
+    "matching_blocks": [
+      [
+        34,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "",
+    "b": "aaaaabbababaaaaaabaaab",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.0,
+    "matching_blocks": [
+      [
+        0,
+        22,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "abbababaabbbaaababb",
+    "b": "baaabbaabbbababaabbaabbaaaababbaabb",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.7037037037037037,
+    "matching_blocks": [
+      [
+        0,
+        1,
+        1
+      ],
+      [
+        1,
+        9,
+        10
+      ],
+      [
+        11,
+        21,
+        1
+      ],
+      [
+        12,
+        24,
+        7
+      ],
+      [
+        19,
+        35,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "dadddbdcadaadbdadbdcabcbdcdbbad",
+    "b": "dcadadbbdacdcadcabcaaaa",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.5925925925925926,
+    "matching_blocks": [
+      [
+        6,
+        0,
+        5
+      ],
+      [
+        12,
+        5,
+        1
+      ],
+      [
+        13,
+        7,
+        3
+      ],
+      [
+        16,
+        11,
+        1
+      ],
+      [
+        18,
+        14,
+        5
+      ],
+      [
+        29,
+        19,
+        1
+      ],
+      [
+        31,
+        23,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "ccbccabaccbbcc",
+    "b": "acccbbabaacacc",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.5,
+    "matching_blocks": [
+      [
+        0,
+        1,
+        1
+      ],
+      [
+        8,
+        2,
+        4
+      ],
+      [
+        12,
+        12,
+        2
+      ],
+      [
+        14,
+        14,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "babababccacccba",
+    "b": "babcbbaabaacccbabcbbccaa",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.5128205128205128,
+    "matching_blocks": [
+      [
+        4,
+        0,
+        4
+      ],
+      [
+        9,
+        10,
+        6
+      ],
+      [
+        15,
+        24,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "abaa",
+    "b": "aa",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.6666666666666666,
+    "matching_blocks": [
+      [
+        2,
+        0,
+        2
+      ],
+      [
+        4,
+        2,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "abcbacaaa",
+    "b": "a",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.2,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        9,
+        1,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "bbcccc",
+    "b": "cbbcbccccaccaaa",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.5714285714285714,
+    "matching_blocks": [
+      [
+        0,
+        1,
+        1
+      ],
+      [
+        1,
+        4,
+        5
+      ],
+      [
+        6,
+        15,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "adabdbbcbbcdbdbd",
+    "b": "aaddbccbaaacabdaaacaccbcccbadcbdbcbc",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.38461538461538464,
+    "matching_blocks": [
+      [
+        0,
+        1,
+        2
+      ],
+      [
+        2,
+        12,
+        3
+      ],
+      [
+        5,
+        22,
+        1
+      ],
+      [
+        6,
+        32,
+        3
+      ],
+      [
+        10,
+        35,
+        1
+      ],
+      [
+        16,
+        36,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "abbbbaaabab",
+    "b": "ababaabbb",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.4,
+    "matching_blocks": [
+      [
+        0,
+        5,
+        4
+      ],
+      [
+        11,
+        9,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "cbacdccbbbaaccccdb",
+    "b": "adbabcddaabdabcaadacbadc",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.23809523809523808,
+    "matching_blocks": [
+      [
+        0,
+        19,
+        3
+      ],
+      [
+        4,
+        22,
+        2
+      ],
+      [
+        18,
+        24,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "bbdaacbabb",
+    "b": "ba",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.3333333333333333,
+    "matching_blocks": [
+      [
+        6,
+        0,
+        2
+      ],
+      [
+        10,
+        2,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "babaaaba",
+    "b": "abaa",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.6666666666666666,
+    "matching_blocks": [
+      [
+        1,
+        0,
+        4
+      ],
+      [
+        8,
+        4,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "cbcabbcbbac",
+    "b": "abbcccaaca",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.5714285714285714,
+    "matching_blocks": [
+      [
+        3,
+        0,
+        4
+      ],
+      [
+        9,
+        7,
+        2
+      ],
+      [
+        11,
+        10,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "babacacabacaccac",
+    "b": "cacaaaabcbcb",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.5,
+    "matching_blocks": [
+      [
+        4,
+        0,
+        4
+      ],
+      [
+        8,
+        7,
+        1
+      ],
+      [
+        10,
+        8,
+        1
+      ],
+      [
+        12,
+        10,
+        1
+      ],
+      [
+        16,
+        12,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "cdccadbab",
+    "b": "",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.0,
+    "matching_blocks": [
+      [
+        9,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "dcaaddaabcbaabaddbacabbdcaddbbbcadcba",
+    "b": "cabdabaabaabcdbadbcdcacdaadbacc",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.4411764705882353,
+    "matching_blocks": [
+      [
+        1,
+        0,
+        2
+      ],
+      [
+        5,
+        3,
+        2
+      ],
+      [
+        10,
+        5,
+        5
+      ],
+      [
+        15,
+        13,
+        1
+      ],
+      [
+        16,
+        26,
+        4
+      ],
+      [
+        24,
+        30,
+        1
+      ],
+      [
+        37,
+        31,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "abbbbcac",
+    "b": "aabcabcccbaaaaaaabaccabcabbcb",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.21621621621621623,
+    "matching_blocks": [
+      [
+        0,
+        24,
+        3
+      ],
+      [
+        3,
+        28,
+        1
+      ],
+      [
+        8,
+        29,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "aaaabbaababbbbabbaabbb",
+    "b": "",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.0,
+    "matching_blocks": [
+      [
+        22,
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "bcacabbcacacbbbcbcaccbbbabbba",
+    "b": "acbababbbacbcbbbcbabcccccbcbaacbbccb",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.6153846153846154,
+    "matching_blocks": [
+      [
+        2,
+        0,
+        2
+      ],
+      [
+        4,
+        5,
+        3
+      ],
+      [
+        8,
+        9,
+        2
+      ],
+      [
+        11,
+        12,
+        6
+      ],
+      [
+        17,
+        20,
+        1
+      ],
+      [
+        19,
+        23,
+        3
+      ],
+      [
+        22,
+        31,
+        2
+      ],
+      [
+        25,
+        35,
+        1
+      ],
+      [
+        29,
+        36,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "cabcaddbbaccbddacabadbbbdbadbaa",
+    "b": "bbacddacccbbcaaccaaccaacbddbbabad",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.40625,
+    "matching_blocks": [
+      [
+        0,
+        3,
+        1
+      ],
+      [
+        1,
+        6,
+        1
+      ],
+      [
+        2,
+        11,
+        3
+      ],
+      [
+        5,
+        25,
+        5
+      ],
+      [
+        18,
+        30,
+        3
+      ],
+      [
+        31,
+        33,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "cababbccbbabbcacbbb",
+    "b": "cacabbaabbbbacccaccbacbccabbbcbbbaaccba",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.5862068965517241,
+    "matching_blocks": [
+      [
+        0,
+        2,
+        3
+      ],
+      [
+        3,
+        7,
+        3
+      ],
+      [
+        6,
+        17,
+        3
+      ],
+      [
+        9,
+        22,
+        1
+      ],
+      [
+        10,
+        25,
+        3
+      ],
+      [
+        15,
+        29,
+        4
+      ],
+      [
+        19,
+        39,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "b dcedadddfbagafehdbc bcddafhhgaghaag chcedcecdcegdecbgdhh  bhfdbgdfdc gdbhhheacddagaehdhgd bfbbe",
+    "b": "b dcedadddfbagafehdbc bcddafhhgaghaag chcedchecdcehfdecbhdhh  bhfdbgdfdc gdbhhheacddagaehdhgd bfbbe",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.9693877551020408,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        44
+      ],
+      [
+        44,
+        45,
+        5
+      ],
+      [
+        50,
+        52,
+        4
+      ],
+      [
+        55,
+        57,
+        42
+      ],
+      [
+        97,
+        99,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "ebahhfdadh  hdccbg cbegbaa cbebb hbchcgdcf",
+    "b": "e bahhfddh hdccbg hbegbbaa cbbbb hbchcgdcf",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.9047619047619048,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        1,
+        2,
+        6
+      ],
+      [
+        8,
+        8,
+        2
+      ],
+      [
+        11,
+        10,
+        8
+      ],
+      [
+        20,
+        19,
+        3
+      ],
+      [
+        23,
+        23,
+        6
+      ],
+      [
+        30,
+        30,
+        12
+      ],
+      [
+        42,
+        42,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "ghcbgfadechbfffg dg hbeffefcagebeahb  aggh hfdd agebecahhfcae hfag cafa gheg chg cdabbbgbbdcad",
+    "b": "ghdbgaddchbfffg dg hbeffefcagebeadhcb  aggh hfdd hgebecahhfcae ehfa cafa geg chg cdabbbfbbdcad",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.925531914893617,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        2
+      ],
+      [
+        3,
+        3,
+        2
+      ],
+      [
+        6,
+        5,
+        2
+      ],
+      [
+        9,
+        8,
+        25
+      ],
+      [
+        34,
+        34,
+        1
+      ],
+      [
+        35,
+        36,
+        13
+      ],
+      [
+        49,
+        50,
+        13
+      ],
+      [
+        62,
+        64,
+        3
+      ],
+      [
+        66,
+        67,
+        7
+      ],
+      [
+        74,
+        74,
+        13
+      ],
+      [
+        88,
+        88,
+        6
+      ],
+      [
+        94,
+        94,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "ded ddb f becc fad b ecabef deahe",
+    "b": "aded ddb f bccc bad bfccabeaf hdeahe",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.8405797101449275,
+    "matching_blocks": [
+      [
+        0,
+        1,
+        11
+      ],
+      [
+        12,
+        13,
+        3
+      ],
+      [
+        16,
+        17,
+        4
+      ],
+      [
+        22,
+        23,
+        4
+      ],
+      [
+        26,
+        28,
+        2
+      ],
+      [
+        28,
+        31,
+        5
+      ],
+      [
+        33,
+        36,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "dhecgcde  afde fef b bghhefgaecgfhdeb fcghdggeefab hdhgebagcdgebdabh aefa",
+    "b": "dhecgcde  afde fef b bghhefgacgfhdeb fcghdfgeefab hdhgebagcdgebdabha aefh",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.958904109589041,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        29
+      ],
+      [
+        30,
+        29,
+        13
+      ],
+      [
+        44,
+        43,
+        24
+      ],
+      [
+        68,
+        68,
+        4
+      ],
+      [
+        73,
+        73,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "fafcdcheaeadecbgbcgegcdddddgafchghcfedadefbfagcd echhddehcfg cbff  egeeb feabhgbfeedahfh  ah gadbeaa",
+    "b": "fafcdcheaeadecbbcgegcdddddgahahghcfedadefbfagcd ehahdehcfg cbff  egeebhfedbhgbfeedahfh  ah gadbeaa",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.9393939393939394,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        15
+      ],
+      [
+        16,
+        15,
+        13
+      ],
+      [
+        31,
+        30,
+        19
+      ],
+      [
+        51,
+        49,
+        1
+      ],
+      [
+        52,
+        51,
+        1
+      ],
+      [
+        54,
+        52,
+        18
+      ],
+      [
+        73,
+        71,
+        2
+      ],
+      [
+        76,
+        74,
+        24
+      ],
+      [
+        100,
+        98,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "fcccagfh e cdfac gcaeee egcbbc",
+    "b": "fcccagf e cdfachgdcaeeeebgcbcfbc",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.8709677419354839,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        7
+      ],
+      [
+        8,
+        7,
+        8
+      ],
+      [
+        17,
+        16,
+        1
+      ],
+      [
+        18,
+        18,
+        5
+      ],
+      [
+        24,
+        23,
+        1
+      ],
+      [
+        25,
+        25,
+        3
+      ],
+      [
+        28,
+        30,
+        2
+      ],
+      [
+        30,
+        32,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "bheacf ehadbacfhaheddcfeed dhdaffcfcdfaa  cdddhhbf  haadaeehcadeeb",
+    "b": "bhefbfacfa ehadbaacfhahddcfeed dhaffcfcdfaa  dddhhbf  hahdafehcadeeb",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.9104477611940298,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        3
+      ],
+      [
+        3,
+        6,
+        3
+      ],
+      [
+        6,
+        10,
+        7
+      ],
+      [
+        13,
+        18,
+        5
+      ],
+      [
+        19,
+        23,
+        10
+      ],
+      [
+        30,
+        33,
+        12
+      ],
+      [
+        43,
+        45,
+        11
+      ],
+      [
+        55,
+        57,
+        2
+      ],
+      [
+        58,
+        60,
+        8
+      ],
+      [
+        66,
+        68,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "daadech da hffhh b dfc",
+    "b": "dfadeahg da hffhh b dc",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.8636363636363636,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        2,
+        2,
+        3
+      ],
+      [
+        6,
+        6,
+        1
+      ],
+      [
+        7,
+        8,
+        13
+      ],
+      [
+        21,
+        21,
+        1
+      ],
+      [
+        22,
+        22,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "bgg ed heebafadhhbebef caccedfheda cfh ffdddhgdfbfdggab fe f gee  d gg ggfcahhdhachb bffgbcbhhdcca he",
+    "b": "bgg ed bheebafadhhbebef caccedfheda cfh ffdddhgdfbfdggab fe f gee  d gg ggfcahhdhachb bffgbcbhhdcca he",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.9950738916256158,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        7
+      ],
+      [
+        7,
+        8,
+        94
+      ],
+      [
+        101,
+        102,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "hch hh gfchcdeed  fb hhfgbh ddh egdfafccagcg fgg afehchdccdc c dddac dad efbedad ahgfha   bfeda acgafegfchhgb  dfc e",
+    "b": "hch hh gfchcdeed  fb hhfgb ddh egdfafccagcg fgg afehchdccdc c dddac dad efbedad ahgfha   bfeda acgafegfchhgb  dfc e",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.9956709956709957,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        26
+      ],
+      [
+        27,
+        26,
+        89
+      ],
+      [
+        116,
+        115,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "fgbeaa aced fchfhhfecd  ebfcec dhhaddbgebagacfb ge aaa afhgdefcchf a bcg f ggbdhhcehf",
+    "b": "fgbeaa acedfchffhfecd  efcec dhhaddfbgeccghacfb ge aaa afhhdefcc hfba bcg f ggbdhhcehf",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.9122807017543859,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        11
+      ],
+      [
+        12,
+        11,
+        4
+      ],
+      [
+        17,
+        16,
+        8
+      ],
+      [
+        26,
+        24,
+        11
+      ],
+      [
+        37,
+        36,
+        3
+      ],
+      [
+        42,
+        41,
+        1
+      ],
+      [
+        43,
+        43,
+        15
+      ],
+      [
+        59,
+        59,
+        5
+      ],
+      [
+        64,
+        65,
+        2
+      ],
+      [
+        67,
+        68,
+        18
+      ],
+      [
+        85,
+        86,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "ead aa fafedeedbhd  aahhfffb hcbfdggag cgab ggdffdfehacegcef gcbgbd",
+    "b": "ead aa fafedeedbhd  aahhffefb hcbfdggag cgab ggdffdfehacegcef gcbgbd",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.9925925925925926,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        26
+      ],
+      [
+        26,
+        27,
+        41
+      ],
+      [
+        67,
+        68,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "gagcdefgggahecggbe agfdfadecec bgdhagfhb",
+    "b": "gagcdefggahecggbe abgfhfadecec bgdhagfhc",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.925,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        7
+      ],
+      [
+        8,
+        7,
+        12
+      ],
+      [
+        20,
+        20,
+        2
+      ],
+      [
+        23,
+        23,
+        16
+      ],
+      [
+        40,
+        40,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "cgfcbedeeafbaf fcehad ccbb  b",
+    "b": "cg cbedeeafbagf fehhad ccbb  db",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.9,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        2
+      ],
+      [
+        3,
+        3,
+        10
+      ],
+      [
+        13,
+        14,
+        3
+      ],
+      [
+        17,
+        17,
+        1
+      ],
+      [
+        18,
+        19,
+        10
+      ],
+      [
+        28,
+        30,
+        1
+      ],
+      [
+        29,
+        31,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "       b         aa                 b      bb a a   a   b   b    a           b    a   b       a a a baa a b    a b ba   b   a  b a      ",
+    "b": "    b a a   b aa   a a  a a    b b  ab b    a    b      b b     a       a  bb                a  baa a          b",
+    "isjunk": "space",
+    "autojunk": true,
+    "ratio": 0.2661290322580645,
+    "matching_blocks": [
+      [
+        3,
+        0,
+        6
+      ],
+      [
+        16,
+        13,
+        6
+      ],
+      [
+        32,
+        27,
+        6
+      ],
+      [
+        41,
+        73,
+        5
+      ],
+      [
+        46,
+        93,
+        2
+      ],
+      [
+        99,
+        95,
+        7
+      ],
+      [
+        106,
+        111,
+        1
+      ],
+      [
+        136,
+        112,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "ab b a    bb a   a b ba  a  aa   a     b abb     b  a    b    a         b  a       ab  a  b    ",
+    "b": "             b  aa              a  b     a a a        b a a b   a  b  a b b ab a    b     a    a     b bba       ",
+    "isjunk": "space",
+    "autojunk": true,
+    "ratio": 0.15384615384615385,
+    "matching_blocks": [
+      [
+        0,
+        76,
+        3
+      ],
+      [
+        3,
+        84,
+        2
+      ],
+      [
+        5,
+        90,
+        4
+      ],
+      [
+        9,
+        102,
+        3
+      ],
+      [
+        13,
+        105,
+        4
+      ],
+      [
+        95,
+        113,
+        0
+      ]
+    ]
+  },
+  {
+    "a": " abb a  b      b   a  ba b       a  ab   a    a       b   a bba   a   a             aa   a         b a",
+    "b": " b     a   bb   b   aa b    baa     a  a    ba     aa    ab   a   b       a        ",
+    "isjunk": "space",
+    "autojunk": true,
+    "ratio": 0.08648648648648649,
+    "matching_blocks": [
+      [
+        0,
+        56,
+        3
+      ],
+      [
+        3,
+        66,
+        2
+      ],
+      [
+        5,
+        74,
+        3
+      ],
+      [
+        102,
+        83,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "        bb  ba    abb     a b    a  b b      bba  b    ",
+    "b": "   b   b  a       aba       b    aa  b     ba            b b       bb a a         aaba   a  ",
+    "isjunk": "space",
+    "autojunk": true,
+    "ratio": 0.23129251700680273,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        1,
+        60,
+        10
+      ],
+      [
+        12,
+        84,
+        5
+      ],
+      [
+        18,
+        89,
+        1
+      ],
+      [
+        55,
+        92,
+        0
+      ]
+    ]
+  },
+  {
+    "a": " aba        a    a   bbb a    a  a  b  b   b           b        bb aa        a    baa   bb  a  ba     b   b b   b  a             b    ",
+    "b": " ba      a a    ab  bb bb       a     bb baba ab  a    ba b  b a  b a bb     b a",
+    "isjunk": "space",
+    "autojunk": true,
+    "ratio": 0.1588785046728972,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        1,
+        42,
+        4
+      ],
+      [
+        12,
+        46,
+        1
+      ],
+      [
+        15,
+        48,
+        5
+      ],
+      [
+        20,
+        69,
+        3
+      ],
+      [
+        23,
+        77,
+        3
+      ],
+      [
+        134,
+        80,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "  a    a a    a  a  b    b           b   b        b  a bb   bb                ba   b    ab a       ",
+    "b": " b     b        a b a ba                 a     a  b    ba    b aabaa     a  b  ab a    b       a         a  b      b     a   ",
+    "isjunk": "space",
+    "autojunk": true,
+    "ratio": 0.17857142857142858,
+    "matching_blocks": [
+      [
+        0,
+        14,
+        4
+      ],
+      [
+        6,
+        19,
+        2
+      ],
+      [
+        77,
+        21,
+        6
+      ],
+      [
+        83,
+        50,
+        5
+      ],
+      [
+        88,
+        64,
+        2
+      ],
+      [
+        91,
+        66,
+        1
+      ],
+      [
+        99,
+        125,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "    b b b      a                  ab a   abb  b   b   b a            b    bb    a b  a   bb   a   b  b a     a  b  b   b      ab  aab       bb       a a ",
+    "b": "       b bab  a        b  a                 aba     a ba  b    b   a    a  b  a  bb   aa  b b   a bb    aa a a      a a   ab a   ",
+    "isjunk": "space",
+    "autojunk": true,
+    "ratio": 0.4326241134751773,
+    "matching_blocks": [
+      [
+        0,
+        3,
+        7
+      ],
+      [
+        34,
+        10,
+        3
+      ],
+      [
+        37,
+        14,
+        1
+      ],
+      [
+        38,
+        41,
+        5
+      ],
+      [
+        43,
+        54,
+        1
+      ],
+      [
+        44,
+        56,
+        6
+      ],
+      [
+        50,
+        63,
+        4
+      ],
+      [
+        54,
+        75,
+        2
+      ],
+      [
+        56,
+        78,
+        1
+      ],
+      [
+        72,
+        79,
+        7
+      ],
+      [
+        80,
+        86,
+        1
+      ],
+      [
+        81,
+        89,
+        3
+      ],
+      [
+        84,
+        95,
+        2
+      ],
+      [
+        88,
+        97,
+        6
+      ],
+      [
+        94,
+        104,
+        1
+      ],
+      [
+        103,
+        105,
+        2
+      ],
+      [
+        109,
+        107,
+        2
+      ],
+      [
+        123,
+        119,
+        6
+      ],
+      [
+        130,
+        125,
+        1
+      ],
+      [
+        153,
+        129,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "a  ab            a a    b       b                       a   a      b a",
+    "b": "    a a a    a        bb  bb   b   a    a     b aab             b aa  a  a  b  b a     bb     a        baa   b a    a    b  a b    b   ab  b",
+    "isjunk": "space",
+    "autojunk": true,
+    "ratio": 0.38095238095238093,
+    "matching_blocks": [
+      [
+        0,
+        4,
+        2
+      ],
+      [
+        3,
+        49,
+        14
+      ],
+      [
+        17,
+        66,
+        1
+      ],
+      [
+        19,
+        67,
+        3
+      ],
+      [
+        22,
+        74,
+        5
+      ],
+      [
+        32,
+        79,
+        2
+      ],
+      [
+        56,
+        81,
+        4
+      ],
+      [
+        60,
+        94,
+        7
+      ],
+      [
+        67,
+        103,
+        1
+      ],
+      [
+        69,
+        104,
+        1
+      ],
+      [
+        70,
+        140,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "b  a a   a bb    bb  aa                      aa     a   aa a   b b  ab       aa b  b   a a b aa      a  b b         a ",
+    "b": "  b  b           aa  b      b       a   ba  ba  b  b a  b  a      ",
+    "isjunk": "space",
+    "autojunk": true,
+    "ratio": 0.30434782608695654,
+    "matching_blocks": [
+      [
+        0,
+        2,
+        3
+      ],
+      [
+        11,
+        5,
+        1
+      ],
+      [
+        19,
+        15,
+        6
+      ],
+      [
+        38,
+        29,
+        8
+      ],
+      [
+        46,
+        41,
+        3
+      ],
+      [
+        52,
+        45,
+        3
+      ],
+      [
+        55,
+        52,
+        2
+      ],
+      [
+        57,
+        59,
+        2
+      ],
+      [
+        118,
+        66,
+        0
+      ]
+    ]
+  },
+  {
+    "a": " a  ba ab     b a  bb      b b b       a    b b    bb a b ab b a    b ",
+    "b": " b a  a  a  b   a  bb  ba  a       a b       b ab  ab    ",
+    "isjunk": "space",
+    "autojunk": true,
+    "ratio": 0.2204724409448819,
+    "matching_blocks": [
+      [
+        0,
+        2,
+        2
+      ],
+      [
+        2,
+        21,
+        5
+      ],
+      [
+        7,
+        47,
+        4
+      ],
+      [
+        58,
+        51,
+        3
+      ],
+      [
+        70,
+        57,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "eededcdbb  badce ccbaaaedcdddcbaa     adbcdbeadeeaaabaabbbceceaaa  eeccbaebbdcbd dbecbc  aee bdbcdeebdedeeabdc  a daec e aabceccdebc ceaa c b badde  aceeeed cbbedc ac ecdaabacdbcedb  a eab deb",
+    "b": "ebecedcdbb  aadce ccbaaaedcdddcbaa     adcbd ddbeedeedaabaaabbbcceceaaa  eeccbdaebbdcba dbebc  aee  bdbcdeecbdedeeabdc a daec e aabbceccdebc beabc c b badde acbbeed cbbec ac ecdaccbacdbcedb  a eab deb",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.00510204081632653,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        192,
+        200,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "acin o phyulnifx zavz erqsmekjbwbpjeuzgny netvtbwhoxeustzm nbump g zxetmxsmxqmfruvpvgpxbd cslixnc jychw knezpdfesffakemhgcfpjyvhendemkaibpteb gxeojzqrrudcs hxm iih ehuriqnysxduyw smgqogobuysydnw kinobevmktd wssm  qclplrlgjudkahvkdd",
+    "b": "lcin o phyulnix zavz erismekjbwbeajeuzgyq netvtbwhoxeustzm jnbumog zxetmxsmxbmfruvqstgpxbd cslxnc ychw knezpdfbsffak emhgcfpjyvendemkaibpteb gxeojzqrrudcs hxm iiheehurieqnysxduyw smgqogobuhsfydnw kinbevmktd wsm  hkqc plrgkjudkadhvkdd",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.0,
+    "matching_blocks": [
+      [
+        231,
+        233,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "ixohksoevahxzp vyuqnnutwyqtabftmspdmdekijathfkgw vgepoh pad vmyaoymu vecpcplivpuesem yhxqweiqwmieducjsfusxyymmlddei eq  elrtty v akswkzajzqvqvlszas vzyeqyhouydodpkszwityidqvufbtesifyq vbvdoaddzvdldwhb vmqgdfe",
+    "b": "ixohkscvahxzp vyuqnntwyqtabftmspdmdekjathfkm vgepoh pad vmyaomy vkcpcplivpvesbr ohxqweiqwmieyucjsfusxymmmlddei eq  elrt y v akswkzajzqvnqvlszas zyeqyhouydodpkszwtyidqvufbtesiebyq vbvdoaddzvdldwhb vmqgdfe",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.13138686131386862,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        6
+      ],
+      [
+        8,
+        7,
+        13
+      ],
+      [
+        40,
+        37,
+        6
+      ],
+      [
+        46,
+        46,
+        1
+      ],
+      [
+        50,
+        199,
+        1
+      ],
+      [
+        208,
+        203,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "nmtvlebuipk bp skabjvsylcsawynvmype tplljss yjoghbwqqiwybvjbbfmtpoehdtpacebhfnpfghevwvibjakcmvpmjmpg fqwbhwqscekmrxgfljiejmrpzobeogldwpeilpxefctqxjezgtoygzchpoovde ahorbbztil whcihlq sieudtkgyplk",
+    "b": "njtvlebuipk bp skabjvsylcsawynvmype tpllbjqss yjoghbqqiwybvsbfmmpoehdtpcebmfncfghevwvibjakcvpmjzmpg fqwbhwqscekmrnxgfljiejmrpzobeogldwpeilpxefctqxaeztoygzchpoovde ahorbbztil whcihlq sieudtksyplk",
+    "isjunk": null,
+    "autojunk": false,
+    "ratio": 0.9408740359897172,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        2,
+        2,
+        38
+      ],
+      [
+        40,
+        41,
+        1
+      ],
+      [
+        41,
+        43,
+        9
+      ],
+      [
+        51,
+        52,
+        7
+      ],
+      [
+        60,
+        60,
+        3
+      ],
+      [
+        64,
+        64,
+        7
+      ],
+      [
+        72,
+        71,
+        3
+      ],
+      [
+        76,
+        75,
+        2
+      ],
+      [
+        79,
+        78,
+        13
+      ],
+      [
+        93,
+        91,
+        4
+      ],
+      [
+        97,
+        96,
+        17
+      ],
+      [
+        114,
+        114,
+        32
+      ],
+      [
+        147,
+        147,
+        2
+      ],
+      [
+        150,
+        149,
+        40
+      ],
+      [
+        191,
+        190,
+        4
+      ],
+      [
+        195,
+        194,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "gppuk wtzvrbjwsbjfue puejdtbjzlxuwustgx qy ps mmwfz msganzacukkvbgtgbfycnsdtw rbomdpkwp xwmxhjh byt  pgan  scv hp lqmx atswgwdmudfoveadxh  xfdzw xojghihbfbfqc r zuemteihgchegjdyaerivrkakijdpf ymvfzrqkvzsjx wklehheweo rlztm fefu bsbxatmrukjeekkbpqb",
+    "b": "gppukqwtzvrbjsbjfue pejntbjzlxuustgx ay ps ummwfz msganzacukkvbhgtgbfcnsdtw rbzmdpkwp xwmxhdh bt  gan  jcv hp lqimxlatswgwdmujfoveadh  xfdzw xojghihbfbfqcn  wuemteihgchdgdyerivrkakijdpf ymvfzrqkv zsjx wklehheieo rlztm fefu brssxoatmrukjeekkbpqb",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.048879837067209775,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        5
+      ],
+      [
+        41,
+        38,
+        5
+      ],
+      [
+        70,
+        171,
+        1
+      ],
+      [
+        97,
+        186,
+        1
+      ],
+      [
+        247,
+        244,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "ababaaaabbbaaaaababbbbaabaabaababbabbbbaaabbabbbaaabbbbababaaaabababbaababbaaaaabbbabbaaaabbbaaabbaaabbbabbbbbbaaaabbabbbaaabbabbaaabbababaabababababbbbbaabbbabbbbbaaabbababbaababbbaaaabbbabaabbbaabbbababababaaabbabbaabaabbbbbbaaabababaabaabbbbbabaababb",
+    "b": "babaaaabbbaaaaabbbbbbaabaabaababbabbbbaaabbabbbaaaabbbbabaaaabababbaababbaaaaabbbabbaaaaabbbaaabaaabbbabbbbbbaaaaabbabbbaabbbabbaaabbababaabababababbbbbabbabbbbbaaabbababbaababbabaaababbbabaabbbaabbbabaababaabaaabbabbbaababbbabaababababaabbbbbabaababb",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.0,
+    "matching_blocks": [
+      [
+        253,
+        251,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "gwnk itdtraqqsxhanjub oicaer gmypepqdacooyf  g dezyosyce ouaolqtyap etqnbdchwi odjtjqbpeyzvz qgeqdwuapwyfixa qjshmczkklglfbecz bqlfmdaxfnir cfp ksqeq taxtr gazvenptdzgxgs eqsa wuffknygtwetd qxbnltby bcrhswsz yhlrbeiq",
+    "b": "wnk idraqqsahxnjub ocar gnmyppqdacooyf mg ezyopsyce okaolqtyap etqnbdchwiojjtqbpoeyzvz qgekqdwuapwyfxa qjhmczhklqgfbweaz bqlftddaxfnir cfp iksqeq tamrxatrggdavenptdzxg eqgsa wuffntwetd qxsbnltbyeccrbswsz yhorbeq",
+    "isjunk": null,
+    "autojunk": false,
+    "ratio": 0.8618266978922716,
+    "matching_blocks": [
+      [
+        1,
+        0,
+        5
+      ],
+      [
+        7,
+        5,
+        1
+      ],
+      [
+        9,
+        6,
+        5
+      ],
+      [
+        14,
+        13,
+        1
+      ],
+      [
+        17,
+        14,
+        6
+      ],
+      [
+        24,
+        20,
+        2
+      ],
+      [
+        27,
+        22,
+        3
+      ],
+      [
+        30,
+        26,
+        3
+      ],
+      [
+        34,
+        29,
+        10
+      ],
+      [
+        45,
+        40,
+        2
+      ],
+      [
+        48,
+        42,
+        4
+      ],
+      [
+        52,
+        47,
+        6
+      ],
+      [
+        59,
+        54,
+        19
+      ],
+      [
+        79,
+        73,
+        1
+      ],
+      [
+        81,
+        75,
+        2
+      ],
+      [
+        84,
+        77,
+        3
+      ],
+      [
+        87,
+        81,
+        9
+      ],
+      [
+        96,
+        91,
+        9
+      ],
+      [
+        106,
+        100,
+        5
+      ],
+      [
+        112,
+        105,
+        4
+      ],
+      [
+        117,
+        110,
+        2
+      ],
+      [
+        119,
+        113,
+        1
+      ],
+      [
+        121,
+        114,
+        2
+      ],
+      [
+        123,
+        117,
+        1
+      ],
+      [
+        125,
+        119,
+        6
+      ],
+      [
+        132,
+        127,
+        12
+      ],
+      [
+        144,
+        140,
+        8
+      ],
+      [
+        152,
+        150,
+        1
+      ],
+      [
+        153,
+        152,
+        2
+      ],
+      [
+        156,
+        154,
+        1
+      ],
+      [
+        157,
+        157,
+        1
+      ],
+      [
+        159,
+        158,
+        7
+      ],
+      [
+        167,
+        165,
+        2
+      ],
+      [
+        170,
+        167,
+        3
+      ],
+      [
+        173,
+        171,
+        7
+      ],
+      [
+        181,
+        178,
+        1
+      ],
+      [
+        184,
+        179,
+        8
+      ],
+      [
+        192,
+        188,
+        6
+      ],
+      [
+        200,
+        196,
+        2
+      ],
+      [
+        203,
+        199,
+        7
+      ],
+      [
+        211,
+        207,
+        3
+      ],
+      [
+        215,
+        210,
+        1
+      ],
+      [
+        216,
+        211,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "bbbbababbbabababbbbbaababaaaaaaabaaabbbaaababbaaabbbaabbbbaabaababbbbaaaaabbbbbaaaaaabbbbaababababababbbaaabbbbababbabbaabbbbabbbabbabbabbaabbbbababbababbaaabbbbbbabaaaaabbababaaababbbabbbbbbbaababaabaaabaaaabbaabbaabaaabbabbbba",
+    "b": "bbbbbababbabaaabbbbbaaaabaaaaaaabaaababbaaababbaaabbbaabbbbbaabaababbbaaaaabbbbbaaaaaabbbbbaababaababababbbaaaabbbbababbabbaabbbbabaabbbbabbabbaaabbbbababbababbaaabbbbbbbabaabaababbabaaaaababbabbbbbbbabababaabaaabaaaabbaabbaaaaabbbbabbbba",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.017167381974248927,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        4
+      ],
+      [
+        228,
+        238,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "gmsrkokqfb fywqqrtcmuecvubtgnhycjfkoh kpz cfevtvlsthvotkr dnnieak umoyjhitswbjhu tamv ansrrxto myxfhwkfutfbemmotgfptmx v eearfgkxrtxselsobfcqwum ytqxaakcrqw g usnrtleieeidh zmppw uzdydguxpoyymbmrbajhziqulifvm sqrdgqrjy oemqeaps jpmgbznjfjb k bom kelxg",
+    "b": "gpkokqfb fybwqqrtcmecvfbgtgnhyvcjfkohkpz cfevtvlsthotkr vnnieak umoysjhitswbhu oamvtnsrrxtokmyfhwkutfbemmotgfptmnv eearfgkxrtxsellobfcqwum ytqxakrqw gwusnrtleieeidhtzxppow uzdydguepoyymbmrbanjhziquifvm scqrdgnrjy oefjmqeapsnjpgbnjfb  bom kelxg",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.004048582995951417,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        251,
+        243,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "bbedebba  abee ecea   edabadacbd  eac cadcbaebce dabbcddad deedd eeaecbacbbeaabad c bddbcaa eeca cdbb  eea ed dd  ecebeb ae ceaadbccceeb  dd ed deab eeebbadea e  cee dd bddabebccecbcb eadd   eed ceccccccbcc dc bddbadaeddbacccbcbebdabb",
+    "b": "bbdebb  abe cea   eddabadacb   ec cacbadecbceedabbcddad deedd eeaebbaccbdaabad c bddbcaa becca d cdbb  eea eddd  eceb eb ae caaadbccceaed  dd ea ddeab eeebbade e  ce de dd cddebeabccec cb ead  ead ce eccccc c dc bddbadaed dbaeccbcbadbdabb",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.00847457627118644,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        2
+      ],
+      [
+        234,
+        238,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "baaaaabbaaabbbababbaabbbbaaabbbbaaabbababbbabbbbabaaababbbbaaababaabbabbaaaaaaababbaabbabbaababbaabaaaabaaabababbaaabbbbaaabbaaabbbaaabbbabaaaabbabbbabbbaaaababaaabbabbabaabbbabaababbbaabbaaabbabb",
+    "b": "baaaabbaabbbababbababbbbaaabbbbaaabbababbbbabbbbaaaababbbbaaababaabbbbbaaaaaaababbaabbabbaababbaabbaaaabaaabababbbaabbbbaaabbaaabbbbaaabbbabaaaabbabbbabbbaaaababaaabbabbbbaabbbabaababbbaabbaaaaabbabb",
+    "isjunk": null,
+    "autojunk": false,
+    "ratio": 0.9620253164556962,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        2,
+        1,
+        6
+      ],
+      [
+        9,
+        7,
+        11
+      ],
+      [
+        20,
+        19,
+        23
+      ],
+      [
+        43,
+        43,
+        6
+      ],
+      [
+        50,
+        49,
+        19
+      ],
+      [
+        70,
+        69,
+        29
+      ],
+      [
+        99,
+        99,
+        14
+      ],
+      [
+        114,
+        114,
+        14
+      ],
+      [
+        128,
+        129,
+        40
+      ],
+      [
+        169,
+        170,
+        22
+      ],
+      [
+        191,
+        194,
+        5
+      ],
+      [
+        196,
+        199,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "qzobifebydwxltpd qaonopzpszkddn gpzyvokriettxpgoierhbmggshiwhjc yvhsiooiktrpmlj topfpticdjpwdho tqaiwshdnwu zzu tgagoaykfszgqdtidohrwzm orwiaanbarvngvapmxrtpcrjakz szkjwhqaghxrbijtofpxhmt sykk t fvfqhmqmlv lbg z urcssxfllfoqqzmx ogfdjhwlqjhfrzjaqkqlgbh z ",
+    "b": "pqzbifebydwxltpd qaonopzp zkdxdn gpzyvokri etexpgoierhbmghiwhjf yvuiooiktrmlj tojfpticdywrho tqbiwytdnwu zztgaeo akfbzgqdtidohrwzm orwidanbrvnbjamtxrtypcrjakzk szkjwnhqhxrbzijofpxhmt fykk t fvfqhmqmlv lg  grcszsxfllfoqqzmx ogfdjhklqjhfrzjaakqlgb z ",
+    "isjunk": null,
+    "autojunk": false,
+    "ratio": 0.8707753479125249,
+    "matching_blocks": [
+      [
+        0,
+        1,
+        2
+      ],
+      [
+        3,
+        3,
+        22
+      ],
+      [
+        26,
+        26,
+        3
+      ],
+      [
+        29,
+        30,
+        12
+      ],
+      [
+        41,
+        43,
+        2
+      ],
+      [
+        44,
+        46,
+        11
+      ],
+      [
+        57,
+        57,
+        5
+      ],
+      [
+        63,
+        63,
+        3
+      ],
+      [
+        68,
+        67,
+        7
+      ],
+      [
+        76,
+        74,
+        6
+      ],
+      [
+        83,
+        81,
+        6
+      ],
+      [
+        91,
+        88,
+        1
+      ],
+      [
+        93,
+        90,
+        5
+      ],
+      [
+        99,
+        96,
+        2
+      ],
+      [
+        103,
+        100,
+        7
+      ],
+      [
+        112,
+        107,
+        3
+      ],
+      [
+        116,
+        111,
+        1
+      ],
+      [
+        117,
+        113,
+        1
+      ],
+      [
+        119,
+        114,
+        2
+      ],
+      [
+        122,
+        117,
+        18
+      ],
+      [
+        141,
+        136,
+        3
+      ],
+      [
+        145,
+        139,
+        3
+      ],
+      [
+        150,
+        144,
+        1
+      ],
+      [
+        152,
+        145,
+        1
+      ],
+      [
+        153,
+        147,
+        3
+      ],
+      [
+        156,
+        151,
+        7
+      ],
+      [
+        163,
+        159,
+        6
+      ],
+      [
+        169,
+        166,
+        2
+      ],
+      [
+        173,
+        168,
+        4
+      ],
+      [
+        177,
+        173,
+        2
+      ],
+      [
+        180,
+        175,
+        8
+      ],
+      [
+        189,
+        184,
+        18
+      ],
+      [
+        208,
+        202,
+        2
+      ],
+      [
+        211,
+        204,
+        1
+      ],
+      [
+        213,
+        206,
+        3
+      ],
+      [
+        216,
+        210,
+        19
+      ],
+      [
+        236,
+        230,
+        9
+      ],
+      [
+        246,
+        240,
+        5
+      ],
+      [
+        252,
+        245,
+        3
+      ],
+      [
+        255,
+        248,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "again tool password help searoh tool cen tre passwgrd confirm settings again tool answser help setting answer tool etry login checfforgot account results confirm answer help user answer check page pagze user settings forgot checksteps help passwozrd passsword ccount accountsearc tool steps settings documents reset",
+    "b": "again tool password help search tool centre password confirm settings again tool answer help settings answer tool retry login check forgot account results confirm answer help user answer check page page user settings forgot check steps help password password account account search tool steps settings documents reset",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.2626582278481013,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        29
+      ],
+      [
+        51,
+        50,
+        35
+      ],
+      [
+        115,
+        115,
+        15
+      ],
+      [
+        130,
+        132,
+        1
+      ],
+      [
+        131,
+        158,
+        1
+      ],
+      [
+        157,
+        217,
+        1
+      ],
+      [
+        160,
+        306,
+        1
+      ],
+      [
+        315,
+        317,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "answer query settingssteps forgot passwoprd forgnt password email documents wage acswer useyr again query vheck checmk tool rest ansvwer settings dccuments age tqfvoogot concfirm email cofirm page retry abgan query qvuery steps reisultscquer y user answeru check centre email reset",
+    "b": "answer query settings steps forgot password forgot password email documents page answer user again query check check tool reset answer settings documents page forgot confirm email confirm page retry again query query steps results query user answer check centre email reset",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.23465703971119134,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        21
+      ],
+      [
+        107,
+        106,
+        9
+      ],
+      [
+        117,
+        115,
+        10
+      ],
+      [
+        256,
+        248,
+        25
+      ],
+      [
+        281,
+        273,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "centre retry search link settings login account results user again results search confirm confirm login search again email settings centre forgot steps",
+    "b": "centre again confirm link results login results confirm settings forgot steps search user retry search again email login search centre account settings",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.4768211920529801,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        7
+      ],
+      [
+        7,
+        18,
+        1
+      ],
+      [
+        19,
+        20,
+        5
+      ],
+      [
+        47,
+        25,
+        9
+      ],
+      [
+        62,
+        36,
+        1
+      ],
+      [
+        64,
+        37,
+        11
+      ],
+      [
+        82,
+        48,
+        8
+      ],
+      [
+        101,
+        60,
+        2
+      ],
+      [
+        103,
+        95,
+        20
+      ],
+      [
+        123,
+        143,
+        8
+      ],
+      [
+        151,
+        151,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "query search page user documents answer retry check email forgot password password forgot email tool settings check steps documents retry search steps password settings results tool login documents account page check check steps email link again results again confirm again account forgot confirm link email results page centre retry reset answer retry",
+    "b": "documents email check password forgot user link retry check steps email confirm login retry query again settings again link results account steps forgot check settings search tool page search email reset retry confirm again password documents forgot answer page account page email results answer retry results check documents steps password centre tool",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.017045454545454544,
+    "matching_blocks": [
+      [
+        0,
+        92,
+        6
+      ],
+      [
+        352,
+        352,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "password query account reset query check account password steps user search login confirm settings link page email again login account tool check check query forgot login page page user email confirm page forgot steps settings check documents search documents answer reset account settings email page reset user centre page documents reset retry user again email settings login centre",
+    "b": "confirm query steps settings password login user documents email page account check page email account user tool search user check centre reset reset page login password documents forgot centre login account page settings reset again login again link documents check forgot account reset check user query query confirm page search answer email page retry email steps settings settings",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.0703125,
+    "matching_blocks": [
+      [
+        0,
+        29,
+        9
+      ],
+      [
+        9,
+        299,
+        6
+      ],
+      [
+        29,
+        305,
+        7
+      ],
+      [
+        52,
+        333,
+        2
+      ],
+      [
+        155,
+        352,
+        3
+      ],
+      [
+        384,
+        384,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "again email tool link retry check answer help forgot answer answer results results forgot help login account confirm user centre login help email answer account answer confirm user email search confirm email tool check confirm check login steps tool email account settings again retry user answer",
+    "b": "user email results centre email retry answer search email tool login help confirm user account confirm check settings steps account again user help account confirm forgot login tool link check results help answer tool answer email answer login again check forgot answer email confirm answer retry",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.04391891891891892,
+    "matching_blocks": [
+      [
+        21,
+        31,
+        7
+      ],
+      [
+        278,
+        290,
+        6
+      ],
+      [
+        296,
+        296,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "tool user reslts documnts help help user login retry reset againyresults centremagain passwordpan wer reset settings centre centrw settings docments resurts confirm documents password results login documents centre password help search again logkn forgot steps results results checw query query user confirm query documents page answer link tool steps",
+    "b": "tool user results documents help help user login retry reset again results centre again password answer reset settings centre centre settings documents results confirm documents password results login documents centre password help search again login forgot steps results results check query query user confirm query documents page answer link tool steps",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.18723404255319148,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        13
+      ],
+      [
+        22,
+        24,
+        42
+      ],
+      [
+        64,
+        290,
+        1
+      ],
+      [
+        156,
+        302,
+        9
+      ],
+      [
+        245,
+        342,
+        1
+      ],
+      [
+        351,
+        354,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "settings link email page password again tool account tool login documents help account query check query confirm account password account confirm link login password help documents page retry centre page link search centre search steps confirm check help login login login login email login results link",
+    "b": "query tool account documents search check tool login help link documents help page account check search login again email login login email login page centre confirm password account steps retry settings link page account password login confirm password link results centre help link query confirm login",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.0858085808580858,
+    "matching_blocks": [
+      [
+        24,
+        165,
+        11
+      ],
+      [
+        86,
+        283,
+        8
+      ],
+      [
+        106,
+        291,
+        7
+      ],
+      [
+        303,
+        303,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "settings page again documents settings settings page settings steps page tool forgot tool again page user documents answer email answer documents documents user steps search results login",
+    "b": "steps documents documents user documents again again steps page settings page settings email forgot results user documents search page tool answer settings answer login tool page settings",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.2887700534759358,
+    "matching_blocks": [
+      [
+        62,
+        0,
+        5
+      ],
+      [
+        135,
+        5,
+        26
+      ],
+      [
+        161,
+        53,
+        4
+      ],
+      [
+        165,
+        121,
+        9
+      ],
+      [
+        174,
+        145,
+        1
+      ],
+      [
+        175,
+        148,
+        1
+      ],
+      [
+        176,
+        154,
+        1
+      ],
+      [
+        180,
+        158,
+        1
+      ],
+      [
+        181,
+        162,
+        6
+      ],
+      [
+        187,
+        187,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "check user steps forgot documents account answer check search reset tool reset help steps user account steps reset link documents settings answer documents documents forgot confirm results login account retry link documents help again retry answer settings account settings account search help again help password password account again page retry centre forgot email search help",
+    "b": "settings answer link results search search user steps login help confirm retry documents documents forgot steps account account account account reset retry password centre documents settings email search help reset account user again answer steps check help documents account again answer tool forgot documents settings help password link reset again page retry check help forgot",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.06068601583113457,
+    "matching_blocks": [
+      [
+        4,
+        19,
+        2
+      ],
+      [
+        17,
+        68,
+        1
+      ],
+      [
+        48,
+        246,
+        7
+      ],
+      [
+        114,
+        333,
+        6
+      ],
+      [
+        165,
+        372,
+        7
+      ],
+      [
+        379,
+        379,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "login pame answer help centrespage answer hel p password help linh emaliql raset qcheck again plogin quedry settings eiail reset answuer retry results sexrch password retry results centre passwobd reset enmailhelp fo rgot againn email steps querky confirm results documents results password tool agaien answer account page documents lik rretry documents centye lbnk useg settings search user",
+    "b": "login page answer help centre page answer help password help link email reset check again login query settings email reset answer retry results search password retry results centre password reset email help forgot again email steps query confirm results documents results password tool again answer account page documents link retry documents centre link user settings search user",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.03631647211413749,
+    "matching_blocks": [
+      [
+        0,
+        0,
+        8
+      ],
+      [
+        72,
+        96,
+        1
+      ],
+      [
+        80,
+        231,
+        2
+      ],
+      [
+        86,
+        325,
+        2
+      ],
+      [
+        245,
+        353,
+        1
+      ],
+      [
+        391,
+        380,
+        0
+      ]
+    ]
+  },
+  {
+    "a": "confirm page tool again answer page reset help search again help reset centre link again tool page answer forgot check steps query user page account user query confirm steps",
+    "b": "steps confirm tool page page confirm user help tool reset query answer answer centre query reset forgot link account steps again search again again check page page user help",
+    "isjunk": null,
+    "autojunk": true,
+    "ratio": 0.42196531791907516,
+    "matching_blocks": [
+      [
+        0,
+        6,
+        8
+      ],
+      [
+        8,
+        19,
+        4
+      ],
+      [
+        12,
+        46,
+        6
+      ],
+      [
+        23,
+        63,
+        8
+      ],
+      [
+        32,
+        71,
+        1
+      ],
+      [
+        34,
+        75,
+        1
+      ],
+      [
+        35,
+        90,
+        7
+      ],
+      [
+        43,
+        119,
+        1
+      ],
+      [
+        45,
+        120,
+        1
+      ],
+      [
+        46,
+        128,
+        14
+      ],
+      [
+        83,
+        142,
+        5
+      ],
+      [
+        112,
+        147,
+        7
+      ],
+      [
+        121,
+        157,
+        1
+      ],
+      [
+        122,
+        159,
+        1
+      ],
+      [
+        127,
+        162,
+        1
+      ],
+      [
+        130,
+        163,
+        6
+      ],
+      [
+        136,
+        172,
+        1
+      ],
+      [
+        173,
+        173,
+        0
+      ]
+    ]
+  }
+]

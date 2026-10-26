@@ -1,0 +1,10 @@
+{
+  "template": "HallucinationMetric.generate_verdicts",
+  "inputs": {
+    "actual_output": "Paris is the capital of France. The Louvre opened in 1893.",
+    "contexts": [
+      "Paris is the capital and largest city of France.",
+      "The Louvre, the world's most-visited museum, opened in 1793."
+    ]
+  }
+}

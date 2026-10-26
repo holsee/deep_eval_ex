@@ -1,0 +1,130 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "input": "What's the weather in Paris?",
+          "tools_called": [
+            {
+              "name": "get_weather",
+              "type": "FUNCTION",
+              "input_parameters": {
+                "city": "Paris"
+              }
+            }
+          ],
+          "available_tools": [
+            {
+              "name": "get_weather",
+              "type": "FUNCTION",
+              "description": "Fetch current weather for a city"
+            },
+            {
+              "name": "search_web",
+              "type": "FUNCTION",
+              "description": "Search the web"
+            }
+          ]
+        },
+        "questions": {
+          "verdict": {
+            "type": "score",
+            "instructions": "Judging only which tools were chosen (not how well they were used or whether the output was correct), how well do the tools in `tools_called` match what `input` asks for, given the purpose of each tool in `available_tools`? Penalise better-suited tools that were ignored, unnecessary extra tools, and tools poorly matched to their purpose.",
+            "criteria": [
+              "Misaligned",
+              "Poor selection",
+              "Mixed selection",
+              "Mostly appropriate",
+              "Fully appropriate"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {},
+          "scores": {
+            "verdict": {
+              "score": 4.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.0,
+                "2": 0.05,
+                "3": 0.15,
+                "4": 0.8
+              },
+              "confidence": 0.75
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "input": "What's the weather in Paris?",
+        "tools_called": [
+          {
+            "name": "get_weather",
+            "type": "FUNCTION",
+            "input_parameters": {
+              "city": "Paris"
+            }
+          }
+        ],
+        "available_tools": [
+          {
+            "name": "get_weather",
+            "type": "FUNCTION",
+            "description": "Fetch current weather for a city"
+          },
+          {
+            "name": "search_web",
+            "type": "FUNCTION",
+            "description": "Search the web"
+          }
+        ]
+      },
+      "questions": {
+        "verdict": {
+          "type": "score",
+          "instructions": "Judging only which tools were chosen (not how well they were used or whether the output was correct), how well do the tools in `tools_called` match what `input` asks for, given the purpose of each tool in `available_tools`? Penalise better-suited tools that were ignored, unnecessary extra tools, and tools poorly matched to their purpose.",
+          "criteria": [
+            "Misaligned",
+            "Poor selection",
+            "Mixed selection",
+            "Mostly appropriate",
+            "Fully appropriate"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {},
+        "scores": {
+          "verdict": {
+            "score": 4.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.0,
+              "2": 0.05,
+              "3": 0.15,
+              "4": 0.8
+            },
+            "confidence": 0.75
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

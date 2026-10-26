@@ -1,0 +1,174 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "content": "I'm flying to Lisbon on 3 May.",
+              "role": "user"
+            },
+            {
+              "content": "Lovely! Where are you flying to?",
+              "role": "assistant"
+            },
+            {
+              "content": "Lisbon. I'm vegetarian, too.",
+              "role": "user"
+            },
+            {
+              "content": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!",
+              "role": "assistant"
+            }
+          ],
+          "test_case": {
+            "chatbot_role": "A cheerful travel agent who keeps every reply short."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "The assistant remembers what the user told it."
+          },
+          "q_1": {
+            "type": "score",
+            "instructions": "How well do the assistant's turns keep to `chatbot_role`?",
+            "criteria": [
+              "Not at all",
+              "Partly",
+              "Fully"
+            ]
+          },
+          "q_2": {
+            "type": "choice",
+            "instructions": "How does the assistant end the conversation?",
+            "criteria": {
+              "confirms_the_booking": null,
+              "asks_again": null,
+              "still_open": null
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.35
+            }
+          },
+          "choices": {
+            "q_2": {
+              "choice": "confirms_the_booking",
+              "probabilities": {
+                "confirms_the_booking": 0.7,
+                "asks_again": 0.2,
+                "still_open": 0.1
+              },
+              "confidence": 0.6
+            }
+          },
+          "scores": {
+            "q_1": {
+              "score": 1.8,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.1,
+                "2": 0.85
+              },
+              "confidence": 0.8
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "turns": [
+          {
+            "content": "I'm flying to Lisbon on 3 May.",
+            "role": "user"
+          },
+          {
+            "content": "Lovely! Where are you flying to?",
+            "role": "assistant"
+          },
+          {
+            "content": "Lisbon. I'm vegetarian, too.",
+            "role": "user"
+          },
+          {
+            "content": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!",
+            "role": "assistant"
+          }
+        ],
+        "test_case": {
+          "chatbot_role": "A cheerful travel agent who keeps every reply short."
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "The assistant remembers what the user told it."
+        },
+        "q_1": {
+          "type": "score",
+          "instructions": "How well do the assistant's turns keep to `chatbot_role`?",
+          "criteria": [
+            "Not at all",
+            "Partly",
+            "Fully"
+          ]
+        },
+        "q_2": {
+          "type": "choice",
+          "instructions": "How does the assistant end the conversation?",
+          "criteria": {
+            "confirms_the_booking": null,
+            "asks_again": null,
+            "still_open": null
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.35
+          }
+        },
+        "choices": {
+          "q_2": {
+            "choice": "confirms_the_booking",
+            "probabilities": {
+              "confirms_the_booking": 0.7,
+              "asks_again": 0.2,
+              "still_open": 0.1
+            },
+            "confidence": 0.6
+          }
+        },
+        "scores": {
+          "q_1": {
+            "score": 1.8,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.1,
+              "2": 0.85
+            },
+            "confidence": 0.8
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

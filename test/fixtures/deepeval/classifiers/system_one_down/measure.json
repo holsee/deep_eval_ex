@@ -1,0 +1,15 @@
+{
+  "label": null,
+  "reason": null,
+  "error": null,
+  "evaluation_model": "exploding-jev",
+  "evaluation_cost": 0,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "confidence": null,
+  "system_one_fallback_reason": null,
+  "raised": {
+    "type": "ConnectionError",
+    "message": "Jev is down"
+  }
+}

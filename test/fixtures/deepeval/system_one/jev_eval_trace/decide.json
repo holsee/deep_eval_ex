@@ -1,0 +1,184 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "trace": {
+            "name": "answer",
+            "type": "agent",
+            "input": {
+              "query": "Where is my invoice?"
+            },
+            "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+            "tools_called": [
+              {
+                "name": "lookup_invoice",
+                "type": "FUNCTION",
+                "description": "Finds the latest invoice",
+                "reasoning": null,
+                "output": "INV-42",
+                "input_parameters": {
+                  "account": "acme"
+                }
+              }
+            ],
+            "available_tools": [
+              "lookup_invoice",
+              "escalate"
+            ],
+            "children": [
+              {
+                "name": "lookup_invoice",
+                "type": "tool",
+                "description": "Finds the latest invoice",
+                "input": {
+                  "account": "acme"
+                },
+                "output": "INV-42"
+              },
+              {
+                "name": "reply",
+                "type": "llm",
+                "input": {
+                  "query": "Where is my invoice?",
+                  "invoice": "INV-42"
+                },
+                "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+                "model": "gpt-4o-mini"
+              }
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "The agent looked the invoice up before replying."
+          },
+          "q_1": {
+            "type": "score",
+            "instructions": "How directly did the agent get to the answer?",
+            "criteria": [
+              "Wandered",
+              "Some detours",
+              "Straight there"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.93
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_1": {
+              "score": 1.8,
+              "probabilities": {
+                "0": 0.02,
+                "1": 0.16,
+                "2": 0.82
+              },
+              "confidence": 0.66
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "trace": {
+          "name": "answer",
+          "type": "agent",
+          "input": {
+            "query": "Where is my invoice?"
+          },
+          "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+          "tools_called": [
+            {
+              "name": "lookup_invoice",
+              "type": "FUNCTION",
+              "description": "Finds the latest invoice",
+              "reasoning": null,
+              "output": "INV-42",
+              "input_parameters": {
+                "account": "acme"
+              }
+            }
+          ],
+          "available_tools": [
+            "lookup_invoice",
+            "escalate"
+          ],
+          "children": [
+            {
+              "name": "lookup_invoice",
+              "type": "tool",
+              "description": "Finds the latest invoice",
+              "input": {
+                "account": "acme"
+              },
+              "output": "INV-42"
+            },
+            {
+              "name": "reply",
+              "type": "llm",
+              "input": {
+                "query": "Where is my invoice?",
+                "invoice": "INV-42"
+              },
+              "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+              "model": "gpt-4o-mini"
+            }
+          ]
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "The agent looked the invoice up before replying."
+        },
+        "q_1": {
+          "type": "score",
+          "instructions": "How directly did the agent get to the answer?",
+          "criteria": [
+            "Wandered",
+            "Some detours",
+            "Straight there"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.93
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_1": {
+            "score": 1.8,
+            "probabilities": {
+              "0": 0.02,
+              "1": 0.16,
+              "2": 0.82
+            },
+            "confidence": 0.66
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

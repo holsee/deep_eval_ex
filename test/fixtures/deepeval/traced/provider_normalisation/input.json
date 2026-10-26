@@ -1,0 +1,109 @@
+{
+  "description": "LlmSpan providers: normalised to deepeval's Provider values outside evaluation (exact, case and separator variants, a model path, an unknown provider kept), exported raw by the evaluation walkers",
+  "goldens": [
+    {
+      "input": "How do I reset my password?",
+      "expected_output": "Use the 'Forgot password' link.",
+      "name": "password-reset"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    }
+  ],
+  "modes": [
+    "sync",
+    "async"
+  ],
+  "functions": {
+    "agent": {
+      "type": "agent",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "body": [
+        {
+          "call": "call_openai"
+        },
+        {
+          "call": "call_anthropic"
+        },
+        {
+          "call": "call_vertex"
+        },
+        {
+          "call": "call_custom"
+        },
+        {
+          "call": "call_updated"
+        }
+      ],
+      "returns": "called"
+    },
+    "call_openai": {
+      "type": "llm",
+      "observe": {
+        "model": "gpt-4o",
+        "provider": "openai"
+      },
+      "returns": "a"
+    },
+    "call_anthropic": {
+      "type": "llm",
+      "observe": {
+        "model": "claude-3-haiku",
+        "provider": "anthropic/claude-3-haiku"
+      },
+      "returns": "b"
+    },
+    "call_vertex": {
+      "type": "llm",
+      "observe": {
+        "model": "gemini-1.5",
+        "provider": "Vertex AI"
+      },
+      "returns": "c"
+    },
+    "call_custom": {
+      "type": "llm",
+      "observe": {
+        "model": "local",
+        "provider": "My Lab"
+      },
+      "returns": "d"
+    },
+    "call_updated": {
+      "type": "llm",
+      "observe": {
+        "model": "grok-2"
+      },
+      "body": [
+        {
+          "update_current_span": {
+            "provider": "x_ai"
+          }
+        }
+      ],
+      "returns": "e"
+    }
+  },
+  "app": [
+    {
+      "call": "agent",
+      "args": [
+        "{input}"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "description": "ToolCorrectness in hybrid mode with Jev down: the LLM scores tool selection",
+  "metrics": [
+    {
+      "kind": "tool_correctness",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5,
+        "available_tools": [
+          {
+            "name": "get_weather",
+            "description": "Fetch current weather for a city"
+          },
+          {
+            "name": "search_web",
+            "description": "Search the web"
+          }
+        ]
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What's the weather in Paris?",
+    "actual_output": "It is 18°C in Paris.",
+    "tools_called": [
+      {
+        "name": "get_weather",
+        "input_parameters": {
+          "city": "Paris"
+        }
+      }
+    ],
+    "expected_tools": [
+      {
+        "name": "get_weather",
+        "input_parameters": {
+          "city": "Paris"
+        }
+      }
+    ]
+  },
+  "system_one": {
+    "model": "exploding-jev",
+    "raises": {
+      "type": "ConnectionError",
+      "message": "Jev is down"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "tool_correctness": {
+      "reason,score": [
+        {
+          "reason": "get_weather was the best available tool for the question.",
+          "score": 0.9
+        }
+      ]
+    }
+  }
+}

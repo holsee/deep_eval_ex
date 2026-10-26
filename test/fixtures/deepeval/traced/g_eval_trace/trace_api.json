@@ -1,0 +1,108 @@
+[
+  {
+    "uuid": "7ac34be8-5e93-476b-bc55-d5e4be8c8446",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "10948c5a-70d0-4c48-b653-ee45c5093432",
+        "name": "agent",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T06:14:01.762Z",
+        "endTime": "2026-10-23T06:14:01.762Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "Answer to How do I reset my password?",
+        "toolsCalled": [
+          {
+            "name": "search",
+            "type": "FUNCTION",
+            "output": [
+              "result for How do I reset my password?"
+            ],
+            "inputParameters": {
+              "query": "How do I reset my password?"
+            }
+          },
+          {
+            "name": "search",
+            "type": "FUNCTION",
+            "output": [
+              "result for How do I reset my password?"
+            ],
+            "inputParameters": {
+              "query": "How do I reset my password?"
+            }
+          }
+        ],
+        "availableTools": [
+          "search"
+        ],
+        "agentHandoffs": []
+      }
+    ],
+    "llmSpans": [
+      {
+        "uuid": "2715dc30-dc9b-48ea-8a59-0df86f6a3063",
+        "name": "generate",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "10948c5a-70d0-4c48-b653-ee45c5093432",
+        "startTime": "2026-10-23T06:14:01.762Z",
+        "endTime": "2026-10-23T06:14:01.762Z",
+        "input": {
+          "query": "How do I reset my password?",
+          "documents": []
+        },
+        "output": "Answer to How do I reset my password?",
+        "model": "gpt-4o-mini",
+        "inputTokenCount": 42.0,
+        "outputTokenCount": 7.0,
+        "costPerInputToken": 1.5e-07,
+        "costPerOutputToken": 6e-07
+      }
+    ],
+    "retrieverSpans": [],
+    "toolSpans": [
+      {
+        "uuid": "c93cfe55-49d8-4a76-bc1b-fecf3e72e47c",
+        "name": "search",
+        "status": "SUCCESS",
+        "type": "tool",
+        "parentUuid": "10948c5a-70d0-4c48-b653-ee45c5093432",
+        "startTime": "2026-10-23T06:14:01.762Z",
+        "endTime": "2026-10-23T06:14:01.762Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": [
+          "result for How do I reset my password?"
+        ]
+      },
+      {
+        "uuid": "6978cd50-d2d9-46e8-ae25-7652316e2fca",
+        "name": "search",
+        "status": "SUCCESS",
+        "type": "tool",
+        "parentUuid": "10948c5a-70d0-4c48-b653-ee45c5093432",
+        "startTime": "2026-10-23T06:14:01.762Z",
+        "endTime": "2026-10-23T06:14:01.762Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": [
+          "result for How do I reset my password?"
+        ]
+      }
+    ],
+    "startTime": "2026-10-23T06:14:01.762Z",
+    "endTime": "2026-10-23T06:14:01.762Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "Answer to How do I reset my password?",
+    "status": "SUCCESS"
+  }
+]

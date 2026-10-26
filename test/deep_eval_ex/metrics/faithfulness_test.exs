@@ -6,6 +6,8 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
 
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.Faithfulness
+  alias DeepEvalEx.SystemOne.Adapters.Mock, as: SystemOneMock
+  alias DeepEvalEx.SystemOne.{EvalSpec, Scored}
   alias DeepEvalEx.TestCase
 
   setup do
@@ -197,19 +199,13 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
     end
   end
 
-  describe "measure/2 with idk verdicts" do
-    test "treats idk verdicts as faithful (not contradicting)" do
-      # Mock truths extraction
+  describe "measure/2 with borderline verdicts" do
+    setup do
       Mock.set_schema_response(
         ~r/generate a comprehensive list of.*truths/i,
-        %{
-          "truths" => [
-            "The API supports JSON responses."
-          ]
-        }
+        %{"truths" => ["The API supports JSON responses."]}
       )
 
-      # Mock claims extraction
       Mock.set_schema_response(
         ~r/extract a comprehensive list of FACTUAL/i,
         %{
@@ -220,18 +216,6 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
         }
       )
 
-      # Mock verdicts - first yes, second idk (not mentioned)
-      Mock.set_schema_response(
-        ~r/indicate whether EACH claim contradicts/i,
-        %{
-          "verdicts" => [
-            %{"verdict" => "yes"},
-            %{"verdict" => "idk", "reason" => "XML support is not mentioned in the context."}
-          ]
-        }
-      )
-
-      # Mock reason generation
       Mock.set_schema_response(
         ~r/CONCISELY summarize the contradictions/i,
         %{
@@ -244,19 +228,120 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
         TestCase.new!(
           input: "What formats does the API support?",
           actual_output: "The API supports JSON and XML responses.",
-          retrieval_context: [
-            "The API supports JSON responses."
-          ]
+          retrieval_context: ["The API supports JSON responses."]
         )
 
+      %{test_case: test_case}
+    end
+
+    test "treats borderline verdicts as faithful (not contradicting)", %{test_case: test_case} do
+      Mock.set_schema_response(
+        ~r/indicate whether EACH claim contradicts/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{
+              "verdict" => "borderline",
+              "reason" => "XML support is not mentioned in the context."
+            }
+          ]
+        }
+      )
+
       assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
-      # idk counts as faithful (not a contradiction)
-      assert result.score == 1.0
+      assert result.score === 1.0
+      assert [%{verdict: :yes}, %{verdict: :borderline}] = result.metadata.verdicts
+    end
+
+    test "reads the legacy idk verdict as borderline", %{test_case: test_case} do
+      Mock.set_schema_response(
+        ~r/indicate whether EACH claim contradicts/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "no", "reason" => "Contradicts."},
+            %{"verdict" => "idk", "reason" => "XML support is not mentioned in the context."}
+          ]
+        }
+      )
+
+      assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
+      assert result.score === 0.5
+      assert [%{verdict: :no}, %{verdict: :borderline}] = result.metadata.verdicts
+    end
+
+    test "counts borderline verdicts as unfaithful with penalize_ambiguous_claims", %{
+      test_case: test_case
+    } do
+      Mock.set_schema_response(
+        ~r/indicate whether EACH claim contradicts/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{
+              "verdict" => "borderline",
+              "reason" => "XML support is not mentioned in the context."
+            }
+          ]
+        }
+      )
+
+      assert {:ok, result} =
+               Faithfulness.measure(test_case, adapter: :mock, penalize_ambiguous_claims: true)
+
+      assert result.score === 0.5
+    end
+
+    test "lists ambiguous claims as contradictions in the reason prompt only when penalized", %{
+      test_case: test_case
+    } do
+      Mock.set_schema_response(
+        ~r/indicate whether EACH claim contradicts/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "borderline", "reason" => "XML is not mentioned."},
+            %{"verdict" => "no", "reason" => "Contradicts."},
+            %{"verdict" => "borderline"}
+          ]
+        }
+      )
+
+      reason_prompt = fn opts ->
+        Mock.clear_recorded_prompts()
+        assert {:ok, _result} = Faithfulness.measure(test_case, [adapter: :mock] ++ opts)
+        Enum.find(Mock.get_recorded_prompts(), &(&1 =~ "CONCISELY summarize"))
+      end
+
+      penalized = reason_prompt.(penalize_ambiguous_claims: true)
+
+      # In verdict order, with deepeval's f-string of a missing reason.
+      assert penalized =~
+               ~s"['(Ambiguous) XML is not mentioned.', 'Contradicts.', '(Ambiguous) None']"
+
+      assert reason_prompt.([]) =~ ~s"['Contradicts.']"
+      refute reason_prompt.([]) =~ "Ambiguous"
+    end
+
+    test "drops unknown verdicts instead of counting them as faithful", %{
+      test_case: test_case
+    } do
+      Mock.set_schema_response(
+        ~r/indicate whether EACH claim contradicts/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "No, the context says otherwise.", "reason" => "Contradicts."},
+            %{"verdict" => "unsure", "reason" => "?"}
+          ]
+        }
+      )
+
+      assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
+      assert result.score === 0.0
+      assert [%{verdict: :no}] = result.metadata.verdicts
     end
   end
 
   describe "measure/2 with no claims" do
-    test "returns score 1.0 when no claims extracted" do
+    test "returns score 1 when no claims extracted" do
       # Mock truths extraction
       Mock.set_schema_response(
         ~r/generate a comprehensive list of.*truths/i,
@@ -288,8 +373,8 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
         )
 
       assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
-      # No claims = perfectly faithful
-      assert result.score == 1.0
+      # No claims = perfectly faithful; deepeval's QAG scoring returns the integer 1
+      assert result.score === 1
     end
   end
 
@@ -497,42 +582,228 @@ defmodule DeepEvalEx.Metrics.FaithfulnessTest do
     end
   end
 
-  describe "measure/2 with context alias" do
-    test "accepts context as alias for retrieval_context" do
-      # Mock truths extraction
-      Mock.set_schema_response(
-        ~r/generate a comprehensive list of.*truths/i,
-        %{"truths" => ["Truth"]}
-      )
+  describe "measure/2 with context only" do
+    test "does not use context as the retrieval context, as deepeval 4.3.1" do
+      test_case =
+        TestCase.new!(
+          input: "Q",
+          actual_output: "A",
+          context: ["Context, not retrieval context"]
+        )
 
-      # Mock claims extraction
-      Mock.set_schema_response(
-        ~r/extract a comprehensive list of FACTUAL/i,
-        %{"claims" => ["Claim"]}
-      )
+      assert {:error, {:missing_params, [:retrieval_context]}} =
+               Faithfulness.measure(test_case, adapter: :mock)
+    end
+  end
 
-      # Mock verdicts
+  defmodule NativeMock do
+    @moduledoc false
+    # The Mock adapter declared native, so a measure reports its cost.
+    use DeepEvalEx.LLM.Adapter
+
+    @impl true
+    defdelegate generate(prompt, opts), to: Mock
+
+    @impl true
+    defdelegate generate_with_schema(prompt, schema, opts), to: Mock
+
+    @impl true
+    defdelegate model_name(opts), to: Mock
+
+    @impl true
+    defdelegate supports_structured_outputs?, to: Mock
+
+    @impl true
+    defdelegate supports_log_probs?, to: Mock
+
+    @impl true
+    def native?, do: true
+  end
+
+  describe "measure/2 usage" do
+    setup do
+      saved = Application.get_env(:deep_eval_ex, :model_pricing)
+
+      Application.put_env(:deep_eval_ex, :model_pricing, %{
+        "mock-model" => %{input: 1.0, output: 2.0}
+      })
+
+      on_exit(fn ->
+        if saved,
+          do: Application.put_env(:deep_eval_ex, :model_pricing, saved),
+          else: Application.delete_env(:deep_eval_ex, :model_pricing)
+      end)
+    end
+
+    test "accumulates tokens and cost across every LLM call, including concurrent ones" do
+      Mock.set_schema_response(~r/generate a comprehensive list of.*truths/i, %{"truths" => ["T"]})
+
+      Mock.set_schema_response(~r/extract a comprehensive list of FACTUAL/i, %{"claims" => ["C"]})
+
       Mock.set_schema_response(
         ~r/indicate whether EACH claim contradicts/i,
         %{"verdicts" => [%{"verdict" => "yes"}]}
       )
 
-      # Mock reason
-      Mock.set_schema_response(
-        ~r/CONCISELY summarize the contradictions/i,
-        %{"reason" => "Good."}
-      )
+      Mock.set_schema_response(~r/CONCISELY summarize the contradictions/i, %{"reason" => "Ok."})
 
-      # Using context instead of retrieval_context
+      test_case = TestCase.new!(input: "Q", actual_output: "A", retrieval_context: ["C"])
+
+      assert {:ok, result} =
+               Faithfulness.measure(test_case,
+                 adapter: NativeMock,
+                 mock_usage: [input_tokens: 100_000, output_tokens: 10_000]
+               )
+
+      # truths + claims (concurrent tasks) + verdicts + reason = 4 calls
+      assert result.evaluation_model == "mock-model"
+      assert result.input_tokens == 400_000
+      assert result.output_tokens == 40_000
+      assert_in_delta result.evaluation_cost, 4 * (0.1 + 0.02), 1.0e-9
+
+      # A custom judge, as deepeval's, reports its tokens but no cost.
+      assert {:ok, %{input_tokens: 400_000, output_tokens: 40_000, evaluation_cost: nil}} =
+               Faithfulness.measure(test_case,
+                 adapter: :mock,
+                 mock_usage: [input_tokens: 100_000, output_tokens: 10_000]
+               )
+    end
+
+    test "reports the judge model with unknown tokens and cost when usage is not reported" do
+      Mock.set_schema_response(~r/generate a comprehensive list of.*truths/i, %{"truths" => ["T"]})
+
+      Mock.set_schema_response(~r/extract a comprehensive list of FACTUAL/i, %{"claims" => []})
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A", retrieval_context: ["C"])
+
+      assert {:ok, result} =
+               Faithfulness.measure(test_case, adapter: :mock, include_reason: false)
+
+      assert result.evaluation_model == "mock-model"
+      assert result.input_tokens == nil
+      assert result.output_tokens == nil
+      assert result.evaluation_cost == nil
+    end
+  end
+
+  describe "System One" do
+    test "system_one_eval_spec/2 asks deepeval's questions about the output and its context" do
+      assert %EvalSpec{
+               evaluation_params: [:actual_output, :retrieval_context],
+               questions: [
+                 %Scored.Noul{statement: "Every factual claim" <> _, weight: 2.0},
+                 %Scored.Noul{statement: "No claim in" <> _, weight: 1.0},
+                 %Scored.Score{
+                   levels: [
+                     "Fabricated",
+                     "Mostly fabricated",
+                     "Mostly grounded",
+                     "Fully grounded"
+                   ]
+                 }
+               ]
+             } = Faithfulness.system_one_eval_spec(%TestCase{}, [])
+    end
+
+    test "hybrid asks System One nothing when there are no claims" do
+      Mock.set_schema_response(~r/generate a comprehensive list of.*truths/i, %{
+        "truths" => ["Some fact from context."]
+      })
+
+      Mock.set_schema_response(~r/extract a comprehensive list of FACTUAL/i, %{"claims" => []})
+
+      Mock.set_schema_response(~r/CONCISELY summarize the contradictions/i, %{
+        "reason" => "The score is 1.00 because there are no claims to verify."
+      })
+
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.9))
+
       test_case =
         TestCase.new!(
-          input: "Q",
-          actual_output: "A",
-          context: ["Context via alias"]
+          input: "Hello",
+          actual_output: "Hi there!",
+          retrieval_context: ["Some fact from context."]
         )
 
-      assert {:ok, result} = Faithfulness.measure(test_case, adapter: :mock)
-      assert result.score == 1.0
+      assert {:ok, result} =
+               Faithfulness.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one
+               )
+
+      assert result.score === 1
+      assert result.confidence == nil
+      assert SystemOneMock.calls(system_one) == []
+    end
+
+    test "llm mode never asks System One" do
+      Mock.set_schema_response(~r/generate a comprehensive list of.*truths/i, %{
+        "truths" => ["Employees receive 20 days paid time off annually."]
+      })
+
+      Mock.set_schema_response(~r/extract a comprehensive list of FACTUAL/i, %{
+        "claims" => ["Employees get 20 days of PTO per year."]
+      })
+
+      Mock.set_schema_response(~r/indicate whether EACH claim contradicts/i, %{
+        "verdicts" => [%{"verdict" => "no", "reason" => "Judged by the LLM."}]
+      })
+
+      Mock.set_schema_response(~r/CONCISELY summarize the contradictions/i, %{
+        "reason" => "The score is 0.00 because the LLM disagreed."
+      })
+
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.9))
+
+      test_case =
+        TestCase.new!(
+          input: "What is the vacation policy?",
+          actual_output: "Employees get 20 days of PTO per year.",
+          retrieval_context: ["Employees receive 20 days paid time off annually."]
+        )
+
+      assert {:ok, result} =
+               Faithfulness.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :llm,
+                 system_one_model: system_one
+               )
+
+      assert result.score == 0
+      assert SystemOneMock.calls(system_one) == []
+    end
+  end
+
+  describe "measure/2 with RetrievedContextData" do
+    # deepeval 4.3.1 raises a TypeError joining RetrievedContextData into the
+    # truths prompt; DeepEvalEx renders each as its serialised form instead.
+    test "renders each RetrievedContextData as 'source: context' in the truths prompt" do
+      Mock.script(%{
+        "truths" => [%{"truths" => ["Paris is in France."]}],
+        "claims" => [%{"claims" => []}],
+        "reason" => [%{"reason" => "The score is 1.00 because there are no claims."}]
+      })
+
+      test_case =
+        TestCase.new!(
+          input: "Where is Paris?",
+          actual_output: "In France.",
+          retrieval_context: [
+            %DeepEvalEx.Schemas.RetrievedContextData{
+              context: "Paris is in France.",
+              source: "wiki"
+            },
+            "Lyon is in France."
+          ]
+        )
+
+      assert {:ok, _result} = Faithfulness.measure(test_case, adapter: :mock)
+
+      [truths_prompt] =
+        for %{step: "truths", prompt: prompt} <- Mock.scripted_prompts(), do: prompt
+
+      assert truths_prompt =~ "wiki: Paris is in France.\n\nLyon is in France."
     end
   end
 end

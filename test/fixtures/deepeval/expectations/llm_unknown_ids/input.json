@@ -1,0 +1,34 @@
+{
+  "description": "A duplicate verdict id: measure() raises before the reason call",
+  "test_case": {
+    "input": "Hi",
+    "actual_output": "Hello!",
+    "expectations": {
+      "must": [
+        "Greets the user"
+      ],
+      "must_not": []
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "verdicts": [
+      {
+        "verdicts": [
+          {
+            "id": "must[0]",
+            "status": "pass",
+            "reason": "It greets.",
+            "evidence": ""
+          },
+          {
+            "id": "must[0]",
+            "status": "pass",
+            "reason": "It greets again.",
+            "evidence": ""
+          }
+        ]
+      }
+    ]
+  }
+}

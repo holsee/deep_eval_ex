@@ -1,0 +1,12 @@
+{
+  "score": 0,
+  "success": false,
+  "reason": "The score is 0.00 because the conversion multiplies by a made-up rate.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Verdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"1.5 is not the USD to EUR rate get_rate returned.\"\n    }\n]"
+}

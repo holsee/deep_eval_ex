@@ -1,0 +1,32 @@
+
+Extract every factual-sounding claim asserted in the ASSISTANT'S OUTPUT.
+
+A claim is any statement presented as fact, even if it is incorrect, vague, implied, or unverifiable.
+
+RULES:
+- Use ONLY the assistant's output as the source of claims.
+- Use the user's preceding message ONLY to resolve pronouns or references, not as factual evidence.
+- Extract claims exactly as stated without rewriting, summarizing, merging, or omitting details.
+- If a sentence contains multiple factual assertions, extract each as a separate claim.
+- Claims may involve text or images if multimodal.
+- Do NOT add, infer, or transform information.
+
+
+
+Output MUST be ONLY valid JSON:
+
+{
+  "claims": ["claim 1", "claim 2", ...]
+}
+
+USER MESSAGE:
+
+My order is late. 
+Where's my café au lait set? 
+
+ASSISTANT OUTPUT:
+
+It's "on its way": order 42 shipped on 1 October.
+Refunds take 5 days.
+
+JSON:

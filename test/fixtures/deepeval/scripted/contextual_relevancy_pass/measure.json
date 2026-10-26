@@ -1,0 +1,12 @@
+{
+  "score": 1.0,
+  "success": true,
+  "reason": "The score is 1.00 because every statement names Paris as the capital of France.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Verdicts:\n[\n    {\n        \"verdicts\": [\n            {\n                \"statement\": \"Paris is the capital and largest city of France.\",\n                \"verdict\": \"yes\",\n                \"reason\": null\n            }\n        ]\n    },\n    {\n        \"verdicts\": [\n            {\n                \"statement\": \"France's capital, Paris, is home to the national government.\",\n                \"verdict\": \"yes\",\n                \"reason\": null\n            }\n        ]\n    }\n]"
+}

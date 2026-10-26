@@ -1,0 +1,17 @@
+
+[
+  {
+    "type": "noul",
+    "statement": "Every step of `actual_output` (with the tools in `tools_called`) (each tool call, LLM call and retrieval) was strictly necessary for the task the user asked for in `input`; none was redundant, repeated, speculative or done only to enrich the answer.",
+    "weight": 2
+  },
+  {
+    "type": "noul",
+    "statement": "`actual_output` (with the tools in `tools_called`) takes the most direct path to the task the user asked for in `input`, with no detours, re-queries or loops that a shorter sequence of actions would have avoided."
+  },
+  {
+    "type": "score",
+    "question": "Judging only the number and directness of its steps, not the quality of the result, how efficiently does `actual_output` (with the tools in `tools_called`) carry out the task the user asked for in `input`?",
+    "levels": ["Highly inefficient", "Low efficiency", "Moderate efficiency", "Strong efficiency", "Perfectly efficient"]
+  }
+]

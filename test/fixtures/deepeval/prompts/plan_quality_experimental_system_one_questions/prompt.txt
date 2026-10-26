@@ -1,0 +1,20 @@
+
+
+[
+  {
+    "type": "choice",
+    "question": "Would the plan the agent states in `actual_output`, if carried out as written, fully accomplish the task the user asked for in `input`, covering every requirement and prerequisite?",
+    "options": {"Yes, the plan is complete": 1.0, "No, the plan misses a requirement or prerequisite": 0.0, "The agent states no plan": null},
+    "weight": 2
+  },
+  {
+    "type": "choice",
+    "question": "Is every step of the plan the agent states in `actual_output` specific enough to execute, necessary for the task the user asked for in `input`, and in a logical order, with no vague, redundant or off-task step?",
+    "options": {"Yes, every step is clear, necessary and well ordered": 1.0, "No, some step is vague, redundant, off-task or out of order": 0.0, "The agent states no plan": null}
+  },
+  {
+    "type": "choice",
+    "question": "How good is the plan the agent states in `actual_output` for accomplishing the task the user asked for in `input`?",
+    "options": {"Inadequate plan": 0.0, "Weak plan": 0.25, "Adequate but flawed plan": 0.5, "Good plan": 0.75, "Excellent plan": 1.0, "The agent states no plan": null}
+  }
+]

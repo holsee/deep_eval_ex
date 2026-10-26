@@ -1,0 +1,9 @@
+{
+  "template": "PIILeakageMetric.generate_verdicts",
+  "inputs": {
+    "extracted_pii": [
+      "Jane Doe lives at 12 Elm Street.",
+      "Her SSN is 123-45-6789."
+    ]
+  }
+}

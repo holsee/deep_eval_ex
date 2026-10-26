@@ -1,0 +1,61 @@
+{
+  "description": "ContextualRelevancy in hybrid mode with Jev down: the LLM takes each node's verdicts",
+  "metrics": [
+    {
+      "kind": "contextual_relevancy",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris.",
+    "retrieval_context": [
+      "Rome is the capital of Italy. Paris is the capital of France.",
+      "The Louvre is in Paris."
+    ]
+  },
+  "system_one": {
+    "model": "exploding-jev",
+    "raises": {
+      "type": "ConnectionError",
+      "message": "Jev is down"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "contextual_relevancy": {
+      "reason": [
+        {
+          "reason": "The score is 0.33 because only 'Paris is the capital of France.' addresses the input; Rome and the Louvre do not."
+        }
+      ],
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "statement": "Rome is the capital of Italy.",
+              "verdict": "no",
+              "reason": "'Rome is the capital of Italy.' is about Italy."
+            },
+            {
+              "statement": "Paris is the capital of France.",
+              "verdict": "yes"
+            }
+          ]
+        },
+        {
+          "verdicts": [
+            {
+              "statement": "The Louvre is in Paris.",
+              "verdict": "no",
+              "reason": "'The Louvre is in Paris.' does not name the capital."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

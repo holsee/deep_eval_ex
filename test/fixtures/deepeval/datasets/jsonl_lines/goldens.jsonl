@@ -1,0 +1,4 @@
+{"input": "lists", "context": ["a", "b"], "retrieval_context": ["deepeval_source=s,deepeval_context=c", "r"], "tools_called": [{"name": "t", "input_parameters": {"x": 1}}], "token_cost": 1, "input_token_count": 4}
+
+   {"input": "strings", "context": "a|b", "retrieval_context": "", "tools_called": "[{\"name\": \"t\",}]", "expected_tools": [], "expectations": {"must": ["x"]}}  
+{"input": "nulls", "context": null, "tools_called": null, "output_token_count": 2.0}

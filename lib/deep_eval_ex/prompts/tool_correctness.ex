@@ -1,8 +1,14 @@
 # Copyright 2025 Steven Holdsworth (@holsee)
 # SPDX-License-Identifier: Apache-2.0
 #
-# Ported from deepeval/metrics/tool_correctness/template.py
+# Prompt text copied verbatim from deepeval 4.3.1
+# (deepeval/metrics/tool_correctness/templates/get_tool_selection_score.txt
+# and _experimental_system_one_tool_selection_score.txt),
+# Copyright Confident AI, Apache-2.0.
 # Original: https://github.com/confident-ai/deepeval
+#
+# test/deep_eval_ex/prompt_golden_test.exs checks every byte of the
+# prompts against deepeval's.
 
 defmodule DeepEvalEx.Prompts.ToolCorrectness do
   @moduledoc """
@@ -10,7 +16,19 @@ defmodule DeepEvalEx.Prompts.ToolCorrectness do
 
   Contains the tool selection evaluation prompt used when
   `available_tools` are provided.
+
+  `get_tool_selection_score/1` renders deepeval 4.3.1's
+  `ToolCorrectnessMetric.get_tool_selection_score` template byte for byte,
+  with tools formatted by `format_tools/1` as deepeval's
+  `print_tools_called` formats them. `system_one_tool_selection_score/0`
+  is its System One template, `_experimental_system_one_tool_selection_score`,
+  which takes no arguments.
   """
+
+  use DeepEvalEx.Prompts.EvaluationTemplate,
+    templates: [get_tool_selection_score: 1, system_one_tool_selection_score: 0]
+
+  alias DeepEvalEx.TestRun.JSON
 
   @doc """
   Generates a prompt for the LLM to evaluate tool selection quality.
@@ -84,8 +102,8 @@ defmodule DeepEvalEx.Prompts.ToolCorrectness do
 
     Return a valid JSON object with this exact structure:
     {
-        "score": float between 0.0 and 1.0,
-        "reason": "1-3 concise, factual sentences explaining the score. Reference specific tool names and descriptions when relevant."
+      "score": float between 0.0 and 1.0,
+      "reason": "1-3 concise, factual sentences explaining the score. Reference specific tool names and descriptions when relevant."
     }
 
     Do not include any additional commentary or output outside the JSON object.
@@ -101,32 +119,61 @@ defmodule DeepEvalEx.Prompts.ToolCorrectness do
     TOOL CALLS MADE BY AGENT:
     #{tools_called}
 
-    JSON:
+    JSON:\
     """
   end
 
   @doc """
-  Formats a list of ToolCall structs as a JSON-like string for prompt inclusion.
+  The question a System One model is asked about tool selection under the
+  `:hybrid` and `:system_one` eval modes, deepeval's
+  `_experimental_system_one_tool_selection_score` template: the instructions
+  of a Score over the metric's five tool selection levels, about a state
+  holding `input`, `tools_called` and `available_tools` (see
+  `DeepEvalEx.SystemOne.Spec.Score`).
   """
+  @spec system_one_tool_selection_score() :: String.t()
+  def system_one_tool_selection_score do
+    "Judging only which tools were chosen (not how well they were used or whether the " <>
+      "output was correct), how well do the tools in `tools_called` match what `input` " <>
+      "asks for, given the purpose of each tool in `available_tools`? Penalise " <>
+      "better-suited tools that were ignored, unnecessary extra tools, and tools poorly " <>
+      "matched to their purpose."
+  end
+
+  @doc """
+  Formats a list of ToolCall structs for prompt inclusion, as deepeval's
+  `print_tools_called` does.
+
+  Each tool call is its `json.dumps(indent=4)` (`name`, `type`,
+  `description`, `reasoning`, `output` and `input_parameters`, `null` when
+  unset, non-ASCII escaped) indented by two spaces, inside `[` and `]`. An
+  empty list formats as the empty string.
+  """
+  def format_tools([]), do: ""
+
   def format_tools(tools) when is_list(tools) do
     formatted =
       Enum.map_join(tools, ",\n", fn tool ->
         tool
-        |> Map.from_struct()
-        |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-        |> Map.new()
-        |> Jason.encode!(pretty: true)
-        |> indent(2)
+        |> tool_json()
+        |> JSON.encode!(indent: 4)
+        |> String.split("\n")
+        |> Enum.map_join("\n", &("  " <> &1))
       end)
 
     "[\n#{formatted}\n]"
   end
 
-  defp indent(string, spaces) do
-    pad = String.duplicate(" ", spaces)
-
-    string
-    |> String.split("\n")
-    |> Enum.map_join("\n", fn line -> "#{pad}#{line}" end)
+  # deepeval serialises ToolCall's fields in this order, its type as the
+  # enum value.
+  defp tool_json(tool) do
+    Jason.OrderedObject.new([
+      {"name", tool.name},
+      {"type", tool.type |> to_string() |> String.upcase()},
+      {"description", tool.description},
+      {"reasoning", tool.reasoning},
+      {"output", tool.output},
+      {"input_parameters", tool.input_parameters}
+    ])
   end
 end

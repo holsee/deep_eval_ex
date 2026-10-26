@@ -1,0 +1,6 @@
+{
+  "template": "FaithfulnessMetric.generate_claims",
+  "inputs": {
+    "actual_output": "Paris is the capital of France. The Louvre opened in 1893."
+  }
+}

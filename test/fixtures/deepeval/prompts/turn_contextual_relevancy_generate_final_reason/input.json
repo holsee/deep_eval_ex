@@ -1,0 +1,11 @@
+{
+  "template": "TurnContextualRelevancyMetric.generate_final_reason",
+  "inputs": {
+    "final_score": 0.25,
+    "success": false,
+    "reasons": [
+      "Most statements are about Rome.",
+      null
+    ]
+  }
+}

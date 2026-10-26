@@ -1,0 +1,33 @@
+Given the evaluation steps, return a JSON with two keys: 1) a `score` key that is STRICTLY EITHER 1 (follows the criteria 100% outlined in the evaluation steps), OR 0 (does not follow the criteria), and 2) a `reason` key, a reason for the given score, but DO NOT QUOTE THE SCORE in your reason. Please mention specific information from Input and Actual Output in your reason, but be very concise with it!
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+
+
+Evaluation Steps:
+1. Check that the actual output describes the image.
+
+
+Input:
+Describe [DEEPEVAL:IMAGE:red-dot] 
+
+Actual Output:
+A red dot. 
+
+
+
+**
+IMPORTANT: Please make sure to only return in JSON format, with the "score" and "reason" key. No words or explanation is needed.
+
+Example JSON:
+{
+  "reason": "The text does not follow the evaluation steps provided.",
+  "score": 0
+}
+**
+
+JSON:

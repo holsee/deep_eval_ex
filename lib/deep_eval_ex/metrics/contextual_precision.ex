@@ -17,6 +17,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   1. **Generate verdicts** - For each retrieval context node, determine if it's:
      - `yes` - Useful in arriving at the expected output
      - `no` - Not useful/irrelevant
+     Other verdicts are dropped.
   2. **Calculate score** - Weighted cumulative precision:
      - For each relevant node at position k: precision@k = relevant_so_far / k
      - Score = sum(precision@k for relevant nodes) / total_relevant_nodes
@@ -55,21 +56,76 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   ## Options
 
   - `:threshold` - Pass/fail threshold (default: 0.5)
+  - `:strict_mode` - Force the threshold to `1` and score below it `0`
+    (default: false)
   - `:include_reason` - Generate explanation (default: true)
   - `:model` - LLM model for evaluation
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
+  - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
+    (default: false)
+  - `:eval_mode` and `:system_one_model` - who decides, see "System One"
+
+  ## System One
+
+  Like deepeval 4.3.1's `ContextualPrecisionMetric`, the metric can route
+  its decisions to a System One model (see `DeepEvalEx.SystemOne.Mode`):
+
+  - `:hybrid` - the System One model judges each retrieval context node
+    against `input` and `expected_output`, one Noul per node
+    (`DeepEvalEx.Prompts.ContextualPrecision.system_one_verdict/0`), whose
+    P(yes) is a verdict: `0.5` and above `yes`, else `no`, with the reason
+    `"P(yes)=0.91"`. The LLM still writes the reason. If the model fails,
+    the LLM judges the nodes and the result's
+    `:system_one_fallback_reason` says why
+  - `:system_one` - one request about `input`, `retrieval_context` and
+    `expected_output` answers the whole metric
+    (`DeepEvalEx.Prompts.ContextualPrecision.system_one_questions/0`, see
+    `DeepEvalEx.SystemOne.Runner`): no LLM call is made, and the score and
+    reason are built from the answers
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
-  alias DeepEvalEx.{LLM.Adapter, Result}
+  alias DeepEvalEx.{LLM.Adapter, Metrics.BaseMetric, Metrics.QAG, Result}
+  alias DeepEvalEx.Metrics.Utils.Verbose
   alias DeepEvalEx.Prompts.ContextualPrecision, as: Template
+  alias DeepEvalEx.Prompts.EvaluationTemplate
   alias DeepEvalEx.Schemas.MetricOutputs.ContextualPrecision, as: Schema
+  alias DeepEvalEx.Schemas.RetrievedContextData
+  alias DeepEvalEx.SystemOne.{Decision, EvalSpec, Runner, Scored, Spec}
 
   @impl true
   def metric_name, do: "Contextual Precision"
 
   @impl true
   def required_params, do: [:input, :retrieval_context, :expected_output]
+
+  @doc """
+  Returns the judge model this metric calls with `opts`.
+  """
+  @impl true
+  defdelegate evaluation_model(opts), to: Adapter, as: :model_name
+
+  @doc """
+  The whole metric as one System One request under the `:system_one` eval
+  mode, deepeval's `_system_one_eval_spec`: its questions about the test
+  case's `input`, `retrieval_context` (in its order) and `expected_output`
+  (the metric's required params).
+
+  A multimodal test case has none (`nil`), as in deepeval: System One
+  reads text only.
+  """
+  @impl true
+  def system_one_eval_spec(%{multimodal: true}, _opts), do: nil
+
+  def system_one_eval_spec(_test_case, opts) do
+    %EvalSpec{
+      evaluation_params: required_params(),
+      questions: Scored.parse!(EvaluationTemplate.render(opts, Template, :system_one_questions))
+    }
+  end
 
   @doc """
   Measures contextual precision of the retrieval context ranking.
@@ -82,22 +138,46 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
   - `:model` - Model name
   """
   def do_measure(test_case, opts) do
-    threshold = Keyword.get(opts, :threshold, default_threshold())
+    case Runner.run(__MODULE__, test_case, opts) do
+      {:ok, result} -> {:ok, result}
+      :continue -> measure_with_llm(test_case, opts)
+    end
+  end
+
+  defp measure_with_llm(test_case, opts) do
+    # deepeval passes the test case's multimodal flag to its templates.
+    opts = Keyword.put(opts, :multimodal, Map.get(test_case, :multimodal, false))
+    threshold = BaseMetric.threshold(opts, default_threshold())
     include_reason = Keyword.get(opts, :include_reason, true)
 
     input = test_case.input
     expected_output = test_case.expected_output
-    retrieval_context = get_retrieval_context(test_case)
+    retrieval_context = group_retrieval_contexts(test_case.retrieval_context)
 
     with {:ok, verdicts} <- generate_verdicts(input, expected_output, retrieval_context, opts),
-         score = calculate_score(verdicts),
+         score =
+           BaseMetric.strict_score(calculate_score(verdicts),
+             strict_mode: Keyword.get(opts, :strict_mode, false),
+             threshold: threshold
+           ),
          {:ok, reason} <- maybe_generate_reason(score, input, verdicts, include_reason, opts) do
+      verbose_logs =
+        Verbose.construct_verbose_logs(
+          metric_name(),
+          [
+            "Verdicts:\n#{verdicts |> Verbose.verdict_models() |> Verbose.prettify_list()}",
+            "Score: #{Verbose.to_str(score)}\nReason: #{Verbose.to_str(reason)}"
+          ],
+          opts
+        )
+
       {:ok,
        Result.new(
          metric: metric_name(),
          score: score,
          threshold: threshold,
          reason: reason,
+         verbose_logs: verbose_logs,
          metadata: %{
            verdicts: verdicts,
            context_count: length(retrieval_context)
@@ -106,26 +186,86 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
     end
   end
 
-  defp get_retrieval_context(%{retrieval_context: ctx}) when is_list(ctx), do: ctx
-  defp get_retrieval_context(%{context: ctx}) when is_list(ctx), do: ctx
-  defp get_retrieval_context(_), do: []
-
   defp generate_verdicts(_input, _expected_output, [], _opts) do
     {:ok, []}
   end
 
+  # Under :hybrid the System One model judges the nodes; the LLM does when
+  # it is not asked or fails (deepeval's generate_qag_verdicts).
   defp generate_verdicts(input, expected_output, retrieval_context, opts) do
+    spec = %Spec.Verdicts{
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_verdict),
+      items: retrieval_context,
+      item_key: "node",
+      state: [input: input, expected_output: expected_output]
+    }
+
+    decision_opts = Keyword.put_new(opts, :metric_name, metric_name())
+
+    case Decision.verdicts(spec, QAG.yes_no(), decision_opts) do
+      {:ok, verdicts} -> {:ok, verdicts}
+      :llm -> llm_verdicts(input, expected_output, retrieval_context, opts)
+    end
+  end
+
+  defp llm_verdicts(input, expected_output, retrieval_context, opts) do
     prompt =
-      Template.generate_verdicts(
+      EvaluationTemplate.render(opts, Template, :generate_verdicts,
         input: input,
         expected_output: expected_output,
-        retrieval_context: retrieval_context
+        retrieval_context: retrieval_context,
+        multimodal: opts[:multimodal],
+        images: opts[:images]
       )
 
     case Adapter.generate_with_schema(prompt, Schema.verdicts_schema(), opts) do
       {:ok, response} -> Schema.parse_verdicts(response)
       {:error, _} = error -> error
     end
+  end
+
+  @doc """
+  Groups a retrieval context's `DeepEvalEx.Schemas.RetrievedContextData`
+  by source, as deepeval's `_group_retrieval_contexts`: the contexts of one
+  source become one document, `"Source: <source>\\n"` followed by them
+  joined with `"\\n---\\n"`, at the position of the source's first
+  context. Strings stay documents of their own, in place. The metric
+  judges and ranks these documents.
+
+  ## Examples
+
+      iex> alias DeepEvalEx.Schemas.RetrievedContextData
+      iex> DeepEvalEx.Metrics.ContextualPrecision.group_retrieval_contexts([
+      ...>   %RetrievedContextData{context: "Paris is in France.", source: "wiki"},
+      ...>   "Rome is in Italy.",
+      ...>   %RetrievedContextData{context: "Lyon is in France.", source: "wiki"}
+      ...> ])
+      ["Source: wiki\\nParis is in France.\\n---\\nLyon is in France.", "Rome is in Italy."]
+  """
+  @spec group_retrieval_contexts([String.t() | RetrievedContextData.t()]) :: [String.t()]
+  def group_retrieval_contexts(retrieval_context) do
+    {order, groups} =
+      Enum.reduce(retrieval_context, {[], %{}}, fn
+        %RetrievedContextData{source: source, context: context}, {order, groups} ->
+          case groups do
+            %{^source => contexts} -> {order, %{groups | source => [context | contexts]}}
+            _ -> {[{:grouped, source} | order], Map.put(groups, source, [context])}
+          end
+
+        text, {order, groups} when is_binary(text) ->
+          {[{:standalone, text} | order], groups}
+      end)
+
+    order
+    |> Enum.reverse()
+    |> Enum.map(fn
+      {:grouped, source} ->
+        "Source: #{source}\n" <>
+          (groups |> Map.fetch!(source) |> Enum.reverse() |> Enum.join("\n---\n"))
+
+      {:standalone, text} ->
+        text
+    end)
   end
 
   @doc """
@@ -180,10 +320,11 @@ defmodule DeepEvalEx.Metrics.ContextualPrecision do
 
   defp maybe_generate_reason(score, input, verdicts, true, opts) do
     prompt =
-      Template.generate_reason(
+      EvaluationTemplate.render(opts, Template, :generate_reason,
         score: score,
         input: input,
-        verdicts: verdicts
+        verdicts: verdicts,
+        multimodal: opts[:multimodal]
       )
 
     case Adapter.generate_with_schema(prompt, Schema.reason_schema(), opts) do

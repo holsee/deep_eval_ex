@@ -1,0 +1,16 @@
+{
+  "template": "ConversationCompletenessMetric.generate_verdicts",
+  "inputs": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Book a table for two in Zürich on Friday."
+      },
+      {
+        "role": "assistant",
+        "content": "Done: Café Odéon, Friday at 8pm."
+      }
+    ],
+    "intention": "User wants to book a table for two on Friday"
+  }
+}

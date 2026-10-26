@@ -1,0 +1,10 @@
+{
+  "template": "TurnContextualPrecisionMetric.generate_verdicts",
+  "inputs": {
+    "input": "\nWhen does it ship? ",
+    "expected_outcome": "It ships today.",
+    "retrieval_context": [
+      "Order 42 ships today."
+    ]
+  }
+}

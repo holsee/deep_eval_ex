@@ -1,0 +1,36 @@
+{
+  "score": 1.0,
+  "success": true,
+  "reason": "The score is 1.0 because it states the policy and offers an exchange.",
+  "threshold": 1.0,
+  "strict_mode": true,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "{\"verdicts\":[{\"id\":\"must[0]\",\"status\":\"pass\",\"reason\":\"It says used tickets can't be refunded.\",\"evidence\":\"Used tickets can't be refunded\"},{\"id\":\"must[1]\",\"status\":\"pass\",\"reason\":\"It offers an exchange.\",\"evidence\":\"exchange it within 30 days\"},{\"id\":\"must_not[0]\",\"status\":\"pass\",\"reason\":\"No refund is promised.\",\"evidence\":\"\"}]}",
+  "verdicts": [
+    {
+      "id": "must[0]",
+      "status": "pass",
+      "reason": "It says used tickets can't be refunded.",
+      "evidence": "Used tickets can't be refunded"
+    },
+    {
+      "id": "must[1]",
+      "status": "pass",
+      "reason": "It offers an exchange.",
+      "evidence": "exchange it within 30 days"
+    },
+    {
+      "id": "must_not[0]",
+      "status": "pass",
+      "reason": "No refund is promised.",
+      "evidence": ""
+    }
+  ],
+  "criteria": "{\"eval_mode\": \"llm\", \"system_one_model\": null}",
+  "confidence": null,
+  "raised": null
+}

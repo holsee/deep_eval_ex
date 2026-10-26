@@ -1,0 +1,12 @@
+{
+  "score": 0.5,
+  "success": true,
+  "reason": "The score is 0.50 because the output agrees with one context and contradicts the other.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Verdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"The output agrees that Paris is the capital of France.\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"The output does not say Paris is in Germany, but the context does, so it disagrees.\"\n    }\n]"
+}

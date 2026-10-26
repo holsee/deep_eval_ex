@@ -1,0 +1,15 @@
+{
+  "label": null,
+  "reason": null,
+  "error": "Evaluation LLM outputted an invalid JSON. Please use a better evaluation model.",
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "confidence": null,
+  "system_one_fallback_reason": null,
+  "raised": {
+    "type": "ValueError",
+    "message": "Evaluation LLM outputted an invalid JSON. Please use a better evaluation model."
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "description": "JevEval with a weighted Noul, a Score and a Choice whose N/A option stays unlikely",
+  "metrics": [
+    {
+      "kind": "jev_eval",
+      "params": {
+        "name": "Helpfulness",
+        "evaluation_params": [
+          "input",
+          "actual_output"
+        ],
+        "threshold": 0.6,
+        "questions": [
+          {
+            "type": "noul",
+            "statement": "`actual_output` answers `input`.",
+            "weight": 2
+          },
+          {
+            "type": "score",
+            "question": "How complete is `actual_output`?",
+            "levels": [
+              "Not at all",
+              "Partly",
+              "Fully"
+            ]
+          },
+          {
+            "type": "choice",
+            "question": "What tone does `actual_output` take?",
+            "options": {
+              "friendly": 1.0,
+              "neutral": 0.5,
+              "rude": 0.0,
+              "no_reply": null
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris is the capital of France. It is known for café culture."
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.88
+        }
+      },
+      "scores": {
+        "q_1": {
+          "score": 1.6,
+          "probabilities": {
+            "0": 0.05,
+            "1": 0.3,
+            "2": 0.65
+          },
+          "confidence": 0.48
+        }
+      },
+      "choices": {
+        "q_2": {
+          "choice": "neutral",
+          "probabilities": {
+            "friendly": 0.35,
+            "neutral": 0.45,
+            "rude": 0.15,
+            "no_reply": 0.05
+          },
+          "confidence": 0.27
+        }
+      }
+    }
+  }
+}

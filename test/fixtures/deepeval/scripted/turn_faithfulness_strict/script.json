@@ -1,0 +1,86 @@
+{
+  "description": "TurnFaithfulness in strict mode without reasons: a window with a contradicted claim scores 0",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "turn_faithfulness",
+    "params": {
+      "strict_mode": true,
+      "include_reason": false
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "When did order 42 ship?"
+      },
+      {
+        "role": "assistant",
+        "content": "On 1 October, by courier.",
+        "retrieval_context": [
+          "Order 42 shipped on 1 October."
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Thanks!"
+      },
+      {
+        "role": "assistant",
+        "content": "Anything else?",
+        "retrieval_context": [
+          "Order 42 shipped on 1 October."
+        ]
+      }
+    ]
+  },
+  "responses": {
+    "turn_faithfulness": {
+      "truths": [
+        {
+          "truths": [
+            "Order 42 shipped on 1 October."
+          ]
+        },
+        {
+          "truths": [
+            "Order 42 shipped on 1 October."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": [
+            "Order 42 shipped on 1 October.",
+            "Order 42 was sent by courier."
+          ]
+        },
+        {
+          "claims": [
+            "Order 42 shipped on 1 October."
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "no",
+              "reason": "Order 42 was not sent by courier."
+            }
+          ]
+        },
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

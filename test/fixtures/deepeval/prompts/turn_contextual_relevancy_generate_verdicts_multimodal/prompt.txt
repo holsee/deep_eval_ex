@@ -1,0 +1,45 @@
+Based on the user message and context (image or string), please generate a JSON object to indicate whether the context is relevant to the provided user message. The JSON will be a list of 'verdicts', with 2 mandatory fields: 'verdict' and 'statement', and 1 optional field: 'reason'.
+If the context is textual, you should first extract the statements found in the context if the context, which are high level information found in the context, before deciding on a verdict and optionally a reason for each statement.
+If the context is an image, `statement` should be a description of the image. Do not assume any information not visibly available.
+The 'verdict' key should STRICTLY be either 'yes' or 'no', and states whether the statement or image is relevant to the user message.
+Provide a 'reason' ONLY IF verdict is no. You MUST quote the irrelevant parts of the statement or image to back up your reason.
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+- When evaluating claims, compare them to BOTH textual and visual evidence.
+- If the claim references something not clearly visible, respond with 'borderline'.
+
+
+**
+IMPORTANT: Please make sure to only return in JSON format.
+Example Context: "Einstein won the Nobel Prize for his discovery of the photoelectric effect. He won the Nobel Prize in 1968. There was a cat."
+Example User Message: "What were some of Einstein's achievements?"
+
+Example:
+{
+  "verdicts": [
+    {
+      "statement": "Einstein won the Nobel Prize for his discovery of the photoelectric effect in 1968",
+      "verdict": "yes"
+    },
+    {
+      "statement": "There was a cat.",
+      "reason": "The retrieval context contained the information 'There was a cat' when it has nothing to do with Einstein's achievements.",
+      "verdict": "no"
+    }
+  ]
+}
+**
+
+User Message:
+
+What is in the picture? 
+
+Context:
+The picture shows a red bicycle.
+
+JSON:

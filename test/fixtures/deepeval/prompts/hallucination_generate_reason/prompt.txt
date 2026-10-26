@@ -1,0 +1,28 @@
+Given a list of factual alignments and contradictions, which highlights alignment/contradictions between the `actual output` and `contexts, use it to provide a reason for the hallucination score in a CONCISELY. Note that the hallucination score ranges from 0 - 1 and measures how well the `actual output` aligns with the `contexts`, and the higher the better.
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+
+
+** 
+IMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason.
+Example JSON:
+{
+  "reason": "The score is <hallucination_score> because <your_reason>."
+}
+**
+
+Factual Alignments:
+["The actual output agrees that Paris is France's capital."]
+
+Contradictions:
+['The actual output says 1893; the context says 1793.']
+
+Hallucination Score:
+0.50
+
+JSON:

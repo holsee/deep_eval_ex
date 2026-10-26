@@ -1,0 +1,112 @@
+{
+  "description": "TurnFaithfulness with window_size 1, penalize_ambiguous_claims and a truths_extraction_limit: a raw-text verdict list in a code fence (one verdict dropped), a window without retrieval context or claims, and a contradiction",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "turn_faithfulness",
+    "params": {
+      "window_size": 1,
+      "penalize_ambiguous_claims": true,
+      "truths_extraction_limit": 2,
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Hi, I need help with order 42."
+      },
+      {
+        "role": "user",
+        "content": "It's late."
+      },
+      {
+        "role": "assistant",
+        "content": "Sorry! Order 42 shipped on 2 October and refunds take 2 days.",
+        "retrieval_context": [
+          "Order 42 shipped on 1 October.",
+          "Refunds take 5 business days."
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Thanks."
+      },
+      {
+        "role": "assistant",
+        "content": "You're welcome!"
+      },
+      {
+        "role": "user",
+        "content": "Is the café open?"
+      },
+      {
+        "role": "assistant",
+        "content": "The café opens at 8.",
+        "retrieval_context": [
+          "The café opens at 9."
+        ]
+      }
+    ]
+  },
+  "responses": {
+    "turn_faithfulness": {
+      "truths": [
+        {
+          "truths": [
+            "Order 42 shipped on 1 October.",
+            "Refunds take 5 business days."
+          ]
+        },
+        {
+          "truths": []
+        },
+        {
+          "truths": [
+            "The café opens at 9."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": [
+            "Order 42 shipped on 1 October.",
+            "Refunds take 2 days.",
+            "The courier is DHL.",
+            "Order 42 is late."
+          ]
+        },
+        {
+          "claims": []
+        },
+        {
+          "claims": [
+            "The café opens at 8."
+          ]
+        }
+      ],
+      "verdicts": [
+        "```json\n{\"verdicts\": [{\"verdict\": \"yes\"}, {\"verdict\": \"No, it takes 5\", \"reason\": \"Refunds take 5 business days.\"}, {\"verdict\": \"borderline\", \"reason\": \"The courier is not mentioned.\"}, {\"verdict\": \"maybe\"}]}\n```",
+        {
+          "verdicts": [
+            {
+              "verdict": "no",
+              "reason": "The café opens at 9, not 8."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "Refunds take 5 business days, not 2."
+        },
+        {
+          "reason": "The café opens at 9, not 8."
+        },
+        {
+          "reason": "The score is 0.44 because the assistant got the refund time and opening hours wrong."
+        }
+      ]
+    }
+  }
+}

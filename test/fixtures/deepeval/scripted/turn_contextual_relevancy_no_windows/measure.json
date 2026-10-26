@@ -1,0 +1,12 @@
+{
+  "score": 1,
+  "success": true,
+  "reason": "There were no retrieval contexts in your turns to evaluate, hence the score is 1",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Final Score: 1\n"
+}

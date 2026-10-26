@@ -1,0 +1,9 @@
+{
+  "template": "SummarizationMetric._experimental_system_one_questions",
+  "inputs": {
+    "assessment_questions": [
+      "Does the park open in May?",
+      "Is the café <open> & \"busy\"?"
+    ]
+  }
+}

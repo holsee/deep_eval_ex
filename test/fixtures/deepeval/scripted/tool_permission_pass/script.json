@@ -1,0 +1,29 @@
+{
+  "description": "ToolPermission: every call is on the allowlist",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "tool_permission",
+    "params": {
+      "allowed_tools": [
+        "search_kb",
+        "reply"
+      ]
+    }
+  },
+  "test_case": {
+    "input": "How do I reset my password?",
+    "actual_output": "Use the 'Forgot password' link.",
+    "tools_called": [
+      {
+        "name": "search_kb",
+        "input_parameters": {
+          "query": "reset password"
+        }
+      },
+      {
+        "name": "reply"
+      }
+    ]
+  },
+  "responses": {}
+}

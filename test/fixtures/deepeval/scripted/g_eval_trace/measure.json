@@ -1,0 +1,12 @@
+{
+  "score": 0.9,
+  "success": true,
+  "reason": "booking_agent searched, then called book_table with Saturday and Café Odéon, and confirm repeats what book_table returned.",
+  "threshold": 0.7,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Criteria:\nDetermine whether the agent booked what the user asked for, using the tool results it got. \n \nEvaluation Steps:\n[\n    \"Check that booking_agent called book_table with the day and restaurant asked for.\",\n    \"Check that the root output agrees with what book_table returned.\"\n] \n \nRubric:\n0-3: Wrong booking or no tool call.\n4-7: Right booking, output disagrees.\n8-10: Right booking, faithful output. \n \nScore: 0.9"
+}

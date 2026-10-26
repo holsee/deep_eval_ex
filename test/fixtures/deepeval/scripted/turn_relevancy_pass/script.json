@@ -1,0 +1,47 @@
+{
+  "description": "TurnRelevancy: both assistant turns are relevant, one window per unit interaction",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "turn_relevancy",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order is late."
+      },
+      {
+        "role": "assistant",
+        "content": "Sorry! Let me check order 42 for you."
+      },
+      {
+        "role": "user",
+        "content": "Thanks. When will it arrive?"
+      },
+      {
+        "role": "assistant",
+        "content": "It ships today and arrives on Friday."
+      }
+    ]
+  },
+  "responses": {
+    "turn_relevancy": {
+      "reason,verdict": [
+        {
+          "verdict": "yes"
+        },
+        {
+          "verdict": "yes"
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1 because every assistant message answers the user."
+        }
+      ]
+    }
+  }
+}

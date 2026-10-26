@@ -1,0 +1,17 @@
+
+⚠ WARNING: No hyperparameters logged.
+» Log hyperparameters to attribute prompts and models to your test runs.
+
+================================================================================
+
+
+✓ Evaluation completed 🎉! (time taken: 0.12s | token cost: 0.000642 USD)
+» Test Results (1 total tests):
+   » Pass Rate: 0.0% | Passed: 0 | Failed: 1
+
+ ================================================================================ 
+
+» Want to share evals with your team, or a place for your test cases to live? ❤️ 🏡
+  » Run 'deepeval view' to analyze and save testing results on Confident AI.
+
+

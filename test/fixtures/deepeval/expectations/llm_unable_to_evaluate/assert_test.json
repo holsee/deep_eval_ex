@@ -1,0 +1,6 @@
+{
+  "raised": {
+    "type": "ValueError",
+    "message": "Unable to evaluate expectations:\nmust[0] States the refund policy: pass — It states the policy. Evidence: \nmust[1] Offers the café exchange: unable_to_evaluate — The exchange tool output is missing. Evidence: \nmust_not[0] Promises a refund: pass — No refund is promised. Evidence: "
+  }
+}

@@ -1,0 +1,60 @@
+[
+  {
+    "uuid": "04151e47-4a43-4b04-b6c9-f78f81a697b5",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "15e3068a-4221-4230-a217-a77a53a34a64",
+        "name": "agent",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.924Z",
+        "endTime": "2026-10-23T03:23:29.925Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "planned",
+        "availableTools": [],
+        "agentHandoffs": []
+      }
+    ],
+    "llmSpans": [],
+    "retrieverSpans": [],
+    "toolSpans": [
+      {
+        "uuid": "5b0864c8-c812-4c56-b500-b5846ff204bf",
+        "name": "search",
+        "status": "SUCCESS",
+        "type": "tool",
+        "parentUuid": "15e3068a-4221-4230-a217-a77a53a34a64",
+        "startTime": "2026-10-23T03:23:29.925Z",
+        "endTime": "2026-10-23T03:23:29.925Z",
+        "input": {
+          "query": "more How do I reset my password?"
+        },
+        "output": "hit for more How do I reset my password?"
+      },
+      {
+        "uuid": "b04bf1bd-f2ad-4092-905e-1f3ab28983ac",
+        "name": "search",
+        "status": "SUCCESS",
+        "type": "tool",
+        "parentUuid": "15e3068a-4221-4230-a217-a77a53a34a64",
+        "startTime": "2026-10-23T03:23:29.925Z",
+        "endTime": "2026-10-23T03:23:29.925Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "hit for How do I reset my password?"
+      }
+    ],
+    "startTime": "2026-10-23T03:23:29.924Z",
+    "endTime": "2026-10-23T03:23:29.925Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "planned",
+    "status": "SUCCESS"
+  }
+]

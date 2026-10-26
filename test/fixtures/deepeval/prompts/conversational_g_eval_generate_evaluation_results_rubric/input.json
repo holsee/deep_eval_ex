@@ -1,0 +1,70 @@
+{
+  "template": "ConversationalGEval.generate_evaluation_results",
+  "inputs": {
+    "evaluation_steps": [
+      "Check that the assistant's answers are grounded in its retrieval context.",
+      "Check that the assistant called the right tools."
+    ],
+    "evaluation_params": [
+      "role",
+      "content",
+      "retrieval_context",
+      "tools_called"
+    ],
+    "rubric": [
+      {
+        "score_range": [
+          0,
+          3
+        ],
+        "expected_outcome": "Ungrounded answers or wrong tools."
+      },
+      {
+        "score_range": [
+          4,
+          7
+        ],
+        "expected_outcome": "Partly grounded answers."
+      },
+      {
+        "score_range": [
+          8,
+          10
+        ],
+        "expected_outcome": "Grounded answers and the right tools."
+      }
+    ],
+    "test_case": {
+      "expected_outcome": "Not an evaluation param, so not in the prompt.",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Where is order 42?"
+        },
+        {
+          "role": "assistant",
+          "content": "It shipped on 1 October.",
+          "retrieval_context": [
+            "Orders ship within 2 days.",
+            {
+              "context": "Order 42 shipped on 1 October.",
+              "source": "orders.db"
+            }
+          ],
+          "tools_called": [
+            {
+              "name": "lookup_order",
+              "description": "Find an order",
+              "input_parameters": {
+                "order": 42
+              },
+              "output": {
+                "status": "shipped"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

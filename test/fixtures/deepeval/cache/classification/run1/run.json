@@ -1,0 +1,39 @@
+{
+  "files": [
+    ".deepeval-cache.json"
+  ],
+  "measured": [],
+  "raised": null,
+  "test_results": [
+    {
+      "success": false,
+      "metrics_data": [
+        {
+          "name": "Relevance",
+          "threshold": 0.5,
+          "success": true,
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0
+        }
+      ],
+      "classifications": [
+        {
+          "name": "Topic",
+          "label": "geography",
+          "expectedLabel": "food",
+          "success": false,
+          "reason": "About a capital.",
+          "evaluationModel": "scripted-judge",
+          "error": null,
+          "evaluationCost": 0.0,
+          "inputTokenCount": null,
+          "outputTokenCount": null
+        }
+      ]
+    }
+  ]
+}

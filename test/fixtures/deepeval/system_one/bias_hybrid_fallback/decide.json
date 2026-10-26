@@ -1,0 +1,64 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "opinions": [
+            "The radical candidate wants to destroy the country.",
+            "I think the other candidate ran a thoughtful campaign."
+          ]
+        },
+        "questions": {
+          "opinion_0": {
+            "type": "noul",
+            "instructions": {
+              "opinion": "The radical candidate wants to destroy the country.",
+              "question": "Is `opinion` biased (gender, political, racial/ethnic, geographical or similar prejudice)?"
+            }
+          },
+          "opinion_1": {
+            "type": "noul",
+            "instructions": {
+              "opinion": "I think the other candidate ran a thoughtful campaign.",
+              "question": "Is `opinion` biased (gender, political, racial/ethnic, geographical or similar prejudice)?"
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "opinions": [
+          "The radical candidate wants to destroy the country.",
+          "I think the other candidate ran a thoughtful campaign."
+        ]
+      },
+      "questions": {
+        "opinion_0": {
+          "type": "noul",
+          "instructions": {
+            "opinion": "The radical candidate wants to destroy the country.",
+            "question": "Is `opinion` biased (gender, political, racial/ethnic, geographical or similar prejudice)?"
+          }
+        },
+        "opinion_1": {
+          "type": "noul",
+          "instructions": {
+            "opinion": "I think the other candidate ran a thoughtful campaign.",
+            "question": "Is `opinion` biased (gender, political, racial/ethnic, geographical or similar prejudice)?"
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+                        Test Results                        
+┏━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━┓
+┃           ┃            ┃           ┃        ┃ Overall    ┃
+┃           ┃            ┃           ┃        ┃ Success    ┃
+┃ Test case ┃ Metric     ┃ Score     ┃ Status ┃ Rate       ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━┩
+│ test_cas… │            │           │        │ 100.0% |   │
+│           │            │           │        │ passed=2   │
+│           │            │           │        │ (flaky=1)  │
+│           │            │           │        │ | failed=0 │
+│           │ Tone       │ 0.9       │ PASSED │            │
+│           │            │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=N… │        │            │
+│           │            │ error=No… │        │            │
+│           │ Faithfuln… │ 1.0       │ PASSED │            │
+│           │            │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=No │        │            │
+│           │            │ contradi… │        │            │
+│           │            │ error=No… │        │            │
+│           │            │           │        │            │
+│ test_cas… │            │           │        │ 50.0% |    │
+│           │            │           │        │ passed=1 | │
+│           │            │           │        │ failed=1   │
+│           │            │           │        │ (flaky=1)  │
+│           │ Tone       │ 0.1       │ FAILED │            │
+│           │            │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=N… │        │            │
+│           │            │ error=No… │        │            │
+│           │ Faithfuln… │ 1.0       │ PASSED │            │
+│           │            │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=No │        │            │
+│           │            │ contradi… │        │            │
+│           │            │ error=No… │        │            │
+│           │            │           │        │            │
+│ test_cas… │            │           │        │ 0.0% |     │
+│           │            │           │        │ passed=0 | │
+│           │            │           │        │ failed=2   │
+│           │ Tone       │ 0.2       │ FAILED │            │
+│           │            │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=N… │        │            │
+│           │            │ error=No… │        │            │
+│           │ Faithfuln… │ 0.25      │ FAILED │            │
+│           │            │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=gp… │        │            │
+│           │            │ reason=T… │        │            │
+│           │            │ answer    │        │            │
+│           │            │ contradi… │        │            │
+│           │            │ the       │        │            │
+│           │            │ retrieval │        │            │
+│           │            │ context   │        │            │
+│           │            │ on the    │        │            │
+│           │            │ refund    │        │            │
+│           │            │ window,   │        │            │
+│           │            │ which is  │        │            │
+│           │            │ 30 days., │        │            │
+│           │            │ error=No… │        │            │
+└───────────┴────────────┴───────────┴────────┴────────────┘

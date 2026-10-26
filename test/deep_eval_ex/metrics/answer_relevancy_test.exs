@@ -6,6 +6,8 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
 
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.AnswerRelevancy
+  alias DeepEvalEx.SystemOne.Adapters.Mock, as: SystemOneMock
+  alias DeepEvalEx.SystemOne.{EvalSpec, Scored}
   alias DeepEvalEx.TestCase
 
   setup do
@@ -161,9 +163,8 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
     end
   end
 
-  describe "measure/2 with ambiguous statements (idk)" do
-    test "treats idk verdicts as relevant (supporting information)" do
-      # Mock statements extraction
+  describe "measure/2 with borderline statements" do
+    setup do
       Mock.set_schema_response(
         ~r/breakdown and generate a list of statements/i,
         %{
@@ -174,18 +175,6 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
         }
       )
 
-      # Mock verdicts - one yes, one idk
-      Mock.set_schema_response(
-        ~r/determine whether each statement is relevant/i,
-        %{
-          "verdicts" => [
-            %{"verdict" => "yes"},
-            %{"verdict" => "idk", "reason" => "Company history is tangentially related."}
-          ]
-        }
-      )
-
-      # Mock reason generation
       Mock.set_schema_response(
         ~r/provide a CONCISE reason for the score/i,
         %{
@@ -200,15 +189,84 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
           actual_output: "The laptop has a Retina display. Our company was founded in 2010."
         )
 
+      %{test_case: test_case}
+    end
+
+    test "treats borderline verdicts as relevant (supporting information)", %{
+      test_case: test_case
+    } do
+      Mock.set_schema_response(
+        ~r/determine whether each statement is relevant/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "yes"},
+            %{"verdict" => "borderline", "reason" => "Company history is tangentially related."}
+          ]
+        }
+      )
+
       assert {:ok, result} = AnswerRelevancy.measure(test_case, adapter: :mock)
-      # idk counts as relevant
-      assert result.score == 1.0
+      assert result.score === 1.0
       assert result.success == true
+
+      assert [%{verdict: :yes}, %{verdict: :borderline}] = result.metadata.verdicts
+    end
+
+    test "reads the legacy idk verdict as borderline", %{test_case: test_case} do
+      Mock.set_schema_response(
+        ~r/determine whether each statement is relevant/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "no", "reason" => "Not a feature."},
+            %{"verdict" => "idk", "reason" => "Company history is tangentially related."}
+          ]
+        }
+      )
+
+      assert {:ok, result} = AnswerRelevancy.measure(test_case, adapter: :mock)
+      assert result.score === 0.5
+      assert [%{verdict: :no}, %{verdict: :borderline}] = result.metadata.verdicts
+    end
+  end
+
+  describe "measure/2 verdict normalisation" do
+    test "reads verbose verdicts by their leading word and drops unknown ones" do
+      Mock.set_schema_response(
+        ~r/breakdown and generate a list of statements/i,
+        %{"statements" => ["Retina display.", "Founded in 2010.", "Nice weather."]}
+      )
+
+      Mock.set_schema_response(
+        ~r/determine whether each statement is relevant/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "Yes, it is relevant."},
+            %{"verdict" => "No", "reason" => "Not a feature."},
+            %{"verdict" => "maybe", "reason" => "Unsure."}
+          ]
+        }
+      )
+
+      Mock.set_schema_response(
+        ~r/provide a CONCISE reason for the score/i,
+        %{"reason" => "The score is 0.50."}
+      )
+
+      test_case =
+        TestCase.new!(
+          input: "What are the features of the new laptop?",
+          actual_output: "Retina display. Founded in 2010. Nice weather."
+        )
+
+      assert {:ok, result} = AnswerRelevancy.measure(test_case, adapter: :mock)
+      # The unknown verdict is dropped, not counted as irrelevant: 1 / 2
+      assert result.score === 0.5
+      assert [%{verdict: :yes}, %{verdict: :no}] = result.metadata.verdicts
     end
   end
 
   describe "measure/2 with no statements" do
-    test "returns score 1.0 when no statements extracted" do
+    test "returns score 1 when no statements extracted" do
       # Mock statements extraction - empty
       Mock.set_schema_response(
         ~r/breakdown and generate a list of statements/i,
@@ -228,7 +286,8 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
         )
 
       assert {:ok, result} = AnswerRelevancy.measure(test_case, adapter: :mock)
-      assert result.score == 1.0
+      # deepeval's shared QAG scoring returns the integer 1 for no verdicts
+      assert result.score === 1
       assert result.success == true
     end
   end
@@ -385,8 +444,48 @@ defmodule DeepEvalEx.Metrics.AnswerRelevancyTest do
         actual_output: ""
       }
 
-      assert {:error, {:missing_params, [:actual_output]}} =
+      assert {:error, {:empty_param, :actual_output}} =
                AnswerRelevancy.measure(test_case, adapter: :mock)
+    end
+  end
+
+  describe "System One" do
+    test "system_one_eval_spec/2 asks deepeval's questions about the input and output" do
+      assert %EvalSpec{
+               evaluation_params: [:input, :actual_output],
+               questions: [
+                 %Scored.Noul{statement: "Every statement in" <> _, weight: 2.0},
+                 %Scored.Noul{statement: "`actual_output` directly addresses" <> _, weight: 1.0},
+                 %Scored.Score{
+                   levels: ["None of it", "Less than half", "Most of it", "All of it"]
+                 }
+               ]
+             } = AnswerRelevancy.system_one_eval_spec(%TestCase{}, [])
+    end
+
+    test "hybrid asks System One nothing when there are no statements" do
+      Mock.set_schema_response(
+        ~r/breakdown and generate a list of statements/i,
+        %{"statements" => []}
+      )
+
+      Mock.set_schema_response(
+        ~r/provide a CONCISE reason for the score/i,
+        %{"reason" => "The score is 1.00 because there are no statements to evaluate."}
+      )
+
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.9))
+      test_case = TestCase.new!(input: "What are the features?", actual_output: "I don't know.")
+
+      assert {:ok, result} =
+               AnswerRelevancy.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one
+               )
+
+      assert result.score === 1
+      assert SystemOneMock.calls(system_one) == []
     end
   end
 end

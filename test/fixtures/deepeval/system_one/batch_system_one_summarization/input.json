@@ -1,0 +1,70 @@
+{
+  "description": "Summarization and AnswerRelevancy batched into one request about input and actual_output by evaluate()",
+  "batched": true,
+  "metrics": [
+    {
+      "kind": "summarization",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    },
+    {
+      "kind": "answer_relevancy",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+    "actual_output": "The council approved a riverside park with a lake. It opens in June."
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 8.4e-05,
+      "input_tokens": 2000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "m0.q_0": {
+          "probability": 0.3
+        },
+        "m0.q_1": {
+          "probability": 0.8
+        },
+        "m1.q_0": {
+          "probability": 0.9
+        },
+        "m1.q_1": {
+          "probability": 0.85
+        }
+      },
+      "scores": {
+        "m0.q_2": {
+          "score": 1,
+          "probabilities": {
+            "0": 0.1,
+            "1": 0.6,
+            "2": 0.2,
+            "3": 0.1
+          },
+          "confidence": 0.35
+        },
+        "m1.q_2": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.0,
+            "1": 0.05,
+            "2": 0.15,
+            "3": 0.8
+          },
+          "confidence": 0.8
+        }
+      }
+    }
+  }
+}

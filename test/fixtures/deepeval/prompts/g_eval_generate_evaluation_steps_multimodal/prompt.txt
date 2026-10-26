@@ -1,0 +1,22 @@
+Given an evaluation criteria which outlines how you should judge the Input and Actual Output, generate 3-4 concise evaluation steps based on the criteria below. You MUST make it clear how to evaluate Input and Actual Output in relation to one another.
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+
+
+Evaluation Criteria:
+Determine whether the actual output describes the image in the input.
+
+**
+IMPORTANT: Please make sure to only return in JSON format, with the "steps" key as a list of strings. No words or explanation is needed.
+Example JSON:
+{
+  "steps": <list_of_strings>
+}
+**
+
+JSON:

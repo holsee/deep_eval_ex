@@ -1,0 +1,12 @@
+{
+  "template": "TurnFaithfulnessMetric.generate_final_reason",
+  "inputs": {
+    "final_score": 0.6666666666666666,
+    "success": true,
+    "reasons": [
+      "The refund time contradicts the context.",
+      null,
+      "<no claims to verify>"
+    ]
+  }
+}

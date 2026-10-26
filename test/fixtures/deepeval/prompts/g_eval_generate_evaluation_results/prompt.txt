@@ -1,0 +1,41 @@
+You are an evaluator. Given the following evaluation steps, assess the response below and return a JSON object with two fields:
+
+- `"score"`: an integer between 0 and 10, with 10 indicating strong alignment with the evaluation steps and 0 indicating no alignment.
+- `"reason"`: a brief explanation for why the score was given. This must mention specific strengths or shortcomings, referencing relevant details from the input. Do **not** quote the score itself in the explanation.
+
+Your explanation should:
+- Be specific and grounded in the evaluation steps.
+- Mention key details from the test case parameters.
+- Be concise, clear, and focused on the evaluation logic.
+
+
+Only return valid JSON. Do **not** include any extra commentary or text.
+
+---
+
+Evaluation Steps:
+1. Read the input's question.
+2. Check that the actual output answers it with the right fact.
+
+
+Test Case:
+Input:
+What is the capital of France? 
+
+Actual Output:
+Paris is the capital of France. 
+
+
+
+Parameters:
+Input and Actual Output
+
+
+---
+**Example JSON:**
+{
+  "reason": "your concise and informative reason here",
+  "score": 0
+}
+
+JSON:

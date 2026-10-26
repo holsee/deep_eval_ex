@@ -1,0 +1,17 @@
+{
+  "success": null,
+  "classifications": [
+    {
+      "name": "ticket_type",
+      "label": "Account Access",
+      "expectedLabel": null,
+      "success": null,
+      "reason": "Login trouble.",
+      "evaluationModel": "scripted-judge",
+      "error": null,
+      "evaluationCost": null,
+      "inputTokenCount": null,
+      "outputTokenCount": null
+    }
+  ]
+}

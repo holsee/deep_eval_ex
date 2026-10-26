@@ -1,0 +1,87 @@
+{
+  "description": "KnowledgeRetention and RoleAdherence batched into one request by evaluate(), the state holding the turns and the chatbot_role",
+  "batched": true,
+  "metrics": [
+    {
+      "kind": "knowledge_retention",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    },
+    {
+      "kind": "role_adherence",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "chatbot_role": "A cheerful travel agent who keeps every reply short.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "I'm flying to Lisbon on 3 May."
+      },
+      {
+        "role": "assistant",
+        "content": "Lovely! Where are you flying to?"
+      },
+      {
+        "role": "user",
+        "content": "Lisbon. I'm vegetarian, too."
+      },
+      {
+        "role": "assistant",
+        "content": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!"
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 8.4e-05,
+      "input_tokens": 2001,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "m0.q_0": {
+          "probability": 0.4
+        },
+        "m0.q_1": {
+          "probability": 0.25
+        },
+        "m1.q_0": {
+          "probability": 0.88
+        },
+        "m1.q_1": {
+          "probability": 0.9
+        }
+      },
+      "scores": {
+        "m0.q_2": {
+          "score": 1,
+          "probabilities": {
+            "0": 0.1,
+            "1": 0.5,
+            "2": 0.3,
+            "3": 0.1
+          },
+          "confidence": 0.4
+        },
+        "m1.q_2": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.0,
+            "1": 0.05,
+            "2": 0.15,
+            "3": 0.8
+          },
+          "confidence": 0.8
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "template": "GoalAccuracyMetric.get_final_reason",
+  "inputs": {
+    "final_score": 0.625,
+    "threshold": 0.5,
+    "goal_scores": [
+      {
+        "score": 1.0,
+        "reason": "The table was booked."
+      },
+      {
+        "score": 0.5,
+        "reason": "The user's agenda is missing."
+      }
+    ],
+    "plan_scores": [
+      {
+        "score": 0.75,
+        "reason": "A clear plan."
+      },
+      {
+        "score": 0.25,
+        "reason": "No plan for the agenda."
+      }
+    ]
+  }
+}

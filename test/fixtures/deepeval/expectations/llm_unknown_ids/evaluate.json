@@ -1,0 +1,20 @@
+{
+  "success": false,
+  "metrics_data": [
+    {
+      "name": "Expectations",
+      "threshold": 1.0,
+      "success": false,
+      "strictMode": true,
+      "flaky": false,
+      "evaluationModel": "scripted-judge",
+      "error": "Expectation judge returned missing, duplicate, or unknown verdict IDs.",
+      "expectationsData": {
+        "success": false,
+        "verdicts": [],
+        "evaluationModel": "scripted-judge",
+        "error": "Expectation judge returned missing, duplicate, or unknown verdict IDs."
+      }
+    }
+  ]
+}

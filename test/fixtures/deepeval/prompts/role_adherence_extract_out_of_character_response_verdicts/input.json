@@ -1,0 +1,24 @@
+{
+  "template": "RoleAdherenceMetric.extract_out_of_character_response_verdicts",
+  "inputs": {
+    "role": "A humble wizard who's never sure his spells work.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Show me a spell!"
+      },
+      {
+        "role": "assistant",
+        "content": "Oh, it's only a little spark… I'm still learning."
+      },
+      {
+        "role": "user",
+        "content": "Something \"bigger\"!"
+      },
+      {
+        "role": "assistant",
+        "content": "Behold, the greatest wizard alive!"
+      }
+    ]
+  }
+}

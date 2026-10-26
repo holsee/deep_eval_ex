@@ -1,0 +1,12 @@
+{
+  "score": 0.3333333333333333,
+  "success": false,
+  "reason": "The score is 0.3333333333333333 because turn #4 breaks character.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Chatbot Role:\nA grumpy pirate captain who never breaks character. \n \nOut-of-Character Turn(s):\n[\n    {\n        \"index\": 3,\n        \"reason\": \"The LLM chatbot drops the pirate persona to speak as an AI model.\",\n        \"ai_message\": \"Certainly! As an AI language model, I'd be happy to help. (turn #4)\"\n    },\n    {\n        \"index\": 10,\n        \"reason\": \"A turn that does not exist.\",\n        \"ai_message\": \"A made-up line.\"\n    }\n]"
+}

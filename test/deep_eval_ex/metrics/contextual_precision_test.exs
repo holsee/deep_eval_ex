@@ -6,7 +6,11 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
 
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.ContextualPrecision
+  alias DeepEvalEx.SystemOne.Adapters.Mock, as: SystemOneMock
+  alias DeepEvalEx.SystemOne.{EvalSpec, Scored}
   alias DeepEvalEx.TestCase
+
+  doctest DeepEvalEx.Metrics.ContextualPrecision, only: [group_retrieval_contexts: 1]
 
   setup do
     Mock.clear_responses()
@@ -212,7 +216,7 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
   end
 
   describe "measure/2 with empty context" do
-    test "returns error when retrieval_context is empty" do
+    test "accepts an empty retrieval_context list, as deepeval only rejects a missing one" do
       test_case =
         TestCase.new!(
           input: "Question",
@@ -220,8 +224,11 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
           retrieval_context: []
         )
 
-      assert {:error, {:missing_params, [:retrieval_context]}} =
-               ContextualPrecision.measure(test_case, adapter: :mock)
+      assert {:ok, result} =
+               ContextualPrecision.measure(test_case, adapter: :mock, include_reason: false)
+
+      assert result.score == 0
+      assert result.metadata.context_count == 0
     end
   end
 
@@ -343,30 +350,49 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
     end
   end
 
-  describe "measure/2 with context alias" do
-    test "accepts context as alias for retrieval_context" do
-      # Mock verdicts
-      Mock.set_schema_response(
-        ~r/determine whether each node in the retrieval context was remotely useful/i,
-        %{"verdicts" => [%{"verdict" => "yes", "reason" => "Relevant."}]}
-      )
-
-      # Mock reason
-      Mock.set_schema_response(
-        ~r/provide a CONCISE summary for the score/i,
-        %{"reason" => "Good."}
-      )
-
-      # Using context instead of retrieval_context
+  describe "measure/2 with context only" do
+    test "does not use context as the retrieval context, as deepeval 4.3.1" do
       test_case =
         TestCase.new!(
           input: "Q",
           expected_output: "A",
-          context: ["Context via alias"]
+          context: ["Context, not retrieval context"]
+        )
+
+      assert {:error, {:missing_params, [:retrieval_context]}} =
+               ContextualPrecision.measure(test_case, adapter: :mock)
+    end
+  end
+
+  describe "measure/2 verdict normalisation" do
+    test "reads verbose verdicts by their leading word and drops unknown ones" do
+      Mock.set_schema_response(
+        ~r/determine whether each node in the retrieval context/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "No.", "reason" => "Irrelevant."},
+            %{"verdict" => "perhaps", "reason" => "Unsure."},
+            %{"verdict" => "yes", "reason" => "Relevant."}
+          ]
+        }
+      )
+
+      Mock.set_schema_response(
+        ~r/concise summary for the score/i,
+        %{"reason" => "The score is 0.50."}
+      )
+
+      test_case =
+        TestCase.new!(
+          input: "Q",
+          expected_output: "A",
+          retrieval_context: ["C1", "C2", "C3"]
         )
 
       assert {:ok, result} = ContextualPrecision.measure(test_case, adapter: :mock)
-      assert result.score == 1.0
+      # [no, yes] once the unknown verdict is dropped: precision@2 = 1/2
+      assert result.score === 0.5
+      assert [%{verdict: :no}, %{verdict: :yes}] = result.metadata.verdicts
     end
   end
 
@@ -392,6 +418,102 @@ defmodule DeepEvalEx.Metrics.ContextualPrecisionTest do
 
       assert {:error, {:missing_params, [:retrieval_context]}} =
                ContextualPrecision.measure(test_case, adapter: :mock)
+    end
+  end
+
+  describe "System One" do
+    test "system_one_eval_spec/2 asks deepeval's questions about the input, context and expected output" do
+      assert %EvalSpec{
+               evaluation_params: [:input, :retrieval_context, :expected_output],
+               questions: [
+                 %Scored.Noul{
+                   statement: "In `retrieval_context`, every document" <> _,
+                   weight: 2.0
+                 },
+                 %Scored.Noul{statement: "The first document" <> _, weight: 1.0},
+                 %Scored.Score{
+                   levels: [
+                     "Useful documents are all at the end",
+                     "Useful documents are mixed with irrelevant ones",
+                     "Useful documents are mostly first",
+                     "Useful documents are all first"
+                   ]
+                 }
+               ]
+             } = ContextualPrecision.system_one_eval_spec(%TestCase{}, [])
+    end
+
+    test "hybrid judges each node yes or no, never borderline" do
+      Mock.set_schema_response(~r/provide a CONCISE summary for the score/i, %{
+        "reason" => "The score is 1.00 because both nodes are useful."
+      })
+
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.5))
+
+      test_case =
+        TestCase.new!(
+          input: "What is the capital of France?",
+          expected_output: "Paris is the capital of France.",
+          retrieval_context: ["Paris is in France.", "Paris is the capital."]
+        )
+
+      assert {:ok, result} =
+               ContextualPrecision.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one
+               )
+
+      assert result.score == 1.0
+
+      assert [%{verdict: :yes, reason: "P(yes)=0.50"}, %{verdict: :yes}] =
+               result.metadata.verdicts
+
+      assert [%SystemOneMock.Call{questions: questions}] = SystemOneMock.calls(system_one)
+      assert Enum.map(questions, &elem(&1, 0)) == ["node_0", "node_1"]
+    end
+  end
+
+  describe "measure/2 with RetrievedContextData" do
+    alias DeepEvalEx.Schemas.RetrievedContextData
+
+    test "groups contexts by source at the source's first position, as deepeval's _group_retrieval_contexts" do
+      Mock.script(%{
+        "verdicts" => [
+          %{
+            "verdicts" => [
+              %{"verdict" => "yes", "reason" => "It names the capital."},
+              %{"verdict" => "no", "reason" => "Rome is irrelevant."},
+              %{"verdict" => "yes", "reason" => "It names the tower."}
+            ]
+          }
+        ],
+        "reason" => [%{"reason" => "The score is 0.83 because a relevant node is ranked last."}]
+      })
+
+      test_case =
+        TestCase.new!(
+          input: "Tell me about Paris.",
+          expected_output: "Paris is the capital of France.",
+          retrieval_context: [
+            %RetrievedContextData{context: "Paris is the capital of France.", source: "wiki"},
+            "Rome is the capital of Italy.",
+            %RetrievedContextData{context: "The Eiffel Tower is in Paris.", source: "atlas"},
+            %RetrievedContextData{context: "Paris has 2 million people.", source: "wiki"}
+          ]
+        )
+
+      assert {:ok, result} = ContextualPrecision.measure(test_case, adapter: :mock)
+      assert result.metadata.context_count == 3
+
+      [prompt | _] =
+        for %{step: "verdicts", prompt: prompt} <- Mock.scripted_prompts(), do: prompt
+
+      assert prompt =~
+               ~S"""
+               Retrieval Context  (3 documents):
+               ['Source: wiki\nParis is the capital of France.\n---\nParis has 2 million people.', 'Rome is the capital of Italy.', 'Source: atlas\nThe Eiffel Tower is in Paris.']
+               """
     end
   end
 end

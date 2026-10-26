@@ -1,0 +1,6 @@
+{
+  "raised": {
+    "type": "AssertionError",
+    "message": "Metrics: Expectations (score: 0.0, threshold: 1.0, strict: True, error: None, reason: The score is 0.0 because it promises a refund.) failed."
+  }
+}

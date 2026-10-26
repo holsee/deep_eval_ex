@@ -1,0 +1,20 @@
+{
+  "score": null,
+  "success": null,
+  "reason": null,
+  "threshold": 1.0,
+  "strict_mode": true,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": null,
+  "verdicts": null,
+  "criteria": "{\"eval_mode\": \"llm\", \"system_one_model\": null}",
+  "confidence": null,
+  "raised": {
+    "type": "ValueError",
+    "message": "Expectation judge returned missing, duplicate, or unknown verdict IDs."
+  }
+}

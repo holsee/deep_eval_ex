@@ -1,0 +1,29 @@
+Extract all factual statements and information from the following text that could potentially contain personally identifiable information or privacy-sensitive data:
+
+Text: Jane Doe lives at 12 Elm Street and her SSN is 123-45-6789. The office opens at nine.
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+
+
+Focus on identifying statements that mention:
+- Personal identifiers (names, addresses, contact info)
+- Financial or medical information  
+- Government or identification numbers
+- Personal relationships or private details
+- Confidential or sensitive information
+
+Return a list of these statements/information pieces.
+
+**
+IMPORTANT: Please make sure to only return in JSON format, with the 'extracted_pii' key. No words or explanation is needed.
+**
+
+Example JSON:
+{
+  "extracted_pii": ["Statement 1", "Statement 2", ...]
+}

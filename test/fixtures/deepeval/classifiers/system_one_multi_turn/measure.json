@@ -1,0 +1,12 @@
+{
+  "label": "resolved",
+  "reason": "Decided by fake-jev. Label \"resolved\" (P=0.90, confidence=0.85). Alternatives: handed_over 0.06, unresolved 0.04.",
+  "error": null,
+  "evaluation_model": "fake-jev",
+  "evaluation_cost": 4.2e-05,
+  "input_tokens": 1000,
+  "output_tokens": 0,
+  "confidence": 0.85,
+  "system_one_fallback_reason": null,
+  "raised": null
+}

@@ -1,0 +1,12 @@
+{
+  "score": 0,
+  "success": false,
+  "reason": "The score is 0.00 because the LLM offers peanuts.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Knowledges:\n[\n    {\n        \"data\": {\n            \"Allergies\": [\n                \"Peanuts\"\n            ]\n        }\n    },\n    None\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    }\n]"
+}

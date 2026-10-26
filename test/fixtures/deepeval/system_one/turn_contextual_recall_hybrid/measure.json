@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.5,
+    "success": true,
+    "reason": "The score is 0.9 because the windows mostly pass.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 2000,
+    "output_tokens": 0,
+    "verbose_logs": "Window 1 \n \n \nVerdicts: [\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.90\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"P(yes)=0.30\"\n    }\n] \n \n \nScore: 0.5 \n \n \nReason: The score is 1.00 because the first window is fine. \n \n \nWindow 2 \n \n \nVerdicts: [\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"P(yes)=0.90\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"P(yes)=0.30\"\n    }\n] \n \n \nScore: 0.5 \n \n \nReason: The score is 0.83 because of the second window. \n \n \nFinal Score: 0.5\n",
+    "confidence": 0.4,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

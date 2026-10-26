@@ -1,0 +1,18 @@
+
+
+[
+  {
+    "type": "noul",
+    "statement": "`actual_output` (with the tools in `tools_called`) fully accomplishes `task`.",
+    "weight": 2
+  },
+  {
+    "type": "noul",
+    "statement": "The final outcome of `actual_output` (with the tools in `tools_called`) is what `task` asks for: not a partial result, a different result, or only a plan to get it."
+  },
+  {
+    "type": "score",
+    "question": "How completely does `actual_output` (with the tools in `tools_called`) accomplish `task`?",
+    "levels": ["Not achieved", "Partly achieved", "Mostly achieved", "Fully achieved"]
+  }
+]

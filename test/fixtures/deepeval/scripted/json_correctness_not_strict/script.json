@@ -1,0 +1,81 @@
+{
+  "description": "JsonCorrectness with strict_mode off: the 0.5 threshold, a JSON array where an object is expected, include_reason off (no judge call) and verbose_mode",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "json_correctness",
+    "params": {
+      "expected_schema": {
+        "$defs": {
+          "Address": {
+            "properties": {
+              "city": {
+                "title": "City",
+                "type": "string"
+              },
+              "postcode": {
+                "title": "Postcode",
+                "type": "string"
+              }
+            },
+            "required": [
+              "city",
+              "postcode"
+            ],
+            "title": "Address",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "name": {
+            "description": "Full name, e.g. José Saramago",
+            "title": "Name",
+            "type": "string"
+          },
+          "age": {
+            "title": "Age",
+            "type": "integer"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "address": {
+            "$ref": "#/$defs/Address"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Nickname"
+          }
+        },
+        "required": [
+          "name",
+          "age",
+          "tags",
+          "address"
+        ],
+        "title": "Person",
+        "type": "object"
+      },
+      "strict_mode": false,
+      "threshold": 0.5,
+      "include_reason": false,
+      "verbose_mode": true
+    }
+  },
+  "test_case": {
+    "input": "Return the customer's profile as JSON.",
+    "actual_output": "[{\"name\": \"José Saramago\"}]"
+  },
+  "responses": {}
+}

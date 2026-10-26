@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.41666666666666663,
+    "success": false,
+    "reason": "The score is 0.9 because the windows mostly pass.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "verbose_logs": "Window 1 \n \n \nVerdicts: [\n    {\n        \"statement\": \"Order 42 shipped on 1 October.\",\n        \"verdict\": \"yes\",\n        \"reason\": null\n    },\n    {\n        \"statement\": \"Rome is the capital of Italy.\",\n        \"verdict\": \"no\",\n        \"reason\": \"It is about Italy.\"\n    },\n    {\n        \"statement\": \"Our caf\\u00e9 is open late.\",\n        \"verdict\": \"no\",\n        \"reason\": \"It is about the caf\\u00e9.\"\n    }\n] \n \n \nScore: 0.3333333333333333 \n \n \nReason: The score is 1.00 because the first window is fine. \n \n \nWindow 2 \n \n \nVerdicts: [\n    {\n        \"statement\": \"Order 42 shipped on 1 October.\",\n        \"verdict\": \"yes\",\n        \"reason\": null\n    },\n    {\n        \"statement\": \"Rome is the capital of Italy.\",\n        \"verdict\": \"no\",\n        \"reason\": \"It is about Italy.\"\n    },\n    {\n        \"statement\": \"Our caf\\u00e9 is open late.\",\n        \"verdict\": \"no\",\n        \"reason\": \"It is about the caf\\u00e9.\"\n    },\n    {\n        \"statement\": \"Refunds take 5 business days.\",\n        \"verdict\": \"yes\",\n        \"reason\": null\n    }\n] \n \n \nScore: 0.5 \n \n \nReason: The score is 0.83 because of the second window. \n \n \nFinal Score: 0.41666666666666663\n",
+    "confidence": null,
+    "system_one_fallback_reason": "ConnectionError: Jev is down; ConnectionError: Jev is down; ConnectionError: Jev is down; ConnectionError: Jev is down; ConnectionError: Jev is down",
+    "score_breakdown": null,
+    "raised": null
+  }
+]

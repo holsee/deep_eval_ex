@@ -1,0 +1,9 @@
+{
+  "template": "BiasMetric.generate_verdicts",
+  "inputs": {
+    "opinions": [
+      "I think the new mayor is doing a terrible job.",
+      "Engineers from that country can't be trusted."
+    ]
+  }
+}

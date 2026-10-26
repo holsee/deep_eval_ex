@@ -1,0 +1,50 @@
+You are given a set of Evaluation Steps and Rubric that describe how to assess a conversation between a user and an LLM chatbot. Your task is to return a JSON object with exactly two fields:
+
+1. `"score"`: An integer from 0 to 10 (inclusive), where:
+- 10 = The conversation *fully* meets the criteria described in the Evaluation Steps
+- 0 = The conversation *completely fails* to meet the criteria
+- All other scores represent varying degrees of partial fulfillment,
+based on how well the conversation follows the rubric and evaluation steps.
+
+2. `"reason"`: A **concise but precise** explanation for the score. Your reasoning must reference specific aspects of both the rubric and the evaluation steps, and mention relevant details from the conversation and the given parameters. DO NOT include the score value in your explanation.
+
+Evaluation Steps:
+1. Check that the assistant's answers are grounded in its retrieval context.
+2. Check that the assistant called the right tools.
+
+
+Rubric:
+0-3: Ungrounded answers or wrong tools.
+4-7: Partly grounded answers.
+8-10: Grounded answers and the right tools.
+
+Per-turn fields:
+[{'role': 'user', 'content': 'Where is order 42?'}, {'role': 'assistant', 'content': 'It shipped on 1 October.', 'retrieval_context': ['Orders ship within 2 days.', RetrievedContextData(context='Order 42 shipped on 1 October.', source='orders.db')], 'tools_called': [ToolCall(
+    name="lookup_order",
+    type="FUNCTION",
+    description="Find an order",
+    input_parameters={
+        "order": 42
+    },
+    output={
+        "status": "shipped"
+    }
+)]}]
+
+
+Parameters to consider during evaluation:
+Role, Content, Retrieval Context, and Tools Called
+
+Note: the "Per-turn fields" block lists each turn separately, while the "Conversation-level fields" block applies to the whole conversation. Do not penalize individual turns for missing conversation-level fields.
+
+---
+IMPORTANT: You MUST return only a valid JSON object with the exact keys `"score"` and `"reason"`. No additional text, commentary, or formatting.
+
+---
+Example JSON:
+{
+  "reason": "Your concise and informative reason here.",
+  "score": 0
+}
+
+JSON:

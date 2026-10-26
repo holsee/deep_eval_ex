@@ -1,0 +1,12 @@
+{
+  "score": 0,
+  "success": null,
+  "reason": "The score is 0 because strict mode requires 1.\nThe score is 0 because the units are missing.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Tool Selection Scores: [\n    {\n        \"score\": 0.75,\n        \"reason\": \"A good choice.\"\n    }\n] \n \n \nArgument Correctness Scores: [\n    {\n        \"score\": 0.5,\n        \"reason\": \"The city is right, the units missing.\"\n    }\n] \n \n \nFinal Score: 0"
+}

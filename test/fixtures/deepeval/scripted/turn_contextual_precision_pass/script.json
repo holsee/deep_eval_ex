@@ -1,0 +1,81 @@
+{
+  "description": "TurnContextualPrecision: two windows, the relevant nodes ranked first",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "turn_contextual_precision",
+    "params": {}
+  },
+  "test_case": {
+    "expected_outcome": "The assistant says order 42 shipped on 1 October and refunds take 5 business days.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Where is order 42?"
+      },
+      {
+        "role": "assistant",
+        "content": "It shipped on 1 October.",
+        "retrieval_context": [
+          "Order 42 shipped on 1 October.",
+          "Rome is the capital of Italy."
+        ]
+      },
+      {
+        "role": "user",
+        "content": "And a refund?"
+      },
+      {
+        "role": "assistant",
+        "content": "Refunds take 5 business days.",
+        "retrieval_context": [
+          "Refunds take 5 business days at the café."
+        ]
+      }
+    ]
+  },
+  "responses": {
+    "turn_contextual_precision": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes",
+              "reason": "It gives the shipping date."
+            },
+            {
+              "verdict": "no",
+              "reason": "Rome is irrelevant."
+            }
+          ]
+        },
+        {
+          "verdicts": [
+            {
+              "verdict": "yes",
+              "reason": "It gives the shipping date."
+            },
+            {
+              "verdict": "no",
+              "reason": "Rome is irrelevant."
+            },
+            {
+              "verdict": "yes",
+              "reason": "It gives the refund time."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1.00 because the relevant node is ranked first."
+        },
+        {
+          "reason": "The score is 0.83 because Rome is ranked above the refund node."
+        },
+        {
+          "reason": "The score is 0.9166666666666666 because the relevant nodes are mostly ranked first."
+        }
+      ]
+    }
+  }
+}

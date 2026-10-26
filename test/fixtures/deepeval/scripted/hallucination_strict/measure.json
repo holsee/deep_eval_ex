@@ -1,0 +1,12 @@
+{
+  "score": 1.0,
+  "success": true,
+  "reason": "The score is 1.00 because the output agrees with the context.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Verdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"The output agrees with the context.\"\n    }\n]"
+}

@@ -1,0 +1,252 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "trace": {
+            "name": "answer",
+            "type": "agent",
+            "input": {
+              "query": "Where is my invoice?"
+            },
+            "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+            "tools_called": [
+              {
+                "name": "lookup_invoice",
+                "type": "FUNCTION",
+                "description": "Finds the latest invoice",
+                "reasoning": null,
+                "output": "INV-42",
+                "input_parameters": {
+                  "account": "acme"
+                }
+              }
+            ],
+            "available_tools": [
+              "lookup_invoice",
+              "escalate"
+            ],
+            "children": [
+              {
+                "name": "lookup_invoice",
+                "type": "tool",
+                "description": "Finds the latest invoice",
+                "input": {
+                  "account": "acme"
+                },
+                "output": "INV-42"
+              },
+              {
+                "name": "reply",
+                "type": "llm",
+                "input": {
+                  "query": "Where is my invoice?",
+                  "invoice": "INV-42"
+                },
+                "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+                "model": "gpt-4o-mini"
+              }
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "choice",
+            "instructions": "Would the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan), if carried out as written, fully accomplish the task the user gave in the root span's input of `trace`, covering every requirement and prerequisite?",
+            "criteria": {
+              "Yes, the plan is complete": null,
+              "No, the plan misses a requirement or prerequisite": null,
+              "The agent states no plan": null
+            }
+          },
+          "q_1": {
+            "type": "choice",
+            "instructions": "Is every step of the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan) specific enough to execute, necessary for the task the user gave in the root span's input of `trace`, and in a logical order, with no vague, redundant or off-task step?",
+            "criteria": {
+              "Yes, every step is clear, necessary and well ordered": null,
+              "No, some step is vague, redundant, off-task or out of order": null,
+              "The agent states no plan": null
+            }
+          },
+          "q_2": {
+            "type": "choice",
+            "instructions": "How good is the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan) for accomplishing the task the user gave in the root span's input of `trace`?",
+            "criteria": {
+              "Inadequate plan": null,
+              "Weak plan": null,
+              "Adequate but flawed plan": null,
+              "Good plan": null,
+              "Excellent plan": null,
+              "The agent states no plan": null
+            }
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {
+            "q_0": {
+              "choice": "Yes, the plan is complete",
+              "probabilities": {
+                "Yes, the plan is complete": 0.7,
+                "No, the plan misses a requirement or prerequisite": 0.15,
+                "The agent states no plan": 0.15
+              },
+              "confidence": 0.6
+            },
+            "q_1": {
+              "choice": "No, some step is vague, redundant, off-task or out of order",
+              "probabilities": {
+                "Yes, every step is clear, necessary and well ordered": 0.15,
+                "No, some step is vague, redundant, off-task or out of order": 0.7,
+                "The agent states no plan": 0.15
+              },
+              "confidence": 0.6
+            },
+            "q_2": {
+              "choice": "Good plan",
+              "probabilities": {
+                "Inadequate plan": 0.06,
+                "Weak plan": 0.06,
+                "Adequate but flawed plan": 0.06,
+                "Good plan": 0.7,
+                "Excellent plan": 0.06,
+                "The agent states no plan": 0.06
+              },
+              "confidence": 0.6
+            }
+          },
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "trace": {
+          "name": "answer",
+          "type": "agent",
+          "input": {
+            "query": "Where is my invoice?"
+          },
+          "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+          "tools_called": [
+            {
+              "name": "lookup_invoice",
+              "type": "FUNCTION",
+              "description": "Finds the latest invoice",
+              "reasoning": null,
+              "output": "INV-42",
+              "input_parameters": {
+                "account": "acme"
+              }
+            }
+          ],
+          "available_tools": [
+            "lookup_invoice",
+            "escalate"
+          ],
+          "children": [
+            {
+              "name": "lookup_invoice",
+              "type": "tool",
+              "description": "Finds the latest invoice",
+              "input": {
+                "account": "acme"
+              },
+              "output": "INV-42"
+            },
+            {
+              "name": "reply",
+              "type": "llm",
+              "input": {
+                "query": "Where is my invoice?",
+                "invoice": "INV-42"
+              },
+              "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+              "model": "gpt-4o-mini"
+            }
+          ]
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "choice",
+          "instructions": "Would the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan), if carried out as written, fully accomplish the task the user gave in the root span's input of `trace`, covering every requirement and prerequisite?",
+          "criteria": {
+            "Yes, the plan is complete": null,
+            "No, the plan misses a requirement or prerequisite": null,
+            "The agent states no plan": null
+          }
+        },
+        "q_1": {
+          "type": "choice",
+          "instructions": "Is every step of the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan) specific enough to execute, necessary for the task the user gave in the root span's input of `trace`, and in a logical order, with no vague, redundant or off-task step?",
+          "criteria": {
+            "Yes, every step is clear, necessary and well ordered": null,
+            "No, some step is vague, redundant, off-task or out of order": null,
+            "The agent states no plan": null
+          }
+        },
+        "q_2": {
+          "type": "choice",
+          "instructions": "How good is the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan) for accomplishing the task the user gave in the root span's input of `trace`?",
+          "criteria": {
+            "Inadequate plan": null,
+            "Weak plan": null,
+            "Adequate but flawed plan": null,
+            "Good plan": null,
+            "Excellent plan": null,
+            "The agent states no plan": null
+          }
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {
+          "q_0": {
+            "choice": "Yes, the plan is complete",
+            "probabilities": {
+              "Yes, the plan is complete": 0.7,
+              "No, the plan misses a requirement or prerequisite": 0.15,
+              "The agent states no plan": 0.15
+            },
+            "confidence": 0.6
+          },
+          "q_1": {
+            "choice": "No, some step is vague, redundant, off-task or out of order",
+            "probabilities": {
+              "Yes, every step is clear, necessary and well ordered": 0.15,
+              "No, some step is vague, redundant, off-task or out of order": 0.7,
+              "The agent states no plan": 0.15
+            },
+            "confidence": 0.6
+          },
+          "q_2": {
+            "choice": "Good plan",
+            "probabilities": {
+              "Inadequate plan": 0.06,
+              "Weak plan": 0.06,
+              "Adequate but flawed plan": 0.06,
+              "Good plan": 0.7,
+              "Excellent plan": 0.06,
+              "The agent states no plan": 0.06
+            },
+            "confidence": 0.6
+          }
+        },
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

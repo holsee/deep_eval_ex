@@ -1,0 +1,12 @@
+{
+  "template": "ConversationalGEval.generate_evaluation_steps",
+  "inputs": {
+    "criteria": "Check that the conversation plays out the scenario and reaches the expected outcome.",
+    "evaluation_params": [
+      "scenario",
+      "expected_outcome",
+      "role",
+      "content"
+    ]
+  }
+}

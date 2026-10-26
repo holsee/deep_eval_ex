@@ -1,0 +1,46 @@
+[
+  {
+    "score": 1.0,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.40.\n1. Every fact in `actual_output` is in `retrieval_context`. -> likely holds (P(yes)=0.70, confidence=0.40) strict=pass\n2. Does `actual_output` cite its sources? -> not applicable (not applicable, confidence=0.55)\nScore: 1.00 (strict mode: every applicable question passed).",
+    "threshold": 1,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": null,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "verbose_logs": "Questions:\n1. [noul, weight=1] Every fact in `actual_output` is in `retrieval_context`.\n   value=0.700 applicable=True probabilities={'true': 0.7, 'false': 0.3} confidence=0.400 strict_pass=True\n2. [choice, weight=1] Does `actual_output` cite its sources?\n   value=n/a applicable=False probabilities={'cites': 0.1, 'does_not_cite': 0.2, 'nothing_to_cite': 0.7} confidence=0.550 \n \nScore: 1.0\nConfidence: 0.3999999999999999",
+    "confidence": 0.3999999999999999,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every fact in `actual_output` is in `retrieval_context`.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.7,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.7,
+          "false": 0.30000000000000004
+        },
+        "confidence": 0.3999999999999999,
+        "passed": true
+      },
+      {
+        "question": "Does `actual_output` cite its sources?",
+        "type": "choice",
+        "weight": 1.0,
+        "value": null,
+        "applicable": false,
+        "probabilities": {
+          "cites": 0.1,
+          "does_not_cite": 0.2,
+          "nothing_to_cite": 0.7
+        },
+        "confidence": 0.55,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

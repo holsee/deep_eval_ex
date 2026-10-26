@@ -1,0 +1,60 @@
+[
+  {
+    "score": 0.14583333333333331,
+    "success": false,
+    "reason": "Decided by fake-jev, minimum confidence 0.33.\n1. In `retrieval_context`, every document useful for arriving at `expected_output` for `input` is listed before every document that is not useful. -> clearly fails (P(yes)=0.10, confidence=0.80, weight=2)\n2. The first document in `retrieval_context` is useful for arriving at `expected_output` for `input`. -> clearly fails (P(yes)=0.05, confidence=0.90)\n3. How well are the documents in `retrieval_context` ordered, with the ones useful for arriving at `expected_output` for `input` first? -> \"Useful documents are mixed with irrelevant ones\" (expected level=0.33 of 1.00, confidence=0.33)\nScore: 0.15 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] In `retrieval_context`, every document useful for arriving at `expected_output` for `input` is listed before every document that is not useful.\n   value=0.100 applicable=True probabilities={'true': 0.1, 'false': 0.9} confidence=0.800\n2. [noul, weight=1] The first document in `retrieval_context` is useful for arriving at `expected_output` for `input`.\n   value=0.050 applicable=True probabilities={'true': 0.05, 'false': 0.95} confidence=0.900\n3. [score, weight=1] How well are the documents in `retrieval_context` ordered, with the ones useful for arriving at `expected_output` for `input` first?\n   value=0.333 applicable=True probabilities={'Useful documents are all at the end': 0.3, 'Useful documents are mixed with irrelevant ones': 0.5, 'Useful documents are mostly first': 0.15, 'Useful documents are all first': 0.05} confidence=0.330",
+    "confidence": 0.33,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "In `retrieval_context`, every document useful for arriving at `expected_output` for `input` is listed before every document that is not useful.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.1,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.1,
+          "false": 0.9
+        },
+        "confidence": 0.8,
+        "passed": null
+      },
+      {
+        "question": "The first document in `retrieval_context` is useful for arriving at `expected_output` for `input`.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.05,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.05,
+          "false": 0.95
+        },
+        "confidence": 0.9,
+        "passed": null
+      },
+      {
+        "question": "How well are the documents in `retrieval_context` ordered, with the ones useful for arriving at `expected_output` for `input` first?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.3333333333333333,
+        "applicable": true,
+        "probabilities": {
+          "Useful documents are all at the end": 0.3,
+          "Useful documents are mixed with irrelevant ones": 0.5,
+          "Useful documents are mostly first": 0.15,
+          "Useful documents are all first": 0.05
+        },
+        "confidence": 0.33,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

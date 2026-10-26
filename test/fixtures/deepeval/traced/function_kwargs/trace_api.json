@@ -1,0 +1,96 @@
+[
+  {
+    "uuid": "fb792f0e-1783-4efa-8c8e-e96cdcf4b937",
+    "baseSpans": [
+      {
+        "uuid": "7d69feba-dc98-4480-929a-6b14796a7538",
+        "name": "clock",
+        "status": "SUCCESS",
+        "type": "base",
+        "parentUuid": "4e656cc0-5ca8-4623-8a83-8c440d5d7f72",
+        "startTime": "2026-10-23T03:23:29.905Z",
+        "endTime": "2026-10-23T03:23:29.905Z",
+        "input": {},
+        "output": "noon"
+      }
+    ],
+    "agentSpans": [
+      {
+        "uuid": "4e656cc0-5ca8-4623-8a83-8c440d5d7f72",
+        "name": "agent",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.905Z",
+        "endTime": "2026-10-23T03:23:29.905Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "Looked up at noon",
+        "toolsCalled": [
+          {
+            "name": "lookup",
+            "type": "FUNCTION",
+            "output": {
+              "found": true
+            },
+            "inputParameters": {
+              "zeta": "How do I reset my password?",
+              "alpha": 3,
+              "mid": true,
+              "omega": null,
+              "beta": [
+                1,
+                2
+              ]
+            }
+          }
+        ],
+        "availableTools": [],
+        "agentHandoffs": []
+      }
+    ],
+    "llmSpans": [],
+    "retrieverSpans": [],
+    "toolSpans": [
+      {
+        "uuid": "b0a1a760-0328-4194-8cba-3b6e3c2166e5",
+        "name": "lookup",
+        "status": "SUCCESS",
+        "type": "tool",
+        "parentUuid": "4e656cc0-5ca8-4623-8a83-8c440d5d7f72",
+        "startTime": "2026-10-23T03:23:29.905Z",
+        "endTime": "2026-10-23T03:23:29.905Z",
+        "input": {
+          "zeta": "How do I reset my password?",
+          "alpha": 3,
+          "mid": true,
+          "omega": null,
+          "beta": [
+            1,
+            2
+          ]
+        },
+        "output": {
+          "found": true
+        },
+        "metricsData": [
+          {
+            "name": "Span Judge",
+            "threshold": 0.7,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "startTime": "2026-10-23T03:23:29.905Z",
+    "endTime": "2026-10-23T03:23:29.905Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "Looked up at noon",
+    "status": "SUCCESS"
+  }
+]

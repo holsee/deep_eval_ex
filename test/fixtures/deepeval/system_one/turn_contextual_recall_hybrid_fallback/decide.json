@@ -1,0 +1,138 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "retrieval_context": [
+            "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+            "Our café is open late."
+          ],
+          "sentences": [
+            "Order 42 shipped on 1 October.",
+            "Refunds take 5 business days."
+          ]
+        },
+        "questions": {
+          "sentence_0": {
+            "type": "noul",
+            "instructions": {
+              "sentence": "Order 42 shipped on 1 October.",
+              "question": "Can `sentence` be attributed to the facts in `retrieval_context`?"
+            }
+          },
+          "sentence_1": {
+            "type": "noul",
+            "instructions": {
+              "sentence": "Refunds take 5 business days.",
+              "question": "Can `sentence` be attributed to the facts in `retrieval_context`?"
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      },
+      {
+        "state": {
+          "retrieval_context": [
+            "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+            "Our café is open late.",
+            "Refunds take 5 business days."
+          ],
+          "sentences": [
+            "Order 42 shipped on 1 October.",
+            "Refunds take 5 business days."
+          ]
+        },
+        "questions": {
+          "sentence_0": {
+            "type": "noul",
+            "instructions": {
+              "sentence": "Order 42 shipped on 1 October.",
+              "question": "Can `sentence` be attributed to the facts in `retrieval_context`?"
+            }
+          },
+          "sentence_1": {
+            "type": "noul",
+            "instructions": {
+              "sentence": "Refunds take 5 business days.",
+              "question": "Can `sentence` be attributed to the facts in `retrieval_context`?"
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "retrieval_context": [
+          "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+          "Our café is open late."
+        ],
+        "sentences": [
+          "Order 42 shipped on 1 October.",
+          "Refunds take 5 business days."
+        ]
+      },
+      "questions": {
+        "sentence_0": {
+          "type": "noul",
+          "instructions": {
+            "sentence": "Order 42 shipped on 1 October.",
+            "question": "Can `sentence` be attributed to the facts in `retrieval_context`?"
+          }
+        },
+        "sentence_1": {
+          "type": "noul",
+          "instructions": {
+            "sentence": "Refunds take 5 business days.",
+            "question": "Can `sentence` be attributed to the facts in `retrieval_context`?"
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    },
+    {
+      "state": {
+        "retrieval_context": [
+          "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+          "Our café is open late.",
+          "Refunds take 5 business days."
+        ],
+        "sentences": [
+          "Order 42 shipped on 1 October.",
+          "Refunds take 5 business days."
+        ]
+      },
+      "questions": {
+        "sentence_0": {
+          "type": "noul",
+          "instructions": {
+            "sentence": "Order 42 shipped on 1 October.",
+            "question": "Can `sentence` be attributed to the facts in `retrieval_context`?"
+          }
+        },
+        "sentence_1": {
+          "type": "noul",
+          "instructions": {
+            "sentence": "Refunds take 5 business days.",
+            "question": "Can `sentence` be attributed to the facts in `retrieval_context`?"
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

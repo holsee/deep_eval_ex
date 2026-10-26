@@ -1,0 +1,101 @@
+{
+  "description": "display=failing leaves out the passing test case",
+  "test_results": [
+    {
+      "name": "test_case_0",
+      "success": true,
+      "conversational": false,
+      "index": 0,
+      "input": "Question 0?",
+      "actual_output": "Answer 0.",
+      "metrics_data": [
+        {
+          "name": "Answer Relevancy",
+          "threshold": 0.7,
+          "success": true,
+          "score": 0.91,
+          "reason": "The answer states the policy accurately and names every condition the context lists, so it is relevant.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        },
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "No contradictions.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0012
+        }
+      ],
+      "expected_output": "The policy allows refunds within 30 days."
+    },
+    {
+      "name": "refund question",
+      "success": false,
+      "conversational": false,
+      "index": 1,
+      "input": "Can I get a refund on a used ticket?",
+      "actual_output": "Yes, always.\nNo questions asked.",
+      "metrics_data": [
+        {
+          "name": "Answer Relevancy",
+          "threshold": 0.7,
+          "success": false,
+          "score": 0.333333,
+          "reason": "Off topic.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        },
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": false,
+          "score": 0.25,
+          "reason": "The answer contradicts the retrieval context on the refund window, which is 30 days.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ]
+    },
+    {
+      "name": "test_case_2",
+      "success": false,
+      "conversational": false,
+      "index": 2,
+      "input": "Question 2?",
+      "actual_output": "Answer 2.",
+      "metrics_data": [
+        {
+          "name": "Answer Relevancy",
+          "threshold": 0.7,
+          "success": true,
+          "score": 0.91,
+          "reason": "The answer states the policy accurately and names every condition the context lists, so it is relevant.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        },
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": false,
+          "score": 0.25,
+          "reason": "The answer contradicts the retrieval context on the refund window, which is 30 days.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ]
+    }
+  ],
+  "display": "failing",
+  "truncate": true,
+  "run_duration": 2.0,
+  "hyperparameters": null,
+  "identifier": null
+}

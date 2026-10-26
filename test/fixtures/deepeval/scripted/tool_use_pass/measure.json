@@ -1,0 +1,12 @@
+{
+  "score": 0.875,
+  "success": null,
+  "reason": "The score is 0.875 because the tools were well chosen.\nThe score is 0.875 because the arguments were right.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Tool Selection Scores: [\n    {\n        \"score\": 1.0,\n        \"reason\": \"get_weather was the right tool.\"\n    },\n    {\n        \"score\": 0.75,\n        \"reason\": \"No tool was needed.\"\n    }\n] \n \n \nArgument Correctness Scores: [\n    {\n        \"score\": 1.0,\n        \"reason\": \"The city is right.\"\n    }\n] \n \n \nFinal Score: 0.875"
+}

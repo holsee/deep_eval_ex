@@ -1,0 +1,12 @@
+{
+  "score": 1.0,
+  "success": true,
+  "reason": "The score is 1.00 because every statement addresses the question.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Statements:\n[\n    \"Paris is the capital of France.\",\n    \"Paris is on the Seine.\"\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    },\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    }\n]"
+}

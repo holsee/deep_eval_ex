@@ -1,0 +1,12 @@
+{
+  "score": 1,
+  "success": true,
+  "reason": "booking_agent's output agrees with book_table.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Criteria:\nNone \n \nEvaluation Steps:\n[\n    \"Check that the root output agrees with what book_table returned.\"\n] \n \nRubric:\nNone \n \nScore: 1"
+}

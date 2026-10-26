@@ -1,0 +1,60 @@
+[
+  {
+    "score": 0.18333333333333335,
+    "success": false,
+    "reason": "Decided by fake-jev, minimum confidence 0.30.\n1. `actual_output` agrees with every document in `context`. -> likely fails (P(yes)=0.15, confidence=0.70, weight=2)\n2. No statement in `actual_output` contradicts a document in `context`. -> clearly fails (P(yes)=0.10, confidence=0.80)\n3. How much of `actual_output` is consistent with the documents in `context`? -> \"Mostly contradicts them\" (expected level=0.33 of 1.00, confidence=0.30)\nScore: 0.18 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] `actual_output` agrees with every document in `context`.\n   value=0.150 applicable=True probabilities={'true': 0.15, 'false': 0.85} confidence=0.700\n2. [noul, weight=1] No statement in `actual_output` contradicts a document in `context`.\n   value=0.100 applicable=True probabilities={'true': 0.1, 'false': 0.9} confidence=0.800\n3. [score, weight=1] How much of `actual_output` is consistent with the documents in `context`?\n   value=0.333 applicable=True probabilities={'Contradicts them': 0.1, 'Mostly contradicts them': 0.6, 'Mostly consistent': 0.2, 'Fully consistent': 0.1} confidence=0.300",
+    "confidence": 0.3,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "`actual_output` agrees with every document in `context`.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.15,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.15,
+          "false": 0.85
+        },
+        "confidence": 0.7,
+        "passed": null
+      },
+      {
+        "question": "No statement in `actual_output` contradicts a document in `context`.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.1,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.1,
+          "false": 0.9
+        },
+        "confidence": 0.8,
+        "passed": null
+      },
+      {
+        "question": "How much of `actual_output` is consistent with the documents in `context`?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.3333333333333333,
+        "applicable": true,
+        "probabilities": {
+          "Contradicts them": 0.1,
+          "Mostly contradicts them": 0.6,
+          "Mostly consistent": 0.2,
+          "Fully consistent": 0.1
+        },
+        "confidence": 0.3,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

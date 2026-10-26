@@ -1,0 +1,122 @@
+{
+  "description": "DAGMetric whose in-order verdict hands the score to a GEval, measured with the DAG's judge",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "dag",
+    "params": {
+      "name": "Format Correctness",
+      "dag": {
+        "nodes": {
+          "extract": {
+            "type": "TaskNode",
+            "instructions": "Extract all headings in `actual_output`.",
+            "output_label": "Summary headings",
+            "label": "Extract headings",
+            "evaluation_params": [
+              "actual_output"
+            ],
+            "children": [
+              "has_headings"
+            ]
+          },
+          "has_headings": {
+            "type": "BinaryJudgementNode",
+            "criteria": "Does the summary headings contain all three: 'intro', 'body', and 'conclusion'?",
+            "label": null,
+            "evaluation_params": null,
+            "children": [
+              "missing",
+              "complete"
+            ]
+          },
+          "missing": {
+            "type": "VerdictNode",
+            "verdict": false,
+            "score": 0
+          },
+          "complete": {
+            "type": "VerdictNode",
+            "verdict": true,
+            "child": {
+              "type": "node",
+              "ref": "order"
+            }
+          },
+          "order": {
+            "type": "NonBinaryJudgementNode",
+            "criteria": "Are the summary headings in the correct order: 'intro' => 'body' => 'conclusion'?",
+            "label": "Heading order",
+            "evaluation_params": [
+              "actual_output"
+            ],
+            "children": [
+              "out",
+              "partly_out",
+              "in_order"
+            ]
+          },
+          "out": {
+            "type": "VerdictNode",
+            "verdict": "Out of order",
+            "score": 2
+          },
+          "partly_out": {
+            "type": "VerdictNode",
+            "verdict": "Partly out of order",
+            "score": 4
+          },
+          "in_order": {
+            "type": "VerdictNode",
+            "verdict": "In order",
+            "child": {
+              "type": "geval",
+              "name": "Concision",
+              "criteria": "Is every section of `actual_output` a single sentence?",
+              "evaluation_params": [
+                "actual_output"
+              ]
+            }
+          }
+        }
+      },
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "Summarise the meeting transcript under intro, body and conclusion headings.",
+    "actual_output": "Intro: The team met to plan the launch.\nBody: QA needs two more weeks.\nConclusion: The launch moves to May."
+  },
+  "responses": {
+    "dag": {
+      "output": [
+        {
+          "output": "Intro, Body, Conclusion"
+        }
+      ],
+      "reason,verdict": [
+        {
+          "reason": "All three headings are present.",
+          "verdict": true
+        },
+        {
+          "reason": "The headings are in order.",
+          "verdict": "In order"
+        }
+      ],
+      "steps": [
+        {
+          "steps": [
+            "Split the actual output into its sections.",
+            "Check that each section is one sentence."
+          ]
+        }
+      ],
+      "reason,score": [
+        {
+          "reason": "Each section is one short sentence.",
+          "score": 8
+        }
+      ]
+    }
+  }
+}

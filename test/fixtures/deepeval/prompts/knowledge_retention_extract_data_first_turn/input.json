@@ -1,0 +1,7 @@
+{
+  "template": "KnowledgeRetentionMetric.extract_data",
+  "inputs": {
+    "user_message": "I'm flying to Lisbon on 3 May.",
+    "previous_turns": []
+  }
+}

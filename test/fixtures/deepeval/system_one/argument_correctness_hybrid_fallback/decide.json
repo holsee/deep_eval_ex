@@ -1,0 +1,66 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "input": "Book a table for two in Zürich on Friday.",
+          "tool_calls": [
+            "ToolCall(\n    name=\"restaurant_search\",\n    type=\"FUNCTION\",\n    description=\"Find restaurants in a city\",\n    input_parameters={\n        \"city\": \"Zürich\",\n        \"party_size\": 2\n    }\n)",
+            "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    input_parameters={\n        \"day\": \"Saturday\",\n        \"restaurant\": \"Café Odéon\"\n    },\n    output='Booked for Saturday at 19:00'\n)"
+          ]
+        },
+        "questions": {
+          "tool_call_0": {
+            "type": "noul",
+            "instructions": {
+              "tool_call": "ToolCall(\n    name=\"restaurant_search\",\n    type=\"FUNCTION\",\n    description=\"Find restaurants in a city\",\n    input_parameters={\n        \"city\": \"Zürich\",\n        \"party_size\": 2\n    }\n)",
+              "question": "Do the input parameters of `tool_call` relevantly and correctly address `input`? Answer no if there are no input parameters."
+            }
+          },
+          "tool_call_1": {
+            "type": "noul",
+            "instructions": {
+              "tool_call": "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    input_parameters={\n        \"day\": \"Saturday\",\n        \"restaurant\": \"Café Odéon\"\n    },\n    output='Booked for Saturday at 19:00'\n)",
+              "question": "Do the input parameters of `tool_call` relevantly and correctly address `input`? Answer no if there are no input parameters."
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "input": "Book a table for two in Zürich on Friday.",
+        "tool_calls": [
+          "ToolCall(\n    name=\"restaurant_search\",\n    type=\"FUNCTION\",\n    description=\"Find restaurants in a city\",\n    input_parameters={\n        \"city\": \"Zürich\",\n        \"party_size\": 2\n    }\n)",
+          "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    input_parameters={\n        \"day\": \"Saturday\",\n        \"restaurant\": \"Café Odéon\"\n    },\n    output='Booked for Saturday at 19:00'\n)"
+        ]
+      },
+      "questions": {
+        "tool_call_0": {
+          "type": "noul",
+          "instructions": {
+            "tool_call": "ToolCall(\n    name=\"restaurant_search\",\n    type=\"FUNCTION\",\n    description=\"Find restaurants in a city\",\n    input_parameters={\n        \"city\": \"Zürich\",\n        \"party_size\": 2\n    }\n)",
+            "question": "Do the input parameters of `tool_call` relevantly and correctly address `input`? Answer no if there are no input parameters."
+          }
+        },
+        "tool_call_1": {
+          "type": "noul",
+          "instructions": {
+            "tool_call": "ToolCall(\n    name=\"book_table\",\n    type=\"FUNCTION\",\n    input_parameters={\n        \"day\": \"Saturday\",\n        \"restaurant\": \"Café Odéon\"\n    },\n    output='Booked for Saturday at 19:00'\n)",
+            "question": "Do the input parameters of `tool_call` relevantly and correctly address `input`? Answer no if there are no input parameters."
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "score": 0.65,
+  "success": false,
+  "reason": null,
+  "threshold": 0.7,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Task: Book a table for two at Café Odéon on Saturday. \n \nOutcome: The system searched the web, booked a table for Saturday at 19:00 and confirmed it."
+}

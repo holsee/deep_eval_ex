@@ -1,0 +1,102 @@
+{
+  "description": "Flaky metrics count towards their verdict with a flaky sub-count, and never fail the test case",
+  "test_results": [
+    {
+      "name": "test_case_0",
+      "success": true,
+      "conversational": false,
+      "index": 0,
+      "input": "Question 0?",
+      "actual_output": "Answer 0.",
+      "metrics_data": [
+        {
+          "name": "Tone",
+          "threshold": 0.5,
+          "success": true,
+          "score": 0.9,
+          "reason": null,
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321,
+          "flaky": true
+        },
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "No contradictions.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0012
+        }
+      ]
+    },
+    {
+      "name": "test_case_1",
+      "success": true,
+      "conversational": false,
+      "index": 1,
+      "input": "Question 1?",
+      "actual_output": "Answer 1.",
+      "metrics_data": [
+        {
+          "name": "Tone",
+          "threshold": 0.5,
+          "success": false,
+          "score": 0.1,
+          "reason": null,
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321,
+          "flaky": true
+        },
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "No contradictions.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0012
+        }
+      ]
+    },
+    {
+      "name": "test_case_2",
+      "success": false,
+      "conversational": false,
+      "index": 2,
+      "input": "Question 2?",
+      "actual_output": "Answer 2.",
+      "metrics_data": [
+        {
+          "name": "Tone",
+          "threshold": 0.5,
+          "success": false,
+          "score": 0.2,
+          "reason": null,
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        },
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": false,
+          "score": 0.25,
+          "reason": "The answer contradicts the retrieval context on the refund window, which is 30 days.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ]
+    }
+  ],
+  "display": "all",
+  "truncate": false,
+  "run_duration": 4.5,
+  "hyperparameters": null,
+  "identifier": null
+}

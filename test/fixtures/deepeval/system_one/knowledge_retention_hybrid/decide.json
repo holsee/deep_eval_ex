@@ -1,0 +1,140 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "llm_message": "Lovely! Where are you flying to?",
+          "accumulated_knowledge": [
+            {
+              "Date": "3 May",
+              "Destination": "Lisbon"
+            }
+          ]
+        },
+        "questions": {
+          "verdict": {
+            "type": "noul",
+            "instructions": "Does `llm_message` forget or contradict a fact in `accumulated_knowledge`, for example by asking again for information already given or by assuming something that conflicts with it? Answer no if it only asks to clarify, confirm or correct a known fact."
+          }
+        },
+        "answers": {
+          "nouls": {
+            "verdict": {
+              "probability": 0.74
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "llm_message": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!",
+          "accumulated_knowledge": [
+            {
+              "Date": "3 May",
+              "Destination": "Lisbon"
+            },
+            {
+              "Destination": "Lisbon",
+              "Diet": "Vegetarian"
+            }
+          ]
+        },
+        "questions": {
+          "verdict": {
+            "type": "noul",
+            "instructions": "Does `llm_message` forget or contradict a fact in `accumulated_knowledge`, for example by asking again for information already given or by assuming something that conflicts with it? Answer no if it only asks to clarify, confirm or correct a known fact."
+          }
+        },
+        "answers": {
+          "nouls": {
+            "verdict": {
+              "probability": 0.74
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "llm_message": "Lovely! Where are you flying to?",
+        "accumulated_knowledge": [
+          {
+            "Date": "3 May",
+            "Destination": "Lisbon"
+          }
+        ]
+      },
+      "questions": {
+        "verdict": {
+          "type": "noul",
+          "instructions": "Does `llm_message` forget or contradict a fact in `accumulated_knowledge`, for example by asking again for information already given or by assuming something that conflicts with it? Answer no if it only asks to clarify, confirm or correct a known fact."
+        }
+      },
+      "answers": {
+        "nouls": {
+          "verdict": {
+            "probability": 0.74
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "llm_message": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!",
+        "accumulated_knowledge": [
+          {
+            "Date": "3 May",
+            "Destination": "Lisbon"
+          },
+          {
+            "Destination": "Lisbon",
+            "Diet": "Vegetarian"
+          }
+        ]
+      },
+      "questions": {
+        "verdict": {
+          "type": "noul",
+          "instructions": "Does `llm_message` forget or contradict a fact in `accumulated_knowledge`, for example by asking again for information already given or by assuming something that conflicts with it? Answer no if it only asks to clarify, confirm or correct a known fact."
+        }
+      },
+      "answers": {
+        "nouls": {
+          "verdict": {
+            "probability": 0.74
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

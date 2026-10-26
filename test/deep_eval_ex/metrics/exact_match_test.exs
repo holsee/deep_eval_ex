@@ -15,7 +15,7 @@ defmodule DeepEvalEx.Metrics.ExactMatchTest do
       assert {:ok, result} = ExactMatch.measure(test_case)
       assert result.score == 1.0
       assert result.success == true
-      assert result.metric == "ExactMatch"
+      assert result.metric == "Exact Match"
       assert result.reason =~ "exact match"
     end
 
@@ -106,7 +106,7 @@ defmodule DeepEvalEx.Metrics.ExactMatchTest do
 
   describe "metric_name/0" do
     test "returns correct name" do
-      assert ExactMatch.metric_name() == "ExactMatch"
+      assert ExactMatch.metric_name() == "Exact Match"
     end
   end
 
@@ -119,6 +119,43 @@ defmodule DeepEvalEx.Metrics.ExactMatchTest do
   describe "default_threshold/0" do
     test "returns 1.0 for exact match metric" do
       assert ExactMatch.default_threshold() == 1.0
+    end
+  end
+
+  describe "usage" do
+    test "leaves evaluation model, tokens and cost nil as it makes no LLM call" do
+      test_case = %TestCase{input: "Q", actual_output: "4", expected_output: "4"}
+
+      assert {:ok, result} = ExactMatch.measure(test_case)
+      assert result.evaluation_model == nil
+      assert result.input_tokens == nil
+      assert result.output_tokens == nil
+      assert result.evaluation_cost == nil
+    end
+  end
+
+  describe "verbose logs" do
+    setup do
+      %{test_case: %TestCase{input: "Q", actual_output: "4", expected_output: "4"}}
+    end
+
+    test "are only computed in verbose mode, as deepeval's", %{test_case: test_case} do
+      assert {:ok, %{verbose_logs: nil}} = ExactMatch.measure(test_case)
+
+      ExUnit.CaptureIO.capture_io(fn ->
+        assert {:ok, %{verbose_logs: "Score: 1.00"}} =
+                 ExactMatch.measure(test_case, verbose_mode: true)
+      end)
+    end
+
+    test "print the score and reason in verbose mode", %{test_case: test_case} do
+      output =
+        ExUnit.CaptureIO.capture_io(fn -> ExactMatch.measure(test_case, verbose_mode: true) end)
+
+      assert output =~ "Exact Match Verbose Logs"
+
+      assert output =~
+               "Score: 1.00\n \nReason: The actual and expected outputs are exact matches."
     end
   end
 end

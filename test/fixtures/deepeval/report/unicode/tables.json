@@ -1,0 +1,44 @@
+[
+  {
+    "table": {
+      "title": "Test Results",
+      "columns": [
+        "Test case",
+        "Metric",
+        "Score",
+        "Status",
+        "Overall Success Rate"
+      ],
+      "rows": [
+        [
+          "café ☕ 测试",
+          "",
+          "",
+          "",
+          "50.0% | passed=1 | failed=1"
+        ],
+        [
+          "",
+          "Answer Relevancy",
+          "0.88 (threshold=0.5, evaluation model=gpt-4o-mini, reason=回答完全相关，并且涵盖了所有要点。🎉 The answer is fully relevant and covers every point., error=None)",
+          "[green]PASSED[/green]",
+          ""
+        ],
+        [
+          "",
+          "Faithfulness",
+          "0.12 (threshold=0.5, evaluation model=gpt-4o-mini, reason=Line one.\nLine two., error=None)",
+          "[red]FAILED[/red]",
+          ""
+        ],
+        [
+          "[bold red]Note: Use Confident AI with DeepEval to analyze failed test cases for more details[/bold red]",
+          "",
+          "",
+          "",
+          ""
+        ]
+      ]
+    }
+  }
+]

@@ -1,0 +1,64 @@
+[
+  {
+    "score": 0.41911764705882354,
+    "success": false,
+    "reason": "Decided by fake-jev, minimum confidence 0.45.\n1. Does `actual_output` (with the tools in `tools_called`) carry out every step of the plan the agent states in `actual_output`, explicitly and in the stated order? -> \"No, a planned step is missing, only implied or out of order\" (P=0.70, confidence=0.45, weight=2)\n2. Does `actual_output` (with the tools in `tools_called`) take any major action, tool call or reasoning step that is not part of the plan the agent states in `actual_output`? -> \"No, it does only what the plan says\" (P=0.70, confidence=0.45)\n3. How strictly do the actions of `actual_output` (with the tools in `tools_called`) follow the plan the agent states in `actual_output`? -> \"Partial adherence\" (P=0.70, confidence=0.45)\nScore: 0.42 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [choice, weight=2] Does `actual_output` (with the tools in `tools_called`) carry out every step of the plan the agent states in `actual_output`, explicitly and in the stated order?\n   value=0.176 applicable=True probabilities={'Yes, every planned step is carried out in order': 0.15, 'No, a planned step is missing, only implied or out of order': 0.7, 'The agent states no plan': 0.15} confidence=0.450\n2. [choice, weight=1] Does `actual_output` (with the tools in `tools_called`) take any major action, tool call or reasoning step that is not part of the plan the agent states in `actual_output`?\n   value=0.824 applicable=True probabilities={'No, it does only what the plan says': 0.7, 'Yes, it takes actions outside the plan': 0.15, 'The agent states no plan': 0.15} confidence=0.450\n3. [choice, weight=1] How strictly do the actions of `actual_output` (with the tools in `tools_called`) follow the plan the agent states in `actual_output`?\n   value=0.500 applicable=True probabilities={'No adherence': 0.06, 'Weak adherence': 0.06, 'Partial adherence': 0.7, 'Strong adherence': 0.06, 'Perfect adherence': 0.06, 'The agent states no plan': 0.06} confidence=0.450",
+    "confidence": 0.45,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Does `actual_output` (with the tools in `tools_called`) carry out every step of the plan the agent states in `actual_output`, explicitly and in the stated order?",
+        "type": "choice",
+        "weight": 2.0,
+        "value": 0.17647058823529413,
+        "applicable": true,
+        "probabilities": {
+          "Yes, every planned step is carried out in order": 0.15,
+          "No, a planned step is missing, only implied or out of order": 0.7,
+          "The agent states no plan": 0.15
+        },
+        "confidence": 0.45,
+        "passed": null
+      },
+      {
+        "question": "Does `actual_output` (with the tools in `tools_called`) take any major action, tool call or reasoning step that is not part of the plan the agent states in `actual_output`?",
+        "type": "choice",
+        "weight": 1.0,
+        "value": 0.8235294117647058,
+        "applicable": true,
+        "probabilities": {
+          "No, it does only what the plan says": 0.7,
+          "Yes, it takes actions outside the plan": 0.15,
+          "The agent states no plan": 0.15
+        },
+        "confidence": 0.45,
+        "passed": null
+      },
+      {
+        "question": "How strictly do the actions of `actual_output` (with the tools in `tools_called`) follow the plan the agent states in `actual_output`?",
+        "type": "choice",
+        "weight": 1.0,
+        "value": 0.5,
+        "applicable": true,
+        "probabilities": {
+          "No adherence": 0.06,
+          "Weak adherence": 0.06,
+          "Partial adherence": 0.7,
+          "Strong adherence": 0.06,
+          "Perfect adherence": 0.06,
+          "The agent states no plan": 0.06
+        },
+        "confidence": 0.45,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

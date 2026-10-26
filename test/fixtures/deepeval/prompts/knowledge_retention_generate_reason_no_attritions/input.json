@@ -1,0 +1,7 @@
+{
+  "template": "KnowledgeRetentionMetric.generate_reason",
+  "inputs": {
+    "score": 1,
+    "attritions": []
+  }
+}

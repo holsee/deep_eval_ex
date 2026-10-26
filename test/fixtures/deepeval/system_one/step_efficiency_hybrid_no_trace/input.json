@@ -1,0 +1,41 @@
+{
+  "description": "StepEfficiency in hybrid mode without a trace: Jev is not asked, the LLM scores the efficiency",
+  "metrics": [
+    {
+      "kind": "step_efficiency",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Where is my invoice?",
+    "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {}
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "step_efficiency": {
+      "task": [
+        {
+          "task": "Find my latest invoice."
+        }
+      ],
+      "reason,score": [
+        {
+          "score": 0.75,
+          "reason": "The lookup was needed; the reply was direct."
+        }
+      ]
+    }
+  }
+}

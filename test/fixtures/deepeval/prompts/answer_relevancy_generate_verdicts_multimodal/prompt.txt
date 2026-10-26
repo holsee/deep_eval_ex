@@ -1,0 +1,49 @@
+For the provided list of statements, determine whether each statement is relevant to address the input.
+Generate JSON objects with 'verdict' and 'reason' fields.
+The 'verdict' should be 'yes' (relevant), 'no' (irrelevant), or 'borderline' (ambiguous/supporting information).
+Provide 'reason' ONLY for 'no' or 'borderline' verdicts.
+The statements are from an AI's actual output.
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+
+
+**
+IMPORTANT: Please make sure to only return in valid and parseable JSON format, with the 'verdicts' key mapping to a list of JSON objects. Ensure all strings are closed appropriately. Repair any invalid JSON before you output it.
+
+Expected JSON format:
+{
+  "verdicts": [
+    {
+      "verdict": "yes"
+    },
+    {
+      "reason": <explanation_for_irrelevance>,
+      "verdict": "no"
+    },
+    {
+      "reason": <explanation_for_ambiguity>,
+      "verdict": "borderline"
+    }
+  ]  
+}
+
+Generate ONE verdict per statement - number of 'verdicts' MUST equal number of statements.
+'verdict' must be STRICTLY 'yes', 'no', or 'borderline':
+- 'yes': statement is relevant to addressing the input
+- 'no': statement is irrelevant to the input  
+- 'borderline': statement is ambiguous (not directly relevant but could be supporting information)
+Provide 'reason' ONLY for 'no' or 'borderline' verdicts.
+**          
+
+Input:
+What does [DEEPEVAL:IMAGE:sales-chart] show?
+
+Statements:
+['Sales doubled.', 'The chart is blue.']
+
+JSON:

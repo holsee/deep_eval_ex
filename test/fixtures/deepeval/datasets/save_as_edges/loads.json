@@ -1,0 +1,463 @@
+[
+  {
+    "loader": "add_goldens_from_csv_file",
+    "file": "saved.csv",
+    "args": [],
+    "kwargs": {},
+    "goldens": [
+      {
+        "input": "Emoji 🎉, bell \u0007, CR\rand CRLF\r\nend",
+        "actual_output": null,
+        "expected_output": " padded; semi ",
+        "context": [],
+        "retrieval_context": [],
+        "additional_metadata": {},
+        "comments": null,
+        "tools_called": [],
+        "expected_tools": [
+          {
+            "name": "noop",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": {},
+            "output": {
+              "a": null,
+              "b": [
+                1,
+                2.5,
+                true,
+                -0.0
+              ],
+              "c": 1e+16
+            }
+          }
+        ],
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": "edge",
+        "custom_column_key_values": null,
+        "expectations": {
+          "model": null,
+          "eval_mode": "system_one",
+          "must": [],
+          "must_not": []
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Tabs\tand ümläuts  ",
+        "actual_output": null,
+        "expected_output": null,
+        "context": [
+          "only",
+          "piped"
+        ],
+        "retrieval_context": [
+          {
+            "source": "",
+            "context": ""
+          }
+        ],
+        "additional_metadata": {
+          "a": [],
+          "b": {},
+          "n": 1.5e-07
+        },
+        "comments": null,
+        "tools_called": [
+          {
+            "name": "t",
+            "type": "MCP",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": null,
+            "output": "plain"
+          }
+        ],
+        "expected_tools": [],
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": {
+          "k": "vé"
+        },
+        "expectations": {
+          "model": "m",
+          "eval_mode": null,
+          "must": [
+            "Be kind"
+          ],
+          "must_not": []
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Tiny cost",
+        "actual_output": "ok",
+        "expected_output": null,
+        "context": [],
+        "retrieval_context": [
+          {
+            "source": "db",
+            "context": "row 1"
+          }
+        ],
+        "additional_metadata": {
+          "nested": {
+            "a": 1,
+            "b": "ü"
+          }
+        },
+        "comments": null,
+        "tools_called": [],
+        "expected_tools": [],
+        "token_cost": 1e-05,
+        "input_token_count": 0,
+        "output_token_count": 1000000,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": {
+          "model": null,
+          "eval_mode": null,
+          "must": [
+            "Answer"
+          ],
+          "must_not": []
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Whole cost",
+        "actual_output": "ok",
+        "expected_output": null,
+        "context": [],
+        "retrieval_context": [],
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": [],
+        "expected_tools": [],
+        "token_cost": 2.0,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      }
+    ]
+  },
+  {
+    "loader": "add_goldens_from_json_file",
+    "file": "saved.json",
+    "args": [],
+    "kwargs": {},
+    "goldens": [
+      {
+        "input": "Emoji 🎉, bell \u0007, CR\rand CRLF\r\nend",
+        "actual_output": "",
+        "expected_output": " padded; semi ",
+        "context": [],
+        "retrieval_context": [],
+        "additional_metadata": {},
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": [
+          {
+            "name": "noop",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": {},
+            "output": {
+              "a": null,
+              "b": [
+                1,
+                2.5,
+                true,
+                -0.0
+              ],
+              "c": 1e+16
+            }
+          }
+        ],
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": "edge",
+        "custom_column_key_values": {},
+        "expectations": {
+          "model": null,
+          "eval_mode": "system_one",
+          "must": [],
+          "must_not": []
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Tabs\tand ümläuts  ",
+        "actual_output": null,
+        "expected_output": null,
+        "context": [
+          "only|piped"
+        ],
+        "retrieval_context": [
+          {
+            "source": "",
+            "context": ""
+          }
+        ],
+        "additional_metadata": {
+          "a": [],
+          "b": {},
+          "n": 1.5e-07
+        },
+        "comments": null,
+        "tools_called": [
+          {
+            "name": "t",
+            "type": "MCP",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": null,
+            "output": "plain"
+          }
+        ],
+        "expected_tools": null,
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": {
+          "k": "vé"
+        },
+        "expectations": {
+          "model": "m",
+          "eval_mode": null,
+          "must": [
+            "Be kind"
+          ],
+          "must_not": []
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Tiny cost",
+        "actual_output": "ok",
+        "expected_output": null,
+        "context": null,
+        "retrieval_context": [
+          {
+            "source": "db",
+            "context": "row 1"
+          }
+        ],
+        "additional_metadata": {
+          "nested": {
+            "a": 1,
+            "b": "ü"
+          }
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "token_cost": 1e-05,
+        "input_token_count": 0,
+        "output_token_count": 1000000,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": {
+          "model": null,
+          "eval_mode": null,
+          "must": [
+            "Answer"
+          ],
+          "must_not": []
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Whole cost",
+        "actual_output": "ok",
+        "expected_output": null,
+        "context": null,
+        "retrieval_context": null,
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "token_cost": 2.0,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      }
+    ]
+  },
+  {
+    "loader": "add_goldens_from_jsonl_file",
+    "file": "saved.jsonl",
+    "args": [],
+    "kwargs": {},
+    "goldens": [
+      {
+        "input": "Emoji 🎉, bell \u0007, CR\rand CRLF\r\nend",
+        "actual_output": "",
+        "expected_output": " padded; semi ",
+        "context": [],
+        "retrieval_context": [],
+        "additional_metadata": {},
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": [
+          {
+            "name": "noop",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": {},
+            "output": {
+              "a": null,
+              "b": [
+                1,
+                2.5,
+                true,
+                -0.0
+              ],
+              "c": 1e+16
+            }
+          }
+        ],
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": "edge",
+        "custom_column_key_values": {},
+        "expectations": {
+          "model": null,
+          "eval_mode": "system_one",
+          "must": [],
+          "must_not": []
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Tabs\tand ümläuts  ",
+        "actual_output": null,
+        "expected_output": null,
+        "context": [
+          "only",
+          "piped"
+        ],
+        "retrieval_context": [
+          {
+            "source": "",
+            "context": ""
+          }
+        ],
+        "additional_metadata": {
+          "a": [],
+          "b": {},
+          "n": 1.5e-07
+        },
+        "comments": null,
+        "tools_called": [
+          {
+            "name": "t",
+            "type": "MCP",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": null,
+            "output": "plain"
+          }
+        ],
+        "expected_tools": null,
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": {
+          "k": "vé"
+        },
+        "expectations": {
+          "model": "m",
+          "eval_mode": null,
+          "must": [
+            "Be kind"
+          ],
+          "must_not": []
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Tiny cost",
+        "actual_output": "ok",
+        "expected_output": null,
+        "context": null,
+        "retrieval_context": [
+          {
+            "source": "db",
+            "context": "row 1"
+          }
+        ],
+        "additional_metadata": {
+          "nested": {
+            "a": 1,
+            "b": "ü"
+          }
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "token_cost": 1e-05,
+        "input_token_count": 0,
+        "output_token_count": 1000000,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": {
+          "model": null,
+          "eval_mode": null,
+          "must": [
+            "Answer"
+          ],
+          "must_not": []
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "Whole cost",
+        "actual_output": "ok",
+        "expected_output": null,
+        "context": null,
+        "retrieval_context": null,
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "token_cost": 2.0,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      }
+    ]
+  }
+]

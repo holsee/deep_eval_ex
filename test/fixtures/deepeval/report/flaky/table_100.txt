@@ -1,0 +1,40 @@
+                                            Test Results                                            
+┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Test case   ┃ Metric       ┃ Score                        ┃ Status ┃ Overall Success Rate        ┃
+┡━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ test_case_0 │              │                              │        │ 100.0% | passed=2 (flaky=1) │
+│             │              │                              │        │ | failed=0                  │
+│             │ Tone         │ 0.9 (threshold=0.5,          │ PASSED │                             │
+│             │              │ evaluation                   │        │                             │
+│             │              │ model=gpt-4o-mini,           │        │                             │
+│             │              │ reason=None, error=None)     │        │                             │
+│             │ Faithfulness │ 1.0 (threshold=0.5,          │ PASSED │                             │
+│             │              │ evaluation                   │        │                             │
+│             │              │ model=gpt-4o-mini, reason=No │        │                             │
+│             │              │ contradictions., error=None) │        │                             │
+│             │              │                              │        │                             │
+│ test_case_1 │              │                              │        │ 50.0% | passed=1 | failed=1 │
+│             │              │                              │        │ (flaky=1)                   │
+│             │ Tone         │ 0.1 (threshold=0.5,          │ FAILED │                             │
+│             │              │ evaluation                   │        │                             │
+│             │              │ model=gpt-4o-mini,           │        │                             │
+│             │              │ reason=None, error=None)     │        │                             │
+│             │ Faithfulness │ 1.0 (threshold=0.5,          │ PASSED │                             │
+│             │              │ evaluation                   │        │                             │
+│             │              │ model=gpt-4o-mini, reason=No │        │                             │
+│             │              │ contradictions., error=None) │        │                             │
+│             │              │                              │        │                             │
+│ test_case_2 │              │                              │        │ 0.0% | passed=0 | failed=2  │
+│             │ Tone         │ 0.2 (threshold=0.5,          │ FAILED │                             │
+│             │              │ evaluation                   │        │                             │
+│             │              │ model=gpt-4o-mini,           │        │                             │
+│             │              │ reason=None, error=None)     │        │                             │
+│             │ Faithfulness │ 0.25 (threshold=0.5,         │ FAILED │                             │
+│             │              │ evaluation                   │        │                             │
+│             │              │ model=gpt-4o-mini,           │        │                             │
+│             │              │ reason=The answer            │        │                             │
+│             │              │ contradicts the retrieval    │        │                             │
+│             │              │ context on the refund        │        │                             │
+│             │              │ window, which is 30 days.,   │        │                             │
+│             │              │ error=None)                  │        │                             │
+└─────────────┴──────────────┴──────────────────────────────┴────────┴─────────────────────────────┘

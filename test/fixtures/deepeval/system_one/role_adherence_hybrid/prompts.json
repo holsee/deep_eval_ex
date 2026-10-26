@@ -1,0 +1,8 @@
+[
+  [
+    {
+      "step": "reason",
+      "prompt": "Below is a list of LLM chatbot responses (ai_message) that is out of character with respect to the specified chatbot role. It is drawn from a list of messages in a conversation, which you have minimal knowledge of.\nGiven the role adherence score, which is a 0-1 score indicating how well the chatbot responses has adhered to the given role through a conversation, with 1 being the best and 0 being worst, provide a reason by quoting the out of character responses to justify the score. \n\n\n\n--- MULTIMODAL INPUT RULES ---\n- Treat image content as factual evidence.\n- Only reference visual details that are explicitly and clearly visible.\n- Do not infer or guess objects, text, or details not visibly present.\n- If an image is unclear or ambiguous, mark uncertainty explicitly.\n\n\n** \nIMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason.\nExample JSON:\n{\n  \"reason\": \"The score is <role_adherence_score> because <your_reason>.\"\n}\n\nAlways cite information in the out of character responses as well as which turn it belonged to in your final reason.\nMake the reason sound convincing, and refer to the specified chatbot role to justify your reason.\nYou should refer to the out of character responses as LLM chatbot responses.\nBe sure in your reason, as if you know what the LLM responses from the entire conversation is.\n**\n\nRole Adherence Score:\n0.0\n\nChatbot Role:\nA cheerful travel agent who keeps every reply short.\n\nOut of character responses:\n['Lovely! Where are you flying to? (turn #2)', 'Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage! (turn #4)']\n\nJSON:"
+    }
+  ]
+]

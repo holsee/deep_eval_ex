@@ -1,0 +1,109 @@
+{
+  "description": "TurnFaithfulness in hybrid mode: the LLM extracts each window's truths and claims, Jev judges the claims, one request per window",
+  "metrics": [
+    {
+      "kind": "turn_faithfulness",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "expected_outcome": "Order 42 shipped on 1 October. Refunds take 5 business days.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Where is order 42?"
+      },
+      {
+        "role": "assistant",
+        "content": "It shipped on 1 October from Zürich.",
+        "retrieval_context": [
+          "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+          "Our café is open late."
+        ]
+      },
+      {
+        "role": "user",
+        "content": "How long does a refund take?"
+      },
+      {
+        "role": "assistant",
+        "content": "Refunds take 2 business days.",
+        "retrieval_context": [
+          "Refunds take 5 business days."
+        ]
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "claim_0": {
+          "probability": 0.9
+        },
+        "claim_1": {
+          "probability": 0.5
+        },
+        "claim_2": {
+          "probability": 0.1
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "turn_faithfulness": {
+      "truths": [
+        {
+          "truths": [
+            "Order 42 shipped on 1 October.",
+            "Rome is the capital of Italy.",
+            "Our café is open late."
+          ]
+        },
+        {
+          "truths": [
+            "Order 42 shipped on 1 October.",
+            "Rome is the capital of Italy.",
+            "Our café is open late.",
+            "Refunds take 5 business days."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": [
+            "Order 42 shipped on 1 October.",
+            "Order 42 shipped from Zürich."
+          ]
+        },
+        {
+          "claims": [
+            "Order 42 shipped on 1 October.",
+            "Order 42 shipped from Zürich.",
+            "Refunds take 2 business days."
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "No contradictions were found."
+        },
+        {
+          "reason": "Refunds take 5 business days, not 2."
+        },
+        {
+          "reason": "The score is 0.83 because the refund time contradicts the context."
+        }
+      ]
+    }
+  }
+}

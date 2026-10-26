@@ -1,0 +1,12 @@
+{
+  "score": 0.65,
+  "success": true,
+  "reason": "Identical reasoning outputs at steps 1 and 2.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": null,
+  "evaluation_cost": 0,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Tool Repetition Score: 1.0 (Tool calls are within acceptable repetition limits.) \n \nReasoning Stagnation Score: 0.0 (Identical reasoning outputs at steps 1 and 2.) \n \nCall Graph Cycles Score: 1.0 (No execution cycles detected.) \n \nCombined Loop Score: 0.65"
+}

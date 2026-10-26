@@ -1,0 +1,11 @@
+{
+  "template": "ArgumentCorrectnessMetric.generate_reason",
+  "inputs": {
+    "score": 0.3333333333333333,
+    "incorrect_tool_calls_reasons": [
+      "It books Saturday, not Friday.",
+      null
+    ],
+    "input": "Book a table for two in Zürich on Friday."
+  }
+}

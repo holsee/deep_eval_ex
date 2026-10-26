@@ -1,0 +1,79 @@
+{
+  "description": "Jev: one Choice per condition with the observed case as state; strict score 1",
+  "test_case": {
+    "input": "Can I get a refund on a used ticket?",
+    "actual_output": "Used tickets can't be refunded, but you can exchange it within 30 days.",
+    "retrieval_context": [
+      "Used tickets are non-refundable.",
+      {
+        "context": "Exchanges are free within 30 days.",
+        "source": "policy.md"
+      }
+    ],
+    "tools_called": [
+      {
+        "name": "lookup_policy",
+        "input_parameters": {
+          "topic": "refunds"
+        }
+      }
+    ],
+    "metadata": {
+      "channel": "chat",
+      "priority": null
+    },
+    "tags": [
+      "refunds"
+    ],
+    "expectations": {
+      "must": [
+        "States the refund policy",
+        "Offers the café exchange"
+      ],
+      "must_not": [
+        "Promises a refund"
+      ],
+      "eval_mode": "system_one"
+    }
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "choices": {
+        "q_0": {
+          "choice": "pass",
+          "probabilities": {
+            "pass": 0.9,
+            "fail": 0.08,
+            "unable_to_evaluate": 0.02
+          },
+          "confidence": 0.85
+        },
+        "q_1": {
+          "choice": "pass",
+          "probabilities": {
+            "pass": 0.7,
+            "fail": 0.25,
+            "unable_to_evaluate": 0.05
+          },
+          "confidence": 0.55
+        },
+        "q_2": {
+          "choice": "pass",
+          "probabilities": {
+            "pass": 0.95,
+            "fail": 0.04,
+            "unable_to_evaluate": 0.01
+          },
+          "confidence": 0.9
+        }
+      }
+    }
+  },
+  "assert_test": true
+}

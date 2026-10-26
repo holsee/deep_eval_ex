@@ -1,0 +1,92 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "actual_output": "Paris is the capital of France. The Louvre opened in 1893.",
+          "contexts": [
+            "Paris is the capital and largest city of France.",
+            "The Louvre, the world's most-visited museum, opened in 1793."
+          ]
+        },
+        "questions": {
+          "context_0": {
+            "type": "noul",
+            "instructions": {
+              "context": "Paris is the capital and largest city of France.",
+              "question": "Does `actual_output` agree with `context`? Answer no if it contradicts it."
+            }
+          },
+          "context_1": {
+            "type": "noul",
+            "instructions": {
+              "context": "The Louvre, the world's most-visited museum, opened in 1793.",
+              "question": "Does `actual_output` agree with `context`? Answer no if it contradicts it."
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "context_0": {
+              "probability": 0.9
+            },
+            "context_1": {
+              "probability": 0.05
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "actual_output": "Paris is the capital of France. The Louvre opened in 1893.",
+        "contexts": [
+          "Paris is the capital and largest city of France.",
+          "The Louvre, the world's most-visited museum, opened in 1793."
+        ]
+      },
+      "questions": {
+        "context_0": {
+          "type": "noul",
+          "instructions": {
+            "context": "Paris is the capital and largest city of France.",
+            "question": "Does `actual_output` agree with `context`? Answer no if it contradicts it."
+          }
+        },
+        "context_1": {
+          "type": "noul",
+          "instructions": {
+            "context": "The Louvre, the world's most-visited museum, opened in 1793.",
+            "question": "Does `actual_output` agree with `context`? Answer no if it contradicts it."
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "context_0": {
+            "probability": 0.9
+          },
+          "context_1": {
+            "probability": 0.05
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

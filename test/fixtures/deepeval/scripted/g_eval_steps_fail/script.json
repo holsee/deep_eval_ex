@@ -1,0 +1,35 @@
+{
+  "description": "GEval with given evaluation steps, scored 2/10 under a 0.5 threshold",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "g_eval",
+    "params": {
+      "name": "Correctness",
+      "evaluation_params": [
+        "input",
+        "actual_output",
+        "expected_output"
+      ],
+      "evaluation_steps": [
+        "Compare the actual output with the expected output.",
+        "Check that the key fact is stated correctly."
+      ],
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "The capital of France is Lyon.",
+    "expected_output": "Paris"
+  },
+  "responses": {
+    "g_eval": {
+      "reason,score": [
+        {
+          "reason": "The output names Lyon instead of Paris.",
+          "score": 2
+        }
+      ]
+    }
+  }
+}

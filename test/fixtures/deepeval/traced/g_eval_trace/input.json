@@ -1,0 +1,128 @@
+{
+  "description": "GEval without evaluation_params on the trace, judged by a ScriptedJudge from the nested trace dict with its trace prompts",
+  "goldens": [
+    {
+      "input": "How do I reset my password?",
+      "expected_output": "Use the 'Forgot password' link.",
+      "name": "password-reset"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "g_eval",
+      "judge_model": "mock-model",
+      "params": {
+        "name": "Trajectory",
+        "criteria": "Determine whether the agent answered from what its search returned, without redundant calls.",
+        "threshold": 0.5
+      },
+      "responses": {
+        "steps": [
+          {
+            "steps": [
+              "Check that generate answers from search's results.",
+              "Check for repeated search calls."
+            ]
+          }
+        ],
+        "reason,score": [
+          {
+            "score": 6,
+            "reason": "agent answered via generate, but called search twice."
+          }
+        ]
+      }
+    }
+  ],
+  "modes": [
+    "sync",
+    "async"
+  ],
+  "functions": {
+    "agent": {
+      "type": "agent",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "observe": {
+        "available_tools": [
+          "search"
+        ]
+      },
+      "body": [
+        {
+          "call": "search",
+          "args": [
+            "$query"
+          ]
+        },
+        {
+          "call": "search",
+          "args": [
+            "$query"
+          ]
+        },
+        {
+          "call": "generate",
+          "args": [
+            "$query",
+            []
+          ],
+          "as": "answer"
+        },
+        {
+          "update_current_trace": {
+            "output": "$answer"
+          }
+        }
+      ],
+      "returns": "$answer"
+    },
+    "search": {
+      "type": "tool",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "returns": [
+        "result for {query}"
+      ]
+    },
+    "generate": {
+      "type": "llm",
+      "params": [
+        [
+          "query"
+        ],
+        [
+          "documents"
+        ]
+      ],
+      "observe": {
+        "model": "gpt-4o-mini",
+        "cost_per_input_token": 1.5e-07
+      },
+      "body": [
+        {
+          "update_llm_span": {
+            "input_token_count": 42,
+            "output_token_count": 7,
+            "cost_per_output_token": 6e-07
+          }
+        }
+      ],
+      "returns": "Answer to {query}"
+    }
+  },
+  "app": [
+    {
+      "call": "agent",
+      "args": [
+        "{input}"
+      ]
+    }
+  ]
+}

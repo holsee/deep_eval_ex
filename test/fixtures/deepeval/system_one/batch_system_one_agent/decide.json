@@ -1,0 +1,251 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "Book a table for two in Zürich on Friday.",
+            "tools_called": [
+              {
+                "name": "restaurant_search",
+                "type": "FUNCTION",
+                "description": "Find restaurants in a city",
+                "input_parameters": {
+                  "city": "Zürich",
+                  "party_size": 2
+                }
+              },
+              {
+                "name": "book_table",
+                "type": "FUNCTION",
+                "output": "Booked for Saturday at 19:00",
+                "input_parameters": {
+                  "day": "Saturday",
+                  "restaurant": "Café Odéon"
+                }
+              }
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every tool call in `tools_called` has `input_parameters` that correctly address `input`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "No tool call in `tools_called` has `input_parameters` that are missing, irrelevant to `input`, or wrong for `input`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How many of the tool calls in `tools_called` have `input_parameters` that correctly address `input`?",
+            "criteria": [
+              "None of them",
+              "Less than half",
+              "Most of them",
+              "All of them"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.3
+            },
+            "q_1": {
+              "probability": 0.25
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 2.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.3,
+                "2": 0.55,
+                "3": 0.1
+              },
+              "confidence": 0.4
+            }
+          }
+        },
+        "cost": {
+          "value": 8.4e-05,
+          "input_tokens": 2000,
+          "output_tokens": 0
+        }
+      }
+    ],
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "Book a table for two in Zürich on Friday.",
+            "actual_output": "Your table at Café Odéon is booked for Saturday."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every statement in `actual_output` is relevant to addressing `input`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "`actual_output` directly addresses what `input` asks for, rather than a different or broader topic."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `actual_output` is relevant to addressing `input`?",
+            "criteria": [
+              "None of it",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.7
+            },
+            "q_1": {
+              "probability": 0.85
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 3.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.05,
+                "2": 0.15,
+                "3": 0.8
+              },
+              "confidence": 0.8
+            }
+          }
+        },
+        "cost": {
+          "value": 8.4e-05,
+          "input_tokens": 2000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "input": "Book a table for two in Zürich on Friday.",
+          "tools_called": [
+            {
+              "name": "restaurant_search",
+              "type": "FUNCTION",
+              "description": "Find restaurants in a city",
+              "input_parameters": {
+                "city": "Zürich",
+                "party_size": 2
+              }
+            },
+            {
+              "name": "book_table",
+              "type": "FUNCTION",
+              "output": "Booked for Saturday at 19:00",
+              "input_parameters": {
+                "day": "Saturday",
+                "restaurant": "Café Odéon"
+              }
+            }
+          ],
+          "actual_output": "Your table at Café Odéon is booked for Saturday."
+        }
+      },
+      "questions": {
+        "m0.q_0": {
+          "type": "noul",
+          "instructions": "Every tool call in `tools_called` has `input_parameters` that correctly address `input`."
+        },
+        "m0.q_1": {
+          "type": "noul",
+          "instructions": "No tool call in `tools_called` has `input_parameters` that are missing, irrelevant to `input`, or wrong for `input`."
+        },
+        "m0.q_2": {
+          "type": "score",
+          "instructions": "How many of the tool calls in `tools_called` have `input_parameters` that correctly address `input`?",
+          "criteria": [
+            "None of them",
+            "Less than half",
+            "Most of them",
+            "All of them"
+          ]
+        },
+        "m1.q_0": {
+          "type": "noul",
+          "instructions": "Every statement in `actual_output` is relevant to addressing `input`."
+        },
+        "m1.q_1": {
+          "type": "noul",
+          "instructions": "`actual_output` directly addresses what `input` asks for, rather than a different or broader topic."
+        },
+        "m1.q_2": {
+          "type": "score",
+          "instructions": "How much of `actual_output` is relevant to addressing `input`?",
+          "criteria": [
+            "None of it",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "m0.q_0": {
+            "probability": 0.3
+          },
+          "m0.q_1": {
+            "probability": 0.25
+          },
+          "m1.q_0": {
+            "probability": 0.7
+          },
+          "m1.q_1": {
+            "probability": 0.85
+          }
+        },
+        "choices": {},
+        "scores": {
+          "m0.q_2": {
+            "score": 2.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.3,
+              "2": 0.55,
+              "3": 0.1
+            },
+            "confidence": 0.4
+          },
+          "m1.q_2": {
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.05,
+              "2": 0.15,
+              "3": 0.8
+            },
+            "confidence": 0.8
+          }
+        }
+      },
+      "cost": {
+        "value": 8.4e-05,
+        "input_tokens": 2000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+[
+  {
+    "description": "evaluate() without test cases",
+    "kind": "evaluate",
+    "test_cases": [],
+    "raised": {
+      "type": "ValueError",
+      "message": "Provide at least one test case with non-empty expectations when evaluating without metrics or classifiers."
+    }
+  },
+  {
+    "description": "evaluate(): one test case of two without expectations",
+    "kind": "evaluate",
+    "test_cases": [
+      {
+        "input": "Q",
+        "actual_output": "A",
+        "expectations": {
+          "must": [
+            "Answers."
+          ]
+        }
+      },
+      {
+        "input": "Q",
+        "actual_output": "A"
+      }
+    ],
+    "raised": {
+      "type": "ValueError",
+      "message": "1 test case is missing expectations. Fill in non-empty expectations for these test cases and/or provide at least one metric and/or classifier."
+    }
+  },
+  {
+    "description": "evaluate(): two test cases without (empty) expectations",
+    "kind": "evaluate",
+    "test_cases": [
+      {
+        "input": "Q",
+        "actual_output": "A",
+        "expectations": {}
+      },
+      {
+        "input": "Q",
+        "actual_output": "A"
+      }
+    ],
+    "raised": {
+      "type": "ValueError",
+      "message": "2 test cases are missing expectations. Fill in non-empty expectations for these test cases and/or provide at least one metric and/or classifier."
+    }
+  },
+  {
+    "description": "assert_test() of a test case without expectations",
+    "kind": "assert_test",
+    "test_cases": [
+      {
+        "input": "Q",
+        "actual_output": "A"
+      }
+    ],
+    "raised": {
+      "type": "ValueError",
+      "message": "1 test case is missing expectations. Fill in non-empty expectations for these test cases and/or provide at least one metric and/or classifier."
+    }
+  }
+]

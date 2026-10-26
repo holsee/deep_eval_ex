@@ -1,0 +1,126 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+            "retrieval_context": [
+              "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+              "Section 3.3: Up to 5 unused days can be carried over to the next year."
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every factual claim in `actual_output` is supported by the facts in `retrieval_context`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "No claim in `actual_output` contradicts the facts in `retrieval_context`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `actual_output` is grounded in the facts in `retrieval_context`?",
+            "criteria": [
+              "Fabricated",
+              "Mostly fabricated",
+              "Mostly grounded",
+              "Fully grounded"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.3
+            },
+            "q_1": {
+              "probability": 0.2
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 1.0,
+              "probabilities": {
+                "0": 0.1,
+                "1": 0.6,
+                "2": 0.2,
+                "3": 0.1
+              },
+              "confidence": 0.4
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+          "retrieval_context": [
+            "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+            "Section 3.3: Up to 5 unused days can be carried over to the next year."
+          ]
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "Every factual claim in `actual_output` is supported by the facts in `retrieval_context`."
+        },
+        "q_1": {
+          "type": "noul",
+          "instructions": "No claim in `actual_output` contradicts the facts in `retrieval_context`."
+        },
+        "q_2": {
+          "type": "score",
+          "instructions": "How much of `actual_output` is grounded in the facts in `retrieval_context`?",
+          "criteria": [
+            "Fabricated",
+            "Mostly fabricated",
+            "Mostly grounded",
+            "Fully grounded"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.3
+          },
+          "q_1": {
+            "probability": 0.2
+          }
+        },
+        "choices": {},
+        "scores": {
+          "q_2": {
+            "score": 1.0,
+            "probabilities": {
+              "0": 0.1,
+              "1": 0.6,
+              "2": 0.2,
+              "3": 0.1
+            },
+            "confidence": 0.4
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

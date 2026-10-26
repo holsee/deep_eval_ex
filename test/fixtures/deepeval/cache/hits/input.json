@@ -1,0 +1,96 @@
+{
+  "description": "A cold run writes the cache; a warm run with use_cache reads every metric of both test cases from it at cost 0, measuring none",
+  "runs": [
+    {
+      "test_cases": [
+        {
+          "input": "What is the capital of France?",
+          "actual_output": "Paris.",
+          "expected_output": "Paris."
+        },
+        {
+          "input": "Où est le café?",
+          "actual_output": "Ici.",
+          "expected_output": "Là-bas.",
+          "context": [
+            "b",
+            "a"
+          ]
+        }
+      ],
+      "metrics": [
+        {
+          "kind": "cache_stub",
+          "name": "Relevance",
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "threshold": 0.5,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        },
+        {
+          "kind": "cache_stub",
+          "name": "Tone",
+          "score": 0.4,
+          "reason": "Tone reason.",
+          "threshold": 0.6,
+          "evaluation_model": "gpt-4o",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        },
+        {
+          "kind": "exact_match"
+        }
+      ]
+    },
+    {
+      "test_cases": [
+        {
+          "input": "What is the capital of France?",
+          "actual_output": "Paris.",
+          "expected_output": "Paris."
+        },
+        {
+          "input": "Où est le café?",
+          "actual_output": "Ici.",
+          "expected_output": "Là-bas.",
+          "context": [
+            "b",
+            "a"
+          ]
+        }
+      ],
+      "metrics": [
+        {
+          "kind": "cache_stub",
+          "name": "Relevance",
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "threshold": 0.5,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        },
+        {
+          "kind": "cache_stub",
+          "name": "Tone",
+          "score": 0.4,
+          "reason": "Tone reason.",
+          "threshold": 0.6,
+          "evaluation_model": "gpt-4o",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        },
+        {
+          "kind": "exact_match"
+        }
+      ],
+      "use_cache": true
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "test_cases": [
+    {
+      "input": "What's the weather in Paris?",
+      "actual_output": "18°C",
+      "expected_output": "18°C",
+      "mcp_servers": [
+        {
+          "server_name": "weather",
+          "transport": "stdio",
+          "available_tools": [
+            {
+              "name": "get_weather",
+              "description": "Current weather for a city"
+            },
+            {
+              "name": "get_forecast"
+            }
+          ]
+        }
+      ],
+      "tools_called": [
+        {
+          "name": "get_weather",
+          "input_parameters": {
+            "city": "Paris"
+          },
+          "output": "18°C"
+        },
+        {
+          "name": "format_answer",
+          "output": "18°C"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "get_weather"
+        },
+        {
+          "name": "add"
+        }
+      ]
+    },
+    {
+      "input": "Add 2 and 3",
+      "actual_output": "5",
+      "expected_output": "5",
+      "tools_called": [
+        {
+          "name": "add",
+          "input_parameters": {
+            "a": 2,
+            "b": 3
+          },
+          "output": 5
+        }
+      ]
+    },
+    {
+      "input": "Add 1 and 1",
+      "actual_output": "2",
+      "expected_output": "2",
+      "mcp_servers": [
+        {
+          "server_name": "empty",
+          "transport": "sse"
+        }
+      ],
+      "tools_called": [
+        {
+          "name": "add",
+          "output": 2
+        }
+      ]
+    },
+    {
+      "input": "Add 4 and 4",
+      "actual_output": "8",
+      "expected_output": "8",
+      "mcp_servers": [],
+      "tools_called": [
+        {
+          "name": "add",
+          "output": 8
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "exact_match"
+    }
+  ],
+  "mcp_servers": [
+    {
+      "server_name": "calculator",
+      "available_tools": [
+        {
+          "name": "add"
+        }
+      ]
+    }
+  ],
+  "identifier": null,
+  "hyperparameters": null,
+  "error_config": {
+    "ignore_errors": true,
+    "skip_on_missing_params": false
+  }
+}

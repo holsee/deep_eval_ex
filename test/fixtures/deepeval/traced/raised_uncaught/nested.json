@@ -1,0 +1,39 @@
+[
+  {
+    "name": "agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "error": "agent gave up",
+    "tools_called": [
+      {
+        "name": "search",
+        "type": "FUNCTION",
+        "description": null,
+        "reasoning": null,
+        "output": [
+          "result for How do I reset my password?"
+        ],
+        "input_parameters": {
+          "query": "How do I reset my password?"
+        }
+      }
+    ],
+    "available_tools": [],
+    "agent_handoffs": [],
+    "children": [
+      {
+        "name": "search",
+        "type": "tool",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": [
+          "result for How do I reset my password?"
+        ],
+        "children": []
+      }
+    ]
+  }
+]

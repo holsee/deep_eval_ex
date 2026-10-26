@@ -1,0 +1,70 @@
+{
+  "description": "Test results sorted by index, then by name naturally (case 2 before case 10)",
+  "test_results": [
+    {
+      "name": "Case 10",
+      "success": true,
+      "conversational": false,
+      "index": 1,
+      "input": "Question 1?",
+      "actual_output": "Answer 1.",
+      "metrics_data": [
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "No contradictions.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0012
+        }
+      ]
+    },
+    {
+      "name": "case 2",
+      "success": false,
+      "conversational": false,
+      "index": 1,
+      "input": "Question 1?",
+      "actual_output": "Answer 1.",
+      "metrics_data": [
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": false,
+          "score": 0.25,
+          "reason": "The answer contradicts the retrieval context on the refund window, which is 30 days.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ]
+    },
+    {
+      "name": "case 1",
+      "success": true,
+      "conversational": false,
+      "index": 0,
+      "input": "Question 0?",
+      "actual_output": "Answer 0.",
+      "metrics_data": [
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "No contradictions.",
+          "strictMode": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0012
+        }
+      ]
+    }
+  ],
+  "display": "all",
+  "truncate": false,
+  "run_duration": 1.0,
+  "hyperparameters": null,
+  "identifier": null
+}

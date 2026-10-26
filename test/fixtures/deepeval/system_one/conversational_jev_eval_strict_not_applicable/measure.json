@@ -1,0 +1,46 @@
+[
+  {
+    "score": 1.0,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.24.\n1. Every assistant turn is grounded in its `retrieval_context`. -> unclear (P(yes)=0.62, confidence=0.24) strict=pass\n2. Does the conversation reach `expected_outcome`? -> not applicable (not applicable, confidence=0.55)\nScore: 1.00 (strict mode: every applicable question passed).",
+    "threshold": 1,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": null,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "verbose_logs": "Questions:\n1. [noul, weight=1] Every assistant turn is grounded in its `retrieval_context`.\n   value=0.620 applicable=True probabilities={'true': 0.62, 'false': 0.38} confidence=0.240 strict_pass=True\n2. [choice, weight=1] Does the conversation reach `expected_outcome`?\n   value=n/a applicable=False probabilities={'reaches_it': 0.2, 'misses_it': 0.1, 'no_outcome': 0.7} confidence=0.550 \n \nScore: 1.0\nConfidence: 0.24",
+    "confidence": 0.24,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every assistant turn is grounded in its `retrieval_context`.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.62,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.62,
+          "false": 0.38
+        },
+        "confidence": 0.24,
+        "passed": true
+      },
+      {
+        "question": "Does the conversation reach `expected_outcome`?",
+        "type": "choice",
+        "weight": 1.0,
+        "value": null,
+        "applicable": false,
+        "probabilities": {
+          "reaches_it": 0.2,
+          "misses_it": 0.1,
+          "no_outcome": 0.7
+        },
+        "confidence": 0.55,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

@@ -1,0 +1,40 @@
+                        Test Results                        
+┏━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━┓
+┃           ┃            ┃           ┃        ┃ Overall    ┃
+┃           ┃            ┃           ┃        ┃ Success    ┃
+┃ Test case ┃ Metric     ┃ Score     ┃ Status ┃ Rate       ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━┩
+│ test      │            │           │        │ 100.0% |   │
+│ exact     │            │           │        │ passed=1 | │
+│ match     │            │           │        │ failed=0   │
+│ passes    │            │           │        │            │
+│           │ Exact      │ 1.0       │ PASSED │            │
+│           │ Match      │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=n/… │        │            │
+│           │            │ reason=T… │        │            │
+│           │            │ actual    │        │            │
+│           │            │ and       │        │            │
+│           │            │ expected  │        │            │
+│           │            │ outputs   │        │            │
+│           │            │ are exact │        │            │
+│           │            │ matches., │        │            │
+│           │            │ error=No… │        │            │
+│           │            │           │        │            │
+│ test      │            │           │        │ 0.0% |     │
+│ exact     │            │           │        │ passed=0 | │
+│ match     │            │           │        │ failed=1   │
+│ fails     │            │           │        │            │
+│           │ Exact      │ 0.0       │ FAILED │            │
+│           │ Match      │ (thresho… │        │            │
+│           │            │ evaluati… │        │            │
+│           │            │ model=n/… │        │            │
+│           │            │ reason=T… │        │            │
+│           │            │ actual    │        │            │
+│           │            │ and       │        │            │
+│           │            │ expected  │        │            │
+│           │            │ outputs   │        │            │
+│           │            │ are       │        │            │
+│           │            │ differen… │        │            │
+│           │            │ error=No… │        │            │
+└───────────┴────────────┴───────────┴────────┴────────────┘

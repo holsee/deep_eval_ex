@@ -1,0 +1,13 @@
+{
+  "template": "ContextualRecallMetric.generate_reason",
+  "inputs": {
+    "score": 0.5,
+    "expected_output": "Paris is the capital of France. Its metro opened in 1900.",
+    "supportive_reasons": [
+      "The 1st node says Paris is the capital."
+    ],
+    "unsupportive_reasons": [
+      "No node mentions the metro."
+    ]
+  }
+}

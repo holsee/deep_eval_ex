@@ -1,0 +1,60 @@
+{
+  "description": "ArgumentCorrectness: two of three tool calls have wrong arguments, one without a reason",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "argument_correctness",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "Book a table for two in Zürich on Friday.",
+    "actual_output": "Your table is booked.",
+    "tools_called": [
+      {
+        "name": "restaurant_search",
+        "input_parameters": {
+          "city": "Zürich",
+          "party_size": 2
+        }
+      },
+      {
+        "name": "book_table",
+        "type": "MCP",
+        "input_parameters": {
+          "day": "Saturday",
+          "restaurant": "Café Odéon"
+        },
+        "output": "Booked for Saturday at 19:00"
+      },
+      {
+        "name": "send_newsletter"
+      }
+    ]
+  },
+  "responses": {
+    "argument_correctness": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "no",
+              "reason": "It books Saturday, not Friday."
+            },
+            {
+              "verdict": "no"
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.33 because the booking is for the wrong day and the newsletter call has no arguments."
+        }
+      ]
+    }
+  }
+}

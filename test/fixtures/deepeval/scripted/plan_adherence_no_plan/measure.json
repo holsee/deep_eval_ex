@@ -1,0 +1,12 @@
+{
+  "score": 1,
+  "success": true,
+  "reason": "There were no plans to evaluate within the trace of your agent's execution. Please check if the agent's planning or reasoning or thinking is stored in any one of the trace attributes.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Task: Book a table for two at Café Odéon on Saturday. \n \n \nAgent Plan: \n[] \n \n \nFinal Score: 1 \n"
+}

@@ -1,0 +1,12 @@
+{
+  "score": 0.75,
+  "success": true,
+  "reason": "The plan does not say how the booking is confirmed.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Task: Book a table for two at Café Odéon on Saturday. \n \n \nAgent Plan: \n[\n    \"Find the restaurant\",\n    \"Book the table\",\n    \"Confirm the booking\"\n] \n \n \nFinal Score: 0.75 \n"
+}

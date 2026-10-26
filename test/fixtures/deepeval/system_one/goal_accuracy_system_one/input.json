@@ -1,0 +1,81 @@
+{
+  "description": "GoalAccuracy decided by Jev in one request about the turns and their tools",
+  "metrics": [
+    {
+      "kind": "goal_accuracy",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Book a table for two at Café Odéon on Saturday."
+      },
+      {
+        "role": "assistant",
+        "content": "Booked: Saturday at 19:00, for two.",
+        "tools_called": [
+          {
+            "name": "book_table",
+            "input_parameters": {
+              "day": "Saturday",
+              "restaurant": "Café Odéon"
+            },
+            "output": "Booked for Saturday at 19:00"
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "What's the address?"
+      },
+      {
+        "role": "assistant",
+        "content": "12 Rue de l'Odéon, Paris."
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.7
+        }
+      },
+      "scores": {
+        "q_1": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.05,
+            "1": 0.15,
+            "2": 0.4,
+            "3": 0.3,
+            "4": 0.1
+          },
+          "confidence": 0.35
+        },
+        "q_2": {
+          "score": 4,
+          "probabilities": {
+            "0": 0.0,
+            "1": 0.05,
+            "2": 0.1,
+            "3": 0.25,
+            "4": 0.6
+          },
+          "confidence": 0.55
+        }
+      }
+    }
+  }
+}

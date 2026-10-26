@@ -1,0 +1,298 @@
+[
+  {
+    "panel": {
+      "border_style": "none",
+      "content": "[rgb(106,0,255) bold]🚀 DeepEval Evaluation Results[/rgb(106,0,255) bold]"
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(25,227,160)",
+      "content": {
+        "tree": {
+          "label": "[rgb(25,227,160) bold]✅ test_case_0[/rgb(25,227,160) bold]",
+          "children": [
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": null,
+                    "columns": [
+                      "Key",
+                      "Value"
+                    ],
+                    "rows": [
+                      [
+                        "Input:",
+                        "Question 0?"
+                      ],
+                      [
+                        "Actual Output:",
+                        "Answer 0."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Metrics",
+                    "columns": [
+                      "Status",
+                      "Metric",
+                      "Score",
+                      "Threshold",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold green]PASS[/bold green]",
+                        "Answer Relevancy",
+                        "0.91",
+                        "0.70",
+                        "The answer states the policy accurately and names every condition the context lists, so it is relevant."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Classifiers",
+                    "columns": [
+                      "Status",
+                      "Classifier",
+                      "Label",
+                      "Expected",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold green]PASS[/bold green]",
+                        "Refusal",
+                        "refused",
+                        "refused",
+                        "The answer states the policy accurately and names every condition the context lists, so it is relevant."
+                      ],
+                      [
+                        "[bold dim]NONE[/bold dim]",
+                        "Topic",
+                        "billing",
+                        "N/A",
+                        "About billing."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "red",
+      "content": {
+        "tree": {
+          "label": "[red bold]❌ test_case_1[/red bold]",
+          "children": [
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": null,
+                    "columns": [
+                      "Key",
+                      "Value"
+                    ],
+                    "rows": [
+                      [
+                        "Input:",
+                        "Question 1?"
+                      ],
+                      [
+                        "Actual Output:",
+                        "Answer 1."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Classifiers",
+                    "columns": [
+                      "Status",
+                      "Classifier",
+                      "Label",
+                      "Expected",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold red]FAIL[/bold red]",
+                        "Refusal",
+                        "complied",
+                        "refused",
+                        "It answered."
+                      ],
+                      [
+                        "[bold red]ERROR[/bold red]",
+                        "Topic",
+                        "N/A",
+                        "N/A",
+                        "Classifier returned an undeclared label 'sports'"
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(25,227,160)",
+      "content": {
+        "tree": {
+          "label": "[rgb(25,227,160) bold]✅ test_case_2[/rgb(25,227,160) bold]",
+          "children": [
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": null,
+                    "columns": [
+                      "Key",
+                      "Value"
+                    ],
+                    "rows": [
+                      [
+                        "Input:",
+                        "Question 2?"
+                      ],
+                      [
+                        "Actual Output:",
+                        "Answer 2."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Classifiers",
+                    "columns": [
+                      "Status",
+                      "Classifier",
+                      "Label",
+                      "Expected",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold dim]NONE[/bold dim]",
+                        "Topic",
+                        "none",
+                        "N/A",
+                        "Nothing fits."
+                      ],
+                      [
+                        "[bold dim]NONE[/bold dim]",
+                        "Refusal",
+                        "refused",
+                        "N/A",
+                        "N/A"
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(106,0,255)",
+      "content": {
+        "table": {
+          "title": "[bold]Aggregate Metrics[/bold]\n",
+          "columns": [
+            "Metric",
+            "Average Score",
+            "Pass Rate",
+            "Total"
+          ],
+          "rows": [
+            [
+              "Answer Relevancy",
+              "0.91",
+              "100.00% | passed=1 | failed=0",
+              "1"
+            ]
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(106,0,255)",
+      "content": {
+        "table": {
+          "title": "[bold]Aggregate Classifiers[/bold]\n",
+          "columns": [
+            "Classifier",
+            "Labels",
+            "Pass Rate",
+            "Errors",
+            "Total"
+          ],
+          "rows": [
+            [
+              "Refusal",
+              "refused=2, complied=1",
+              "50.00% | passed=1 | failed=1",
+              "0",
+              "3"
+            ],
+            [
+              "Topic",
+              "billing=1, none=1",
+              "N/A",
+              "1",
+              "3"
+            ]
+          ]
+        }
+      }
+    }
+  }
+]

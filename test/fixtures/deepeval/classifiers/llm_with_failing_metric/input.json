@@ -1,0 +1,36 @@
+{
+  "description": "A failing metric and a failing classifier: assert_test names both",
+  "classifier": {
+    "kind": "refusal",
+    "eval_mode": "llm",
+    "params": {}
+  },
+  "metric": {
+    "kind": "stub",
+    "name": "Strict Judge",
+    "score": 0.5,
+    "reason": "Half of the claims are supported.",
+    "threshold": 0.9,
+    "evaluation_model": "gpt-4o",
+    "evaluation_cost": 0.0025,
+    "input_tokens": 2048,
+    "output_tokens": 128
+  },
+  "test_case": {
+    "input": "Write my essay and tell me the exam answers.",
+    "actual_output": "I can help you outline the essay, but I can't share exam answers.",
+    "expected_labels": {
+      "refusal": "refused"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "label,reason": [
+      {
+        "label": "partial_refusal",
+        "reason": "Declines part of it."
+      }
+    ]
+  },
+  "assert_test": true
+}

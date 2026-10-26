@@ -1,0 +1,2300 @@
+{
+  "metrics": [
+    {
+      "scenario": "answer_relevancy_fail",
+      "kind": "answer_relevancy",
+      "before": "{\"threshold\": 0.7, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.7, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "answer_relevancy_no_statements",
+      "kind": "answer_relevancy",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "answer_relevancy_pass",
+      "kind": "answer_relevancy",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "answer_relevancy_strict",
+      "kind": "answer_relevancy",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "argument_correctness_fail",
+      "kind": "argument_correctness",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "argument_correctness_no_tool_calls",
+      "kind": "argument_correctness",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "argument_correctness_pass",
+      "kind": "argument_correctness",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "argument_correctness_strict",
+      "kind": "argument_correctness",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "bias_fail",
+      "kind": "bias",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "bias_no_opinions",
+      "kind": "bias",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "bias_pass",
+      "kind": "bias",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "bias_strict",
+      "kind": "bias",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_precision_fail",
+      "kind": "contextual_precision",
+      "before": "{\"threshold\": 0.7, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.7, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_precision_pass",
+      "kind": "contextual_precision",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_precision_retrieved_context_data",
+      "kind": "contextual_precision",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_precision_strict",
+      "kind": "contextual_precision",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_recall_fail",
+      "kind": "contextual_recall",
+      "before": "{\"threshold\": 0.7, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.7, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_recall_pass",
+      "kind": "contextual_recall",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_recall_retrieved_context_data",
+      "kind": "contextual_recall",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_recall_strict",
+      "kind": "contextual_recall",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_relevancy_fail",
+      "kind": "contextual_relevancy",
+      "before": "{\"threshold\": 0.7, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.7, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_relevancy_no_statements",
+      "kind": "contextual_relevancy",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_relevancy_pass",
+      "kind": "contextual_relevancy",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_relevancy_strict",
+      "kind": "contextual_relevancy",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "exact_match_fail",
+      "kind": "exact_match",
+      "before": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": false}",
+      "after": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": false}"
+    },
+    {
+      "scenario": "exact_match_pass",
+      "kind": "exact_match",
+      "before": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": false}",
+      "after": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": false}"
+    },
+    {
+      "scenario": "faithfulness_borderline",
+      "kind": "faithfulness",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "faithfulness_fail",
+      "kind": "faithfulness",
+      "before": "{\"threshold\": 0.8, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.8, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "faithfulness_no_claims",
+      "kind": "faithfulness",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "faithfulness_pass",
+      "kind": "faithfulness",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "faithfulness_penalize_ambiguous",
+      "kind": "faithfulness",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "faithfulness_strict",
+      "kind": "faithfulness",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "g_eval_criteria_pass",
+      "kind": "g_eval",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"criteria\": \"Determine whether the actual output is factually correct based on the expected output.\", \"include_reason\": false, \"evaluation_params\": [\"input\", \"actual_output\", \"expected_output\"]}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"criteria\": \"Determine whether the actual output is factually correct based on the expected output.\", \"include_reason\": false, \"evaluation_steps\": [\"Check whether the facts in the actual output contradict any facts in the expected output.\", \"Heavily penalise omission of detail present in the expected output.\"], \"evaluation_params\": [\"input\", \"actual_output\", \"expected_output\"]}"
+    },
+    {
+      "scenario": "g_eval_logprobs",
+      "kind": "g_eval",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"criteria\": \"Determine whether the actual output is factually correct based on the expected output.\", \"include_reason\": false, \"evaluation_params\": [\"input\", \"actual_output\", \"expected_output\"]}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"criteria\": \"Determine whether the actual output is factually correct based on the expected output.\", \"include_reason\": false, \"evaluation_steps\": [\"Check whether the facts in the actual output contradict any facts in the expected output.\", \"Heavily penalise omission of detail present in the expected output.\"], \"evaluation_params\": [\"input\", \"actual_output\", \"expected_output\"]}"
+    },
+    {
+      "scenario": "g_eval_logprobs_missing",
+      "kind": "g_eval",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"criteria\": \"Determine whether the actual output is factually correct based on the expected output.\", \"include_reason\": false, \"evaluation_params\": [\"input\", \"actual_output\", \"expected_output\"]}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"criteria\": \"Determine whether the actual output is factually correct based on the expected output.\", \"include_reason\": false, \"evaluation_steps\": [\"Check whether the facts in the actual output contradict any facts in the expected output.\", \"Heavily penalise omission of detail present in the expected output.\"], \"evaluation_params\": [\"input\", \"actual_output\", \"expected_output\"]}"
+    },
+    {
+      "scenario": "g_eval_retrieved_context_data",
+      "kind": "g_eval",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": false, \"evaluation_steps\": [\"Check whether every claim in the actual output is supported by the retrieval context.\"], \"evaluation_params\": [\"actual_output\", \"retrieval_context\"]}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": false, \"evaluation_steps\": [\"Check whether every claim in the actual output is supported by the retrieval context.\"], \"evaluation_params\": [\"actual_output\", \"retrieval_context\"]}"
+    },
+    {
+      "scenario": "g_eval_steps_fail",
+      "kind": "g_eval",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": false, \"evaluation_steps\": [\"Compare the actual output with the expected output.\", \"Check that the key fact is stated correctly.\"], \"evaluation_params\": [\"input\", \"actual_output\", \"expected_output\"]}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": false, \"evaluation_steps\": [\"Compare the actual output with the expected output.\", \"Check that the key fact is stated correctly.\"], \"evaluation_params\": [\"input\", \"actual_output\", \"expected_output\"]}"
+    },
+    {
+      "scenario": "g_eval_strict",
+      "kind": "g_eval",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"criteria\": \"Determine whether the actual output is factually correct based on the expected output.\", \"include_reason\": false, \"evaluation_params\": [\"input\", \"actual_output\", \"expected_output\"]}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"criteria\": \"Determine whether the actual output is factually correct based on the expected output.\", \"include_reason\": false, \"evaluation_steps\": [\"Check that the actual output names the same city as the expected output.\"], \"evaluation_params\": [\"input\", \"actual_output\", \"expected_output\"]}"
+    },
+    {
+      "scenario": "hallucination_fail",
+      "kind": "hallucination",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "hallucination_invalid_json",
+      "kind": "hallucination",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": null
+    },
+    {
+      "scenario": "hallucination_messy_json",
+      "kind": "hallucination",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "hallucination_no_verdicts",
+      "kind": "hallucination",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "hallucination_pass",
+      "kind": "hallucination",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "hallucination_strict",
+      "kind": "hallucination",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "json_correctness_fail",
+      "kind": "json_correctness",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "json_correctness_invalid_json",
+      "kind": "json_correctness",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "json_correctness_not_strict",
+      "kind": "json_correctness",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": false}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": false}"
+    },
+    {
+      "scenario": "json_correctness_pass",
+      "kind": "json_correctness",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "pattern_match_fail",
+      "kind": "pattern_match",
+      "before": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": false}",
+      "after": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": false}"
+    },
+    {
+      "scenario": "pattern_match_ignore_case",
+      "kind": "pattern_match",
+      "before": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": false}",
+      "after": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": false}"
+    },
+    {
+      "scenario": "pattern_match_pass",
+      "kind": "pattern_match",
+      "before": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": false}",
+      "after": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": false}"
+    },
+    {
+      "scenario": "pii_leakage_fail",
+      "kind": "pii_leakage",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "pii_leakage_no_pii",
+      "kind": "pii_leakage",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "pii_leakage_pass",
+      "kind": "pii_leakage",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "pii_leakage_strict",
+      "kind": "pii_leakage",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "prompt_alignment_fail",
+      "kind": "prompt_alignment",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "prompt_alignment_no_verdicts",
+      "kind": "prompt_alignment",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "prompt_alignment_pass",
+      "kind": "prompt_alignment",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "prompt_alignment_strict",
+      "kind": "prompt_alignment",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "summarization_fail",
+      "kind": "summarization",
+      "before": "{\"threshold\": 0.6, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"n\": 5, \"assessment_questions\": [\"Did the council approve a riverside park?\", \"Does the park open in May?\", \"Will the park have a playground?\"]}",
+      "after": "{\"threshold\": 0.6, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"n\": 5, \"assessment_questions\": [\"Did the council approve a riverside park?\", \"Does the park open in May?\", \"Will the park have a playground?\"]}"
+    },
+    {
+      "scenario": "summarization_no_claims",
+      "kind": "summarization",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"n\": 5}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"n\": 5, \"assessment_questions\": []}"
+    },
+    {
+      "scenario": "summarization_pass",
+      "kind": "summarization",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"n\": 3}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"n\": 3, \"assessment_questions\": [\"Did the council approve a riverside park?\", \"Does the park open in May?\", \"Will the park have a playground?\"]}"
+    },
+    {
+      "scenario": "summarization_strict",
+      "kind": "summarization",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true, \"n\": 3}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true, \"n\": 3, \"assessment_questions\": [\"Did the council approve a riverside park?\", \"Does the park open in May?\", \"Will the park have a playground?\"]}"
+    },
+    {
+      "scenario": "tool_correctness_available_tools",
+      "kind": "tool_correctness",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"evaluation_params\": []}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"evaluation_params\": []}"
+    },
+    {
+      "scenario": "tool_correctness_fail",
+      "kind": "tool_correctness",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"evaluation_params\": [\"input_parameters\"]}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"evaluation_params\": [\"input_parameters\"]}"
+    },
+    {
+      "scenario": "tool_correctness_pass",
+      "kind": "tool_correctness",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"evaluation_params\": []}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"evaluation_params\": []}"
+    },
+    {
+      "scenario": "tool_correctness_strict",
+      "kind": "tool_correctness",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true, \"evaluation_params\": []}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true, \"evaluation_params\": []}"
+    },
+    {
+      "scenario": "tool_permission_denylist_only",
+      "kind": "tool_permission",
+      "before": "{\"threshold\": 0.3, \"strict_mode\": false, \"include_reason\": false}",
+      "after": "{\"threshold\": 0.3, \"strict_mode\": false, \"include_reason\": false}"
+    },
+    {
+      "scenario": "tool_permission_fail",
+      "kind": "tool_permission",
+      "before": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "tool_permission_no_tool_calls",
+      "kind": "tool_permission",
+      "before": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "tool_permission_pass",
+      "kind": "tool_permission",
+      "before": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "tool_permission_strict",
+      "kind": "tool_permission",
+      "before": "{\"threshold\": 1.0, \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "toxicity_fail",
+      "kind": "toxicity",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "toxicity_no_opinions",
+      "kind": "toxicity",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "toxicity_pass",
+      "kind": "toxicity",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}",
+      "after": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "toxicity_strict",
+      "kind": "toxicity",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}",
+      "after": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    }
+  ],
+  "same": [
+    {
+      "metric": "answer_relevancy_fail",
+      "cached": "answer_relevancy_fail",
+      "same": true
+    },
+    {
+      "metric": "answer_relevancy_fail",
+      "cached": "answer_relevancy_no_statements",
+      "same": false
+    },
+    {
+      "metric": "answer_relevancy_fail",
+      "cached": "answer_relevancy_pass",
+      "same": false
+    },
+    {
+      "metric": "answer_relevancy_fail",
+      "cached": "answer_relevancy_strict",
+      "same": false
+    },
+    {
+      "metric": "answer_relevancy_no_statements",
+      "cached": "answer_relevancy_fail",
+      "same": false
+    },
+    {
+      "metric": "answer_relevancy_no_statements",
+      "cached": "answer_relevancy_no_statements",
+      "same": true
+    },
+    {
+      "metric": "answer_relevancy_no_statements",
+      "cached": "answer_relevancy_pass",
+      "same": true
+    },
+    {
+      "metric": "answer_relevancy_no_statements",
+      "cached": "answer_relevancy_strict",
+      "same": false
+    },
+    {
+      "metric": "answer_relevancy_pass",
+      "cached": "answer_relevancy_fail",
+      "same": false
+    },
+    {
+      "metric": "answer_relevancy_pass",
+      "cached": "answer_relevancy_no_statements",
+      "same": true
+    },
+    {
+      "metric": "answer_relevancy_pass",
+      "cached": "answer_relevancy_pass",
+      "same": true
+    },
+    {
+      "metric": "answer_relevancy_pass",
+      "cached": "answer_relevancy_strict",
+      "same": false
+    },
+    {
+      "metric": "answer_relevancy_strict",
+      "cached": "answer_relevancy_fail",
+      "same": false
+    },
+    {
+      "metric": "answer_relevancy_strict",
+      "cached": "answer_relevancy_no_statements",
+      "same": false
+    },
+    {
+      "metric": "answer_relevancy_strict",
+      "cached": "answer_relevancy_pass",
+      "same": false
+    },
+    {
+      "metric": "answer_relevancy_strict",
+      "cached": "answer_relevancy_strict",
+      "same": true
+    },
+    {
+      "metric": "argument_correctness_fail",
+      "cached": "argument_correctness_fail",
+      "same": true
+    },
+    {
+      "metric": "argument_correctness_fail",
+      "cached": "argument_correctness_no_tool_calls",
+      "same": true
+    },
+    {
+      "metric": "argument_correctness_fail",
+      "cached": "argument_correctness_pass",
+      "same": true
+    },
+    {
+      "metric": "argument_correctness_fail",
+      "cached": "argument_correctness_strict",
+      "same": false
+    },
+    {
+      "metric": "argument_correctness_no_tool_calls",
+      "cached": "argument_correctness_fail",
+      "same": true
+    },
+    {
+      "metric": "argument_correctness_no_tool_calls",
+      "cached": "argument_correctness_no_tool_calls",
+      "same": true
+    },
+    {
+      "metric": "argument_correctness_no_tool_calls",
+      "cached": "argument_correctness_pass",
+      "same": true
+    },
+    {
+      "metric": "argument_correctness_no_tool_calls",
+      "cached": "argument_correctness_strict",
+      "same": false
+    },
+    {
+      "metric": "argument_correctness_pass",
+      "cached": "argument_correctness_fail",
+      "same": true
+    },
+    {
+      "metric": "argument_correctness_pass",
+      "cached": "argument_correctness_no_tool_calls",
+      "same": true
+    },
+    {
+      "metric": "argument_correctness_pass",
+      "cached": "argument_correctness_pass",
+      "same": true
+    },
+    {
+      "metric": "argument_correctness_pass",
+      "cached": "argument_correctness_strict",
+      "same": false
+    },
+    {
+      "metric": "argument_correctness_strict",
+      "cached": "argument_correctness_fail",
+      "same": false
+    },
+    {
+      "metric": "argument_correctness_strict",
+      "cached": "argument_correctness_no_tool_calls",
+      "same": false
+    },
+    {
+      "metric": "argument_correctness_strict",
+      "cached": "argument_correctness_pass",
+      "same": false
+    },
+    {
+      "metric": "argument_correctness_strict",
+      "cached": "argument_correctness_strict",
+      "same": true
+    },
+    {
+      "metric": "bias_fail",
+      "cached": "bias_fail",
+      "same": true
+    },
+    {
+      "metric": "bias_fail",
+      "cached": "bias_no_opinions",
+      "same": true
+    },
+    {
+      "metric": "bias_fail",
+      "cached": "bias_pass",
+      "same": true
+    },
+    {
+      "metric": "bias_fail",
+      "cached": "bias_strict",
+      "same": false
+    },
+    {
+      "metric": "bias_no_opinions",
+      "cached": "bias_fail",
+      "same": true
+    },
+    {
+      "metric": "bias_no_opinions",
+      "cached": "bias_no_opinions",
+      "same": true
+    },
+    {
+      "metric": "bias_no_opinions",
+      "cached": "bias_pass",
+      "same": true
+    },
+    {
+      "metric": "bias_no_opinions",
+      "cached": "bias_strict",
+      "same": false
+    },
+    {
+      "metric": "bias_pass",
+      "cached": "bias_fail",
+      "same": true
+    },
+    {
+      "metric": "bias_pass",
+      "cached": "bias_no_opinions",
+      "same": true
+    },
+    {
+      "metric": "bias_pass",
+      "cached": "bias_pass",
+      "same": true
+    },
+    {
+      "metric": "bias_pass",
+      "cached": "bias_strict",
+      "same": false
+    },
+    {
+      "metric": "bias_strict",
+      "cached": "bias_fail",
+      "same": false
+    },
+    {
+      "metric": "bias_strict",
+      "cached": "bias_no_opinions",
+      "same": false
+    },
+    {
+      "metric": "bias_strict",
+      "cached": "bias_pass",
+      "same": false
+    },
+    {
+      "metric": "bias_strict",
+      "cached": "bias_strict",
+      "same": true
+    },
+    {
+      "metric": "contextual_precision_fail",
+      "cached": "contextual_precision_fail",
+      "same": true
+    },
+    {
+      "metric": "contextual_precision_fail",
+      "cached": "contextual_precision_pass",
+      "same": false
+    },
+    {
+      "metric": "contextual_precision_fail",
+      "cached": "contextual_precision_retrieved_context_data",
+      "same": false
+    },
+    {
+      "metric": "contextual_precision_fail",
+      "cached": "contextual_precision_strict",
+      "same": false
+    },
+    {
+      "metric": "contextual_precision_pass",
+      "cached": "contextual_precision_fail",
+      "same": false
+    },
+    {
+      "metric": "contextual_precision_pass",
+      "cached": "contextual_precision_pass",
+      "same": true
+    },
+    {
+      "metric": "contextual_precision_pass",
+      "cached": "contextual_precision_retrieved_context_data",
+      "same": true
+    },
+    {
+      "metric": "contextual_precision_pass",
+      "cached": "contextual_precision_strict",
+      "same": false
+    },
+    {
+      "metric": "contextual_precision_retrieved_context_data",
+      "cached": "contextual_precision_fail",
+      "same": false
+    },
+    {
+      "metric": "contextual_precision_retrieved_context_data",
+      "cached": "contextual_precision_pass",
+      "same": true
+    },
+    {
+      "metric": "contextual_precision_retrieved_context_data",
+      "cached": "contextual_precision_retrieved_context_data",
+      "same": true
+    },
+    {
+      "metric": "contextual_precision_retrieved_context_data",
+      "cached": "contextual_precision_strict",
+      "same": false
+    },
+    {
+      "metric": "contextual_precision_strict",
+      "cached": "contextual_precision_fail",
+      "same": false
+    },
+    {
+      "metric": "contextual_precision_strict",
+      "cached": "contextual_precision_pass",
+      "same": false
+    },
+    {
+      "metric": "contextual_precision_strict",
+      "cached": "contextual_precision_retrieved_context_data",
+      "same": false
+    },
+    {
+      "metric": "contextual_precision_strict",
+      "cached": "contextual_precision_strict",
+      "same": true
+    },
+    {
+      "metric": "contextual_recall_fail",
+      "cached": "contextual_recall_fail",
+      "same": true
+    },
+    {
+      "metric": "contextual_recall_fail",
+      "cached": "contextual_recall_pass",
+      "same": false
+    },
+    {
+      "metric": "contextual_recall_fail",
+      "cached": "contextual_recall_retrieved_context_data",
+      "same": false
+    },
+    {
+      "metric": "contextual_recall_fail",
+      "cached": "contextual_recall_strict",
+      "same": false
+    },
+    {
+      "metric": "contextual_recall_pass",
+      "cached": "contextual_recall_fail",
+      "same": false
+    },
+    {
+      "metric": "contextual_recall_pass",
+      "cached": "contextual_recall_pass",
+      "same": true
+    },
+    {
+      "metric": "contextual_recall_pass",
+      "cached": "contextual_recall_retrieved_context_data",
+      "same": true
+    },
+    {
+      "metric": "contextual_recall_pass",
+      "cached": "contextual_recall_strict",
+      "same": false
+    },
+    {
+      "metric": "contextual_recall_retrieved_context_data",
+      "cached": "contextual_recall_fail",
+      "same": false
+    },
+    {
+      "metric": "contextual_recall_retrieved_context_data",
+      "cached": "contextual_recall_pass",
+      "same": true
+    },
+    {
+      "metric": "contextual_recall_retrieved_context_data",
+      "cached": "contextual_recall_retrieved_context_data",
+      "same": true
+    },
+    {
+      "metric": "contextual_recall_retrieved_context_data",
+      "cached": "contextual_recall_strict",
+      "same": false
+    },
+    {
+      "metric": "contextual_recall_strict",
+      "cached": "contextual_recall_fail",
+      "same": false
+    },
+    {
+      "metric": "contextual_recall_strict",
+      "cached": "contextual_recall_pass",
+      "same": false
+    },
+    {
+      "metric": "contextual_recall_strict",
+      "cached": "contextual_recall_retrieved_context_data",
+      "same": false
+    },
+    {
+      "metric": "contextual_recall_strict",
+      "cached": "contextual_recall_strict",
+      "same": true
+    },
+    {
+      "metric": "contextual_relevancy_fail",
+      "cached": "contextual_relevancy_fail",
+      "same": true
+    },
+    {
+      "metric": "contextual_relevancy_fail",
+      "cached": "contextual_relevancy_no_statements",
+      "same": false
+    },
+    {
+      "metric": "contextual_relevancy_fail",
+      "cached": "contextual_relevancy_pass",
+      "same": false
+    },
+    {
+      "metric": "contextual_relevancy_fail",
+      "cached": "contextual_relevancy_strict",
+      "same": false
+    },
+    {
+      "metric": "contextual_relevancy_no_statements",
+      "cached": "contextual_relevancy_fail",
+      "same": false
+    },
+    {
+      "metric": "contextual_relevancy_no_statements",
+      "cached": "contextual_relevancy_no_statements",
+      "same": true
+    },
+    {
+      "metric": "contextual_relevancy_no_statements",
+      "cached": "contextual_relevancy_pass",
+      "same": true
+    },
+    {
+      "metric": "contextual_relevancy_no_statements",
+      "cached": "contextual_relevancy_strict",
+      "same": false
+    },
+    {
+      "metric": "contextual_relevancy_pass",
+      "cached": "contextual_relevancy_fail",
+      "same": false
+    },
+    {
+      "metric": "contextual_relevancy_pass",
+      "cached": "contextual_relevancy_no_statements",
+      "same": true
+    },
+    {
+      "metric": "contextual_relevancy_pass",
+      "cached": "contextual_relevancy_pass",
+      "same": true
+    },
+    {
+      "metric": "contextual_relevancy_pass",
+      "cached": "contextual_relevancy_strict",
+      "same": false
+    },
+    {
+      "metric": "contextual_relevancy_strict",
+      "cached": "contextual_relevancy_fail",
+      "same": false
+    },
+    {
+      "metric": "contextual_relevancy_strict",
+      "cached": "contextual_relevancy_no_statements",
+      "same": false
+    },
+    {
+      "metric": "contextual_relevancy_strict",
+      "cached": "contextual_relevancy_pass",
+      "same": false
+    },
+    {
+      "metric": "contextual_relevancy_strict",
+      "cached": "contextual_relevancy_strict",
+      "same": true
+    },
+    {
+      "metric": "exact_match_fail",
+      "cached": "exact_match_fail",
+      "same": true
+    },
+    {
+      "metric": "exact_match_fail",
+      "cached": "exact_match_pass",
+      "same": true
+    },
+    {
+      "metric": "exact_match_pass",
+      "cached": "exact_match_fail",
+      "same": true
+    },
+    {
+      "metric": "exact_match_pass",
+      "cached": "exact_match_pass",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_borderline",
+      "cached": "faithfulness_borderline",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_borderline",
+      "cached": "faithfulness_fail",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_borderline",
+      "cached": "faithfulness_no_claims",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_borderline",
+      "cached": "faithfulness_pass",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_borderline",
+      "cached": "faithfulness_penalize_ambiguous",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_borderline",
+      "cached": "faithfulness_strict",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_fail",
+      "cached": "faithfulness_borderline",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_fail",
+      "cached": "faithfulness_fail",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_fail",
+      "cached": "faithfulness_no_claims",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_fail",
+      "cached": "faithfulness_pass",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_fail",
+      "cached": "faithfulness_penalize_ambiguous",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_fail",
+      "cached": "faithfulness_strict",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_no_claims",
+      "cached": "faithfulness_borderline",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_no_claims",
+      "cached": "faithfulness_fail",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_no_claims",
+      "cached": "faithfulness_no_claims",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_no_claims",
+      "cached": "faithfulness_pass",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_no_claims",
+      "cached": "faithfulness_penalize_ambiguous",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_no_claims",
+      "cached": "faithfulness_strict",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_pass",
+      "cached": "faithfulness_borderline",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_pass",
+      "cached": "faithfulness_fail",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_pass",
+      "cached": "faithfulness_no_claims",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_pass",
+      "cached": "faithfulness_pass",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_pass",
+      "cached": "faithfulness_penalize_ambiguous",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_pass",
+      "cached": "faithfulness_strict",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_penalize_ambiguous",
+      "cached": "faithfulness_borderline",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_penalize_ambiguous",
+      "cached": "faithfulness_fail",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_penalize_ambiguous",
+      "cached": "faithfulness_no_claims",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_penalize_ambiguous",
+      "cached": "faithfulness_pass",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_penalize_ambiguous",
+      "cached": "faithfulness_penalize_ambiguous",
+      "same": true
+    },
+    {
+      "metric": "faithfulness_penalize_ambiguous",
+      "cached": "faithfulness_strict",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_strict",
+      "cached": "faithfulness_borderline",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_strict",
+      "cached": "faithfulness_fail",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_strict",
+      "cached": "faithfulness_no_claims",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_strict",
+      "cached": "faithfulness_pass",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_strict",
+      "cached": "faithfulness_penalize_ambiguous",
+      "same": false
+    },
+    {
+      "metric": "faithfulness_strict",
+      "cached": "faithfulness_strict",
+      "same": true
+    },
+    {
+      "metric": "g_eval_criteria_pass",
+      "cached": "g_eval_criteria_pass",
+      "same": true
+    },
+    {
+      "metric": "g_eval_criteria_pass",
+      "cached": "g_eval_logprobs",
+      "same": true
+    },
+    {
+      "metric": "g_eval_criteria_pass",
+      "cached": "g_eval_logprobs_missing",
+      "same": true
+    },
+    {
+      "metric": "g_eval_criteria_pass",
+      "cached": "g_eval_retrieved_context_data",
+      "same": false
+    },
+    {
+      "metric": "g_eval_criteria_pass",
+      "cached": "g_eval_steps_fail",
+      "same": false
+    },
+    {
+      "metric": "g_eval_criteria_pass",
+      "cached": "g_eval_strict",
+      "same": false
+    },
+    {
+      "metric": "g_eval_logprobs",
+      "cached": "g_eval_criteria_pass",
+      "same": true
+    },
+    {
+      "metric": "g_eval_logprobs",
+      "cached": "g_eval_logprobs",
+      "same": true
+    },
+    {
+      "metric": "g_eval_logprobs",
+      "cached": "g_eval_logprobs_missing",
+      "same": true
+    },
+    {
+      "metric": "g_eval_logprobs",
+      "cached": "g_eval_retrieved_context_data",
+      "same": false
+    },
+    {
+      "metric": "g_eval_logprobs",
+      "cached": "g_eval_steps_fail",
+      "same": false
+    },
+    {
+      "metric": "g_eval_logprobs",
+      "cached": "g_eval_strict",
+      "same": false
+    },
+    {
+      "metric": "g_eval_logprobs_missing",
+      "cached": "g_eval_criteria_pass",
+      "same": true
+    },
+    {
+      "metric": "g_eval_logprobs_missing",
+      "cached": "g_eval_logprobs",
+      "same": true
+    },
+    {
+      "metric": "g_eval_logprobs_missing",
+      "cached": "g_eval_logprobs_missing",
+      "same": true
+    },
+    {
+      "metric": "g_eval_logprobs_missing",
+      "cached": "g_eval_retrieved_context_data",
+      "same": false
+    },
+    {
+      "metric": "g_eval_logprobs_missing",
+      "cached": "g_eval_steps_fail",
+      "same": false
+    },
+    {
+      "metric": "g_eval_logprobs_missing",
+      "cached": "g_eval_strict",
+      "same": false
+    },
+    {
+      "metric": "g_eval_retrieved_context_data",
+      "cached": "g_eval_criteria_pass",
+      "same": false
+    },
+    {
+      "metric": "g_eval_retrieved_context_data",
+      "cached": "g_eval_logprobs",
+      "same": false
+    },
+    {
+      "metric": "g_eval_retrieved_context_data",
+      "cached": "g_eval_logprobs_missing",
+      "same": false
+    },
+    {
+      "metric": "g_eval_retrieved_context_data",
+      "cached": "g_eval_retrieved_context_data",
+      "same": true
+    },
+    {
+      "metric": "g_eval_retrieved_context_data",
+      "cached": "g_eval_steps_fail",
+      "same": false
+    },
+    {
+      "metric": "g_eval_retrieved_context_data",
+      "cached": "g_eval_strict",
+      "same": false
+    },
+    {
+      "metric": "g_eval_steps_fail",
+      "cached": "g_eval_criteria_pass",
+      "same": false
+    },
+    {
+      "metric": "g_eval_steps_fail",
+      "cached": "g_eval_logprobs",
+      "same": false
+    },
+    {
+      "metric": "g_eval_steps_fail",
+      "cached": "g_eval_logprobs_missing",
+      "same": false
+    },
+    {
+      "metric": "g_eval_steps_fail",
+      "cached": "g_eval_retrieved_context_data",
+      "same": false
+    },
+    {
+      "metric": "g_eval_steps_fail",
+      "cached": "g_eval_steps_fail",
+      "same": true
+    },
+    {
+      "metric": "g_eval_steps_fail",
+      "cached": "g_eval_strict",
+      "same": false
+    },
+    {
+      "metric": "g_eval_strict",
+      "cached": "g_eval_criteria_pass",
+      "same": false
+    },
+    {
+      "metric": "g_eval_strict",
+      "cached": "g_eval_logprobs",
+      "same": false
+    },
+    {
+      "metric": "g_eval_strict",
+      "cached": "g_eval_logprobs_missing",
+      "same": false
+    },
+    {
+      "metric": "g_eval_strict",
+      "cached": "g_eval_retrieved_context_data",
+      "same": false
+    },
+    {
+      "metric": "g_eval_strict",
+      "cached": "g_eval_steps_fail",
+      "same": false
+    },
+    {
+      "metric": "g_eval_strict",
+      "cached": "g_eval_strict",
+      "same": true
+    },
+    {
+      "metric": "hallucination_fail",
+      "cached": "hallucination_fail",
+      "same": true
+    },
+    {
+      "metric": "hallucination_fail",
+      "cached": "hallucination_messy_json",
+      "same": true
+    },
+    {
+      "metric": "hallucination_fail",
+      "cached": "hallucination_no_verdicts",
+      "same": true
+    },
+    {
+      "metric": "hallucination_fail",
+      "cached": "hallucination_pass",
+      "same": true
+    },
+    {
+      "metric": "hallucination_fail",
+      "cached": "hallucination_strict",
+      "same": false
+    },
+    {
+      "metric": "hallucination_invalid_json",
+      "cached": "hallucination_fail",
+      "same": true
+    },
+    {
+      "metric": "hallucination_invalid_json",
+      "cached": "hallucination_messy_json",
+      "same": true
+    },
+    {
+      "metric": "hallucination_invalid_json",
+      "cached": "hallucination_no_verdicts",
+      "same": true
+    },
+    {
+      "metric": "hallucination_invalid_json",
+      "cached": "hallucination_pass",
+      "same": true
+    },
+    {
+      "metric": "hallucination_invalid_json",
+      "cached": "hallucination_strict",
+      "same": false
+    },
+    {
+      "metric": "hallucination_messy_json",
+      "cached": "hallucination_fail",
+      "same": true
+    },
+    {
+      "metric": "hallucination_messy_json",
+      "cached": "hallucination_messy_json",
+      "same": true
+    },
+    {
+      "metric": "hallucination_messy_json",
+      "cached": "hallucination_no_verdicts",
+      "same": true
+    },
+    {
+      "metric": "hallucination_messy_json",
+      "cached": "hallucination_pass",
+      "same": true
+    },
+    {
+      "metric": "hallucination_messy_json",
+      "cached": "hallucination_strict",
+      "same": false
+    },
+    {
+      "metric": "hallucination_no_verdicts",
+      "cached": "hallucination_fail",
+      "same": true
+    },
+    {
+      "metric": "hallucination_no_verdicts",
+      "cached": "hallucination_messy_json",
+      "same": true
+    },
+    {
+      "metric": "hallucination_no_verdicts",
+      "cached": "hallucination_no_verdicts",
+      "same": true
+    },
+    {
+      "metric": "hallucination_no_verdicts",
+      "cached": "hallucination_pass",
+      "same": true
+    },
+    {
+      "metric": "hallucination_no_verdicts",
+      "cached": "hallucination_strict",
+      "same": false
+    },
+    {
+      "metric": "hallucination_pass",
+      "cached": "hallucination_fail",
+      "same": true
+    },
+    {
+      "metric": "hallucination_pass",
+      "cached": "hallucination_messy_json",
+      "same": true
+    },
+    {
+      "metric": "hallucination_pass",
+      "cached": "hallucination_no_verdicts",
+      "same": true
+    },
+    {
+      "metric": "hallucination_pass",
+      "cached": "hallucination_pass",
+      "same": true
+    },
+    {
+      "metric": "hallucination_pass",
+      "cached": "hallucination_strict",
+      "same": false
+    },
+    {
+      "metric": "hallucination_strict",
+      "cached": "hallucination_fail",
+      "same": false
+    },
+    {
+      "metric": "hallucination_strict",
+      "cached": "hallucination_messy_json",
+      "same": false
+    },
+    {
+      "metric": "hallucination_strict",
+      "cached": "hallucination_no_verdicts",
+      "same": false
+    },
+    {
+      "metric": "hallucination_strict",
+      "cached": "hallucination_pass",
+      "same": false
+    },
+    {
+      "metric": "hallucination_strict",
+      "cached": "hallucination_strict",
+      "same": true
+    },
+    {
+      "metric": "json_correctness_fail",
+      "cached": "json_correctness_fail",
+      "same": true
+    },
+    {
+      "metric": "json_correctness_fail",
+      "cached": "json_correctness_invalid_json",
+      "same": true
+    },
+    {
+      "metric": "json_correctness_fail",
+      "cached": "json_correctness_not_strict",
+      "same": false
+    },
+    {
+      "metric": "json_correctness_fail",
+      "cached": "json_correctness_pass",
+      "same": true
+    },
+    {
+      "metric": "json_correctness_invalid_json",
+      "cached": "json_correctness_fail",
+      "same": true
+    },
+    {
+      "metric": "json_correctness_invalid_json",
+      "cached": "json_correctness_invalid_json",
+      "same": true
+    },
+    {
+      "metric": "json_correctness_invalid_json",
+      "cached": "json_correctness_not_strict",
+      "same": false
+    },
+    {
+      "metric": "json_correctness_invalid_json",
+      "cached": "json_correctness_pass",
+      "same": true
+    },
+    {
+      "metric": "json_correctness_not_strict",
+      "cached": "json_correctness_fail",
+      "same": false
+    },
+    {
+      "metric": "json_correctness_not_strict",
+      "cached": "json_correctness_invalid_json",
+      "same": false
+    },
+    {
+      "metric": "json_correctness_not_strict",
+      "cached": "json_correctness_not_strict",
+      "same": true
+    },
+    {
+      "metric": "json_correctness_not_strict",
+      "cached": "json_correctness_pass",
+      "same": false
+    },
+    {
+      "metric": "json_correctness_pass",
+      "cached": "json_correctness_fail",
+      "same": true
+    },
+    {
+      "metric": "json_correctness_pass",
+      "cached": "json_correctness_invalid_json",
+      "same": true
+    },
+    {
+      "metric": "json_correctness_pass",
+      "cached": "json_correctness_not_strict",
+      "same": false
+    },
+    {
+      "metric": "json_correctness_pass",
+      "cached": "json_correctness_pass",
+      "same": true
+    },
+    {
+      "metric": "pattern_match_fail",
+      "cached": "pattern_match_fail",
+      "same": true
+    },
+    {
+      "metric": "pattern_match_fail",
+      "cached": "pattern_match_ignore_case",
+      "same": true
+    },
+    {
+      "metric": "pattern_match_fail",
+      "cached": "pattern_match_pass",
+      "same": true
+    },
+    {
+      "metric": "pattern_match_ignore_case",
+      "cached": "pattern_match_fail",
+      "same": true
+    },
+    {
+      "metric": "pattern_match_ignore_case",
+      "cached": "pattern_match_ignore_case",
+      "same": true
+    },
+    {
+      "metric": "pattern_match_ignore_case",
+      "cached": "pattern_match_pass",
+      "same": true
+    },
+    {
+      "metric": "pattern_match_pass",
+      "cached": "pattern_match_fail",
+      "same": true
+    },
+    {
+      "metric": "pattern_match_pass",
+      "cached": "pattern_match_ignore_case",
+      "same": true
+    },
+    {
+      "metric": "pattern_match_pass",
+      "cached": "pattern_match_pass",
+      "same": true
+    },
+    {
+      "metric": "pii_leakage_fail",
+      "cached": "pii_leakage_fail",
+      "same": true
+    },
+    {
+      "metric": "pii_leakage_fail",
+      "cached": "pii_leakage_no_pii",
+      "same": true
+    },
+    {
+      "metric": "pii_leakage_fail",
+      "cached": "pii_leakage_pass",
+      "same": true
+    },
+    {
+      "metric": "pii_leakage_fail",
+      "cached": "pii_leakage_strict",
+      "same": false
+    },
+    {
+      "metric": "pii_leakage_no_pii",
+      "cached": "pii_leakage_fail",
+      "same": true
+    },
+    {
+      "metric": "pii_leakage_no_pii",
+      "cached": "pii_leakage_no_pii",
+      "same": true
+    },
+    {
+      "metric": "pii_leakage_no_pii",
+      "cached": "pii_leakage_pass",
+      "same": true
+    },
+    {
+      "metric": "pii_leakage_no_pii",
+      "cached": "pii_leakage_strict",
+      "same": false
+    },
+    {
+      "metric": "pii_leakage_pass",
+      "cached": "pii_leakage_fail",
+      "same": true
+    },
+    {
+      "metric": "pii_leakage_pass",
+      "cached": "pii_leakage_no_pii",
+      "same": true
+    },
+    {
+      "metric": "pii_leakage_pass",
+      "cached": "pii_leakage_pass",
+      "same": true
+    },
+    {
+      "metric": "pii_leakage_pass",
+      "cached": "pii_leakage_strict",
+      "same": false
+    },
+    {
+      "metric": "pii_leakage_strict",
+      "cached": "pii_leakage_fail",
+      "same": false
+    },
+    {
+      "metric": "pii_leakage_strict",
+      "cached": "pii_leakage_no_pii",
+      "same": false
+    },
+    {
+      "metric": "pii_leakage_strict",
+      "cached": "pii_leakage_pass",
+      "same": false
+    },
+    {
+      "metric": "pii_leakage_strict",
+      "cached": "pii_leakage_strict",
+      "same": true
+    },
+    {
+      "metric": "prompt_alignment_fail",
+      "cached": "prompt_alignment_fail",
+      "same": true
+    },
+    {
+      "metric": "prompt_alignment_fail",
+      "cached": "prompt_alignment_no_verdicts",
+      "same": true
+    },
+    {
+      "metric": "prompt_alignment_fail",
+      "cached": "prompt_alignment_pass",
+      "same": true
+    },
+    {
+      "metric": "prompt_alignment_fail",
+      "cached": "prompt_alignment_strict",
+      "same": false
+    },
+    {
+      "metric": "prompt_alignment_no_verdicts",
+      "cached": "prompt_alignment_fail",
+      "same": true
+    },
+    {
+      "metric": "prompt_alignment_no_verdicts",
+      "cached": "prompt_alignment_no_verdicts",
+      "same": true
+    },
+    {
+      "metric": "prompt_alignment_no_verdicts",
+      "cached": "prompt_alignment_pass",
+      "same": true
+    },
+    {
+      "metric": "prompt_alignment_no_verdicts",
+      "cached": "prompt_alignment_strict",
+      "same": false
+    },
+    {
+      "metric": "prompt_alignment_pass",
+      "cached": "prompt_alignment_fail",
+      "same": true
+    },
+    {
+      "metric": "prompt_alignment_pass",
+      "cached": "prompt_alignment_no_verdicts",
+      "same": true
+    },
+    {
+      "metric": "prompt_alignment_pass",
+      "cached": "prompt_alignment_pass",
+      "same": true
+    },
+    {
+      "metric": "prompt_alignment_pass",
+      "cached": "prompt_alignment_strict",
+      "same": false
+    },
+    {
+      "metric": "prompt_alignment_strict",
+      "cached": "prompt_alignment_fail",
+      "same": false
+    },
+    {
+      "metric": "prompt_alignment_strict",
+      "cached": "prompt_alignment_no_verdicts",
+      "same": false
+    },
+    {
+      "metric": "prompt_alignment_strict",
+      "cached": "prompt_alignment_pass",
+      "same": false
+    },
+    {
+      "metric": "prompt_alignment_strict",
+      "cached": "prompt_alignment_strict",
+      "same": true
+    },
+    {
+      "metric": "summarization_fail",
+      "cached": "summarization_fail",
+      "same": true
+    },
+    {
+      "metric": "summarization_fail",
+      "cached": "summarization_no_claims",
+      "same": false
+    },
+    {
+      "metric": "summarization_fail",
+      "cached": "summarization_pass",
+      "same": false
+    },
+    {
+      "metric": "summarization_fail",
+      "cached": "summarization_strict",
+      "same": false
+    },
+    {
+      "metric": "summarization_no_claims",
+      "cached": "summarization_fail",
+      "same": false
+    },
+    {
+      "metric": "summarization_no_claims",
+      "cached": "summarization_no_claims",
+      "same": false
+    },
+    {
+      "metric": "summarization_no_claims",
+      "cached": "summarization_pass",
+      "same": false
+    },
+    {
+      "metric": "summarization_no_claims",
+      "cached": "summarization_strict",
+      "same": false
+    },
+    {
+      "metric": "summarization_pass",
+      "cached": "summarization_fail",
+      "same": false
+    },
+    {
+      "metric": "summarization_pass",
+      "cached": "summarization_no_claims",
+      "same": false
+    },
+    {
+      "metric": "summarization_pass",
+      "cached": "summarization_pass",
+      "same": false
+    },
+    {
+      "metric": "summarization_pass",
+      "cached": "summarization_strict",
+      "same": false
+    },
+    {
+      "metric": "summarization_strict",
+      "cached": "summarization_fail",
+      "same": false
+    },
+    {
+      "metric": "summarization_strict",
+      "cached": "summarization_no_claims",
+      "same": false
+    },
+    {
+      "metric": "summarization_strict",
+      "cached": "summarization_pass",
+      "same": false
+    },
+    {
+      "metric": "summarization_strict",
+      "cached": "summarization_strict",
+      "same": false
+    },
+    {
+      "metric": "tool_correctness_available_tools",
+      "cached": "tool_correctness_available_tools",
+      "same": true
+    },
+    {
+      "metric": "tool_correctness_available_tools",
+      "cached": "tool_correctness_fail",
+      "same": false
+    },
+    {
+      "metric": "tool_correctness_available_tools",
+      "cached": "tool_correctness_pass",
+      "same": true
+    },
+    {
+      "metric": "tool_correctness_available_tools",
+      "cached": "tool_correctness_strict",
+      "same": false
+    },
+    {
+      "metric": "tool_correctness_fail",
+      "cached": "tool_correctness_available_tools",
+      "same": false
+    },
+    {
+      "metric": "tool_correctness_fail",
+      "cached": "tool_correctness_fail",
+      "same": true
+    },
+    {
+      "metric": "tool_correctness_fail",
+      "cached": "tool_correctness_pass",
+      "same": false
+    },
+    {
+      "metric": "tool_correctness_fail",
+      "cached": "tool_correctness_strict",
+      "same": false
+    },
+    {
+      "metric": "tool_correctness_pass",
+      "cached": "tool_correctness_available_tools",
+      "same": true
+    },
+    {
+      "metric": "tool_correctness_pass",
+      "cached": "tool_correctness_fail",
+      "same": false
+    },
+    {
+      "metric": "tool_correctness_pass",
+      "cached": "tool_correctness_pass",
+      "same": true
+    },
+    {
+      "metric": "tool_correctness_pass",
+      "cached": "tool_correctness_strict",
+      "same": false
+    },
+    {
+      "metric": "tool_correctness_strict",
+      "cached": "tool_correctness_available_tools",
+      "same": false
+    },
+    {
+      "metric": "tool_correctness_strict",
+      "cached": "tool_correctness_fail",
+      "same": false
+    },
+    {
+      "metric": "tool_correctness_strict",
+      "cached": "tool_correctness_pass",
+      "same": false
+    },
+    {
+      "metric": "tool_correctness_strict",
+      "cached": "tool_correctness_strict",
+      "same": true
+    },
+    {
+      "metric": "tool_permission_denylist_only",
+      "cached": "tool_permission_denylist_only",
+      "same": true
+    },
+    {
+      "metric": "tool_permission_denylist_only",
+      "cached": "tool_permission_fail",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_denylist_only",
+      "cached": "tool_permission_no_tool_calls",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_denylist_only",
+      "cached": "tool_permission_pass",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_denylist_only",
+      "cached": "tool_permission_strict",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_fail",
+      "cached": "tool_permission_denylist_only",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_fail",
+      "cached": "tool_permission_fail",
+      "same": true
+    },
+    {
+      "metric": "tool_permission_fail",
+      "cached": "tool_permission_no_tool_calls",
+      "same": true
+    },
+    {
+      "metric": "tool_permission_fail",
+      "cached": "tool_permission_pass",
+      "same": true
+    },
+    {
+      "metric": "tool_permission_fail",
+      "cached": "tool_permission_strict",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_no_tool_calls",
+      "cached": "tool_permission_denylist_only",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_no_tool_calls",
+      "cached": "tool_permission_fail",
+      "same": true
+    },
+    {
+      "metric": "tool_permission_no_tool_calls",
+      "cached": "tool_permission_no_tool_calls",
+      "same": true
+    },
+    {
+      "metric": "tool_permission_no_tool_calls",
+      "cached": "tool_permission_pass",
+      "same": true
+    },
+    {
+      "metric": "tool_permission_no_tool_calls",
+      "cached": "tool_permission_strict",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_pass",
+      "cached": "tool_permission_denylist_only",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_pass",
+      "cached": "tool_permission_fail",
+      "same": true
+    },
+    {
+      "metric": "tool_permission_pass",
+      "cached": "tool_permission_no_tool_calls",
+      "same": true
+    },
+    {
+      "metric": "tool_permission_pass",
+      "cached": "tool_permission_pass",
+      "same": true
+    },
+    {
+      "metric": "tool_permission_pass",
+      "cached": "tool_permission_strict",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_strict",
+      "cached": "tool_permission_denylist_only",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_strict",
+      "cached": "tool_permission_fail",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_strict",
+      "cached": "tool_permission_no_tool_calls",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_strict",
+      "cached": "tool_permission_pass",
+      "same": false
+    },
+    {
+      "metric": "tool_permission_strict",
+      "cached": "tool_permission_strict",
+      "same": true
+    },
+    {
+      "metric": "toxicity_fail",
+      "cached": "toxicity_fail",
+      "same": true
+    },
+    {
+      "metric": "toxicity_fail",
+      "cached": "toxicity_no_opinions",
+      "same": true
+    },
+    {
+      "metric": "toxicity_fail",
+      "cached": "toxicity_pass",
+      "same": true
+    },
+    {
+      "metric": "toxicity_fail",
+      "cached": "toxicity_strict",
+      "same": false
+    },
+    {
+      "metric": "toxicity_no_opinions",
+      "cached": "toxicity_fail",
+      "same": true
+    },
+    {
+      "metric": "toxicity_no_opinions",
+      "cached": "toxicity_no_opinions",
+      "same": true
+    },
+    {
+      "metric": "toxicity_no_opinions",
+      "cached": "toxicity_pass",
+      "same": true
+    },
+    {
+      "metric": "toxicity_no_opinions",
+      "cached": "toxicity_strict",
+      "same": false
+    },
+    {
+      "metric": "toxicity_pass",
+      "cached": "toxicity_fail",
+      "same": true
+    },
+    {
+      "metric": "toxicity_pass",
+      "cached": "toxicity_no_opinions",
+      "same": true
+    },
+    {
+      "metric": "toxicity_pass",
+      "cached": "toxicity_pass",
+      "same": true
+    },
+    {
+      "metric": "toxicity_pass",
+      "cached": "toxicity_strict",
+      "same": false
+    },
+    {
+      "metric": "toxicity_strict",
+      "cached": "toxicity_fail",
+      "same": false
+    },
+    {
+      "metric": "toxicity_strict",
+      "cached": "toxicity_no_opinions",
+      "same": false
+    },
+    {
+      "metric": "toxicity_strict",
+      "cached": "toxicity_pass",
+      "same": false
+    },
+    {
+      "metric": "toxicity_strict",
+      "cached": "toxicity_strict",
+      "same": true
+    }
+  ],
+  "system_one": [
+    {
+      "scenario": "answer_relevancy_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "answer_relevancy_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "answer_relevancy_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "argument_correctness_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "argument_correctness_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "argument_correctness_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "bias_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "bias_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "bias_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_precision_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_precision_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_precision_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_recall_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_recall_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_recall_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_relevancy_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_relevancy_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "contextual_relevancy_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "faithfulness_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "faithfulness_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "faithfulness_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "faithfulness_system_one_strict",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"fake-jev\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "hallucination_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "hallucination_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "hallucination_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "jev_eval",
+      "before": "{\"threshold\": 0.6, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true, \"evaluation_params\": [\"input\", \"actual_output\"]}"
+    },
+    {
+      "scenario": "jev_eval_strict_not_applicable",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"fake-jev\", \"strict_mode\": true, \"include_reason\": true, \"evaluation_params\": [\"actual_output\", \"retrieval_context\"]}"
+    },
+    {
+      "scenario": "json_correctness_hybrid",
+      "before": "{\"threshold\": 1.0, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "json_correctness_system_one",
+      "before": "{\"threshold\": 1.0, \"strict_mode\": true, \"include_reason\": true}"
+    },
+    {
+      "scenario": "pii_leakage_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "pii_leakage_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "pii_leakage_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "prompt_alignment_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "prompt_alignment_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "prompt_alignment_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "summarization_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"n\": 5}"
+    },
+    {
+      "scenario": "summarization_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"n\": 5}"
+    },
+    {
+      "scenario": "summarization_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true, \"n\": 5, \"assessment_questions\": [\"Does the park open in May?\", \"Will the park have a caf\\u00e9?\"]}"
+    },
+    {
+      "scenario": "tool_correctness_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"exploding-llm\", \"strict_mode\": false, \"include_reason\": true, \"evaluation_params\": []}"
+    },
+    {
+      "scenario": "tool_correctness_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true, \"evaluation_params\": []}"
+    },
+    {
+      "scenario": "tool_correctness_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true, \"evaluation_params\": []}"
+    },
+    {
+      "scenario": "toxicity_hybrid",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "toxicity_hybrid_fallback",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"scripted-judge\", \"strict_mode\": false, \"include_reason\": true}"
+    },
+    {
+      "scenario": "toxicity_system_one",
+      "before": "{\"threshold\": 0.5, \"evaluation_model\": \"fake-jev\", \"strict_mode\": false, \"include_reason\": true}"
+    }
+  ]
+}

@@ -6,6 +6,8 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
 
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.ContextualRecall
+  alias DeepEvalEx.SystemOne.Adapters.Mock, as: SystemOneMock
+  alias DeepEvalEx.SystemOne.{EvalSpec, Scored}
   alias DeepEvalEx.TestCase
 
   setup do
@@ -145,7 +147,7 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
   end
 
   describe "measure/2 with empty context" do
-    test "returns error when retrieval_context is empty" do
+    test "accepts an empty retrieval_context list, as deepeval only rejects a missing one" do
       test_case =
         TestCase.new!(
           input: "Question",
@@ -153,8 +155,11 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
           retrieval_context: []
         )
 
-      assert {:error, {:missing_params, [:retrieval_context]}} =
-               ContextualRecall.measure(test_case, adapter: :mock)
+      assert {:ok, result} =
+               ContextualRecall.measure(test_case, adapter: :mock, include_reason: false)
+
+      assert result.score == 0
+      assert result.metadata.context_count == 0
     end
   end
 
@@ -270,30 +275,66 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
     end
   end
 
-  describe "measure/2 with context alias" do
-    test "accepts context as alias for retrieval_context" do
-      # Mock verdicts
-      Mock.set_schema_response(
-        ~r/determine whether the sentence can be attributed/i,
-        %{"verdicts" => [%{"verdict" => "yes", "reason" => "Attributable."}]}
-      )
-
-      # Mock reason
-      Mock.set_schema_response(
-        ~r/summarize a CONCISE reason for the score/i,
-        %{"reason" => "Good."}
-      )
-
-      # Using context instead of retrieval_context
+  describe "measure/2 with context only" do
+    test "does not use context as the retrieval context, as deepeval 4.3.1" do
       test_case =
         TestCase.new!(
           input: "Q",
           expected_output: "A",
-          context: ["Context via alias"]
+          context: ["Context, not retrieval context"]
         )
 
+      assert {:error, {:missing_params, [:retrieval_context]}} =
+               ContextualRecall.measure(test_case, adapter: :mock)
+    end
+  end
+
+  describe "measure/2 verdict normalisation" do
+    setup do
+      Mock.set_schema_response(
+        ~r/summarize a CONCISE reason for the score/i,
+        %{"reason" => "The score is 0.00."}
+      )
+
+      test_case =
+        TestCase.new!(
+          input: "Tell me about Paris",
+          expected_output: "Paris is the capital of France. It has a population of 2 million.",
+          retrieval_context: ["Paris is the capital city of France."]
+        )
+
+      %{test_case: test_case}
+    end
+
+    test "reads verbose verdicts by their leading word and drops unknown ones", %{
+      test_case: test_case
+    } do
+      Mock.set_schema_response(
+        ~r/determine whether the sentence can be attributed/i,
+        %{
+          "verdicts" => [
+            %{"verdict" => "YES - node 1", "reason" => "Attributed to 1st node."},
+            %{"verdict" => "partially", "reason" => "Unsure."}
+          ]
+        }
+      )
+
       assert {:ok, result} = ContextualRecall.measure(test_case, adapter: :mock)
-      assert result.score == 1.0
+      assert result.score === 1.0
+      assert [%{verdict: :yes}] = result.metadata.verdicts
+    end
+
+    test "scores the integer 0 when no verdicts remain, as deepeval does", %{
+      test_case: test_case
+    } do
+      Mock.set_schema_response(
+        ~r/determine whether the sentence can be attributed/i,
+        %{"verdicts" => [%{"verdict" => "unknown", "reason" => "?"}]}
+      )
+
+      assert {:ok, result} = ContextualRecall.measure(test_case, adapter: :mock)
+      assert result.score === 0
+      assert result.success == false
     end
   end
 
@@ -319,6 +360,107 @@ defmodule DeepEvalEx.Metrics.ContextualRecallTest do
 
       assert {:error, {:missing_params, [:retrieval_context]}} =
                ContextualRecall.measure(test_case, adapter: :mock)
+    end
+  end
+
+  describe "System One" do
+    test "system_one_eval_spec/2 asks deepeval's questions about the expected output and context" do
+      assert %EvalSpec{
+               evaluation_params: [:expected_output, :retrieval_context],
+               questions: [
+                 %Scored.Noul{statement: "Every sentence in" <> _, weight: 2.0},
+                 %Scored.Noul{statement: "`retrieval_context` contains" <> _, weight: 1.0},
+                 %Scored.Score{
+                   levels: ["None of it", "Less than half", "Most of it", "All of it"]
+                 }
+               ]
+             } = ContextualRecall.system_one_eval_spec(%TestCase{}, [])
+    end
+
+    test "hybrid judges each sentence of the expected output yes or no" do
+      Mock.set_schema_response(~r/summarize a CONCISE reason for the score/i, %{
+        "reason" => "The score is 0.00 because no sentence is supported."
+      })
+
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.49))
+
+      test_case =
+        TestCase.new!(
+          input: "What is the vacation policy?",
+          expected_output: "Employees get 20 days. Up to 5 days carry over!",
+          retrieval_context: ["Employees receive 20 days of paid time off."]
+        )
+
+      assert {:ok, result} =
+               ContextualRecall.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one
+               )
+
+      assert result.score === 0.0
+      assert [%{verdict: :no, reason: "P(yes)=0.49"}, %{verdict: :no}] = result.metadata.verdicts
+
+      assert [%SystemOneMock.Call{questions: questions}] = SystemOneMock.calls(system_one)
+      assert Enum.map(questions, &elem(&1, 0)) == ["sentence_0", "sentence_1"]
+    end
+  end
+
+  describe "measure/2 with RetrievedContextData" do
+    alias DeepEvalEx.Schemas.RetrievedContextData
+
+    @data %RetrievedContextData{
+      context: "Employees receive 20 days of paid time off.",
+      source: "handbook"
+    }
+
+    test "prints the retrieval context as Python's str(list), deepeval's repr of the model" do
+      Mock.script(%{
+        "verdicts" => [%{"verdicts" => [%{"verdict" => "yes", "reason" => "Node 1 says so."}]}],
+        "reason" => [%{"reason" => "The score is 1.00 because the sentence is supported."}]
+      })
+
+      test_case =
+        TestCase.new!(
+          input: "What is the vacation policy?",
+          expected_output: "Employees get 20 days.",
+          retrieval_context: [@data, "plain chunk"]
+        )
+
+      assert {:ok, _result} = ContextualRecall.measure(test_case, adapter: :mock)
+
+      [prompt | _] =
+        for %{step: "verdicts", prompt: prompt} <- Mock.scripted_prompts(), do: prompt
+
+      assert prompt =~
+               ~s{[RetrievedContextData(context='Employees receive 20 days of paid time off.', source='handbook'), 'plain chunk']}
+    end
+
+    test "sends the retrieval context to System One as Python's str() of each item, as deepeval's _jsonable" do
+      Mock.set_schema_response(~r/summarize a CONCISE reason for the score/i, %{
+        "reason" => "The score is 1.00 because the sentence is supported."
+      })
+
+      system_one = SystemOneMock.new(answer_fn: SystemOneMock.noul_answers(0.9))
+
+      test_case =
+        TestCase.new!(
+          input: "What is the vacation policy?",
+          expected_output: "Employees get 20 days.",
+          retrieval_context: [@data, "plain chunk"]
+        )
+
+      assert {:ok, _result} =
+               ContextualRecall.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one
+               )
+
+      assert [%SystemOneMock.Call{state: state}] = SystemOneMock.calls(system_one)
+
+      assert Jason.encode!(state) =~
+               ~s{"retrieval_context":["context='Employees receive 20 days of paid time off.' source='handbook'","plain chunk"]}
     end
   end
 end

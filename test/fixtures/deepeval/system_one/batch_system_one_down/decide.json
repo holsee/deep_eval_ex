@@ -1,0 +1,131 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+            "retrieval_context": [
+              "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+              "Section 3.3: Up to 5 unused days can be carried over to the next year."
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every factual claim in `actual_output` is supported by the facts in `retrieval_context`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "No claim in `actual_output` contradicts the facts in `retrieval_context`."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `actual_output` is grounded in the facts in `retrieval_context`?",
+            "criteria": [
+              "Fabricated",
+              "Mostly fabricated",
+              "Mostly grounded",
+              "Fully grounded"
+            ]
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ],
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "What is the vacation policy?",
+            "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every statement in `actual_output` is relevant to addressing `input`."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "`actual_output` directly addresses what `input` asks for, rather than a different or broader topic."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "How much of `actual_output` is relevant to addressing `input`?",
+            "criteria": [
+              "None of it",
+              "Less than half",
+              "Most of it",
+              "All of it"
+            ]
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+          "retrieval_context": [
+            "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+            "Section 3.3: Up to 5 unused days can be carried over to the next year."
+          ],
+          "input": "What is the vacation policy?"
+        }
+      },
+      "questions": {
+        "m0.q_0": {
+          "type": "noul",
+          "instructions": "Every factual claim in `actual_output` is supported by the facts in `retrieval_context`."
+        },
+        "m0.q_1": {
+          "type": "noul",
+          "instructions": "No claim in `actual_output` contradicts the facts in `retrieval_context`."
+        },
+        "m0.q_2": {
+          "type": "score",
+          "instructions": "How much of `actual_output` is grounded in the facts in `retrieval_context`?",
+          "criteria": [
+            "Fabricated",
+            "Mostly fabricated",
+            "Mostly grounded",
+            "Fully grounded"
+          ]
+        },
+        "m1.q_0": {
+          "type": "noul",
+          "instructions": "Every statement in `actual_output` is relevant to addressing `input`."
+        },
+        "m1.q_1": {
+          "type": "noul",
+          "instructions": "`actual_output` directly addresses what `input` asks for, rather than a different or broader topic."
+        },
+        "m1.q_2": {
+          "type": "score",
+          "instructions": "How much of `actual_output` is relevant to addressing `input`?",
+          "criteria": [
+            "None of it",
+            "Less than half",
+            "Most of it",
+            "All of it"
+          ]
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

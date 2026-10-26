@@ -1,0 +1,47 @@
+{
+  "description": "ContextualPrecision: relevant nodes ranked first",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "contextual_precision",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "Tell me about Paris.",
+    "actual_output": "Paris is the capital of France. It has the Eiffel Tower. I love pizza.",
+    "expected_output": "Paris is the capital of France and is home to the Eiffel Tower.",
+    "retrieval_context": [
+      "Paris is the capital and largest city of France.",
+      "Rome is the capital of Italy.",
+      "The Eiffel Tower is a wrought-iron tower in Paris."
+    ]
+  },
+  "responses": {
+    "contextual_precision": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes",
+              "reason": "It states Paris is the capital of France."
+            },
+            {
+              "verdict": "yes",
+              "reason": "It mentions the Eiffel Tower."
+            },
+            {
+              "verdict": "no",
+              "reason": "Rome is irrelevant."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1.00 because the relevant nodes are ranked first."
+        }
+      ]
+    }
+  }
+}

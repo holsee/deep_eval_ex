@@ -1,0 +1,53 @@
+{
+  "files": [
+    ".deepeval-cache.json"
+  ],
+  "measured": [
+    "Relevance",
+    "Tone"
+  ],
+  "raised": null,
+  "test_results": [
+    {
+      "success": false,
+      "metrics_data": [
+        {
+          "name": "Relevance",
+          "threshold": 0.5,
+          "success": true,
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321,
+          "inputTokenCount": 120,
+          "outputTokenCount": 12
+        },
+        {
+          "name": "Tone",
+          "threshold": 0.6,
+          "success": false,
+          "score": 0.4,
+          "reason": "Tone reason.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o",
+          "evaluationCost": 0.000321,
+          "inputTokenCount": 120,
+          "outputTokenCount": 12
+        },
+        {
+          "name": "Exact Match",
+          "threshold": 1.0,
+          "success": true,
+          "score": 1.0,
+          "reason": "The actual and expected outputs are exact matches.",
+          "strictMode": false,
+          "flaky": false
+        }
+      ],
+      "classifications": []
+    }
+  ]
+}

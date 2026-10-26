@@ -1,0 +1,180 @@
+[
+  {
+    "panel": {
+      "border_style": "none",
+      "content": "[rgb(106,0,255) bold]🚀 DeepEval Evaluation Results[/rgb(106,0,255) bold]"
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(25,227,160)",
+      "content": {
+        "tree": {
+          "label": "[rgb(25,227,160) bold]✅ test_case_0[/rgb(25,227,160) bold]",
+          "children": [
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": null,
+                    "columns": [
+                      "Key",
+                      "Value"
+                    ],
+                    "rows": [
+                      [
+                        "Input:",
+                        "Question 0?"
+                      ],
+                      [
+                        "Actual Output:",
+                        "Answer 0."
+                      ],
+                      [
+                        "Expected Output:",
+                        "The policy allows refunds within 30 days."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Metrics",
+                    "columns": [
+                      "Status",
+                      "Metric",
+                      "Score",
+                      "Threshold",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold green]PASS[/bold green]",
+                        "Answer Relevancy",
+                        "0.91",
+                        "0.70",
+                        "The answer states the policy accurately and names every condition the context lists, so it is relevant."
+                      ],
+                      [
+                        "[bold green]PASS[/bold green]",
+                        "Faithfulness",
+                        "1.00",
+                        "0.50",
+                        "No contradictions."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(25,227,160)",
+      "content": {
+        "tree": {
+          "label": "[rgb(25,227,160) bold]✅ test_case_1[/rgb(25,227,160) bold]",
+          "children": [
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": null,
+                    "columns": [
+                      "Key",
+                      "Value"
+                    ],
+                    "rows": [
+                      [
+                        "Input:",
+                        "Question 1?"
+                      ],
+                      [
+                        "Actual Output:",
+                        "Answer 1."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Metrics",
+                    "columns": [
+                      "Status",
+                      "Metric",
+                      "Score",
+                      "Threshold",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold green]PASS[/bold green]",
+                        "Answer Relevancy",
+                        "0.91",
+                        "0.70",
+                        "The answer states the policy accurately and names every condition the context lists, so it is relevant."
+                      ],
+                      [
+                        "[bold green]PASS[/bold green]",
+                        "Faithfulness",
+                        "1.00",
+                        "0.50",
+                        "No contradictions."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(106,0,255)",
+      "content": {
+        "table": {
+          "title": "[bold]Aggregate Metrics[/bold]\n",
+          "columns": [
+            "Metric",
+            "Average Score",
+            "Pass Rate",
+            "Total"
+          ],
+          "rows": [
+            [
+              "Answer Relevancy",
+              "0.91",
+              "100.00% | passed=2 | failed=0",
+              "2"
+            ],
+            [
+              "Faithfulness",
+              "1.00",
+              "100.00% | passed=2 | failed=0",
+              "2"
+            ]
+          ]
+        }
+      }
+    }
+  }
+]

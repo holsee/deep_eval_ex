@@ -37,10 +37,19 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     `[:input_parameters]`, `[:output]`, or `[:input_parameters, :output]` (default: `[]`)
   - `:available_tools` - List of available ToolCall structs. When provided, an LLM
     evaluates whether the right tools were selected. Final score = min(calling, selection).
-  - `:strict_mode` - When true, threshold is forced to 1.0 and any score below is zeroed (default: false)
+    As in deepeval, a multimodal test case skips tool selection (it scores 1.0).
+  - `:strict_mode` - When true, threshold is forced to the integer `1` and any score below
+    it becomes the integer `0`, as in deepeval (default: false)
   - `:include_reason` - Whether to include reason in results (default: true)
+  - `:verbose_mode` - Print the result's `:verbose_logs` after measuring
+    (default: false)
   - `:adapter` - LLM adapter for tool selection scoring
   - `:model` - Model name for tool selection scoring
+  - `:evaluation_template` - A module overriding some of the prompts, see
+    `DeepEvalEx.Prompts.EvaluationTemplate` (default: `nil`, deepeval's
+    templates)
+  - `:eval_mode` and `:system_one_model` - who scores tool selection, see
+    "System One"
 
   ## Scoring Modes
 
@@ -52,39 +61,83 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     Score = weighted LCS score / |expected|. Preserves relative order.
   - When `:input_parameters` is in `evaluation_params`, parameter similarity is computed
     via recursive dictionary comparison returning a fractional score (0.0–1.0).
+
+  ## System One
+
+  Like deepeval 4.3.1's `ToolCorrectnessMetric`, the metric can route its
+  one judged decision, tool selection, to a System One model (see
+  `DeepEvalEx.SystemOne.Mode`). Under `:hybrid` and `:system_one`, when
+  `:available_tools` are given, one Score over five levels (`"Misaligned"`
+  to `"Fully appropriate"`,
+  `DeepEvalEx.Prompts.ToolCorrectness.system_one_tool_selection_score/0`)
+  about the `input`, the tools called and the available tools replaces the
+  LLM's tool selection score: the chosen level over the highest, `0.75` for
+  `"Mostly appropriate"`, with the reason `"Decided by <model>: tool
+  selection 0.75, confidence 0.25."`. If the model fails under `:hybrid`,
+  the LLM scores tool selection and the result's
+  `:system_one_fallback_reason` says why.
+
+  The tool calling score is decided in code in every mode, so there is no
+  whole-metric request: `system_one_eval_spec/2` returns `nil`, and under
+  `:system_one` no LLM is used, the tool selection Score is the only
+  request, and the result's `:evaluation_model` is the System One model's.
   """
 
   use DeepEvalEx.Metrics.BaseMetric, default_threshold: 0.5
 
   alias DeepEvalEx.LLM.Adapter
+  alias DeepEvalEx.Metrics.BaseMetric
+  alias DeepEvalEx.Metrics.Utils.Verbose
+  alias DeepEvalEx.Prompts.EvaluationTemplate
+  alias DeepEvalEx.Prompts.Python
   alias DeepEvalEx.Prompts.ToolCorrectness, as: Template
   alias DeepEvalEx.Schemas.MetricOutputs.ToolCorrectness, as: Schema
+  alias DeepEvalEx.SystemOne.{Decision, Spec, State}
+
+  # deepeval's TOOL_SELECTION_LEVELS, lowest first.
+  @tool_selection_levels [
+    "Misaligned",
+    "Poor selection",
+    "Mixed selection",
+    "Mostly appropriate",
+    "Fully appropriate"
+  ]
 
   @impl true
   def metric_name, do: "Tool Correctness"
 
   @impl true
-  def required_params, do: [:tools_called, :expected_tools]
+  def required_params, do: [:input, :tools_called, :expected_tools]
 
   @doc """
-  Override validate_test_case to allow empty lists.
+  Returns the judge model this metric is configured with.
 
-  Python DeepEval allows empty tools_called/expected_tools and returns
-  scores rather than validation errors.
+  As in deepeval, whose constructor sets `evaluation_model` from its model,
+  it is reported even without `:available_tools`, when tool selection, the
+  only LLM-scored part, makes no call.
   """
-  def validate_test_case(test_case) do
-    # Only validate that the fields exist (are not nil)
-    missing =
-      required_params()
-      |> Enum.filter(fn param ->
-        Map.get(test_case, param) == nil
-      end)
+  @impl true
+  defdelegate evaluation_model(opts), to: Adapter, as: :model_name
 
-    case missing do
-      [] -> :ok
-      params -> {:error, {:missing_params, params}}
-    end
+  @doc """
+  ToolCorrectness's test-run cache settings: its evaluation params, as
+  deepeval's attribute (`[]` by default).
+  """
+  @impl true
+  def cache_configuration(opts, _result) do
+    %{evaluation_params: opts |> Keyword.get(:evaluation_params, []) |> Enum.map(&to_string/1)}
   end
+
+  @doc """
+  Always `nil`, deepeval's `_system_one_eval_spec`: the score is decided in
+  code by matching the tools called against the expected tools, so there is
+  no whole-metric System One request. Exporting it keeps the metric on
+  `:system_one` (see `DeepEvalEx.SystemOne.Mode.effective/2`), where tool
+  selection, when `:available_tools` are given, is its only System One
+  decision.
+  """
+  @impl true
+  def system_one_eval_spec(_test_case, _opts), do: nil
 
   def do_measure(test_case, opts) do
     config = parse_config(opts)
@@ -102,7 +155,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
       |> apply_strict_mode(config)
 
     {tool_selection_score, tool_selection_reason} =
-      evaluate_tool_selection(test_case.input, called, config.available_tools, opts)
+      evaluate_tool_selection(test_case, called, config.available_tools, opts)
 
     score =
       min(tool_calling_score, tool_selection_score)
@@ -116,13 +169,28 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
         tool_selection_reason
       )
 
+    verbose_logs =
+      Verbose.construct_verbose_logs(
+        metric_name(),
+        [
+          Verbose.format_tools("Expected Tools", expected),
+          Verbose.format_tools("Tools Called", called),
+          format_available_tools(config.available_tools),
+          # deepeval's ToolSelectionScore.score is a float field.
+          "Tool Selection Score: #{Verbose.to_str(tool_selection_score / 1)}",
+          "Tool Selection Reason: #{Verbose.to_str(tool_selection_reason)}",
+          "Final Score: #{Verbose.to_str(score)}\nFinal Reason: #{Verbose.to_str(reason)}"
+        ],
+        opts
+      )
+
     {:ok,
      Result.new(
        metric: metric_name(),
        score: score,
        threshold: config.threshold,
        reason: reason,
-       success: score >= config.threshold,
+       verbose_logs: verbose_logs,
        metadata: %{
          tool_calling_score: tool_calling_score,
          tool_selection_score: tool_selection_score,
@@ -135,13 +203,13 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
      )}
   end
 
-  defp parse_config(opts) do
-    strict_mode? = Keyword.get(opts, :strict_mode, false)
+  defp format_available_tools(tools) when tools in [nil, []], do: "Available Tools: []"
+  defp format_available_tools(tools), do: Verbose.format_tools("Available Tools", tools)
 
+  defp parse_config(opts) do
     %{
-      strict_mode?: strict_mode?,
-      threshold:
-        if(strict_mode?, do: 1.0, else: Keyword.get(opts, :threshold, default_threshold())),
+      strict_mode?: Keyword.get(opts, :strict_mode, false),
+      threshold: BaseMetric.threshold(opts, default_threshold()),
       exact_match?: Keyword.get(opts, :should_exact_match, false),
       consider_ordering?: Keyword.get(opts, :should_consider_ordering, false),
       eval_params: Keyword.get(opts, :evaluation_params, []),
@@ -150,21 +218,21 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     }
   end
 
-  defp apply_strict_mode(score, %{strict_mode?: true, threshold: threshold})
-       when score < threshold, do: 0.0
-
-  defp apply_strict_mode(score, _config), do: score
-
-  defp evaluate_tool_selection(_input, _called, nil, _opts) do
-    {1.0, "No available tools were provided to assess tool selection criteria"}
+  defp apply_strict_mode(score, config) do
+    BaseMetric.strict_score(score,
+      strict_mode: config.strict_mode?,
+      threshold: config.threshold
+    )
   end
 
-  defp evaluate_tool_selection(_input, _called, [], _opts) do
-    {1.0, "No available tools were provided to assess tool selection criteria"}
-  end
-
-  defp evaluate_tool_selection(input, called, available_tools, opts) do
-    get_tool_selection_score(input, called, available_tools, opts)
+  # deepeval's `if self.available_tools and not test_case.multimodal`: a
+  # multimodal test case is not judged on tool selection either.
+  defp evaluate_tool_selection(test_case, called, available_tools, opts) do
+    if available_tools in [nil, []] or Map.get(test_case, :multimodal, false) do
+      {1.0, "No available tools were provided to assess tool selection criteria"}
+    else
+      get_tool_selection_score(test_case.input, called, available_tools, opts)
+    end
   end
 
   defp build_combined_reason(_called, _expected, %{include_reason: false}, _selection_reason),
@@ -380,12 +448,36 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
 
   # --- Tool Selection Score (LLM-based, matches Python _get_tool_selection_score) ---
 
+  # Under :hybrid and :system_one the System One model scores tool
+  # selection; the LLM does when it is not asked or fails.
   defp get_tool_selection_score(user_input, tools_called, available_tools, opts) do
+    spec = %Spec.Score{
+      instructions: EvaluationTemplate.render(opts, Template, :system_one_tool_selection_score),
+      levels: @tool_selection_levels,
+      state: [
+        input: user_input,
+        tools_called: State.dump(tools_called || []),
+        available_tools: State.dump(available_tools || [])
+      ]
+    }
+
+    decision_opts = Keyword.put_new(opts, :metric_name, metric_name())
+
+    case Decision.score(spec, decision_opts) do
+      {:ok, score} ->
+        {score, Decision.format_reason(decision_opts, "tool selection", score)}
+
+      :llm ->
+        llm_tool_selection_score(user_input, tools_called, available_tools, opts)
+    end
+  end
+
+  defp llm_tool_selection_score(user_input, tools_called, available_tools, opts) do
     tools_called_formatted = Template.format_tools(tools_called)
     available_tools_formatted = Template.format_tools(available_tools)
 
     prompt =
-      Template.get_tool_selection_score(
+      EvaluationTemplate.render(opts, Template, :get_tool_selection_score,
         user_input: user_input,
         tools_called: tools_called_formatted,
         available_tools: available_tools_formatted
@@ -404,6 +496,11 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
   end
 
   # --- Reason generation (matches Python _generate_reason) ---
+  #
+  # deepeval builds these with f-strings, so lists of names print as Python
+  # lists (`['get_weather']`) and missing tool calls as ToolCall reprs. It
+  # prints the missing and out-of-order name sets in set iteration order,
+  # which depends on PYTHONHASHSEED; DeepEvalEx sorts them.
 
   defp generate_reason(called, expected, exact_match?, consider_ordering?, eval_params) do
     called_names = Enum.map(called, & &1.name)
@@ -425,7 +522,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     score = calculate_exact_match_score(called, expected, eval_params)
     label = if score == 1.0, do: "Exact match", else: "Not an exact match"
 
-    "#{label}: expected #{inspect(expected_names)}, called #{inspect(called_names)}. See details above."
+    "#{label}: expected #{Python.repr(expected_names)}, called #{Python.repr(called_names)}. See details above."
   end
 
   defp generate_ordering_reason(called, expected, eval_params, called_names, expected_names) do
@@ -433,7 +530,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     score = calculate_ordering_score(called, expected, weighted_length)
 
     if score == 1.0 do
-      "Correct ordering: all expected tools #{inspect(expected_names)} were called in the correct order."
+      "Correct ordering: all expected tools #{Python.repr(expected_names)} were called in the correct order."
     else
       format_ordering_issues(lcs, called_names, expected_names)
     end
@@ -452,12 +549,12 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
       |> maybe_add_issue(missing, "missing tools")
       |> maybe_add_issue(out_of_order, "out-of-order tools")
 
-    "Incorrect tool usage: #{Enum.join(issues, " and ")}; expected #{inspect(expected_names)}, called #{inspect(called_names)}. See more details above."
+    "Incorrect tool usage: #{Enum.join(issues, " and ")}; expected #{Python.repr(expected_names)}, called #{Python.repr(called_names)}. See more details above."
   end
 
   defp maybe_add_issue(issues, set, label) do
     if MapSet.size(set) > 0,
-      do: issues ++ ["#{label} #{inspect(MapSet.to_list(set))}"],
+      do: issues ++ ["#{label} #{set |> Enum.sort() |> Python.repr()}"],
       else: issues
   end
 
@@ -465,17 +562,24 @@ defmodule DeepEvalEx.Metrics.ToolCorrectness do
     score = calculate_non_exact_match_score(called, expected, eval_params)
 
     if score == 1.0 do
-      "All expected tools #{inspect(expected_names)} were called (order not considered)."
+      "All expected tools #{Python.repr(expected_names)} were called (order not considered)."
     else
-      missing_list =
-        expected
-        |> MapSet.new()
-        |> MapSet.difference(MapSet.new(called))
-        |> Enum.map(& &1.name)
-
-      "Incomplete tool usage: missing tools #{inspect(missing_list)}; expected #{inspect(expected_names)}, called #{inspect(called_names)}. See more details above."
+      "Incomplete tool usage: missing tools #{called |> missing_tools(expected) |> Python.repr()}; expected #{Python.repr(expected_names)}, called #{Python.repr(called_names)}. See more details above."
     end
   end
+
+  # deepeval's set(expected_tools) - set(tools_called): ToolCall equality
+  # and hashing only look at the name, input parameters and output. Listed
+  # in expected order, without duplicates.
+  defp missing_tools(called, expected) do
+    called_keys = MapSet.new(called, &tool_key/1)
+
+    expected
+    |> Enum.uniq_by(&tool_key/1)
+    |> Enum.reject(&MapSet.member?(called_keys, tool_key(&1)))
+  end
+
+  defp tool_key(tool), do: {tool.name, tool.input_parameters, tool.output}
 
   # --- Final reason construction (matches Python _construct_final_reason) ---
 

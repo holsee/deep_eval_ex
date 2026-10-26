@@ -1,0 +1,212 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "content": "My order 42 is late.",
+              "role": "user"
+            },
+            {
+              "content": "Sorry! It ships today.",
+              "role": "assistant"
+            },
+            {
+              "content": "Can I change the address to Zürich?",
+              "role": "user"
+            },
+            {
+              "content": "Have you tried our new café blend?",
+              "role": "assistant"
+            },
+            {
+              "content": "Please just change the address.",
+              "role": "user"
+            },
+            {
+              "content": "Done: order 42 now ships to Zürich.",
+              "role": "assistant"
+            }
+          ],
+          "intention": "User wants to know where order 42 is"
+        },
+        "questions": {
+          "verdict": {
+            "type": "noul",
+            "instructions": "Do the assistant turns in `turns` satisfy `intention`? Answer no if the assistant ignored, refused or only partly addressed it."
+          }
+        },
+        "answers": {
+          "nouls": {
+            "verdict": {
+              "probability": 0.86
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "turns": [
+            {
+              "content": "My order 42 is late.",
+              "role": "user"
+            },
+            {
+              "content": "Sorry! It ships today.",
+              "role": "assistant"
+            },
+            {
+              "content": "Can I change the address to Zürich?",
+              "role": "user"
+            },
+            {
+              "content": "Have you tried our new café blend?",
+              "role": "assistant"
+            },
+            {
+              "content": "Please just change the address.",
+              "role": "user"
+            },
+            {
+              "content": "Done: order 42 now ships to Zürich.",
+              "role": "assistant"
+            }
+          ],
+          "intention": "User wants to change the delivery address to Zürich"
+        },
+        "questions": {
+          "verdict": {
+            "type": "noul",
+            "instructions": "Do the assistant turns in `turns` satisfy `intention`? Answer no if the assistant ignored, refused or only partly addressed it."
+          }
+        },
+        "answers": {
+          "nouls": {
+            "verdict": {
+              "probability": 0.86
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "turns": [
+          {
+            "content": "My order 42 is late.",
+            "role": "user"
+          },
+          {
+            "content": "Sorry! It ships today.",
+            "role": "assistant"
+          },
+          {
+            "content": "Can I change the address to Zürich?",
+            "role": "user"
+          },
+          {
+            "content": "Have you tried our new café blend?",
+            "role": "assistant"
+          },
+          {
+            "content": "Please just change the address.",
+            "role": "user"
+          },
+          {
+            "content": "Done: order 42 now ships to Zürich.",
+            "role": "assistant"
+          }
+        ],
+        "intention": "User wants to know where order 42 is"
+      },
+      "questions": {
+        "verdict": {
+          "type": "noul",
+          "instructions": "Do the assistant turns in `turns` satisfy `intention`? Answer no if the assistant ignored, refused or only partly addressed it."
+        }
+      },
+      "answers": {
+        "nouls": {
+          "verdict": {
+            "probability": 0.86
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "turns": [
+          {
+            "content": "My order 42 is late.",
+            "role": "user"
+          },
+          {
+            "content": "Sorry! It ships today.",
+            "role": "assistant"
+          },
+          {
+            "content": "Can I change the address to Zürich?",
+            "role": "user"
+          },
+          {
+            "content": "Have you tried our new café blend?",
+            "role": "assistant"
+          },
+          {
+            "content": "Please just change the address.",
+            "role": "user"
+          },
+          {
+            "content": "Done: order 42 now ships to Zürich.",
+            "role": "assistant"
+          }
+        ],
+        "intention": "User wants to change the delivery address to Zürich"
+      },
+      "questions": {
+        "verdict": {
+          "type": "noul",
+          "instructions": "Do the assistant turns in `turns` satisfy `intention`? Answer no if the assistant ignored, refused or only partly addressed it."
+        }
+      },
+      "answers": {
+        "nouls": {
+          "verdict": {
+            "probability": 0.86
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

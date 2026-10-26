@@ -1,0 +1,28 @@
+
+Below is a list of contradictions extracted from verdicts. Write a concise justification of the score.
+
+RULES:
+- If contradictions exist, summarize them in 1-3 sentences.
+- If no contradictions exist, respond:
+{
+  "reason": "No contradictions were found."
+}
+- The summary must reference only the contradictions listed.
+- Tone must be neutral and concise.
+- No external knowledge may be used.
+
+
+
+Output MUST be ONLY valid JSON:
+
+{
+  "reason": "<summary>"
+}
+
+FAITHFULNESS SCORE:
+0.33
+
+CONTRADICTIONS:
+['Refunds take 5 business days, not 2.', None]
+
+JSON:

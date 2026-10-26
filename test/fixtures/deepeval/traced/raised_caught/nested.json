@@ -1,0 +1,35 @@
+[
+  {
+    "name": "agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "Recovered from a failed lookup",
+    "tools_called": [
+      {
+        "name": "flaky_tool",
+        "type": "FUNCTION",
+        "description": null,
+        "reasoning": null,
+        "output": null,
+        "input_parameters": {
+          "query": "How do I reset my password?"
+        }
+      }
+    ],
+    "available_tools": [],
+    "agent_handoffs": [],
+    "children": [
+      {
+        "name": "flaky_tool",
+        "type": "tool",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "error": "upstream timeout",
+        "children": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "uuid": "67af4e9a-bdc0-4aca-9145-d109b118be7f",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "94235a4e-b63b-4cb7-b238-01680ca89ff7",
+        "name": "agent",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.933Z",
+        "endTime": "2026-10-23T03:23:29.933Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "drafted",
+        "availableTools": [],
+        "agentHandoffs": []
+      }
+    ],
+    "llmSpans": [
+      {
+        "uuid": "91fab049-275a-4d92-9ac0-7932905bbf94",
+        "name": "draft",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "94235a4e-b63b-4cb7-b238-01680ca89ff7",
+        "startTime": "2026-10-23T03:23:29.933Z",
+        "endTime": "2026-10-23T03:23:29.933Z",
+        "input": {
+          "query": "staged"
+        },
+        "output": "draft of staged",
+        "model": "claude-3-5-sonnet",
+        "promptAlias": "staged-prompt",
+        "promptVersion": "00.00.02",
+        "promptLabel": "staging",
+        "promptCommitHash": "bbb222"
+      },
+      {
+        "uuid": "8cdf3b0c-1581-4847-95aa-aa5a39ece0ad",
+        "name": "polish",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "94235a4e-b63b-4cb7-b238-01680ca89ff7",
+        "startTime": "2026-10-23T03:23:29.933Z",
+        "endTime": "2026-10-23T03:23:29.933Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "polished How do I reset my password?",
+        "model": "gpt-4o",
+        "tokenIntervals": {
+          "2026-10-22T08:44:13.072710Z": "Hel",
+          "2026-10-22T08:44:13.322710Z": "lo",
+          "2026-10-22T08:44:13.822710Z": "!"
+        },
+        "promptAlias": "polish-prompt",
+        "promptVersion": "00.00.07",
+        "promptCommitHash": "ccc333"
+      },
+      {
+        "uuid": "9df219a2-5599-4c5d-a0b8-db47b8f3050b",
+        "name": "draft",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "94235a4e-b63b-4cb7-b238-01680ca89ff7",
+        "startTime": "2026-10-23T03:23:29.933Z",
+        "endTime": "2026-10-23T03:23:29.933Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "draft of How do I reset my password?",
+        "model": "claude-3-5-sonnet",
+        "promptAlias": "draft-prompt",
+        "promptVersion": "00.00.01",
+        "promptLabel": "production",
+        "promptCommitHash": "aaa111"
+      }
+    ],
+    "retrieverSpans": [],
+    "toolSpans": [],
+    "startTime": "2026-10-23T03:23:29.933Z",
+    "endTime": "2026-10-23T03:23:29.933Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "drafted",
+    "status": "SUCCESS"
+  }
+]

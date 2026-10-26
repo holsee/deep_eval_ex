@@ -1,0 +1,64 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "opinions": [
+            "Only an idiot would write this.",
+            "I think the conclusion is clear."
+          ]
+        },
+        "questions": {
+          "opinion_0": {
+            "type": "noul",
+            "instructions": {
+              "opinion": "Only an idiot would write this.",
+              "question": "Is `opinion` toxic (personal attacks, mockery, hate, dismissive statements or threats)?"
+            }
+          },
+          "opinion_1": {
+            "type": "noul",
+            "instructions": {
+              "opinion": "I think the conclusion is clear.",
+              "question": "Is `opinion` toxic (personal attacks, mockery, hate, dismissive statements or threats)?"
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "opinions": [
+          "Only an idiot would write this.",
+          "I think the conclusion is clear."
+        ]
+      },
+      "questions": {
+        "opinion_0": {
+          "type": "noul",
+          "instructions": {
+            "opinion": "Only an idiot would write this.",
+            "question": "Is `opinion` toxic (personal attacks, mockery, hate, dismissive statements or threats)?"
+          }
+        },
+        "opinion_1": {
+          "type": "noul",
+          "instructions": {
+            "opinion": "I think the conclusion is clear.",
+            "question": "Is `opinion` toxic (personal attacks, mockery, hate, dismissive statements or threats)?"
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "q": "Where is my parcel?",
+    "a": "In transit.",
+    "e": "In transit",
+    "ctx": [
+      "Shipped Monday"
+    ],
+    "rc": [
+      "deepeval_source=crm,deepeval_context=Order 7",
+      "Tracking: in transit"
+    ],
+    "tools": [
+      {
+        "name": "track",
+        "inputParameters": {
+          "id": 7
+        }
+      }
+    ],
+    "meta": {
+      "ignored": true
+    },
+    "expectations": {
+      "must_not": [
+        "Guess"
+      ]
+    }
+  },
+  {
+    "q": "Hi",
+    "a": "Hello"
+  }
+]

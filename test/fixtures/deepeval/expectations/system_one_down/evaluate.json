@@ -1,0 +1,22 @@
+{
+  "success": false,
+  "metrics_data": [
+    {
+      "name": "Expectations",
+      "threshold": 1.0,
+      "success": false,
+      "strictMode": true,
+      "flaky": false,
+      "evaluationModel": "exploding-jev",
+      "error": "Jev is down",
+      "evaluationCost": 0.0,
+      "expectationsData": {
+        "success": false,
+        "verdicts": [],
+        "evaluationModel": "exploding-jev",
+        "evaluationCost": 0.0,
+        "error": "Jev is down"
+      }
+    }
+  ]
+}

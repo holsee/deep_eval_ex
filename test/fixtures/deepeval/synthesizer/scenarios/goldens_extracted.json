@@ -1,0 +1,101 @@
+{
+  "method": "generate_goldens_from_goldens",
+  "synthesizer": {
+    "styling_config": null,
+    "evolution_config": {
+      "num_evolutions": 1,
+      "evolutions": {
+        "Hypothetical": 1
+      }
+    },
+    "filtration_config": {
+      "synthetic_input_quality_threshold": 0.5,
+      "max_quality_retries": 3
+    }
+  },
+  "args": {
+    "goldens": [
+      {
+        "input": "How tall is the Eiffel Tower?"
+      }
+    ],
+    "max_goldens_per_golden": 2
+  },
+  "script": {
+    "input_format,scenario,task": [
+      {
+        "scenario": "Tourists asking about Paris landmarks.",
+        "task": "Answering landmark questions.",
+        "input_format": "Short questions in English."
+      }
+    ],
+    "data": [
+      {
+        "data": [
+          {
+            "input": "Is the Louvre big?"
+          },
+          {
+            "input": "When is Notre-Dame open?"
+          }
+        ]
+      }
+    ],
+    "response": [
+      {
+        "response": "Hypothetical one?"
+      },
+      {
+        "response": "Hypothetical two?"
+      }
+    ]
+  },
+  "prompts": [
+    {
+      "step": "input_format,scenario,task",
+      "prompt": "\n            You are a prompt engineer tasked with reverse-engineering the original prompt that may have produced the following inputs. \n            Each input is a message that a user might submit to an AI system.\n\n            Your job is to infer the structure of the original prompt by analyzing patterns in these inputs.\n\n            Specifically, extract the following:\n            \n            1. `scenario`: Describe the type of person or user who would have submitted these inputs, and the context or purpose for doing so.\n            2. `task`: What was the AI system expected to do in response to these inputs?\n            3. `input_format`: Describe the style, tone, or structure of the inputs — how the inputs are typically phrased.\n\n            You MUST return your answer strictly in the following JSON format:\n\n            ```json\n            {\n                \"scenario\": \"<your answer here>\",\n                \"task\": \"<your answer here>\",\n                \"input_format\": \"<your answer here>\"\n            }\n            ```\n\n            **\n            IMPORTANT: Do not use any prior knowledge. Only rely on what is observable in the inputs themselves.   \n\n            Example inputs: [\n                \"How many users signed up last week?\",\n                \"Show me the total revenue for March.\",\n                \"Which products had the highest sales yesterday?\"\n            ]\n\n            Example output:\n            {\n                \"scenario\": \"Non-technical users trying to query a database using plain English.\",\n                \"task\": \"Answering text-to-SQL-related queries by querying a database and returning the results to users.\",\n                \"input_format\": \"Questions in English that ask for data in a database.\"\n            }\n\n            Here are the inputs to analyze:\n\n            ['How tall is the Eiffel Tower?']\n     "
+    },
+    {
+      "step": "data",
+      "prompt": "Generate a series of input prompts from scratch based on the provided scenario, task, and output format.\n        The inputs must align with the given scenario and task description, and conform to specified output format.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'data' key as a list of JSON objects.\n        You MUST TRY to generate 2 data points.\n\n        Example scenario: technical SWE typing SQL queries to query from a database called FAST_FOOD_RESTAURANTS\n        Example task: Text2SQL LLM Assistant\n        Example input format: SQL String\n        Example num prompts: 2\n        Example JSON:\n        {\n            \"data\": [\n                {\n                    \"input\": \"SELECT * FROM menu\"\n                },\n                {\n                    \"input\": \"SELECT AVG(price) FROM menu;\"\n                }\n            ]  \n        }\n\n        You MUST include at least one statement as the input. `input` MUST be of `Short questions in English.` format.\n        You MUST TRY to generate 2 data points, unless the generated `input` is getting repetitive.\n        **\n\n        scenario: Tourists asking about Paris landmarks.\n        task: Answering landmark questions.\n        input format: Short questions in English.\n        num prompts: 2\n        JSON:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input`. You MUST complicate the given `Input` using the following method:\n            1. Rewrite `Input` to include a hypothetical or speculative scenario.\n            2. `Rewritten Input` should encourage the reader to apply knowledge to imagine or deduce outcomes.\n            3. `Rewritten Input` should be concise, clear, and understandable by humans.\n            6. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example input:\n            What are the consequences of the greenhouse effect?\n            Example rewritten input:\n            Imagine a world where greenhouse gas emissions were doubled overnight. How might this intensified greenhouse effect impact global climate patterns and ecosystems?\n\n            --------------------------\n\n            Example input:\n            How do antibiotics work?\n            Example rewritten input:\n            In a scenario where a new antibiotic-resistant superbug emerges, how would the principles of antibiotic action and resistance influence our approach to treatment?\n\n            --------------------------\n\n            Example input:\n            What is quantum computing?\n            Example rewritten input:\n            Suppose a quantum computer was tasked with solving a problem that currently takes traditional computers centuries to solve. How might the unique capabilities of quantum computing change the outcome?\n            **\n\n            Input:\n            Is the Louvre big?\n            Rewritten Input:\n            "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input`. You MUST complicate the given `Input` using the following method:\n            1. Rewrite `Input` to include a hypothetical or speculative scenario.\n            2. `Rewritten Input` should encourage the reader to apply knowledge to imagine or deduce outcomes.\n            3. `Rewritten Input` should be concise, clear, and understandable by humans.\n            6. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example input:\n            What are the consequences of the greenhouse effect?\n            Example rewritten input:\n            Imagine a world where greenhouse gas emissions were doubled overnight. How might this intensified greenhouse effect impact global climate patterns and ecosystems?\n\n            --------------------------\n\n            Example input:\n            How do antibiotics work?\n            Example rewritten input:\n            In a scenario where a new antibiotic-resistant superbug emerges, how would the principles of antibiotic action and resistance influence our approach to treatment?\n\n            --------------------------\n\n            Example input:\n            What is quantum computing?\n            Example rewritten input:\n            Suppose a quantum computer was tasked with solving a problem that currently takes traditional computers centuries to solve. How might the unique capabilities of quantum computing change the outcome?\n            **\n\n            Input:\n            When is Notre-Dame open?\n            Rewritten Input:\n            "
+    }
+  ],
+  "goldens": [
+    {
+      "input": "Hypothetical one?",
+      "expected_output": null,
+      "context": null,
+      "source_file": null,
+      "additional_metadata": {
+        "evolutions": [
+          "Hypothetical"
+        ]
+      }
+    },
+    {
+      "input": "Hypothetical two?",
+      "expected_output": null,
+      "context": null,
+      "source_file": null,
+      "additional_metadata": {
+        "evolutions": [
+          "Hypothetical"
+        ]
+      }
+    }
+  ],
+  "styling_config": {
+    "scenario": "Tourists asking about Paris landmarks.",
+    "task": "Answering landmark questions.",
+    "input_format": "Short questions in English.",
+    "expected_output_format": null
+  }
+}

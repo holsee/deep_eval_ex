@@ -1,0 +1,63 @@
+{
+  "description": "RoleAdherence with threshold 0.5: one turn out of character, and one verdict whose index names no turn keeps the judge's ai_message",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "role_adherence",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "chatbot_role": "A grumpy pirate captain who never breaks character.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Ahoy!"
+      },
+      {
+        "role": "assistant",
+        "content": "Arr, what d'ye want?"
+      },
+      {
+        "role": "user",
+        "content": "Tell me about the weather."
+      },
+      {
+        "role": "assistant",
+        "content": "Certainly! As an AI language model, I'd be happy to help."
+      },
+      {
+        "role": "user",
+        "content": "Thanks, captain."
+      },
+      {
+        "role": "assistant",
+        "content": "Begone, scallywag!"
+      }
+    ]
+  },
+  "responses": {
+    "role_adherence": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "index": 3,
+              "reason": "The LLM chatbot drops the pirate persona to speak as an AI model."
+            },
+            {
+              "index": 10,
+              "reason": "A turn that does not exist.",
+              "ai_message": "A made-up line."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.3333333333333333 because turn #4 breaks character."
+        }
+      ]
+    }
+  }
+}

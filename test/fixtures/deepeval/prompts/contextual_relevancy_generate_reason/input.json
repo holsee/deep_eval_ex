@@ -1,0 +1,14 @@
+{
+  "template": "ContextualRelevancyMetric.generate_reason",
+  "inputs": {
+    "score": 0.3333,
+    "input": "What is the capital of France?",
+    "irrelevant_statements": [
+      "The context mentions 'There was a cat', which is unrelated.",
+      null
+    ],
+    "relevant_statements": [
+      "Paris is the capital of France."
+    ]
+  }
+}

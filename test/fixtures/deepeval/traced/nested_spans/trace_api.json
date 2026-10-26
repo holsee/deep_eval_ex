@@ -1,0 +1,290 @@
+[
+  {
+    "uuid": "ff6bc851-444e-4a16-a125-9f26db019267",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "f7d6da69-fe5f-44b3-a52e-3ec22e474fc2",
+        "name": "answer",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.894Z",
+        "endTime": "2026-10-23T03:23:29.894Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "Answer to How do I reset my password?",
+        "toolsCalled": [
+          {
+            "name": "search_docs",
+            "type": "FUNCTION",
+            "description": "Searches the help centre",
+            "output": {
+              "hits": 2,
+              "query": "How do I reset my password?"
+            },
+            "inputParameters": {
+              "query": "How do I reset my password?"
+            }
+          }
+        ],
+        "availableTools": [
+          "search_docs"
+        ],
+        "agentHandoffs": [
+          "billing"
+        ]
+      }
+    ],
+    "llmSpans": [
+      {
+        "uuid": "1e017c84-28d1-433a-ad85-e997b0bde396",
+        "name": "generate",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "f7d6da69-fe5f-44b3-a52e-3ec22e474fc2",
+        "startTime": "2026-10-23T03:23:29.894Z",
+        "endTime": "2026-10-23T03:23:29.894Z",
+        "input": {
+          "query": "How do I reset my password?",
+          "documents": [
+            "FAQ: How do I reset my password?",
+            "Policy: answers cite the help centre."
+          ]
+        },
+        "output": "Answer to How do I reset my password?",
+        "model": "gpt-4o-mini",
+        "inputTokenCount": 42.0,
+        "outputTokenCount": 7.0,
+        "costPerInputToken": 1.5e-07,
+        "costPerOutputToken": 6e-07,
+        "metricsData": [
+          {
+            "name": "Strict Judge",
+            "threshold": 0.9,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "retrieverSpans": [
+      {
+        "uuid": "8cf336bd-10d5-4190-a590-39841259fe74",
+        "name": "retrieve",
+        "status": "SUCCESS",
+        "type": "retriever",
+        "parentUuid": "f7d6da69-fe5f-44b3-a52e-3ec22e474fc2",
+        "startTime": "2026-10-23T03:23:29.894Z",
+        "endTime": "2026-10-23T03:23:29.894Z",
+        "metadata": {
+          "index": "faq"
+        },
+        "input": {
+          "query": "How do I reset my password?",
+          "k": 2
+        },
+        "output": [
+          "FAQ: How do I reset my password?",
+          "Policy: answers cite the help centre."
+        ],
+        "retrievalContext": [
+          "FAQ: How do I reset my password?"
+        ],
+        "embedder": "text-embedding-3-small",
+        "topK": 2,
+        "chunkSize": 512,
+        "metricsData": [
+          {
+            "name": "Span Judge",
+            "threshold": 0.7,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "toolSpans": [
+      {
+        "uuid": "c4119c14-8c6c-46b7-b543-027fd9cffd62",
+        "name": "search_docs",
+        "status": "SUCCESS",
+        "type": "tool",
+        "parentUuid": "f7d6da69-fe5f-44b3-a52e-3ec22e474fc2",
+        "startTime": "2026-10-23T03:23:29.894Z",
+        "endTime": "2026-10-23T03:23:29.894Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": {
+          "hits": 2,
+          "query": "How do I reset my password?"
+        },
+        "description": "Searches the help centre"
+      }
+    ],
+    "startTime": "2026-10-23T03:23:29.894Z",
+    "endTime": "2026-10-23T03:23:29.894Z",
+    "name": "support",
+    "metadata": {
+      "channel": "chat"
+    },
+    "tags": [
+      "parity"
+    ],
+    "environment": "development",
+    "threadId": "thread-1",
+    "userId": "user-1",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "Answer to How do I reset my password?",
+    "status": "SUCCESS"
+  },
+  {
+    "uuid": "0830ca8b-f282-4b09-96f8-002449929719",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "2772ff32-a804-40c2-b336-49a0ab29d9f2",
+        "name": "answer",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.901Z",
+        "endTime": "2026-10-23T03:23:29.902Z",
+        "input": {
+          "query": "Wo ist meine Rechnung?"
+        },
+        "output": "Answer to Wo ist meine Rechnung?",
+        "toolsCalled": [
+          {
+            "name": "search_docs",
+            "type": "FUNCTION",
+            "description": "Searches the help centre",
+            "output": {
+              "hits": 2,
+              "query": "Wo ist meine Rechnung?"
+            },
+            "inputParameters": {
+              "query": "Wo ist meine Rechnung?"
+            }
+          }
+        ],
+        "availableTools": [
+          "search_docs"
+        ],
+        "agentHandoffs": [
+          "billing"
+        ]
+      }
+    ],
+    "llmSpans": [
+      {
+        "uuid": "b06b6131-e355-4c35-a44a-2dcd9c83e44e",
+        "name": "generate",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "2772ff32-a804-40c2-b336-49a0ab29d9f2",
+        "startTime": "2026-10-23T03:23:29.901Z",
+        "endTime": "2026-10-23T03:23:29.902Z",
+        "input": {
+          "query": "Wo ist meine Rechnung?",
+          "documents": [
+            "FAQ: Wo ist meine Rechnung?",
+            "Policy: answers cite the help centre."
+          ]
+        },
+        "output": "Answer to Wo ist meine Rechnung?",
+        "model": "gpt-4o-mini",
+        "inputTokenCount": 42.0,
+        "outputTokenCount": 7.0,
+        "costPerInputToken": 1.5e-07,
+        "costPerOutputToken": 6e-07,
+        "metricsData": [
+          {
+            "name": "Strict Judge",
+            "threshold": 0.9,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "retrieverSpans": [
+      {
+        "uuid": "752649cd-3529-4ee7-92ab-d09dd4698033",
+        "name": "retrieve",
+        "status": "SUCCESS",
+        "type": "retriever",
+        "parentUuid": "2772ff32-a804-40c2-b336-49a0ab29d9f2",
+        "startTime": "2026-10-23T03:23:29.901Z",
+        "endTime": "2026-10-23T03:23:29.901Z",
+        "metadata": {
+          "index": "faq"
+        },
+        "input": {
+          "query": "Wo ist meine Rechnung?",
+          "k": 2
+        },
+        "output": [
+          "FAQ: Wo ist meine Rechnung?",
+          "Policy: answers cite the help centre."
+        ],
+        "retrievalContext": [
+          "FAQ: Wo ist meine Rechnung?"
+        ],
+        "embedder": "text-embedding-3-small",
+        "topK": 2,
+        "chunkSize": 512,
+        "metricsData": [
+          {
+            "name": "Span Judge",
+            "threshold": 0.7,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "toolSpans": [
+      {
+        "uuid": "03794038-40dd-4784-9a7d-d6ef44fc00f3",
+        "name": "search_docs",
+        "status": "SUCCESS",
+        "type": "tool",
+        "parentUuid": "2772ff32-a804-40c2-b336-49a0ab29d9f2",
+        "startTime": "2026-10-23T03:23:29.901Z",
+        "endTime": "2026-10-23T03:23:29.901Z",
+        "input": {
+          "query": "Wo ist meine Rechnung?"
+        },
+        "output": {
+          "hits": 2,
+          "query": "Wo ist meine Rechnung?"
+        },
+        "description": "Searches the help centre"
+      }
+    ],
+    "startTime": "2026-10-23T03:23:29.901Z",
+    "endTime": "2026-10-23T03:23:29.902Z",
+    "name": "support",
+    "metadata": {
+      "channel": "chat"
+    },
+    "tags": [
+      "parity"
+    ],
+    "environment": "development",
+    "threadId": "thread-1",
+    "userId": "user-1",
+    "input": {
+      "query": "Wo ist meine Rechnung?"
+    },
+    "output": "Answer to Wo ist meine Rechnung?",
+    "status": "SUCCESS"
+  }
+]

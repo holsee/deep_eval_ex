@@ -1,0 +1,7 @@
+{
+  "template": "TaskCompletionMetric.generate_verdict",
+  "inputs": {
+    "task": "Book a table for two on Saturday.",
+    "outcome": "The system booked a table for two on Saturday at 19:00."
+  }
+}

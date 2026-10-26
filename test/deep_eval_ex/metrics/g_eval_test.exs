@@ -1,14 +1,17 @@
 defmodule DeepEvalEx.Metrics.GEvalTest do
   use ExUnit.Case, async: true
 
-  alias DeepEvalEx.LLM.Adapters.Mock
-  alias DeepEvalEx.Metrics.GEval
-  alias DeepEvalEx.TestCase
+  import ExUnit.CaptureIO
 
-  setup do
-    Mock.clear_responses()
-    :ok
-  end
+  alias DeepEvalEx.{Evaluator, MissingTestCaseParamsError}
+  alias DeepEvalEx.LLM.Adapters.Mock
+  alias DeepEvalEx.Metrics.{BaseMetric, GEval}
+  alias DeepEvalEx.Metrics.GEval.Rubric
+  alias DeepEvalEx.Prompts.GEval, as: GEvalPrompts
+  alias DeepEvalEx.TestCase
+  alias DeepEvalEx.Tracing.NestedDict
+
+  doctest GEval, only: [calculate_weighted_summed_score: 2]
 
   describe "new/1" do
     test "creates GEval metric with criteria" do
@@ -38,20 +41,83 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
       assert is_nil(metric.criteria)
     end
 
-    test "creates GEval metric with rubric" do
+    test "creates GEval metric with a rubric, sorted, its score range spanning it" do
       metric =
         GEval.new(
           name: "Quality",
           criteria: "Evaluate quality",
           evaluation_params: [:input, :actual_output],
           rubric: [
-            {10, "Perfect"},
-            {5, "Average"},
-            {1, "Poor"}
+            Rubric.new!(score_range: {8, 10}, expected_outcome: "Perfect"),
+            Rubric.new!(score_range: {1, 3}, expected_outcome: "Poor"),
+            Rubric.new!(score_range: {4, 7}, expected_outcome: "Average")
           ]
         )
 
-      assert metric.rubric == [{10, "Perfect"}, {5, "Average"}, {1, "Poor"}]
+      assert Enum.map(metric.rubric, &{&1.score_range, &1.expected_outcome}) ==
+               [{{1, 3}, "Poor"}, {{4, 7}, "Average"}, {{8, 10}, "Perfect"}]
+
+      assert metric.score_range == {1, 10}
+    end
+
+    test "rejects overlapping rubric ranges, as deepeval's validate_and_sort_rubrics" do
+      assert_raise ArgumentError, "Overlapping score ranges: (0, 5) and (5, 10)", fn ->
+        GEval.new(
+          name: "Quality",
+          criteria: "Evaluate quality",
+          evaluation_params: [:input],
+          rubric: [
+            Rubric.new!(score_range: {5, 10}, expected_outcome: "Good"),
+            Rubric.new!(score_range: {0, 5}, expected_outcome: "Bad")
+          ]
+        )
+      end
+    end
+
+    test "takes an empty rubric as none" do
+      metric = GEval.new(name: "Q", criteria: "c", evaluation_params: [:input], rubric: [])
+
+      assert metric.rubric == nil
+      assert metric.score_range == {0, 10}
+    end
+
+    test "still accepts deprecated {score, description} rubric entries, with a warning" do
+      warning =
+        capture_io(:stderr, fn ->
+          metric =
+            GEval.new(
+              name: "Quality",
+              criteria: "Evaluate quality",
+              evaluation_params: [:input],
+              rubric: [{10, "Perfect"}, {1, "Poor"}]
+            )
+
+          send(self(), {:metric, metric})
+        end)
+
+      assert warning =~ "{score, description} GEval rubric entries are deprecated"
+      assert_received {:metric, metric}
+
+      assert metric.rubric == [
+               %Rubric{score_range: {1, 1}, expected_outcome: "Poor"},
+               %Rubric{score_range: {10, 10}, expected_outcome: "Perfect"}
+             ]
+
+      assert metric.score_range == {1, 10}
+    end
+
+    test "rejects deepeval's invalid criteria, evaluation steps and evaluation params" do
+      assert_raise ArgumentError, "Criteria provided cannot be an empty string.", fn ->
+        GEval.new(name: "Q", criteria: "  ", evaluation_params: [:input])
+      end
+
+      assert_raise ArgumentError, ~r/^'evaluation_steps' must not be an empty list/, fn ->
+        GEval.new(name: "Q", evaluation_steps: [], evaluation_params: [:input])
+      end
+
+      assert_raise ArgumentError, "evaluation_params cannot be an empty list.", fn ->
+        GEval.new(name: "Q", criteria: "c", evaluation_params: [])
+      end
     end
 
     test "raises without criteria or evaluation_steps" do
@@ -75,16 +141,83 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
       assert metric.strict_mode == true
     end
 
-    test "supports custom score_range" do
+    test "strict_mode forces the threshold to the integer 1, as deepeval's constructor" do
       metric =
+        GEval.new(
+          name: "Strict",
+          criteria: "Binary check",
+          evaluation_params: [:input],
+          strict_mode: true,
+          threshold: 0.3
+        )
+
+      assert metric.threshold === 1
+    end
+
+    test "accepts a nil threshold for score-only evaluation and a flaky flag" do
+      metric =
+        GEval.new(
+          name: "Scored",
+          criteria: "Quality",
+          evaluation_params: [:input],
+          threshold: nil,
+          flaky: true
+        )
+
+      assert metric.threshold == nil
+      assert metric.flaky == true
+      refute GEval.new(name: "D", criteria: "c", evaluation_params: [:input]).flaky
+    end
+
+    test "still accepts a deprecated :score_range without a rubric, with a warning" do
+      warning =
+        capture_io(:stderr, fn ->
+          metric =
+            GEval.new(
+              name: "Custom Range",
+              criteria: "Test",
+              evaluation_params: [:input],
+              score_range: {1, 5}
+            )
+
+          send(self(), {:metric, metric})
+        end)
+
+      assert warning =~ "GEval's :score_range option is deprecated"
+      assert_received {:metric, %{score_range: {1, 5}}}
+    end
+
+    test "accepts without a warning a :score_range equal to the one it derives" do
+      rubric = [Rubric.new!(score_range: {1, 5}, expected_outcome: "x")]
+
+      assert capture_io(:stderr, fn ->
+               GEval.new(
+                 name: "Q",
+                 criteria: "c",
+                 evaluation_params: [:input],
+                 score_range: {0, 10}
+               )
+
+               GEval.new(
+                 name: "Q",
+                 criteria: "c",
+                 evaluation_params: [:input],
+                 rubric: rubric,
+                 score_range: {1, 5}
+               )
+             end) == ""
+    end
+
+    test "rejects a :score_range given with a rubric, which sets the range" do
+      assert_raise ArgumentError, ~r/:score_range/, fn ->
         GEval.new(
           name: "Custom Range",
           criteria: "Test",
           evaluation_params: [:input],
-          score_range: {1, 5}
+          score_range: {1, 5},
+          rubric: [Rubric.new!(score_range: {0, 2}, expected_outcome: "x")]
         )
-
-      assert metric.score_range == {1, 5}
+      end
     end
   end
 
@@ -94,13 +227,70 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
     end
   end
 
+  describe "metric_name/1" do
+    test "suffixes the configured name with [GEval] like deepeval's __name__" do
+      metric = GEval.new(name: "Helpfulness", criteria: "c", evaluation_params: [:input])
+
+      assert GEval.metric_name(metric) == "Helpfulness [GEval]"
+    end
+
+    test "returns the bare name when the suffix is disabled" do
+      metric =
+        GEval.new(
+          name: "Helpfulness",
+          criteria: "c",
+          evaluation_params: [:input],
+          include_g_eval_suffix: false
+        )
+
+      assert GEval.metric_name(metric) == "Helpfulness"
+    end
+  end
+
+  defmodule StepsOverride do
+    @behaviour GEvalPrompts
+
+    @impl true
+    def generate_evaluation_steps(opts),
+      do: "CUSTOM STEPS\n" <> GEvalPrompts.generate_evaluation_steps(opts)
+  end
+
   describe "evaluate/2 with mock adapter" do
+    test "renders the :evaluation_template override and the defaults for the rest" do
+      Mock.script(%{
+        "steps" => [%{"steps" => ["Check accuracy."]}],
+        "reason,score" => [%{"score" => 7, "reason" => "Good."}]
+      })
+
+      metric =
+        GEval.new(
+          name: "Accuracy",
+          criteria: "Is the arithmetic right?",
+          evaluation_params: [:input, :actual_output],
+          evaluation_template: StepsOverride
+        )
+
+      assert metric.evaluation_template == StepsOverride
+
+      test_case = TestCase.new!(input: "2 + 2?", actual_output: "4")
+
+      assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
+      assert result.score == 0.7
+
+      assert [%{step: "steps", prompt: steps}, %{step: "reason,score", prompt: results}] =
+               Mock.scripted_prompts()
+
+      assert steps =~ ~r/^CUSTOM STEPS\n/
+      assert steps =~ "Is the arithmetic right?"
+      assert results =~ "2 + 2?"
+      refute results =~ "CUSTOM"
+    end
+
     test "evaluates test case with pre-defined steps" do
       # Mock the evaluation response
-      Mock.set_schema_response(
-        ~r/evaluator/i,
-        %{"score" => 8, "reason" => "The response is helpful and accurate."}
-      )
+      Mock.script(%{
+        "reason,score" => [%{"score" => 8, "reason" => "The response is helpful and accurate."}]
+      })
 
       metric =
         GEval.new(
@@ -127,17 +317,11 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
     end
 
     test "generates steps when not provided" do
-      # Mock the steps generation
-      Mock.set_schema_response(
-        ~r/generate.*evaluation steps/i,
-        %{"steps" => ["Step 1: Check accuracy", "Step 2: Check completeness"]}
-      )
-
-      # Mock the evaluation response
-      Mock.set_schema_response(
-        ~r/evaluator/i,
-        %{"score" => 7, "reason" => "Good but could be more detailed."}
-      )
+      # Mock the steps generation, then the evaluation response
+      Mock.script(%{
+        "steps" => [%{"steps" => ["Step 1: Check accuracy", "Step 2: Check completeness"]}],
+        "reason,score" => [%{"score" => 7, "reason" => "Good but could be more detailed."}]
+      })
 
       metric =
         GEval.new(
@@ -162,17 +346,13 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
     end
 
     test "normalizes score to 0-1 range" do
-      Mock.set_schema_response(
-        ~r/evaluator/i,
-        %{"score" => 5, "reason" => "Average response."}
-      )
+      Mock.script(%{"reason,score" => [%{"score" => 5, "reason" => "Average response."}]})
 
       metric =
         GEval.new(
           name: "Test",
           evaluation_params: [:input, :actual_output],
-          evaluation_steps: ["Check quality"],
-          score_range: {0, 10}
+          evaluation_steps: ["Check quality"]
         )
 
       test_case = TestCase.new!(input: "Q", actual_output: "A")
@@ -182,26 +362,128 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
       assert result.score == 0.5
     end
 
-    test "handles custom score range" do
-      Mock.set_schema_response(
-        ~r/evaluator/i,
-        %{"score" => 3, "reason" => "Meets expectations."}
-      )
+    test "sends its rubric as deepeval's format_rubrics does, lowest range first" do
+      Mock.script(%{"reason,score" => [%{"score" => 7, "reason" => "Good."}]})
 
       metric =
         GEval.new(
           name: "Test",
           evaluation_params: [:input, :actual_output],
           evaluation_steps: ["Check quality"],
-          # 1-5 range
-          score_range: {1, 5}
+          rubric: [
+            Rubric.new!(score_range: {7, 10}, expected_outcome: "Good."),
+            Rubric.new!(score_range: {0, 3}, expected_outcome: "Bad."),
+            Rubric.new!(score_range: {5, 5}, expected_outcome: "Mid.")
+          ]
         )
 
       test_case = TestCase.new!(input: "Q", actual_output: "A")
 
       assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
+      assert [%{prompt: prompt}] = Mock.scripted_prompts()
+
+      assert prompt =~
+               "\n\nRubric:\n0-3: Bad.\n5: Mid.\n7-10: Good.\n\nTest Case:\nInput:\nQ \n\n"
+
+      assert prompt =~ ~s(an integer between 0 and 10, based on the rubric provided.)
+      assert result.verbose_logs =~ "Rubric:\n0-3: Bad.\n5: Mid.\n7-10: Good. \n \n"
+    end
+
+    test "a nil threshold measures score-only, through the evaluator too" do
+      # Measured twice: by GEval, then through the evaluator.
+      Mock.script(%{"reason,score" => List.duplicate(%{"score" => 5, "reason" => "Average."}, 2)})
+
+      metric =
+        GEval.new(
+          name: "Test",
+          evaluation_params: [:input, :actual_output],
+          evaluation_steps: ["Check quality"],
+          threshold: nil,
+          flaky: true
+        )
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A")
+
+      assert {:ok, %{score: 0.5, threshold: nil, success: nil}} =
+               GEval.evaluate(metric, test_case, adapter: :mock)
+
+      assert %{score: 0.5, threshold: nil, success: nil, flaky: true} =
+               DeepEvalEx.Evaluator.evaluate_metric(test_case, metric,
+                 adapter: :mock,
+                 threshold: 0.7
+               )
+    end
+
+    test "normalizes over the score range its rubric spans" do
+      Mock.script(%{"reason,score" => [%{"score" => 3, "reason" => "Meets expectations."}]})
+
+      metric =
+        GEval.new(
+          name: "Test",
+          evaluation_params: [:input, :actual_output],
+          evaluation_steps: ["Check quality"],
+          rubric: [
+            Rubric.new!(score_range: {1, 2}, expected_outcome: "Poor."),
+            Rubric.new!(score_range: {3, 5}, expected_outcome: "Good.")
+          ]
+        )
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A")
+
+      assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
+      assert [%{prompt: prompt}] = Mock.scripted_prompts()
+      assert prompt =~ "an integer between 1 and 5, based on the rubric provided."
       # Score 3 in range 1-5: (3-1)/(5-1) = 2/4 = 0.5
       assert result.score == 0.5
+      assert result.metadata.score_range == {1, 5}
+    end
+
+    test "measures a rubric metric through the evaluator, which rebuilds it from its fields" do
+      Mock.script(%{"reason,score" => [%{"score" => 4, "reason" => "Good."}]})
+
+      metric =
+        GEval.new(
+          name: "Test",
+          evaluation_params: [:input, :actual_output],
+          evaluation_steps: ["Check quality"],
+          rubric: [
+            Rubric.new!(score_range: {1, 2}, expected_outcome: "Poor."),
+            Rubric.new!(score_range: {3, 5}, expected_outcome: "Good.")
+          ]
+        )
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A")
+
+      assert capture_io(:stderr, fn ->
+               result = DeepEvalEx.Evaluator.evaluate_metric(test_case, metric, adapter: :mock)
+               send(self(), {:result, result})
+             end) == ""
+
+      assert_received {:result, %{score: 0.75, error: nil}}
+    end
+
+    test "in strict mode, takes the judge's score as the score, as deepeval's int(g_score)" do
+      metric =
+        GEval.new(
+          name: "Strict",
+          evaluation_params: [:input, :actual_output],
+          evaluation_steps: ["Check quality"],
+          strict_mode: true
+        )
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A")
+
+      Mock.script(%{"reason,score" => [%{"score" => 1, "reason" => "Meets it."}]})
+
+      assert {:ok, %{score: 1, success: true, threshold: 1} = result} =
+               GEval.evaluate(metric, test_case, adapter: :mock)
+
+      assert String.ends_with?(result.verbose_logs, " \n \nScore: 1")
+
+      Mock.script(%{"reason,score" => [%{"score" => 0, "reason" => "Misses it."}]})
+
+      assert {:ok, %{score: 0, success: false}} =
+               GEval.evaluate(metric, test_case, adapter: :mock)
     end
 
     test "returns error for missing evaluation params" do
@@ -219,11 +501,47 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
                GEval.evaluate(metric, test_case, adapter: :mock)
     end
 
+    test "validates params as deepeval: an empty actual_output is rejected, other empties are not" do
+      metric =
+        GEval.new(
+          name: "Test",
+          evaluation_params: [:input, :actual_output, :expected_output],
+          evaluation_steps: ["Check"]
+        )
+
+      assert {:error, {:empty_param, :actual_output}} =
+               GEval.evaluate(
+                 metric,
+                 %TestCase{input: "Q", actual_output: "", expected_output: nil},
+                 adapter: :mock
+               )
+
+      Mock.script(%{"reason,score" => [%{"score" => 10, "reason" => "Fine."}]})
+
+      assert {:ok, %{score: 1.0}} =
+               GEval.evaluate(
+                 metric,
+                 %TestCase{input: "Q", actual_output: "A", expected_output: ""},
+                 adapter: :mock
+               )
+    end
+
+    test "does not accept context for retrieval_context" do
+      metric =
+        GEval.new(
+          name: "Test",
+          evaluation_params: [:actual_output, :retrieval_context],
+          evaluation_steps: ["Check"]
+        )
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A", context: ["ctx"])
+
+      assert {:error, {:missing_params, [:retrieval_context]}} =
+               GEval.evaluate(metric, test_case, adapter: :mock)
+    end
+
     test "includes metadata in result" do
-      Mock.set_schema_response(
-        ~r/evaluator/i,
-        %{"score" => 9, "reason" => "Excellent."}
-      )
+      Mock.script(%{"reason,score" => [%{"score" => 9, "reason" => "Excellent."}]})
 
       metric =
         GEval.new(
@@ -245,10 +563,7 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
 
   describe "do_measure/2" do
     test "works with inline configuration" do
-      Mock.set_schema_response(
-        ~r/evaluator/i,
-        %{"score" => 8, "reason" => "Good."}
-      )
+      Mock.script(%{"reason,score" => [%{"score" => 8, "reason" => "Good."}]})
 
       test_case = TestCase.new!(input: "Q", actual_output: "A")
 
@@ -262,12 +577,321 @@ defmodule DeepEvalEx.Metrics.GEvalTest do
                )
 
       assert result.score == 0.8
+      assert result.metric == "Inline [GEval]"
+    end
+
+    test "names the result with the bare name when the suffix is disabled" do
+      Mock.script(%{"reason,score" => [%{"score" => 8, "reason" => "Good."}]})
+
+      test_case = TestCase.new!(input: "Q", actual_output: "A")
+
+      assert {:ok, result} =
+               GEval.do_measure(test_case,
+                 name: "Inline",
+                 evaluation_params: [:input, :actual_output],
+                 evaluation_steps: ["Check"],
+                 include_g_eval_suffix: false,
+                 adapter: :mock
+               )
+
+      assert result.metric == "Inline"
     end
 
     test "returns error without configuration" do
       test_case = TestCase.new!(input: "Q", actual_output: "A")
 
       assert {:error, {:missing_config, _}} = GEval.do_measure(test_case, [])
+    end
+  end
+
+  # An OpenAI chat completion answering `content`, with `tokens` as its
+  # logprobs: {token, logprob, [{top_token, top_logprob}]}.
+  defp completion(content, tokens) do
+    logprobs =
+      if tokens do
+        %{
+          "content" =>
+            Enum.map(tokens, fn {token, logprob, top} ->
+              %{
+                "token" => token,
+                "logprob" => logprob,
+                "top_logprobs" =>
+                  Enum.map(top, fn {t, lp} -> %{"token" => t, "logprob" => lp} end)
+              }
+            end)
+        }
+      end
+
+    %{
+      "choices" => [
+        %{"message" => %{"role" => "assistant", "content" => content}, "logprobs" => logprobs}
+      ]
+    }
+  end
+
+  @answer ~s({"reason": "Close.", "score": 7})
+
+  # Expected values computed by deepeval 4.3.1's calculate_weighted_summed_score
+  # on the same payloads.
+  describe "calculate_weighted_summed_score/2" do
+    test "weights the score by its token's top logprobs" do
+      raw = completion(@answer, [{"7", -0.1, [{"7", -0.1}, {"8", -2.5}]}])
+
+      assert GEval.calculate_weighted_summed_score(7, raw) == 7.083172696493922
+    end
+
+    test "uses the last token equal to the score, not one in the reasoning" do
+      raw =
+        completion(@answer, [
+          {"7", -0.01, [{"7", -0.01}]},
+          {"7", -0.1, [{"7", -0.1}, {"8", -2.5}]}
+        ])
+
+      assert GEval.calculate_weighted_summed_score(7, raw) == 7.083172696493922
+    end
+
+    test "sums tokens naming the same score and drops non-decimal tokens" do
+      raw =
+        completion(@answer, [
+          {"3", -0.5, [{"3", -0.5}, {"4", -1.0}, {"3", -2.0}, {"x", -0.2}]}
+        ])
+
+      assert GEval.calculate_weighted_summed_score(3, raw) == 3.331498960424092
+    end
+
+    test "drops tokens under 1% probability, keeping the raw score when none is left" do
+      raw = completion(@answer, [{"5", -0.1, [{"five", -0.1}, {"5", -5.0}]}])
+
+      assert GEval.calculate_weighted_summed_score(5, raw) === 5
+    end
+
+    test "keeps the raw score without a token for it or without logprobs" do
+      assert GEval.calculate_weighted_summed_score(5, completion(@answer, [{"6", -0.1, []}])) ===
+               5
+
+      assert GEval.calculate_weighted_summed_score(5, completion(@answer, nil)) === 5
+      assert GEval.calculate_weighted_summed_score(5, %{}) === 5
+    end
+  end
+
+  # A judge with logprobs reporting the top_logprobs it is asked for.
+  defmodule TopLogprobsJudge do
+    use DeepEvalEx.LLM.Adapter
+
+    @impl true
+    def generate(_prompt, _opts), do: raise("not called")
+
+    @impl true
+    def generate_with_schema(_prompt, _schema, _opts), do: raise("not called")
+
+    @impl true
+    def generate_raw_response(_prompt, opts) do
+      send(self(), {:top_logprobs, opts[:top_logprobs]})
+
+      {:ok,
+       %{"choices" => [%{"message" => %{"content" => ~s({"reason": "Close.", "score": 7})}}]}}
+    end
+
+    @impl true
+    def model_name(_opts), do: "top-logprobs-judge"
+
+    @impl true
+    def supports_structured_outputs?, do: true
+
+    @impl true
+    def supports_log_probs?, do: true
+  end
+
+  describe "logprob-weighted scoring" do
+    @steps_metric [
+      name: "Test",
+      evaluation_params: [:input, :actual_output],
+      evaluation_steps: ["Check quality"]
+    ]
+
+    @weighted [{"7", -0.1, [{"7", -0.1}, {"8", -2.5}]}]
+
+    setup do
+      %{test_case: TestCase.new!(input: "Q", actual_output: "A")}
+    end
+
+    test "asks a judge with logprobs for a raw response and weights its score",
+         %{test_case: test_case} do
+      Mock.script(%{"raw_response" => [completion(@answer, @weighted)]})
+
+      assert {:ok, result} = GEval.evaluate(GEval.new(@steps_metric), test_case, adapter: :mock)
+
+      assert result.score == 7.083172696493922 / 10
+      assert result.reason == "Close."
+      assert [%{step: "raw_response", prompt: prompt}] = Mock.scripted_prompts()
+      assert prompt =~ "Check quality"
+    end
+
+    test "asks for the metric's top_logprobs, 20 by default", %{test_case: test_case} do
+      opts = [adapter: TopLogprobsJudge]
+
+      assert {:ok, _} = GEval.evaluate(GEval.new(@steps_metric), test_case, opts)
+      assert_received {:top_logprobs, 20}
+
+      metric = GEval.new([top_logprobs: 5] ++ @steps_metric)
+      assert {:ok, _} = GEval.evaluate(metric, test_case, opts)
+      assert_received {:top_logprobs, 5}
+    end
+
+    test "keeps the raw score of a raw response without logprobs", %{test_case: test_case} do
+      Mock.script(%{"raw_response" => [completion(@answer, nil)]})
+
+      assert {:ok, result} = GEval.evaluate(GEval.new(@steps_metric), test_case, adapter: :mock)
+      assert result.score == 0.7
+    end
+
+    test "loads the raw response's content with trimAndLoadJson", %{test_case: test_case} do
+      content = ~s(Sure:\n```json\n{"reason": "Close.", "score": 7,}\n```)
+      Mock.script(%{"raw_response" => [completion(content, @weighted)]})
+
+      assert {:ok, result} = GEval.evaluate(GEval.new(@steps_metric), test_case, adapter: :mock)
+      assert result.score == 7.083172696493922 / 10
+    end
+
+    test "fails with deepeval's error when the raw response holds no JSON",
+         %{test_case: test_case} do
+      Mock.script(%{"raw_response" => [completion("No.", @weighted)]})
+
+      assert {:error, %DeepEvalEx.LLM.InvalidJSONError{}} =
+               GEval.evaluate(GEval.new(@steps_metric), test_case, adapter: :mock)
+    end
+
+    test "in strict mode, takes the raw response's score unweighted", %{test_case: test_case} do
+      answer = ~s({"reason": "Meets it.", "score": 1})
+
+      Mock.script(%{
+        "raw_response" => [completion(answer, [{"1", -0.5, [{"1", -0.5}, {"0", -1.0}]}])]
+      })
+
+      metric = GEval.new([strict_mode: true] ++ @steps_metric)
+
+      assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
+      assert result.metadata.raw_score === 1
+    end
+
+    test "falls back to the schema call for a judge without logprobs",
+         %{test_case: test_case} do
+      Mock.script(%{"reason,score" => [%{"reason" => "Close.", "score" => 7}]})
+
+      assert {:ok, result} = GEval.evaluate(GEval.new(@steps_metric), test_case, adapter: :mock)
+      assert result.score == 0.7
+      assert [%{step: "reason,score"}] = Mock.scripted_prompts()
+    end
+  end
+
+  describe "trace mode (no evaluation_params)" do
+    setup do
+      trace_dict =
+        Jason.OrderedObject.new([
+          {"name", "booking_agent"},
+          {"type", "agent"},
+          {"input", Jason.OrderedObject.new([{"query", "Book Café Odéon."}])},
+          {"output", "Booked."},
+          {"children",
+           [
+             Jason.OrderedObject.new([
+               {"name", "book_table"},
+               {"type", "tool"},
+               {"input", Jason.OrderedObject.new([{"restaurant", "Café Odéon"}])},
+               {"output", "Booked for Saturday"},
+               {"children", []}
+             ])
+           ]}
+        ])
+
+      %{test_case: %TestCase{input: "None", trace_dict: trace_dict}}
+    end
+
+    test "new/1 takes no evaluation_params, and then the metric requires the trace" do
+      metric = GEval.new(name: "Trajectory", criteria: "Did the agent book it?")
+
+      assert metric.evaluation_params == nil
+      assert GEval.requires_trace?(metric)
+      assert BaseMetric.requires_trace?(metric)
+
+      with_params = GEval.new(name: "Q", criteria: "c", evaluation_params: [:input])
+      refute GEval.requires_trace?(with_params)
+      refute BaseMetric.requires_trace?(with_params)
+    end
+
+    test "asks for steps and a score with deepeval's trace prompts, printing the trace dict",
+         %{test_case: test_case} do
+      Mock.script(%{
+        "steps" => [%{"steps" => ["Check book_table's arguments."]}],
+        "reason,score" => [%{"reason" => "book_table was called right.", "score" => 8}]
+      })
+
+      metric = GEval.new(name: "Trajectory", criteria: "Did the agent book it?")
+
+      assert {:ok, result} = GEval.evaluate(metric, test_case, adapter: :mock)
+      assert result.score == 0.8
+      assert result.metric == "Trajectory [GEval]"
+      assert result.metadata.evaluation_steps == ["Check book_table's arguments."]
+
+      assert [%{step: "steps", prompt: steps}, %{step: "reason,score", prompt: results}] =
+               Mock.scripted_prompts()
+
+      assert steps ==
+               GEvalPrompts.generate_trace_evaluation_steps(criteria: "Did the agent book it?")
+
+      assert results ==
+               GEvalPrompts.generate_trace_evaluation_results(
+                 evaluation_steps: ["Check book_table's arguments."],
+                 trace_json: NestedDict.to_json(test_case.trace_dict),
+                 rubric: nil,
+                 score_range: {0, 10}
+               )
+
+      assert results =~ ~s("query": "Book Caf\\u00e9 Od\\u00e9on.")
+    end
+
+    test "in strict mode, uses the strict trace prompt", %{test_case: test_case} do
+      Mock.script(%{"reason,score" => [%{"reason" => "Agrees.", "score" => 1}]})
+
+      metric =
+        GEval.new(name: "Trajectory", evaluation_steps: ["Check the output."], strict_mode: true)
+
+      assert {:ok, %{score: 1, threshold: 1}} = GEval.evaluate(metric, test_case, adapter: :mock)
+      assert [%{prompt: prompt}] = Mock.scripted_prompts()
+      assert prompt =~ ~r/^You are an evaluator judging an AI agent by its execution trace\. /
+      assert prompt =~ "STRICTLY EITHER 1 (the trajectory follows"
+    end
+
+    test "raises deepeval's error for a test case without a trace dict" do
+      metric = GEval.new(name: "Trajectory", criteria: "Did the agent book it?")
+
+      message =
+        "The 'Trajectory [GEval]' metric has no evaluation_params, so it evaluates the " <>
+          "trace, but this test case has none. Run it on a traced component (`@observe` or " <>
+          "`evals_iterator`), or pass evaluation_params to evaluate a plain LLMTestCase."
+
+      assert_raise MissingTestCaseParamsError, message, fn ->
+        GEval.evaluate(metric, TestCase.new!(input: "Q", actual_output: "A"), adapter: :mock)
+      end
+    end
+
+    test "measures through the evaluator, which rebuilds it from its fields",
+         %{test_case: test_case} do
+      Mock.script(%{"reason,score" => [%{"reason" => "Fine.", "score" => 6}]})
+      metric = GEval.new(name: "Trajectory", evaluation_steps: ["Check the output."])
+
+      assert %{score: 0.6, error: nil} =
+               Evaluator.evaluate_metric(test_case, metric, adapter: :mock)
+    end
+
+    test "the evaluator reports the missing trace as the metric's error" do
+      metric = GEval.new(name: "Trajectory", evaluation_steps: ["Check the output."])
+      test_case = TestCase.new!(input: "Q", actual_output: "A")
+
+      assert %{success: false, error: error} =
+               Evaluator.evaluate_metric(test_case, metric, adapter: :mock, ignore_errors: true)
+
+      assert error =~ "The 'Trajectory [GEval]' metric has no evaluation_params"
     end
   end
 end

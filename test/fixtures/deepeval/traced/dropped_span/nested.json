@@ -1,0 +1,64 @@
+[
+  {
+    "name": "agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "planned",
+    "available_tools": [],
+    "agent_handoffs": [],
+    "children": [
+      {
+        "name": "plan",
+        "type": "base",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "plan",
+        "tools_called": [
+          {
+            "name": "search",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "output": "hit for How do I reset my password?",
+            "input_parameters": {
+              "query": "How do I reset my password?"
+            }
+          },
+          {
+            "name": "search",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "output": "hit for more How do I reset my password?",
+            "input_parameters": {
+              "query": "more How do I reset my password?"
+            }
+          }
+        ],
+        "children": [
+          {
+            "name": "search",
+            "type": "tool",
+            "input": {
+              "query": "How do I reset my password?"
+            },
+            "output": "hit for How do I reset my password?",
+            "children": []
+          },
+          {
+            "name": "search",
+            "type": "tool",
+            "input": {
+              "query": "more How do I reset my password?"
+            },
+            "output": "hit for more How do I reset my password?",
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+]

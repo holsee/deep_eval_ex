@@ -1,0 +1,85 @@
+{
+  "description": "TurnContextualRelevancy with window_size 1: irrelevant statements (one without a reason), a window without retrieval context and a raw-text verdict out of vocabulary dropped",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "turn_contextual_relevancy",
+    "params": {
+      "window_size": 1,
+      "threshold": 0.8
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Where is order 42?"
+      },
+      {
+        "role": "assistant",
+        "content": "It shipped on 1 October.",
+        "retrieval_context": [
+          "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+          "Our café is open late."
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Thanks."
+      },
+      {
+        "role": "assistant",
+        "content": "You're welcome!"
+      },
+      {
+        "role": "user",
+        "content": "And a refund?"
+      },
+      {
+        "role": "assistant",
+        "content": "Refunds take 5 business days.",
+        "retrieval_context": [
+          "Refunds take 5 business days."
+        ]
+      }
+    ]
+  },
+  "responses": {
+    "turn_contextual_relevancy": {
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "statement": "Order 42 shipped on 1 October.",
+              "verdict": "yes"
+            },
+            {
+              "statement": "Rome is the capital of Italy.",
+              "verdict": "no",
+              "reason": "'Rome is the capital of Italy.' is about Italy."
+            }
+          ]
+        },
+        {
+          "verdicts": [
+            {
+              "statement": "Our café is open late.",
+              "verdict": "no"
+            }
+          ]
+        },
+        "{\"verdicts\": [{\"statement\": \"Refunds take 5 business days.\", \"verdict\": \"yes\"}, {\"statement\": \"Refunds\", \"verdict\": \"perhaps\"}]}"
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.33 because Rome and the café are irrelevant."
+        },
+        {
+          "reason": "The score is 1.00 because the refund time is relevant."
+        },
+        {
+          "reason": "The score is 0.7777777777777777 because one window retrieves Rome and the café."
+        }
+      ]
+    }
+  }
+}

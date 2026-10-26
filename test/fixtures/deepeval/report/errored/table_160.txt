@@ -1,0 +1,11 @@
+                                                                          Test Results                                                                          
+┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Test case   ┃ Metric       ┃ Score                                                                                    ┃ Status  ┃ Overall Success Rate       ┃
+┡━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ test_case_0 │              │                                                                                          │         │ 0.0% | passed=0 | failed=1 │
+│             │ Faithfulness │ None (threshold=0.5, evaluation model=gpt-4o-mini, reason=None, error=ValueError: boom)  │ ERRORED │                            │
+│             │              │                                                                                          │         │                            │
+│ test_case_1 │              │                                                                                          │         │ 0.0% | passed=0 | failed=1 │
+│             │ Faithfulness │ None (threshold=0.5, evaluation model=gpt-4o-mini, reason=None, error=Timed out after    │ ERRORED │                            │
+│             │              │ 180s)                                                                                    │         │                            │
+└─────────────┴──────────────┴──────────────────────────────────────────────────────────────────────────────────────────┴─────────┴────────────────────────────┘

@@ -1,0 +1,49 @@
+{
+  "description": "Summarization with empty lists: no claims (no verdicts call, alignment the integer 0) and no questions, so empty answers (coverage the integer 0)",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "summarization",
+    "params": {}
+  },
+  "test_case": {
+    "input": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+    "actual_output": "Hmm."
+  },
+  "responses": {
+    "summarization": {
+      "truths": [
+        {
+          "truths": [
+            "The city council approved a new riverside park on Monday.",
+            "Construction starts in March.",
+            "The park opens in May.",
+            "The park will have a lake, a playground and 200 new trees."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": []
+        }
+      ],
+      "questions": [
+        {
+          "questions": []
+        }
+      ],
+      "answers": [
+        {
+          "answers": []
+        },
+        {
+          "answers": []
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.00 because the summary makes no claims."
+        }
+      ]
+    }
+  }
+}

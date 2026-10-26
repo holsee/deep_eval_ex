@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.6666666666666666,
+    "success": true,
+    "reason": "Decided by fake-jev: task completion 0.67, confidence 0.60.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Task: Find the user's latest invoice. \n \nOutcome: The agent looked up invoice INV-42 and said where to find it.",
+    "confidence": 0.6,
+    "system_one_fallback_reason": null,
+    "score_breakdown": null,
+    "raised": null
+  }
+]

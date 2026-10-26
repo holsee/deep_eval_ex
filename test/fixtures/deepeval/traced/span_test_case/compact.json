@@ -1,0 +1,32 @@
+[
+  {
+    "name": "agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "Use the 'Forgot password' link.",
+    "children": [
+      {
+        "name": "retrieve",
+        "type": "retriever",
+        "input": "How do I reset my password?",
+        "output": "FAQ: reset",
+        "retrieval_context": [
+          "FAQ: reset",
+          "FAQ: billing"
+        ],
+        "context": [
+          "Accounts have passwords."
+        ],
+        "expected_output": "FAQ: reset",
+        "tools_called": [
+          "name='index' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output=None input_parameters={'q': 'How do I reset my password?'}"
+        ],
+        "expected_tools": [
+          "name='index' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output=None input_parameters=None"
+        ]
+      }
+    ]
+  }
+]

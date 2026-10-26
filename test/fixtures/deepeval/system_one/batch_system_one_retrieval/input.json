@@ -1,0 +1,75 @@
+{
+  "description": "ContextualRelevancy and ContextualPrecision batched into one request by evaluate()",
+  "batched": true,
+  "metrics": [
+    {
+      "kind": "contextual_relevancy",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    },
+    {
+      "kind": "contextual_precision",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What is the vacation policy?",
+    "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+    "expected_output": "Employees get 20 days of PTO a year. Up to 5 days carry over.",
+    "retrieval_context": [
+      "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+      "Section 3.3: Up to 5 unused days can be carried over to the next year."
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 8.4e-05,
+      "input_tokens": 2000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "m0.q_0": {
+          "probability": 0.9
+        },
+        "m0.q_1": {
+          "probability": 0.95
+        },
+        "m1.q_0": {
+          "probability": 0.85
+        },
+        "m1.q_1": {
+          "probability": 0.6
+        }
+      },
+      "scores": {
+        "m0.q_2": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.0,
+            "1": 0.05,
+            "2": 0.15,
+            "3": 0.8
+          },
+          "confidence": 0.8
+        },
+        "m1.q_2": {
+          "score": 2,
+          "probabilities": {
+            "0": 0.05,
+            "1": 0.15,
+            "2": 0.6,
+            "3": 0.2
+          },
+          "confidence": 0.45
+        }
+      }
+    }
+  }
+}

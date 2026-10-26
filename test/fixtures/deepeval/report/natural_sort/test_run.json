@@ -1,0 +1,92 @@
+{
+  "testCases": [
+    {
+      "name": "case 1",
+      "input": "Question 0?",
+      "actualOutput": "Answer 0.",
+      "flaky": false,
+      "success": true,
+      "metricsData": [
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "No contradictions.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0012
+        }
+      ],
+      "runDuration": 0.0,
+      "evaluationCost": 0.0012,
+      "order": 0
+    },
+    {
+      "name": "Case 10",
+      "input": "Question 1?",
+      "actualOutput": "Answer 1.",
+      "flaky": false,
+      "success": true,
+      "metricsData": [
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": true,
+          "score": 1.0,
+          "reason": "No contradictions.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.0012
+        }
+      ],
+      "runDuration": 0.0,
+      "evaluationCost": 0.0012,
+      "order": 1
+    },
+    {
+      "name": "case 2",
+      "input": "Question 1?",
+      "actualOutput": "Answer 1.",
+      "flaky": false,
+      "success": false,
+      "metricsData": [
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": false,
+          "score": 0.25,
+          "reason": "The answer contradicts the retrieval context on the refund window, which is 30 days.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ],
+      "runDuration": 0.0,
+      "evaluationCost": 0.000321,
+      "order": 2
+    }
+  ],
+  "conversationalTestCases": [],
+  "metricsScores": [
+    {
+      "metric": "Faithfulness",
+      "scores": [
+        1.0,
+        0.25,
+        1.0
+      ],
+      "passes": 2,
+      "fails": 1,
+      "errors": 0
+    }
+  ],
+  "testPassed": 2,
+  "testFailed": 1,
+  "runDuration": 1.0,
+  "evaluationCost": 0.0027209999999999995,
+  "official": false
+}

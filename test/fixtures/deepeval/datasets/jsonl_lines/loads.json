@@ -1,0 +1,140 @@
+[
+  {
+    "loader": "add_goldens_from_jsonl_file",
+    "file": "goldens.jsonl",
+    "args": [],
+    "kwargs": {},
+    "goldens": [
+      {
+        "input": "lists",
+        "actual_output": null,
+        "expected_output": null,
+        "context": [
+          "a",
+          "b"
+        ],
+        "retrieval_context": [
+          {
+            "source": "s",
+            "context": "c"
+          },
+          "r"
+        ],
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": [
+          {
+            "name": "t",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": {
+              "x": 1
+            },
+            "output": null
+          }
+        ],
+        "expected_tools": null,
+        "token_cost": 1.0,
+        "input_token_count": 4,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      },
+      {
+        "input": "strings",
+        "actual_output": null,
+        "expected_output": null,
+        "context": [
+          "a",
+          "b"
+        ],
+        "retrieval_context": [],
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": [
+          {
+            "name": "t",
+            "type": "FUNCTION",
+            "description": null,
+            "reasoning": null,
+            "input_parameters": null,
+            "output": null
+          }
+        ],
+        "expected_tools": null,
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": {
+          "model": null,
+          "eval_mode": null,
+          "must": [
+            "x"
+          ],
+          "must_not": []
+        },
+        "expected_labels": null
+      },
+      {
+        "input": "nulls",
+        "actual_output": null,
+        "expected_output": null,
+        "context": null,
+        "retrieval_context": null,
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": 2,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      }
+    ]
+  },
+  {
+    "loader": "add_goldens_from_jsonl_file",
+    "file": "custom.jsonl",
+    "args": [],
+    "kwargs": {
+      "input_key_name": "q",
+      "context_key_name": "ctx",
+      "context_col_delimiter": ";"
+    },
+    "goldens": [
+      {
+        "input": "custom",
+        "actual_output": null,
+        "expected_output": null,
+        "context": [
+          "one",
+          "two"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": null,
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "token_cost": null,
+        "input_token_count": null,
+        "output_token_count": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "expectations": null,
+        "expected_labels": null
+      }
+    ]
+  }
+]

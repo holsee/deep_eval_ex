@@ -1,0 +1,17 @@
+
+[
+  {
+    "type": "noul",
+    "statement": "Every step of the agent run in `trace` (each tool call, LLM call and retrieval) was strictly necessary for the task the user gave in the root span\u0027s input of `trace`; none was redundant, repeated, speculative or done only to enrich the answer.",
+    "weight": 2
+  },
+  {
+    "type": "noul",
+    "statement": "the agent run in `trace` takes the most direct path to the task the user gave in the root span\u0027s input of `trace`, with no detours, re-queries or loops that a shorter sequence of actions would have avoided."
+  },
+  {
+    "type": "score",
+    "question": "Judging only the number and directness of its steps, not the quality of the result, how efficiently does the agent run in `trace` carry out the task the user gave in the root span\u0027s input of `trace`?",
+    "levels": ["Highly inefficient", "Low efficiency", "Moderate efficiency", "Strong efficiency", "Perfectly efficient"]
+  }
+]

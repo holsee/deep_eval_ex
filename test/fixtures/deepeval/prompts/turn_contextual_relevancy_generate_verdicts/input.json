@@ -1,0 +1,7 @@
+{
+  "template": "TurnContextualRelevancyMetric.generate_verdicts",
+  "inputs": {
+    "input": "\nWhere's my café au lait set? \nIs it late? ",
+    "context": "Order 42 ships today. Rome is the capital of Italy."
+  }
+}

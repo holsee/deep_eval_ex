@@ -1,0 +1,27 @@
+{
+  "template": "ToolCorrectnessMetric.get_tool_selection_score",
+  "inputs": {
+    "input": "What's the weather in Paris?",
+    "tools_called": [
+      {
+        "name": "get_weather",
+        "input_parameters": {
+          "city": "Paris"
+        },
+        "output": {
+          "temp_c": 18
+        }
+      }
+    ],
+    "available_tools": [
+      {
+        "name": "get_weather",
+        "description": "Fetch current weather for a city"
+      },
+      {
+        "name": "search_web",
+        "description": "Search the web"
+      }
+    ]
+  }
+}

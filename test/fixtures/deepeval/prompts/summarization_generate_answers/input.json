@@ -1,0 +1,10 @@
+{
+  "template": "SummarizationMetric.generate_answers",
+  "inputs": {
+    "questions": [
+      "Was a riverside park approved?",
+      "Does the park's café open in May?"
+    ],
+    "text": "The council approved a riverside park with a lake. It opens in May."
+  }
+}

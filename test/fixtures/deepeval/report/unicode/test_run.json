@@ -1,0 +1,64 @@
+{
+  "testCases": [
+    {
+      "name": "café ☕ 测试",
+      "input": "Où est le café ?",
+      "actualOutput": "Ici 👉 ☕",
+      "flaky": false,
+      "success": false,
+      "metricsData": [
+        {
+          "name": "Answer Relevancy",
+          "threshold": 0.5,
+          "success": true,
+          "score": 0.875,
+          "reason": "回答完全相关，并且涵盖了所有要点。🎉 The answer is fully relevant and covers every point.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        },
+        {
+          "name": "Faithfulness",
+          "threshold": 0.5,
+          "success": false,
+          "score": 0.125,
+          "reason": "Line one.\nLine two.",
+          "strictMode": false,
+          "flaky": false,
+          "evaluationModel": "gpt-4o-mini",
+          "evaluationCost": 0.000321
+        }
+      ],
+      "runDuration": 0.0,
+      "evaluationCost": 0.000642,
+      "order": 0
+    }
+  ],
+  "conversationalTestCases": [],
+  "metricsScores": [
+    {
+      "metric": "Answer Relevancy",
+      "scores": [
+        0.875
+      ],
+      "passes": 1,
+      "fails": 0,
+      "errors": 0
+    },
+    {
+      "metric": "Faithfulness",
+      "scores": [
+        0.125
+      ],
+      "passes": 0,
+      "fails": 1,
+      "errors": 0
+    }
+  ],
+  "testPassed": 0,
+  "testFailed": 1,
+  "runDuration": 0.125,
+  "evaluationCost": 0.000642,
+  "official": false
+}

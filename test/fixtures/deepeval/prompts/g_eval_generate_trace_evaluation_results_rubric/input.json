@@ -1,0 +1,81 @@
+{
+  "template": "GEval.generate_trace_evaluation_results",
+  "inputs": {
+    "evaluation_steps": [
+      "Check that the agent called book_table with the day and restaurant asked for.",
+      "Check that the root output agrees with what book_table returned."
+    ],
+    "rubric": [
+      {
+        "score_range": [
+          0,
+          3
+        ],
+        "expected_outcome": "Wrong booking or no tool call."
+      },
+      {
+        "score_range": [
+          4,
+          7
+        ],
+        "expected_outcome": "Right booking, output disagrees."
+      },
+      {
+        "score_range": [
+          8,
+          10
+        ],
+        "expected_outcome": "Right booking, faithful output."
+      }
+    ],
+    "trace": {
+      "name": "booking_agent",
+      "type": "agent",
+      "input": {
+        "query": "Book a table for two at Café Odéon on Saturday."
+      },
+      "output": "Booked: Saturday at 19:00, for two.",
+      "tools_called": [
+        {
+          "name": "book_table",
+          "type": "FUNCTION",
+          "description": null,
+          "reasoning": null,
+          "output": "Booked for Saturday at 19:00",
+          "input_parameters": {
+            "day": "Saturday",
+            "restaurant": "Café Odéon"
+          }
+        }
+      ],
+      "available_tools": [
+        "book_table",
+        "search_web"
+      ],
+      "agent_handoffs": [],
+      "children": [
+        {
+          "name": "book_table",
+          "type": "tool",
+          "input": {
+            "day": "Saturday",
+            "restaurant": "Café Odéon"
+          },
+          "output": "Booked for Saturday at 19:00",
+          "description": "Book a restaurant table",
+          "children": []
+        },
+        {
+          "name": "confirm",
+          "type": "llm",
+          "input": "Confirm the booking.",
+          "output": "Booked: Saturday at 19:00, for two.",
+          "model": "gpt-4o-mini",
+          "input_token_count": 42.0,
+          "output_token_count": 9.0,
+          "children": []
+        }
+      ]
+    }
+  }
+}

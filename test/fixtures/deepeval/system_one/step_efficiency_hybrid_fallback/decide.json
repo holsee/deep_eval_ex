@@ -1,0 +1,142 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "task": "Find my latest invoice.",
+          "trace": {
+            "name": "answer",
+            "type": "agent",
+            "input": {
+              "query": "Where is my invoice?"
+            },
+            "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+            "tools_called": [
+              {
+                "name": "lookup_invoice",
+                "type": "FUNCTION",
+                "description": "Finds the latest invoice",
+                "reasoning": null,
+                "output": "INV-42",
+                "input_parameters": {
+                  "account": "acme"
+                }
+              }
+            ],
+            "available_tools": [
+              "lookup_invoice",
+              "escalate"
+            ],
+            "children": [
+              {
+                "name": "lookup_invoice",
+                "type": "tool",
+                "description": "Finds the latest invoice",
+                "input": {
+                  "account": "acme"
+                },
+                "output": "INV-42"
+              },
+              {
+                "name": "reply",
+                "type": "llm",
+                "input": {
+                  "query": "Where is my invoice?",
+                  "invoice": "INV-42"
+                },
+                "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+                "model": "gpt-4o-mini"
+              }
+            ]
+          }
+        },
+        "questions": {
+          "verdict": {
+            "type": "score",
+            "instructions": "Judging only the number and directness of its steps, not the quality of the result, how efficiently does the agent run in `trace` carry out `task`? Every tool call, LLM call or retrieval that was redundant, repeated, speculative or only enriched the answer counts against it.",
+            "criteria": [
+              "Highly inefficient",
+              "Low efficiency",
+              "Moderate efficiency",
+              "Strong efficiency",
+              "Perfectly efficient"
+            ]
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "task": "Find my latest invoice.",
+        "trace": {
+          "name": "answer",
+          "type": "agent",
+          "input": {
+            "query": "Where is my invoice?"
+          },
+          "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+          "tools_called": [
+            {
+              "name": "lookup_invoice",
+              "type": "FUNCTION",
+              "description": "Finds the latest invoice",
+              "reasoning": null,
+              "output": "INV-42",
+              "input_parameters": {
+                "account": "acme"
+              }
+            }
+          ],
+          "available_tools": [
+            "lookup_invoice",
+            "escalate"
+          ],
+          "children": [
+            {
+              "name": "lookup_invoice",
+              "type": "tool",
+              "description": "Finds the latest invoice",
+              "input": {
+                "account": "acme"
+              },
+              "output": "INV-42"
+            },
+            {
+              "name": "reply",
+              "type": "llm",
+              "input": {
+                "query": "Where is my invoice?",
+                "invoice": "INV-42"
+              },
+              "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+              "model": "gpt-4o-mini"
+            }
+          ]
+        }
+      },
+      "questions": {
+        "verdict": {
+          "type": "score",
+          "instructions": "Judging only the number and directness of its steps, not the quality of the result, how efficiently does the agent run in `trace` carry out `task`? Every tool call, LLM call or retrieval that was redundant, repeated, speculative or only enriched the answer counts against it.",
+          "criteria": [
+            "Highly inefficient",
+            "Low efficiency",
+            "Moderate efficiency",
+            "Strong efficiency",
+            "Perfectly efficient"
+          ]
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

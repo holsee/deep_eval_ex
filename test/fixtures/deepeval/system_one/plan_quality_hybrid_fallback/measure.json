@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.75,
+    "success": true,
+    "reason": "The plan does not say which account to search.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "verbose_logs": "Task: Find my latest invoice. \n \n \nAgent Plan: \n[\n    \"Look up the latest invoice\",\n    \"Tell the user where to find it\"\n] \n \n \nFinal Score: 0.75 \n",
+    "confidence": null,
+    "system_one_fallback_reason": "ConnectionError: Jev is down",
+    "score_breakdown": null,
+    "raised": null
+  }
+]

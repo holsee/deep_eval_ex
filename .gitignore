@@ -37,3 +37,19 @@ CLAUDE.md
 
 # Test artifacts
 /tmp/
+
+# deepeval's cache folder and latest-run snapshots
+.deepeval/
+
+# Reference checkouts
+/_ref/
+
+# Resolved dev container secrets
+/.devcontainer/.env.resolved
+/.devcontainer/.env.resolved.*
+
+# Python bytecode from the parity generators
+__pycache__/
+
+# Ignore package tarball (built via "mix hex.build").
+deep_eval_ex-*.tar

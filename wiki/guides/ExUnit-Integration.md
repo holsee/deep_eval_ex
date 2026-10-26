@@ -8,7 +8,7 @@ DeepEvalEx provides custom ExUnit assertion macros that make it easy to test LLM
 
 ## Setup
 
-Add the `use` macro to your test module:
+Add the `use` macro to your test module, after `use ExUnit.Case`:
 
 ```elixir
 defmodule MyApp.LLMTest do
@@ -21,10 +21,16 @@ defmodule MyApp.LLMTest do
 end
 ```
 
+`use DeepEvalEx.ExUnit` raises when it comes first: besides importing the
+assertions, it registers each test with a `mix deep_eval.test` run and
+replaces the imported `test` macros with ones that honour `--repeat` (see
+"Test Runs" below).
+
 ## Available Assertions
 
 | Macro | Description |
 |-------|-------------|
+| `assert_test/2,3` | deepeval's `assert_test`: assert a test case passes its metrics, classifiers and expectations |
 | `assert_passes/2,3` | Assert metric evaluation passes (score >= threshold) |
 | `assert_fails/2,3` | Assert metric evaluation fails (score < threshold) |
 | `assert_score/3,4` | Assert score is within a specific range |
@@ -57,18 +63,20 @@ test "response is faithful to context" do
 end
 ```
 
+`assert_passes(test_case, metric)` is deepeval's `assert_test(test_case, [metric])`:
+the test case is evaluated by `DeepEvalEx.Evaluator` (concurrency, timeouts and
+`ignore_errors` / `skip_on_missing_params` included, with `assert_test`'s
+`max_concurrent: 100` and `throttle_value: 0` unless you pass them), and it
+raises `ArgumentError` when the metric has no threshold or is flaky, as
+`assert_test` does.
+
 ### Failure Output
 
-When an assertion fails, you get detailed output:
+When an assertion fails, the message is deepeval's `assert_test` message, with
+each field printed as Python prints it:
 
 ```
-Metric evaluation failed unexpectedly.
-
-Metric:    Faithfulness
-Score:     0.4 (40.0%)
-Threshold: 0.5 (50.0%)
-Status:    FAIL (expected PASS)
-Reason:    2 out of 5 claims are not supported by the context.
+Metrics: Faithfulness (score: 0.4, threshold: 0.5, strict: False, error: None, reason: 2 out of 5 claims are not supported by the context.) failed.
 ```
 
 ## `assert_fails/2,3`
@@ -83,7 +91,8 @@ test "hallucinated response is detected" do
     context: ["The sky appears blue during the day due to light scattering."]
   )
 
-  # Hallucination should fail (score should be high = bad)
+  # Hallucination should fail: the output agrees with none of the
+  # contexts, so the score is low (below the minimum of 0.3)
   assert_fails(test_case, Metrics.Hallucination, threshold: 0.3)
 end
 ```
@@ -108,14 +117,14 @@ end
 ### Maximum Score
 
 ```elixir
-test "hallucination score is low" do
+test "response is not a verbatim copy of the expected output" do
   test_case = TestCase.new!(
-    input: "What is 2+2?",
-    actual_output: "4",
-    context: ["Basic arithmetic: 2+2=4"]
+    input: "What is the capital of France?",
+    actual_output: "Paris is the capital and largest city of France.",
+    expected_output: "Paris"
   )
 
-  assert_score(test_case, Metrics.Hallucination, max: 0.2)
+  assert_score(test_case, Metrics.ExactMatch, max: 0.0)
 end
 ```
 
@@ -198,21 +207,52 @@ assert_evaluation(test_case, [
 
 ### Failure Output
 
-When multiple metrics fail:
+`assert_evaluation(test_case, metrics)` is deepeval's `assert_test(test_case,
+metrics)`. The test case fails when a non-flaky metric fails; the message then
+lists every errored or unsuccessful metric, flaky and score-only ones included,
+in the order given:
 
 ```
-Multiple metric evaluations failed.
+Metrics: Faithfulness (score: 0.4, threshold: 0.5, strict: False, error: None, reason: Not all claims are supported), Answer Relevancy (score: 0.3, threshold: 0.5, strict: False, error: None, reason: Response contains irrelevant information) failed.
+```
 
-Failures:
-  Faithfulness:
-    Score:     0.4 (40.0%)
-    Threshold: 0.5 (50.0%)
-    Reason:    Not all claims are supported
+### Classifiers
 
-  AnswerRelevancy:
-    Score:     0.3 (30.0%)
-    Threshold: 0.5 (50.0%)
-    Reason:    Response contains irrelevant information
+Pass `classifiers:` to also classify the test case, as deepeval's
+`assert_test(..., classifiers=[...])` (see the [Classifiers](Classifiers.md)
+guide). A classification that misses the test case's expected label fails it,
+and the message names the subject that failed:
+
+```elixir
+assert_evaluation(test_case, [Faithfulness],
+  classifiers: [DeepEvalEx.Classifiers.refusal()]
+)
+```
+
+```
+Metrics and classifiers: Faithfulness (score: 0.4, ...), refusal (label: complied, expected: refused, error: None, reason: ...) failed.
+```
+
+### Expectations
+
+A test case with `:expectations` is also judged against them (see the
+[Expectations](Expectations.md) guide), and they fail it as a metric would,
+under the name `Expectations`. They are enough on their own:
+`assert_evaluation(test_case, [])` judges just the expectations, and raises
+`"1 test case is missing expectations. ..."` for a test case without any.
+
+```
+Metrics: Expectations (score: 0.0, threshold: 1.0, strict: True, error: None, reason: The score is 0.0 because it promises a refund.) failed.
+```
+
+### Flaky Metrics and Test Cases
+
+A failing metric marked `flaky` never fails the test case on its own. A test
+case marked `flaky: true` does not fail the assertion at all: as deepeval's
+`warnings.warn`, a warning is printed instead and the results are returned:
+
+```
+warning: Flaky test case failed (no assertion raised): Metrics: Exact Match (score: 0.0, threshold: 1.0, strict: False, error: None, reason: The actual and expected outputs are different.) failed.
 ```
 
 ## Complete Test Example
@@ -254,8 +294,9 @@ defmodule MyApp.RAGEvaluationTest do
         ["Available colors: red, blue, green, yellow."]
       )
 
-      # Low hallucination score is good
-      assert_score(test_case, Metrics.Hallucination, max: 0.3)
+      # Hallucination scores the fraction of contexts the output agrees
+      # with, so higher is better
+      assert_score(test_case, Metrics.Hallucination, min: 0.7)
     end
 
     test "comprehensive RAG evaluation" do
@@ -288,6 +329,77 @@ defmodule MyApp.RAGEvaluationTest do
   end
 end
 ```
+
+## Test Runs: `mix deep_eval.test`
+
+`mix deep_eval.test` is deepeval's `deepeval test run`: it runs `mix test`
+and collects every `assert_test/3` (`assert_evaluation/3`, `assert_passes/3`)
+of the run into one test run, then wraps it up as deepeval does. You see
+ExUnit's output, then any skipped tests, the `Test Results` table, the
+warnings and the summary; the run is saved to `.deepeval/.latest_test_run.json`
+(and `test_run_<timestamp>.json` with a results folder), and the test-run
+cache, `.deepeval/.deepeval-cache.json`, is written in deepeval's format.
+
+```elixir
+# mix.exs
+def cli, do: [preferred_envs: ["deep_eval.test": :test]]
+
+# test/test_helper.exs
+ExUnit.start()
+DeepEvalEx.ExUnit.log_hyperparameters(%{"model" => "gpt-4.1", "prompt_version" => "v3"})
+```
+
+```bash
+mix deep_eval.test test/evals -c -i -d failing --identifier nightly -n 8 -m rag
+mix deep_eval.test 'test/evals/refund_eval_test.exs::test refund policy answer' -r 3
+DEEPEVAL_EVAL_MODE=system_one mix deep_eval.test test/evals -c
+mix deep_eval.test test/evals -- --seed 0
+```
+
+The flags are `deepeval test run`'s:
+
+| Flag | Effect |
+|------|--------|
+| `-c`, `--use-cache` | Reuse cached results at cost 0 (not with `--repeat`) |
+| `-i`, `--ignore-errors` | Record metric errors instead of raising them |
+| `-s`, `--skip-on-missing-params` | Skip metrics whose test case lacks their params |
+| `-v`, `--verbose` | Verbose metric logs |
+| `-d`, `--display all\|failing\|passing` | The test cases the table shows |
+| `-id`, `--identifier NAME` | Name the run |
+| `-r`, `--repeat N` | Run each test N times, named `<test>[i-N]` |
+| `-n`, `--num-processes N` | `mix test --max-cases N` |
+| `-x`, `--exit-on-first-failure` | `mix test --max-failures 1` (`-X` undoes it) |
+| `-w`, `--show-warnings` | Print failing flaky test cases' warnings (`-W` undoes it) |
+| `-m`, `--mark EXPR` | `tag`, `not tag` or `a or b`, as `--only` / `--exclude` |
+| `--durations N` | `mix test --slowest N` |
+| `--color yes\|no\|auto` | Colour (default `yes`) |
+| `-o`, `--official` | Prints that a Confident AI key is needed |
+| `--eval-mode MODE` | The run's eval mode (DeepEvalEx only) |
+
+Anything else, and everything after `--`, goes to `mix test`. While the run
+is on, its flags win over `config :deep_eval_ex` and the environment (see
+[Configuration](Configuration.md)).
+
+In a run:
+
+- A test case without a `:name` is named after its test, with ExUnit's full
+  name: `"test refund policy answer"`, or `"test describe block refund policy
+  answer[2-3]"` under `--repeat`. Assertions made from a `Task` the test
+  started count as the test's.
+- `DeepEvalEx.evaluate_run/3` called from a test adds its test cases to the
+  run instead of saving a run of its own.
+- `assert_fails/3` and `assert_score/4` are never recorded.
+- A failing flaky test case's warning is printed after the run with `-w`.
+- Repeats of a test of an `async: true` module run concurrently.
+- `--pdb` is not supported: use `iex -S mix deep_eval.test PATH -- --breakpoints`.
+- deepeval always passes `--durations=10`, but `mix test --slowest` also
+  turns on `--trace` (one test at a time), so `--slowest` is passed only with
+  `--durations`.
+- The exit status is `mix test`'s (`2` when a test failed; pytest's is `1`).
+
+Each run emits `[:deep_eval_ex, :test_run, :stop]` with `source: :cli`
+(see [Telemetry](Telemetry.md)). Under plain `mix test` nothing is recorded,
+cached or saved, as under plain pytest.
 
 ## CI/CD Integration
 
@@ -335,28 +447,69 @@ defmodule MyApp.RAGTest do
 end
 ```
 
+The responses `Mock.set_schema_response/2` configures are shared by every
+process on the node, so a module using them must be `async: false`, as above:
+in an `async: true` module, another module clearing or setting them changes
+what its metrics are answered. An async module scripts its own judge with
+`Mock.script/2`, keyed by the schema each call asks for, and reads its own
+prompts with `Mock.scripted_prompts/0`:
+
+```elixir
+defmodule MyApp.AsyncRAGTest do
+  use ExUnit.Case, async: true
+  use DeepEvalEx.ExUnit
+
+  alias DeepEvalEx.LLM.Adapters.Mock
+
+  test "scripted evaluation passes" do
+    Mock.script(%{"reason,score" => [%{"score" => 8, "reason" => "Good."}]})
+
+    metric =
+      Metrics.GEval.new(
+        name: "Quality",
+        evaluation_params: [:input, :actual_output],
+        evaluation_steps: ["Check quality"]
+      )
+
+    assert_passes(TestCase.new!(input: "Q", actual_output: "A"), metric, adapter: :mock)
+  end
+end
+```
+
 ## Error Handling
 
-The assertions provide helpful error messages:
+A metric that cannot produce a score is *errored*, not failed. As in
+deepeval's `assert_test`, the error is raised unless `IGNORE_DEEPEVAL_ERRORS`
+(or `config :deep_eval_ex, ignore_errors: true`, or the `ignore_errors: true`
+option) is set. With it, `assert_passes` and `assert_evaluation` report the
+error in deepeval's message, with no score or reason:
+
+```
+Metrics: Faithfulness (score: None, threshold: 0.5, strict: False, error: 'retrieval_context' cannot be None for the 'Faithfulness' metric, reason: None) failed.
+```
+
+`assert_fails` and `assert_score`, which have no deepeval counterpart, flunk on
+an errored metric with their own message instead of a low score:
 
 ### Missing Parameters
 
 ```
-Metric evaluation failed with error.
+Faithfulness metric errored: 'retrieval_context' cannot be None for the 'Faithfulness' metric
 
-Metric: Faithfulness
-Error:  Missing required parameters: retrieval_context
-
+Metric:    Faithfulness
+Threshold: 0.5 (50.0%)
+Status:    ERROR (no score was produced)
 Ensure your TestCase includes all required fields for this metric.
 ```
 
 ### API Errors
 
 ```
-Metric evaluation failed with error.
+GEval metric errored: {:api_error, 429, "Rate limit exceeded"}
 
-Metric: GEval
-Error:  {:api_error, 429, "Rate limit exceeded"}
+Metric:    GEval
+Threshold: 0.5 (50.0%)
+Status:    ERROR (no score was produced)
 ```
 
 ## Best Practices

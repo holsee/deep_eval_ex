@@ -1,0 +1,147 @@
+{
+  "description": "next_llm_span and next_span: staged fields land on the next span of the type only (the second LLM call gets none), typed slots win over the base slot, staged metrics run",
+  "goldens": [
+    {
+      "input": "How do I reset my password?",
+      "expected_output": "Use the 'Forgot password' link.",
+      "name": "password-reset"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    }
+  ],
+  "modes": [
+    "sync",
+    "async"
+  ],
+  "functions": {
+    "agent": {
+      "type": "agent",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "body": [
+        {
+          "with": "next_span",
+          "kwargs": {
+            "metadata": {
+              "staged": "base"
+            },
+            "metric_collection": "base-collection"
+          },
+          "body": [
+            {
+              "with": "next_llm_span",
+              "kwargs": {
+                "model": "gpt-4o",
+                "input_token_count": 10,
+                "metadata": {
+                  "staged": "llm"
+                },
+                "name": "staged_call",
+                "metrics": [
+                  {
+                    "kind": "stub",
+                    "name": "Span Judge",
+                    "score": 0.75,
+                    "reason": "Three of the four statements are supported. café ✓",
+                    "threshold": 0.7,
+                    "evaluation_model": "gpt-4o-mini",
+                    "evaluation_cost": 0.000321,
+                    "input_tokens": 1234,
+                    "output_tokens": 56
+                  }
+                ]
+              },
+              "body": [
+                {
+                  "call": "generate",
+                  "args": [
+                    "$query",
+                    []
+                  ]
+                },
+                {
+                  "call": "generate",
+                  "args": [
+                    "again",
+                    []
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "with": "next_tool_span",
+          "kwargs": {
+            "description": "Staged description"
+          },
+          "body": [
+            {
+              "call": "lookup",
+              "args": [
+                "$query"
+              ]
+            }
+          ]
+        }
+      ],
+      "returns": "done"
+    },
+    "generate": {
+      "type": "llm",
+      "params": [
+        [
+          "query"
+        ],
+        [
+          "documents"
+        ]
+      ],
+      "observe": {
+        "model": "gpt-4o-mini",
+        "cost_per_input_token": 1.5e-07
+      },
+      "body": [
+        {
+          "update_llm_span": {
+            "input_token_count": 42,
+            "output_token_count": 7,
+            "cost_per_output_token": 6e-07
+          }
+        }
+      ],
+      "returns": "Answer to {query}"
+    },
+    "lookup": {
+      "type": "tool",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "returns": "found"
+    }
+  },
+  "app": [
+    {
+      "call": "agent",
+      "args": [
+        "{input}"
+      ]
+    }
+  ]
+}

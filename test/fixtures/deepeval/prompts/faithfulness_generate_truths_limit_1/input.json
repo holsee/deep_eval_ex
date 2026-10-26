@@ -1,0 +1,11 @@
+{
+  "template": "FaithfulnessMetric.generate_truths",
+  "inputs": {
+    "retrieval_context": [
+      "Paris is the capital and largest city of France.",
+      "The Louvre, the world's most-visited museum, opened in 1793.",
+      "France's café culture dates back to the 17th century."
+    ],
+    "truths_extraction_limit": 1
+  }
+}

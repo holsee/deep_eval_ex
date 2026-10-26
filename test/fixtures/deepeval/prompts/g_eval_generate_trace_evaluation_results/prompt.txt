@@ -1,0 +1,121 @@
+You are an evaluator judging an AI agent by its execution trace. Given the following evaluation steps, assess the trace below and return a JSON object with two fields:
+
+- `"score"`: an integer between 0 and 10, with 10 indicating the trajectory strongly aligns with the evaluation steps and 0 indicating no alignment.
+- `"reason"`: a brief explanation for why the score was given. Do **not** quote the score itself in the explanation.
+
+How to read the trace:
+- It is a nested JSON tree of spans. Each span has a `name`, a `type` (`agent`, `llm`, `tool`, `retriever`, or `custom`), an `input`, an `output`, and `children` listed in execution order.
+- The root span's input is what the agent was asked to do; its output is what it finally returned.
+
+How to judge:
+- Judge the whole trajectory, not only the root output. Walk the span tree in order.
+- Where relevant to the evaluation steps, consider which tools or retrievers were chosen, the arguments passed to them, whether their outputs were used correctly by later spans, and any errors, retries, or redundant calls.
+- Base every judgement only on what the trace shows. Do not assume steps happened if no span records them.
+- Do not reward or penalize token counts, latency, or cost unless the evaluation steps ask for it.
+
+Your explanation should:
+- Be specific and grounded in the evaluation steps.
+- Cite the specific spans, by `name`, that drove the score.
+- Be concise, clear, and focused on the evaluation logic.
+
+
+Only return valid JSON. Do **not** include any extra commentary or text.
+
+===== EXAMPLE =====
+Evaluation Steps:
+1. Check whether the agent called a tool that can answer the user's question.
+2. Check whether the tool was given arguments that match the user's request.
+3. Check whether the final output is consistent with what the tool returned.
+
+Trace:
+{
+  "name": "support_agent",
+  "type": "agent",
+  "input": {"input": "Where is my order #1234?"},
+  "output": "Your order #1234 was delivered yesterday.",
+  "available_tools": ["order_lookup", "refund_tool"],
+  "children": [
+    {
+      "name": "order_lookup",
+      "type": "tool",
+      "input": {"order_id": "1234"},
+      "output": {"status": "in_transit", "eta": "tomorrow"},
+      "children": []
+    }
+  ]
+}
+
+Example JSON:
+{
+  "reason": "support_agent correctly chose order_lookup and passed the right order_id, but its final output says the order was delivered while order_lookup returned status 'in_transit' with an ETA of tomorrow, so the answer contradicts the tool result.",
+  "score": 0
+}
+===== END OF EXAMPLE =====
+
+---
+
+Evaluation Steps:
+1. Check that the agent called book_table with the day and restaurant asked for.
+2. Check that the root output agrees with what book_table returned.
+
+
+Trace:
+{
+  "name": "booking_agent",
+  "type": "agent",
+  "input": {
+    "query": "Book a table for two at Caf\u00e9 Od\u00e9on on Saturday."
+  },
+  "output": "Booked: Saturday at 19:00, for two.",
+  "tools_called": [
+    {
+      "name": "book_table",
+      "type": "FUNCTION",
+      "description": null,
+      "reasoning": null,
+      "output": "Booked for Saturday at 19:00",
+      "input_parameters": {
+        "day": "Saturday",
+        "restaurant": "Caf\u00e9 Od\u00e9on"
+      }
+    }
+  ],
+  "available_tools": [
+    "book_table",
+    "search_web"
+  ],
+  "agent_handoffs": [],
+  "children": [
+    {
+      "name": "book_table",
+      "type": "tool",
+      "input": {
+        "day": "Saturday",
+        "restaurant": "Caf\u00e9 Od\u00e9on"
+      },
+      "output": "Booked for Saturday at 19:00",
+      "description": "Book a restaurant table",
+      "children": []
+    },
+    {
+      "name": "confirm",
+      "type": "llm",
+      "input": "Confirm the booking.",
+      "output": "Booked: Saturday at 19:00, for two.",
+      "model": "gpt-4o-mini",
+      "input_token_count": 42.0,
+      "output_token_count": 9.0,
+      "children": []
+    }
+  ]
+}
+
+
+---
+**Example JSON:**
+{
+  "reason": "your concise and informative reason here, citing span names",
+  "score": 0
+}
+
+JSON:

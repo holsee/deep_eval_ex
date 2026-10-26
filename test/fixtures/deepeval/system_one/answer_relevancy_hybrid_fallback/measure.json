@@ -1,0 +1,18 @@
+[
+  {
+    "score": 0.5,
+    "success": true,
+    "reason": "The score is 0.50 because café culture does not answer the question.",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "scripted-judge",
+    "evaluation_cost": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "verbose_logs": "Statements:\n[\n    \"Paris is the capital of France.\",\n    \"Paris is known for café culture.\"\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"Caf\\u00e9 culture does not name the capital.\"\n    }\n]",
+    "confidence": null,
+    "system_one_fallback_reason": "ConnectionError: Jev is down",
+    "score_breakdown": null,
+    "raised": null
+  }
+]

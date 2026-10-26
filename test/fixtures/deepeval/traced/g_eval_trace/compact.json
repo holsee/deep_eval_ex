@@ -1,0 +1,49 @@
+[
+  {
+    "name": "agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "Answer to How do I reset my password?",
+    "tools_called": [
+      "name='search' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output=['result for How do I reset my password?'] input_parameters={'query': 'How do I reset my password?'}",
+      "name='search' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output=['result for How do I reset my password?'] input_parameters={'query': 'How do I reset my password?'}"
+    ],
+    "available_tools": [
+      "search"
+    ],
+    "children": [
+      {
+        "name": "search",
+        "type": "tool",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": [
+          "result for How do I reset my password?"
+        ]
+      },
+      {
+        "name": "search",
+        "type": "tool",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": [
+          "result for How do I reset my password?"
+        ]
+      },
+      {
+        "name": "generate",
+        "type": "llm",
+        "input": {
+          "query": "How do I reset my password?",
+          "documents": []
+        },
+        "output": "Answer to How do I reset my password?",
+        "model": "gpt-4o-mini"
+      }
+    ]
+  }
+]

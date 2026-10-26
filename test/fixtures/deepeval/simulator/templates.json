@@ -1,0 +1,147 @@
+[
+  {
+    "template": "SimulationTemplate.simulate_first_user_turn",
+    "args": {
+      "golden": {
+        "scenario": "A customer wants a refund for a late order.",
+        "expected_outcome": "The refund is issued.",
+        "persona": {
+          "name": "Ann",
+          "characteristics": "A busy parent.\n\nShort on patience, types in lowercase.",
+          "metadata": {
+            "orders": [
+              1,
+              2
+            ],
+            "plan": "premium"
+          }
+        }
+      },
+      "language": "English"
+    },
+    "prompt": "Pretend you are a user of an LLM app. Your goal is to start a conversation in English based on a scenario \n            and persona. The scenario defines your context and motivation for interacting with the LLM, \n            while the persona describes who you are and how you speak.\n\n            Guidelines:\n            1. The opening message should clearly convey the user's intent or need within the scenario.\n            2. Match the persona's tone faithfully. If the user is frustrated, impatient, blunt, or impolite, reflect that naturally instead of making them warm or courteous.\n            3. Avoid providing excessive details upfront; the goal is to initiate the conversation and build rapport, not to solve it in the first message.\n            4. The message should be concise, ideally no more than 1-3 sentences.\n\n\n        --- MULTIMODAL INPUT RULES ---\n        - Treat image content as factual evidence.\n        - Only reference visual details that are explicitly and clearly visible.\n        - Do not infer or guess objects, text, or details not visibly present.\n        - If an image is unclear or ambiguous, mark uncertainty explicitly.\n\n\n            IMPORTANT: The output must be formatted as a JSON object with a single key `simulated_input`, where the value is the generated opening message in English.\n\n            Example Language: english\n            Example Persona:\n            <persona>\n            Jeff Seid, is available Monday and Thursday afternoons, and their phone number is 0010281839. He suffers from chronic migraines.\n            </persona>\n            Example Scenario: \"A sick person trying to get a diagnosis for persistent headaches and fever.\"\n            Example JSON Output:\n            {\n                \"simulated_input\": \"Hi, I haven’t been feeling well lately. I’ve had these headaches and a fever that just won’t go away. Could you help me figure out what’s going on?\"\n            }\n\n            Language: English\n            <persona>\n            Name: Ann\n\n            A busy parent.\n\n            Short on patience, types in lowercase.\n\n            Details:\n            {\n              \"orders\": [\n                1,\n                2\n              ],\n              \"plan\": \"premium\"\n            }\n            </persona>\n            Scenario: \"A customer wants a refund for a late order.\"\n            JSON Output:\n"
+  },
+  {
+    "template": "SimulationTemplate.simulate_first_user_turn",
+    "args": {
+      "golden": {
+        "scenario": "Un client veut annuler son abonnement."
+      },
+      "language": "French"
+    },
+    "prompt": "Pretend you are a user of an LLM app. Your goal is to start a conversation in French based on a scenario \n            and persona. The scenario defines your context and motivation for interacting with the LLM, \n            while the persona describes who you are and how you speak.\n\n            Guidelines:\n            1. The opening message should clearly convey the user's intent or need within the scenario.\n            2. Match the persona's tone faithfully. If the user is frustrated, impatient, blunt, or impolite, reflect that naturally instead of making them warm or courteous.\n            3. Avoid providing excessive details upfront; the goal is to initiate the conversation and build rapport, not to solve it in the first message.\n            4. The message should be concise, ideally no more than 1-3 sentences.\n\n\n        --- MULTIMODAL INPUT RULES ---\n        - Treat image content as factual evidence.\n        - Only reference visual details that are explicitly and clearly visible.\n        - Do not infer or guess objects, text, or details not visibly present.\n        - If an image is unclear or ambiguous, mark uncertainty explicitly.\n\n\n            IMPORTANT: The output must be formatted as a JSON object with a single key `simulated_input`, where the value is the generated opening message in French.\n\n            Example Language: english\n            Example Persona:\n            <persona>\n            Jeff Seid, is available Monday and Thursday afternoons, and their phone number is 0010281839. He suffers from chronic migraines.\n            </persona>\n            Example Scenario: \"A sick person trying to get a diagnosis for persistent headaches and fever.\"\n            Example JSON Output:\n            {\n                \"simulated_input\": \"Hi, I haven’t been feeling well lately. I’ve had these headaches and a fever that just won’t go away. Could you help me figure out what’s going on?\"\n            }\n\n            Language: French\n\n            Scenario: \"Un client veut annuler son abonnement.\"\n            JSON Output:\n"
+  },
+  {
+    "template": "SimulationTemplate.simulate_first_user_turn",
+    "args": {
+      "golden": {
+        "scenario": "Line one\nline two, unindented",
+        "persona": {
+          "characteristics": "  Terse.  "
+        }
+      },
+      "language": "English"
+    },
+    "prompt": "Pretend you are a user of an LLM app. Your goal is to start a conversation in English based on a scenario \n            and persona. The scenario defines your context and motivation for interacting with the LLM, \n            while the persona describes who you are and how you speak.\n\n            Guidelines:\n            1. The opening message should clearly convey the user's intent or need within the scenario.\n            2. Match the persona's tone faithfully. If the user is frustrated, impatient, blunt, or impolite, reflect that naturally instead of making them warm or courteous.\n            3. Avoid providing excessive details upfront; the goal is to initiate the conversation and build rapport, not to solve it in the first message.\n            4. The message should be concise, ideally no more than 1-3 sentences.\n\n\n        --- MULTIMODAL INPUT RULES ---\n        - Treat image content as factual evidence.\n        - Only reference visual details that are explicitly and clearly visible.\n        - Do not infer or guess objects, text, or details not visibly present.\n        - If an image is unclear or ambiguous, mark uncertainty explicitly.\n\n\n            IMPORTANT: The output must be formatted as a JSON object with a single key `simulated_input`, where the value is the generated opening message in English.\n\n            Example Language: english\n            Example Persona:\n            <persona>\n            Jeff Seid, is available Monday and Thursday afternoons, and their phone number is 0010281839. He suffers from chronic migraines.\n            </persona>\n            Example Scenario: \"A sick person trying to get a diagnosis for persistent headaches and fever.\"\n            Example JSON Output:\n            {\n                \"simulated_input\": \"Hi, I haven’t been feeling well lately. I’ve had these headaches and a fever that just won’t go away. Could you help me figure out what’s going on?\"\n            }\n\n            Language: English\n            <persona>\n            Terse.\n            </persona>\n            Scenario: \"Line one\nline two, unindented\"\n            JSON Output:\n"
+  },
+  {
+    "template": "SimulationTemplate.simulate_user_turn",
+    "args": {
+      "golden": {
+        "scenario": "A customer wants a refund for a late order.",
+        "expected_outcome": "The refund is issued.",
+        "persona": {
+          "name": "Ann",
+          "characteristics": "A busy parent.\n\nShort on patience, types in lowercase.",
+          "metadata": {
+            "orders": [
+              1,
+              2
+            ],
+            "plan": "premium"
+          }
+        }
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "my order is late"
+        },
+        {
+          "role": "assistant",
+          "content": "Sorry! Could you share the order number?",
+          "metadata": {
+            "intent": "ask_order"
+          }
+        }
+      ],
+      "language": "English"
+    },
+    "prompt": "\n            Pretend you are a user of an LLM app. Your task is to generate the next user input in English \n            based on the provided scenario, persona, and the previous conversation.\n\n            Guidelines:\n            1. Use the scenario and persona as the guiding context for the user's next input.\n            2. Ensure the next input feels natural, conversational, and relevant to the last assistant reply in the conversation.\n            3. Keep the tone consistent with the previous user inputs.\n            4. The generated user input should be concise, ideally no more than 1-2 sentences.\n\n\n        --- MULTIMODAL INPUT RULES ---\n        - Treat image content as factual evidence.\n        - Only reference visual details that are explicitly and clearly visible.\n        - Do not infer or guess objects, text, or details not visibly present.\n        - If an image is unclear or ambiguous, mark uncertainty explicitly.\n\n\n            IMPORTANT: The output must be formatted as a JSON object with a single key `simulated_input`, \n            where the value is the generated user input in English.\n\n            Example Language: english\n            Example Persona:\n            <persona>\n            Jeff Seid, is available Monday and Thursday afternoons, and their phone number is 0010281839.\n            </persona>\n            Example Scenario: \"A user seeking tips for securing a funding round.\"\n            Example Previous Conversation:\n            [\n                {\"role\": \"user\", \"content\": \"Hi, I need help preparing for my funding pitch.\"},\n                {\"role\": \"assistant\", \"content\": \"Of course! Can you share more about your business and the type of investors you are targeting?\"}\n            ]\n            Example JSON Output:\n            {\n                \"simulated_input\": \"Sure, we are a SaaS startup focusing on productivity tools for small businesses.\"\n            }\n\n            Language: English\n            <persona>\n            Name: Ann\n\n            A busy parent.\n\n            Short on patience, types in lowercase.\n\n            Details:\n            {\n              \"orders\": [\n                1,\n                2\n              ],\n              \"plan\": \"premium\"\n            }\n            </persona>\n            Scenario: \"A customer wants a refund for a late order.\"\n            Previous Conversation:\n            [\n    {\n        \"role\": \"user\",\n        \"content\": \"my order is late\",\n        \"user_id\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": null\n    },\n    {\n        \"role\": \"assistant\",\n        \"content\": \"Sorry! Could you share the order number?\",\n        \"user_id\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": {\n            \"intent\": \"ask_order\"\n        }\n    }\n]\n\n            JSON Output:\n"
+  },
+  {
+    "template": "SimulationTemplate.simulate_user_turn",
+    "args": {
+      "golden": {
+        "scenario": "Café opening hours — “quoted”"
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "my order is late"
+        }
+      ],
+      "language": "English"
+    },
+    "prompt": "\n            Pretend you are a user of an LLM app. Your task is to generate the next user input in English \n            based on the provided scenario, persona, and the previous conversation.\n\n            Guidelines:\n            1. Use the scenario and persona as the guiding context for the user's next input.\n            2. Ensure the next input feels natural, conversational, and relevant to the last assistant reply in the conversation.\n            3. Keep the tone consistent with the previous user inputs.\n            4. The generated user input should be concise, ideally no more than 1-2 sentences.\n\n\n        --- MULTIMODAL INPUT RULES ---\n        - Treat image content as factual evidence.\n        - Only reference visual details that are explicitly and clearly visible.\n        - Do not infer or guess objects, text, or details not visibly present.\n        - If an image is unclear or ambiguous, mark uncertainty explicitly.\n\n\n            IMPORTANT: The output must be formatted as a JSON object with a single key `simulated_input`, \n            where the value is the generated user input in English.\n\n            Example Language: english\n            Example Persona:\n            <persona>\n            Jeff Seid, is available Monday and Thursday afternoons, and their phone number is 0010281839.\n            </persona>\n            Example Scenario: \"A user seeking tips for securing a funding round.\"\n            Example Previous Conversation:\n            [\n                {\"role\": \"user\", \"content\": \"Hi, I need help preparing for my funding pitch.\"},\n                {\"role\": \"assistant\", \"content\": \"Of course! Can you share more about your business and the type of investors you are targeting?\"}\n            ]\n            Example JSON Output:\n            {\n                \"simulated_input\": \"Sure, we are a SaaS startup focusing on productivity tools for small businesses.\"\n            }\n\n            Language: English\n\n            Scenario: \"Café opening hours — “quoted”\"\n            Previous Conversation:\n            [\n    {\n        \"role\": \"user\",\n        \"content\": \"my order is late\",\n        \"user_id\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": null\n    }\n]\n\n            JSON Output:\n"
+  },
+  {
+    "template": "SimulationTemplate.simulate_user_turn",
+    "args": {
+      "golden": {
+        "scenario": "No turns yet"
+      },
+      "turns": [],
+      "language": "Spanish"
+    },
+    "prompt": "\n    Pretend you are a user of an LLM app. Your task is to generate the next user input in Spanish \n    based on the provided scenario, persona, and the previous conversation.\n\n    Guidelines:\n    1. Use the scenario and persona as the guiding context for the user's next input.\n    2. Ensure the next input feels natural, conversational, and relevant to the last assistant reply in the conversation.\n    3. Keep the tone consistent with the previous user inputs.\n    4. The generated user input should be concise, ideally no more than 1-2 sentences.\n\n\n--- MULTIMODAL INPUT RULES ---\n- Treat image content as factual evidence.\n- Only reference visual details that are explicitly and clearly visible.\n- Do not infer or guess objects, text, or details not visibly present.\n- If an image is unclear or ambiguous, mark uncertainty explicitly.\n\n\n    IMPORTANT: The output must be formatted as a JSON object with a single key `simulated_input`, \n    where the value is the generated user input in Spanish.\n\n    Example Language: english\n    Example Persona:\n    <persona>\n    Jeff Seid, is available Monday and Thursday afternoons, and their phone number is 0010281839.\n    </persona>\n    Example Scenario: \"A user seeking tips for securing a funding round.\"\n    Example Previous Conversation:\n    [\n        {\"role\": \"user\", \"content\": \"Hi, I need help preparing for my funding pitch.\"},\n        {\"role\": \"assistant\", \"content\": \"Of course! Can you share more about your business and the type of investors you are targeting?\"}\n    ]\n    Example JSON Output:\n    {\n        \"simulated_input\": \"Sure, we are a SaaS startup focusing on productivity tools for small businesses.\"\n    }\n\n    Language: Spanish\n\n    Scenario: \"No turns yet\"\n    Previous Conversation:\n    []\n\n    JSON Output:\n"
+  },
+  {
+    "template": "SimulatorControllerTemplate.check_expected_outcome",
+    "args": {
+      "previous_conversation": "[]",
+      "expected_outcome": "The refund is issued."
+    },
+    "prompt": "You are a Conversation Completion Checker.\n            Your task is to determine whether the conversation has achieved the expected outcome and should be terminated.\n\n            Guidelines:\n            1. Review the entire conversation and decide if the expected outcome has been met and the conversation has ended.\n            2. If the expected outcome has been met, mark the conversation as complete.\n            3. If not, mark it as incomplete and briefly describe what remains to be done.\n\n            IMPORTANT: The output must be formatted as a JSON object with two keys:\n            `is_complete` (a boolean) and `reason` (a string).\n\n            Example Expected Outcome: \"The user has succesfully reset their password.\"\n            Example Conversation History:\n            [\n                {\"role\": \"user\", \"content\": \"I forgot my password and need to reset it.\"},\n                {\"role\": \"assistant\", \"content\": \"Sure. First, go to the login page and click 'Forgot Password'.\"},\n            ]\n            Example JSON Output:\n            {\n                \"is_complete\": false,\n                \"reason\": \"The assistant explained how to forget password but ahas not confirmed that the user successfully set a new password.\"\n            }\n\n            Expected Outcome: \"The refund is issued.\"\n            Conversation History:\n            []\n            JSON Output:\n"
+  },
+  {
+    "template": "SimulatorControllerTemplate.check_expected_outcome",
+    "args": {
+      "previous_conversation": "[\n    {\n        \"role\": \"user\",\n        \"content\": \"my order is late\"\n    },\n    {\n        \"role\": \"assistant\",\n        \"content\": \"Sorry! Could you share the order number?\",\n        \"metadata\": {\n            \"intent\": \"ask_order\"\n        }\n    }\n]",
+      "expected_outcome": "Line one\nline two"
+    },
+    "prompt": "You are a Conversation Completion Checker.\n            Your task is to determine whether the conversation has achieved the expected outcome and should be terminated.\n\n            Guidelines:\n            1. Review the entire conversation and decide if the expected outcome has been met and the conversation has ended.\n            2. If the expected outcome has been met, mark the conversation as complete.\n            3. If not, mark it as incomplete and briefly describe what remains to be done.\n\n            IMPORTANT: The output must be formatted as a JSON object with two keys:\n            `is_complete` (a boolean) and `reason` (a string).\n\n            Example Expected Outcome: \"The user has succesfully reset their password.\"\n            Example Conversation History:\n            [\n                {\"role\": \"user\", \"content\": \"I forgot my password and need to reset it.\"},\n                {\"role\": \"assistant\", \"content\": \"Sure. First, go to the login page and click 'Forgot Password'.\"},\n            ]\n            Example JSON Output:\n            {\n                \"is_complete\": false,\n                \"reason\": \"The assistant explained how to forget password but ahas not confirmed that the user successfully set a new password.\"\n            }\n\n            Expected Outcome: \"Line one\nline two\"\n            Conversation History:\n            [\n    {\n        \"role\": \"user\",\n        \"content\": \"my order is late\"\n    },\n    {\n        \"role\": \"assistant\",\n        \"content\": \"Sorry! Could you share the order number?\",\n        \"metadata\": {\n            \"intent\": \"ask_order\"\n        }\n    }\n]\n            JSON Output:\n"
+  },
+  {
+    "template": "SimulationGraphTemplate.classify_edge",
+    "args": {
+      "assistant_reply": "Sure, I can refund that.",
+      "choices": [
+        "The assistant offered a refund"
+      ]
+    },
+    "prompt": "You are routing a simulated conversation. The assistant just said:\n            <<<\n            Sure, I can refund that.\n            >>>\n\n            Which of the following best describes the assistant's reply?\n              1) The assistant offered a refund\n              2) None of the above\n\n            Pick exactly one option. Respond with the option's number.\n\n            IMPORTANT: The output must be formatted as a JSON object with two keys:\n            - `index`: the 1-based number of the option you chose, OR `null` if you chose \"None of the above\" (option 2).\n            - `reason`: a short rationale (one sentence).\n\n            Example JSON Output for a match:\n            {\n                \"index\": 1,\n                \"reason\": \"The reply explicitly approved the refund.\"\n            }\n\n            Example JSON Output for no match:\n            {\n                \"index\": null,\n                \"reason\": \"The reply asked a clarifying question that does not fit any option.\"\n            }\n\n            JSON Output:\n"
+  },
+  {
+    "template": "SimulationGraphTemplate.classify_edge",
+    "args": {
+      "assistant_reply": "Two lines:\nsecond line",
+      "choices": [
+        "Offered a refund",
+        "Asked for the order number",
+        "Escalated"
+      ]
+    },
+    "prompt": "You are routing a simulated conversation. The assistant just said:\n            <<<\n            Two lines:\nsecond line\n            >>>\n\n            Which of the following best describes the assistant's reply?\n              1) Offered a refund\n  2) Asked for the order number\n  3) Escalated\n              4) None of the above\n\n            Pick exactly one option. Respond with the option's number.\n\n            IMPORTANT: The output must be formatted as a JSON object with two keys:\n            - `index`: the 1-based number of the option you chose, OR `null` if you chose \"None of the above\" (option 4).\n            - `reason`: a short rationale (one sentence).\n\n            Example JSON Output for a match:\n            {\n                \"index\": 1,\n                \"reason\": \"The reply explicitly approved the refund.\"\n            }\n\n            Example JSON Output for no match:\n            {\n                \"index\": null,\n                \"reason\": \"The reply asked a clarifying question that does not fit any option.\"\n            }\n\n            JSON Output:\n"
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "template": "KnowledgeRetentionMetric.extract_data",
+  "inputs": {
+    "user_message": "It's \"Zoë\", and I'm allergic to peanuts.",
+    "previous_turns": [
+      {
+        "role": "user",
+        "content": "Hi, I'd like to book a table."
+      },
+      {
+        "role": "assistant",
+        "content": "Sure! What's your name?"
+      }
+    ]
+  }
+}

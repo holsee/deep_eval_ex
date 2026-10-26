@@ -1,0 +1,77 @@
+{
+  "description": "JsonCorrectness: an output matching the schema, with an empty list, an omitted optional field and a key the schema does not declare; strict by default, no judge call",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "json_correctness",
+    "params": {
+      "expected_schema": {
+        "$defs": {
+          "Address": {
+            "properties": {
+              "city": {
+                "title": "City",
+                "type": "string"
+              },
+              "postcode": {
+                "title": "Postcode",
+                "type": "string"
+              }
+            },
+            "required": [
+              "city",
+              "postcode"
+            ],
+            "title": "Address",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "name": {
+            "description": "Full name, e.g. José Saramago",
+            "title": "Name",
+            "type": "string"
+          },
+          "age": {
+            "title": "Age",
+            "type": "integer"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "address": {
+            "$ref": "#/$defs/Address"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Nickname"
+          }
+        },
+        "required": [
+          "name",
+          "age",
+          "tags",
+          "address"
+        ],
+        "title": "Person",
+        "type": "object"
+      }
+    }
+  },
+  "test_case": {
+    "input": "Return the customer's profile as JSON.",
+    "actual_output": "{\"name\": \"José Saramago\", \"age\": 87, \"tags\": [], \"address\": {\"city\": \"Lisbon\", \"postcode\": \"1100-148\"}, \"employer\": \"Caminho\"}"
+  },
+  "responses": {}
+}

@@ -1,0 +1,24 @@
+{
+  "description": "Hallucination: a judge without structured outputs answers with no JSON at all, so trimAndLoadJson fails the metric with deepeval's invalid JSON error",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "hallucination",
+    "params": {
+      "threshold": 0.5
+    }
+  },
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris is the capital of France.",
+    "context": [
+      "Paris is the capital of France."
+    ]
+  },
+  "responses": {
+    "hallucination": {
+      "verdicts": [
+        "I'm sorry, but I can't judge these contexts. Verdict: yes (agrees)."
+      ]
+    }
+  }
+}

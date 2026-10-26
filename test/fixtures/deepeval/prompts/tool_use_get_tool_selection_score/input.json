@@ -1,0 +1,34 @@
+{
+  "template": "ToolUseMetric.get_tool_selection_score",
+  "inputs": {
+    "user_messages": "What's the weather in Paris? \nAnd in Zürich? \n",
+    "assistant_messages": "It is 18°C in Paris. \nIt is 12°C in Zürich. \n",
+    "tools_called": [
+      {
+        "name": "get_weather",
+        "input_parameters": {
+          "city": "Paris"
+        },
+        "output": {
+          "temp_c": 18
+        }
+      },
+      {
+        "name": "search_web",
+        "input_parameters": {
+          "query": "Zürich weather"
+        }
+      }
+    ],
+    "available_tools": [
+      {
+        "name": "get_weather",
+        "description": "Fetch current weather for a city"
+      },
+      {
+        "name": "search_web",
+        "description": "Search the web"
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "template": "ConversationCompletenessMetric.generate_reason",
+  "inputs": {
+    "score": 0.5,
+    "incompletenesses": [
+      "The LLM never says what the dress code is.",
+      null
+    ],
+    "intentions": [
+      "User wants to book a table",
+      "User wants to know the dress code"
+    ]
+  }
+}

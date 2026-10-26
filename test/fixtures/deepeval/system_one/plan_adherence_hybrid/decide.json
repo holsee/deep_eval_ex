@@ -1,0 +1,186 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "task": "Find my latest invoice.",
+          "plan": [
+            "Look up the latest invoice",
+            "Tell the user where to find it"
+          ],
+          "trace": {
+            "name": "answer",
+            "type": "agent",
+            "input": {
+              "query": "Where is my invoice?"
+            },
+            "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+            "tools_called": [
+              {
+                "name": "lookup_invoice",
+                "type": "FUNCTION",
+                "description": "Finds the latest invoice",
+                "reasoning": null,
+                "output": "INV-42",
+                "input_parameters": {
+                  "account": "acme"
+                }
+              }
+            ],
+            "available_tools": [
+              "lookup_invoice",
+              "escalate"
+            ],
+            "children": [
+              {
+                "name": "lookup_invoice",
+                "type": "tool",
+                "description": "Finds the latest invoice",
+                "input": {
+                  "account": "acme"
+                },
+                "output": "INV-42"
+              },
+              {
+                "name": "reply",
+                "type": "llm",
+                "input": {
+                  "query": "Where is my invoice?",
+                  "invoice": "INV-42"
+                },
+                "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+                "model": "gpt-4o-mini"
+              }
+            ]
+          }
+        },
+        "questions": {
+          "verdict": {
+            "type": "score",
+            "instructions": "How strictly do the actions in `trace` follow `plan`, the plan the agent declared for `task`? Every planned step must appear in `trace` in the same order, and any major action not in `plan` counts against it. Judge only obedience to `plan`, not whether the task succeeded.",
+            "criteria": [
+              "No adherence",
+              "Weak adherence",
+              "Partial adherence",
+              "Strong adherence",
+              "Perfect adherence"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {},
+          "scores": {
+            "verdict": {
+              "score": 4.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.05,
+                "2": 0.1,
+                "3": 0.25,
+                "4": 0.6
+              },
+              "confidence": 0.55
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "task": "Find my latest invoice.",
+        "plan": [
+          "Look up the latest invoice",
+          "Tell the user where to find it"
+        ],
+        "trace": {
+          "name": "answer",
+          "type": "agent",
+          "input": {
+            "query": "Where is my invoice?"
+          },
+          "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+          "tools_called": [
+            {
+              "name": "lookup_invoice",
+              "type": "FUNCTION",
+              "description": "Finds the latest invoice",
+              "reasoning": null,
+              "output": "INV-42",
+              "input_parameters": {
+                "account": "acme"
+              }
+            }
+          ],
+          "available_tools": [
+            "lookup_invoice",
+            "escalate"
+          ],
+          "children": [
+            {
+              "name": "lookup_invoice",
+              "type": "tool",
+              "description": "Finds the latest invoice",
+              "input": {
+                "account": "acme"
+              },
+              "output": "INV-42"
+            },
+            {
+              "name": "reply",
+              "type": "llm",
+              "input": {
+                "query": "Where is my invoice?",
+                "invoice": "INV-42"
+              },
+              "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+              "model": "gpt-4o-mini"
+            }
+          ]
+        }
+      },
+      "questions": {
+        "verdict": {
+          "type": "score",
+          "instructions": "How strictly do the actions in `trace` follow `plan`, the plan the agent declared for `task`? Every planned step must appear in `trace` in the same order, and any major action not in `plan` counts against it. Judge only obedience to `plan`, not whether the task succeeded.",
+          "criteria": [
+            "No adherence",
+            "Weak adherence",
+            "Partial adherence",
+            "Strong adherence",
+            "Perfect adherence"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {},
+        "scores": {
+          "verdict": {
+            "score": 4.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.05,
+              "2": 0.1,
+              "3": 0.25,
+              "4": 0.6
+            },
+            "confidence": 0.55
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

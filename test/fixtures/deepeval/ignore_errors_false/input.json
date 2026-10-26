@@ -1,0 +1,27 @@
+{
+  "test_cases": [
+    {
+      "input": "Hello",
+      "actual_output": "Hi",
+      "expected_output": "Hi"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "exact_match"
+    },
+    {
+      "kind": "error",
+      "name": "Flaky Judge",
+      "threshold": 0.5,
+      "exception": "ValueError",
+      "message": "judge returned invalid JSON"
+    }
+  ],
+  "identifier": null,
+  "hyperparameters": null,
+  "error_config": {
+    "ignore_errors": false,
+    "skip_on_missing_params": false
+  }
+}

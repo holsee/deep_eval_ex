@@ -1,0 +1,49 @@
+{
+  "description": "AnswerRelevancy: two of three statements irrelevant",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "answer_relevancy",
+    "params": {
+      "threshold": 0.7
+    }
+  },
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris. I like pizza. Cats are great."
+  },
+  "responses": {
+    "answer_relevancy": {
+      "statements": [
+        {
+          "statements": [
+            "Paris.",
+            "I like pizza.",
+            "Cats are great."
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "no",
+              "reason": "Pizza preferences do not answer the question."
+            },
+            {
+              "verdict": "no",
+              "reason": "Cats are unrelated to the question."
+            }
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.33 because two statements are unrelated to the question."
+        }
+      ]
+    }
+  }
+}

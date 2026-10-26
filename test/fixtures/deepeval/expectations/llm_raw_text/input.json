@@ -1,0 +1,24 @@
+{
+  "description": "A judge without structured outputs: trimAndLoadJson loads both answers",
+  "test_case": {
+    "input": "Hi",
+    "actual_output": "Hello!",
+    "context": [
+      "Be polite."
+    ],
+    "expectations": {
+      "must": [
+        "Greets the user"
+      ]
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "verdicts": [
+      "```json\n{\"verdicts\": [{\"id\": \"must[0]\", \"status\": \"pass\", \"reason\": \"It greets.\", \"evidence\": \"Hello!\"},]}\n```"
+    ],
+    "reason": [
+      "{\"reason\": \"The score is 1.0 because it greets.\"}"
+    ]
+  }
+}

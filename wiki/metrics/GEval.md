@@ -63,7 +63,7 @@ result.success # => true (score >= threshold)
 |--------|------|---------|-------------|
 | `:name` | string | required | Name for this metric |
 | `:criteria` | string | nil | Evaluation criteria description |
-| `:evaluation_params` | list | required | Test case parameters to evaluate |
+| `:evaluation_params` | list | nil | Test case parameters to evaluate; without them GEval judges the trace (see below) |
 | `:threshold` | float | 0.5 | Pass/fail threshold |
 
 ### Advanced Options
@@ -75,6 +75,8 @@ result.success # => true (score >= threshold)
 | `:score_range` | tuple | {0, 10} | Min/max score range |
 | `:strict_mode` | boolean | false | Binary 0/1 scoring |
 | `:model` | tuple/string | default | LLM model to use |
+| `:top_logprobs` | integer | 20 | Score tokens a judge with logprobs returns for weighting |
+| `:include_g_eval_suffix` | boolean | true | Name results `"<name> [GEval]"`; when false, just `"<name>"` |
 
 ## Pre-defined Evaluation Steps
 
@@ -126,6 +128,21 @@ metric = GEval.new(
 )
 ```
 
+## Logprob-Weighted Scores
+
+As in deepeval, when the judge returns log probabilities (OpenAI's `gpt-4o`,
+`gpt-4o-mini`, `gpt-4.1`, ... but not its reasoning models), GEval asks it for
+a raw chat completion with logprobs instead of a structured answer, and
+replaces the score it gives by the average of the scores it considered,
+weighted by their probabilities: a judge torn between 7 and 8 scores about
+7.5. Tokens under 1% probability are ignored. Strict mode keeps the judge's
+score.
+
+Judges without logprobs (Anthropic, Ollama, custom adapters without
+`generate_raw_response/2`) are asked with the score schema and their score
+is kept, as deepeval does. `DeepEvalEx.Metrics.GEval.calculate_weighted_summed_score/2`
+does the weighting.
+
 ## Custom Score Range
 
 ```elixir
@@ -139,6 +156,31 @@ metric = GEval.new(
 # Score is still normalized to 0-1 in results
 # Raw score available in result.metadata.raw_score
 ```
+
+## Judging an Agent's Trace
+
+Without `:evaluation_params`, GEval judges the agent's trace instead of
+test case fields, as deepeval's GEval does: it requires the trace
+(`GEval.requires_trace?/1`), asks for its steps and score with deepeval's
+trace prompts, and prints the test case's nested trace dict (its
+`:trace_dict`) as deepeval's `serialize_to_json(indent=2)`.
+`DeepEvalEx.evaluate_traced/3` and `DeepEvalEx.ExUnit.assert_trace/3` give
+test cases their trace dict (see the [Tracing](../guides/Tracing.md)
+guide):
+
+```elixir
+trajectory = GEval.new(
+  name: "Trajectory",
+  criteria: "Did the agent answer from what its tools returned, without redundant calls?"
+)
+
+DeepEvalEx.evaluate_traced(goldens, &MyApp.Support.answer(&1.input), metrics: [trajectory])
+```
+
+Rubrics and strict mode work as they do on test case fields. A test case
+without a trace dict raises `DeepEvalEx.MissingTestCaseParamsError`:
+"The 'Trajectory [GEval]' metric has no evaluation_params, so it evaluates
+the trace, but this test case has none. ..."
 
 ## Multiple Evaluation Parameters
 
@@ -220,7 +262,7 @@ criteria: "The response should be good"
 
 - Use `gpt-4o-mini` for faster, cheaper evaluations
 - Pre-define `evaluation_steps` to skip generation step
-- Run evaluations concurrently with `evaluate_batch/3`
+- Run evaluations concurrently with `DeepEvalEx.evaluate/3`
 
 ## Error Handling
 

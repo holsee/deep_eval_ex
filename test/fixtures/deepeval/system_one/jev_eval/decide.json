@@ -1,0 +1,144 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "test_case": {
+            "input": "What is the capital of France?",
+            "actual_output": "Paris is the capital of France. It is known for café culture."
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "`actual_output` answers `input`."
+          },
+          "q_1": {
+            "type": "score",
+            "instructions": "How complete is `actual_output`?",
+            "criteria": [
+              "Not at all",
+              "Partly",
+              "Fully"
+            ]
+          },
+          "q_2": {
+            "type": "choice",
+            "instructions": "What tone does `actual_output` take?",
+            "criteria": {
+              "friendly": null,
+              "neutral": null,
+              "rude": null,
+              "no_reply": null
+            }
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.88
+            }
+          },
+          "choices": {
+            "q_2": {
+              "choice": "neutral",
+              "probabilities": {
+                "friendly": 0.35,
+                "neutral": 0.45,
+                "rude": 0.15,
+                "no_reply": 0.05
+              },
+              "confidence": 0.27
+            }
+          },
+          "scores": {
+            "q_1": {
+              "score": 1.6,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.3,
+                "2": 0.65
+              },
+              "confidence": 0.48
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "test_case": {
+          "input": "What is the capital of France?",
+          "actual_output": "Paris is the capital of France. It is known for café culture."
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "noul",
+          "instructions": "`actual_output` answers `input`."
+        },
+        "q_1": {
+          "type": "score",
+          "instructions": "How complete is `actual_output`?",
+          "criteria": [
+            "Not at all",
+            "Partly",
+            "Fully"
+          ]
+        },
+        "q_2": {
+          "type": "choice",
+          "instructions": "What tone does `actual_output` take?",
+          "criteria": {
+            "friendly": null,
+            "neutral": null,
+            "rude": null,
+            "no_reply": null
+          }
+        }
+      },
+      "answers": {
+        "nouls": {
+          "q_0": {
+            "probability": 0.88
+          }
+        },
+        "choices": {
+          "q_2": {
+            "choice": "neutral",
+            "probabilities": {
+              "friendly": 0.35,
+              "neutral": 0.45,
+              "rude": 0.15,
+              "no_reply": 0.05
+            },
+            "confidence": 0.27
+          }
+        },
+        "scores": {
+          "q_1": {
+            "score": 1.6,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.3,
+              "2": 0.65
+            },
+            "confidence": 0.48
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

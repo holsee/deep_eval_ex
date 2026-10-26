@@ -1,0 +1,79 @@
+[
+  {
+    "table": {
+      "title": "Test Results",
+      "columns": [
+        "Test case",
+        "Metric",
+        "Score",
+        "Status",
+        "Overall Success Rate"
+      ],
+      "rows": [
+        [
+          "case 1",
+          "",
+          "",
+          "",
+          "100.0% | passed=1 | failed=0"
+        ],
+        [
+          "",
+          "Faithfulness",
+          "1.0 (threshold=0.5, evaluation model=gpt-4o-mini, reason=No contradictions., error=None)",
+          "[green]PASSED[/green]",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "Case 10",
+          "",
+          "",
+          "",
+          "100.0% | passed=1 | failed=0"
+        ],
+        [
+          "",
+          "Faithfulness",
+          "1.0 (threshold=0.5, evaluation model=gpt-4o-mini, reason=No contradictions., error=None)",
+          "[green]PASSED[/green]",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "case 2",
+          "",
+          "",
+          "",
+          "0.0% | passed=0 | failed=1"
+        ],
+        [
+          "",
+          "Faithfulness",
+          "0.25 (threshold=0.5, evaluation model=gpt-4o-mini, reason=The answer contradicts the retrieval context on the refund window, which is 30 days., error=None)",
+          "[red]FAILED[/red]",
+          ""
+        ],
+        [
+          "[bold red]Note: Use Confident AI with DeepEval to analyze failed test cases for more details[/bold red]",
+          "",
+          "",
+          "",
+          ""
+        ]
+      ]
+    }
+  }
+]

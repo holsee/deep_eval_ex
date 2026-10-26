@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 env:
   MIX_ENV: test
@@ -47,11 +46,19 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
+      # Fails on retired packages and security advisories in mix.lock.
+      - name: Audit dependencies
+        run: mix hex.audit
+
       - name: Check formatting
         run: mix format --check-formatted
 
+      # req_llm is optional: DeepEvalEx must also compile without it.
+      - name: Compile without optional dependencies
+        run: mix compile --no-optional-deps --warnings-as-errors --force
+
       - name: Compile with warnings as errors
-        run: mix compile --warnings-as-errors
+        run: mix compile --warnings-as-errors --force
 
       - name: Run Credo
         run: mix credo --strict
@@ -73,3 +80,9 @@ jobs:
 
       - name: Run Dialyzer
         run: mix dialyzer
+
+      # ex_doc is a dev-only dependency.
+      - name: Build docs with warnings as errors
+        run: mix docs --warnings-as-errors
+        env:
+          MIX_ENV: dev

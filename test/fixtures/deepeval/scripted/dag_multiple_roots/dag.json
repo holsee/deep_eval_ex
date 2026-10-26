@@ -1,0 +1,50 @@
+{
+  "nodes": {
+    "node_0": {
+      "type": "TaskNode",
+      "instructions": "Extract the text under the intro heading.",
+      "output_label": "Intro",
+      "label": null,
+      "evaluation_params": [
+        "actual_output"
+      ],
+      "children": [
+        "node_2"
+      ]
+    },
+    "node_1": {
+      "type": "TaskNode",
+      "instructions": "Extract the text under the conclusion heading.",
+      "output_label": "Conclusion",
+      "label": "Conclusion text",
+      "evaluation_params": [
+        "actual_output"
+      ],
+      "children": [
+        "node_2"
+      ]
+    },
+    "node_2": {
+      "type": "BinaryJudgementNode",
+      "criteria": "Does the conclusion follow from the intro?",
+      "label": "Consistency",
+      "evaluation_params": [
+        "input"
+      ],
+      "children": [
+        "node_3",
+        "node_4"
+      ]
+    },
+    "node_3": {
+      "type": "VerdictNode",
+      "verdict": true,
+      "score": 9
+    },
+    "node_4": {
+      "type": "VerdictNode",
+      "verdict": false,
+      "score": 3
+    }
+  }
+}

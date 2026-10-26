@@ -1,0 +1,44 @@
+[
+  {
+    "name": "agent",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "done",
+    "tools_called": [
+      "name='lookup' type=<ToolCallType.FUNCTION: 'FUNCTION'> description='Staged description' reasoning=None output='found' input_parameters={'query': 'How do I reset my password?'}"
+    ],
+    "children": [
+      {
+        "name": "staged_call",
+        "type": "llm",
+        "input": {
+          "query": "How do I reset my password?",
+          "documents": []
+        },
+        "output": "Answer to How do I reset my password?",
+        "model": "gpt-4o"
+      },
+      {
+        "name": "generate",
+        "type": "llm",
+        "input": {
+          "query": "again",
+          "documents": []
+        },
+        "output": "Answer to again",
+        "model": "gpt-4o-mini"
+      },
+      {
+        "name": "lookup",
+        "type": "tool",
+        "description": "Staged description",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "found"
+      }
+    ]
+  }
+]

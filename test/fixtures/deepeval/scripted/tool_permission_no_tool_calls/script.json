@@ -1,0 +1,18 @@
+{
+  "description": "ToolPermission: tools_called is [], scored 1.0, with a denylist only",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "tool_permission",
+    "params": {
+      "denied_tools": [
+        "rm_rf"
+      ]
+    }
+  },
+  "test_case": {
+    "input": "Hi!",
+    "actual_output": "Hello! How can I help?",
+    "tools_called": []
+  },
+  "responses": {}
+}

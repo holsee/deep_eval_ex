@@ -1,0 +1,12 @@
+{
+  "score": 1,
+  "success": true,
+  "reason": "The score is 1.00 because there is nothing irrelevant in the output.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Statements:\n[] \n \nVerdicts:\n[]"
+}

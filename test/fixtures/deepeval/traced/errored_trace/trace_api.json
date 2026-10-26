@@ -1,0 +1,78 @@
+[
+  {
+    "uuid": "d92eff65-6773-4709-87de-cb6c7b0aedf0",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "f85e4548-96d5-43fb-855a-22e7f0acbea6",
+        "name": "agent",
+        "status": "ERRORED",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.913Z",
+        "endTime": "2026-10-23T03:23:29.914Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "error": "planner crashed",
+        "toolsCalled": [
+          {
+            "name": "search",
+            "type": "FUNCTION",
+            "output": [
+              "result for How do I reset my password?"
+            ],
+            "inputParameters": {
+              "query": "How do I reset my password?"
+            }
+          }
+        ],
+        "availableTools": [],
+        "agentHandoffs": [],
+        "metricsData": [
+          {
+            "name": "Span Judge",
+            "threshold": 0.7,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "llmSpans": [],
+    "retrieverSpans": [],
+    "toolSpans": [
+      {
+        "uuid": "9d56caa2-aa26-4001-ac1e-5790676584a4",
+        "name": "search",
+        "status": "SUCCESS",
+        "type": "tool",
+        "parentUuid": "f85e4548-96d5-43fb-855a-22e7f0acbea6",
+        "startTime": "2026-10-23T03:23:29.913Z",
+        "endTime": "2026-10-23T03:23:29.914Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": [
+          "result for How do I reset my password?"
+        ],
+        "metricsData": [
+          {
+            "name": "Span Judge",
+            "threshold": 0.7,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "startTime": "2026-10-23T03:23:29.913Z",
+    "endTime": "2026-10-23T03:23:29.914Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "status": "ERRORED"
+  }
+]

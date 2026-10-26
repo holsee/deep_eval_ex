@@ -1,0 +1,164 @@
+[
+  {
+    "name": "answer",
+    "type": "agent",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "Answer to How do I reset my password?",
+    "tools_called": [
+      {
+        "name": "search_docs",
+        "type": "FUNCTION",
+        "description": "Searches the help centre",
+        "reasoning": null,
+        "output": {
+          "hits": 2,
+          "query": "How do I reset my password?"
+        },
+        "input_parameters": {
+          "query": "How do I reset my password?"
+        }
+      }
+    ],
+    "available_tools": [
+      "search_docs"
+    ],
+    "agent_handoffs": [
+      "billing"
+    ],
+    "children": [
+      {
+        "name": "retrieve",
+        "type": "retriever",
+        "input": {
+          "query": "How do I reset my password?",
+          "k": 2
+        },
+        "output": [
+          "FAQ: How do I reset my password?",
+          "Policy: answers cite the help centre."
+        ],
+        "retrieval_context": [
+          "FAQ: How do I reset my password?"
+        ],
+        "embedder": "text-embedding-3-small",
+        "top_k": 2,
+        "chunk_size": 512,
+        "children": []
+      },
+      {
+        "name": "search_docs",
+        "type": "tool",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": {
+          "hits": 2,
+          "query": "How do I reset my password?"
+        },
+        "description": "Searches the help centre",
+        "children": []
+      },
+      {
+        "name": "generate",
+        "type": "llm",
+        "input": {
+          "query": "How do I reset my password?",
+          "documents": [
+            "FAQ: How do I reset my password?",
+            "Policy: answers cite the help centre."
+          ]
+        },
+        "output": "Answer to How do I reset my password?",
+        "model": "gpt-4o-mini",
+        "input_token_count": 42.0,
+        "output_token_count": 7.0,
+        "cost_per_input_token": 1.5e-07,
+        "cost_per_output_token": 6e-07,
+        "children": []
+      }
+    ]
+  },
+  {
+    "name": "answer",
+    "type": "agent",
+    "input": {
+      "query": "Wo ist meine Rechnung?"
+    },
+    "output": "Answer to Wo ist meine Rechnung?",
+    "tools_called": [
+      {
+        "name": "search_docs",
+        "type": "FUNCTION",
+        "description": "Searches the help centre",
+        "reasoning": null,
+        "output": {
+          "hits": 2,
+          "query": "Wo ist meine Rechnung?"
+        },
+        "input_parameters": {
+          "query": "Wo ist meine Rechnung?"
+        }
+      }
+    ],
+    "available_tools": [
+      "search_docs"
+    ],
+    "agent_handoffs": [
+      "billing"
+    ],
+    "children": [
+      {
+        "name": "retrieve",
+        "type": "retriever",
+        "input": {
+          "query": "Wo ist meine Rechnung?",
+          "k": 2
+        },
+        "output": [
+          "FAQ: Wo ist meine Rechnung?",
+          "Policy: answers cite the help centre."
+        ],
+        "retrieval_context": [
+          "FAQ: Wo ist meine Rechnung?"
+        ],
+        "embedder": "text-embedding-3-small",
+        "top_k": 2,
+        "chunk_size": 512,
+        "children": []
+      },
+      {
+        "name": "search_docs",
+        "type": "tool",
+        "input": {
+          "query": "Wo ist meine Rechnung?"
+        },
+        "output": {
+          "hits": 2,
+          "query": "Wo ist meine Rechnung?"
+        },
+        "description": "Searches the help centre",
+        "children": []
+      },
+      {
+        "name": "generate",
+        "type": "llm",
+        "input": {
+          "query": "Wo ist meine Rechnung?",
+          "documents": [
+            "FAQ: Wo ist meine Rechnung?",
+            "Policy: answers cite the help centre."
+          ]
+        },
+        "output": "Answer to Wo ist meine Rechnung?",
+        "model": "gpt-4o-mini",
+        "input_token_count": 42.0,
+        "output_token_count": 7.0,
+        "cost_per_input_token": 1.5e-07,
+        "cost_per_output_token": 6e-07,
+        "children": []
+      }
+    ]
+  }
+]

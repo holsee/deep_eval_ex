@@ -1,0 +1,70 @@
+{
+  "description": "TurnRelevancy decided by Jev in one request about the turns",
+  "metrics": [
+    {
+      "kind": "turn_relevancy",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order 42 is late."
+      },
+      {
+        "role": "assistant",
+        "content": "Sorry! It ships today."
+      },
+      {
+        "role": "user",
+        "content": "Can I change the address to Zürich?"
+      },
+      {
+        "role": "assistant",
+        "content": "Have you tried our new café blend?"
+      },
+      {
+        "role": "user",
+        "content": "Please just change the address."
+      },
+      {
+        "role": "assistant",
+        "content": "Done: order 42 now ships to Zürich."
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.55
+        },
+        "q_1": {
+          "probability": 0.3
+        }
+      },
+      "scores": {
+        "q_2": {
+          "score": 2,
+          "probabilities": {
+            "0": 0.05,
+            "1": 0.3,
+            "2": 0.5,
+            "3": 0.15
+          },
+          "confidence": 0.42
+        }
+      }
+    }
+  }
+}

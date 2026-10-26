@@ -1,0 +1,12 @@
+{
+  "score": 0.8,
+  "success": true,
+  "reason": "The assistant asked for the order number, then started the refund, politely.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Criteria:\nDetermine whether the assistant resolves the user's request politely. \n \nEvaluation Steps:\n[\n    \"Check that each assistant turn answers the user turn before it.\",\n    \"Check that the assistant stays polite throughout.\",\n    \"Check that the request is resolved by the end of the conversation.\"\n] \n \nRubric:\nNone"
+}

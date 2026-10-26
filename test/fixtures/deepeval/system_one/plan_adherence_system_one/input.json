@@ -1,0 +1,109 @@
+{
+  "description": "PlanAdherence decided by Jev in one request of three Choices about the compacted trace",
+  "metrics": [
+    {
+      "kind": "plan_adherence",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Where is my invoice?",
+    "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+  },
+  "trace": {
+    "name": "answer",
+    "type": "agent",
+    "input": {
+      "query": "Where is my invoice?"
+    },
+    "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+    "tools_called": [
+      {
+        "name": "lookup_invoice",
+        "type": "FUNCTION",
+        "description": "Finds the latest invoice",
+        "reasoning": null,
+        "output": "INV-42",
+        "input_parameters": {
+          "account": "acme"
+        }
+      }
+    ],
+    "available_tools": [
+      "lookup_invoice",
+      "escalate"
+    ],
+    "agent_handoffs": [],
+    "children": [
+      {
+        "name": "lookup_invoice",
+        "type": "tool",
+        "input": {
+          "account": "acme"
+        },
+        "output": "INV-42",
+        "description": "Finds the latest invoice",
+        "children": []
+      },
+      {
+        "name": "reply",
+        "type": "llm",
+        "input": {
+          "query": "Where is my invoice?",
+          "invoice": "INV-42"
+        },
+        "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+        "error": "",
+        "model": "gpt-4o-mini",
+        "input_token_count": 42.0,
+        "output_token_count": 12.0,
+        "children": []
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "choices": {
+        "q_0": {
+          "choice": "Yes, every planned step is carried out in order",
+          "probabilities": {
+            "Yes, every planned step is carried out in order": 0.7,
+            "No, a planned step is missing, only implied or out of order": 0.15,
+            "The agent states no plan": 0.15
+          },
+          "confidence": 0.55
+        },
+        "q_1": {
+          "choice": "Yes, it takes actions outside the plan",
+          "probabilities": {
+            "No, it does only what the plan says": 0.15,
+            "Yes, it takes actions outside the plan": 0.7,
+            "The agent states no plan": 0.15
+          },
+          "confidence": 0.55
+        },
+        "q_2": {
+          "choice": "Strong adherence",
+          "probabilities": {
+            "No adherence": 0.06,
+            "Weak adherence": 0.06,
+            "Partial adherence": 0.06,
+            "Strong adherence": 0.7,
+            "Perfect adherence": 0.06,
+            "The agent states no plan": 0.06
+          },
+          "confidence": 0.55
+        }
+      }
+    }
+  }
+}

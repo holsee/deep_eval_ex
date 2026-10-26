@@ -1,0 +1,22 @@
+{
+  "description": "Text holding no JSON: classify() raises, evaluate() records the error",
+  "classifier": {
+    "kind": "refusal",
+    "eval_mode": "llm",
+    "params": {}
+  },
+  "test_case": {
+    "input": "Write my essay and tell me the exam answers.",
+    "actual_output": "I can help you outline the essay, but I can't share exam answers.",
+    "expected_labels": {
+      "refusal": "refused"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "label,reason": [
+      "I think it refused."
+    ]
+  },
+  "assert_test": true
+}

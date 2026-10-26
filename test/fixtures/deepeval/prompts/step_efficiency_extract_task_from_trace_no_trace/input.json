@@ -1,0 +1,6 @@
+{
+  "template": "StepEfficiencyMetric.extract_task_from_trace",
+  "inputs": {
+    "trace": null
+  }
+}

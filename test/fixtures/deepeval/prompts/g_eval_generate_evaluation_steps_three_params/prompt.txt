@@ -1,0 +1,16 @@
+Given an evaluation criteria which outlines how you should judge the Input, Actual Output, and Expected Output, generate 3-4 concise evaluation steps based on the criteria below. You MUST make it clear how to evaluate Input, Actual Output, and Expected Output in relation to one another.
+
+
+
+Evaluation Criteria:
+Check the actual output against the expected output for the input.
+
+**
+IMPORTANT: Please make sure to only return in JSON format, with the "steps" key as a list of strings. No words or explanation is needed.
+Example JSON:
+{
+  "steps": <list_of_strings>
+}
+**
+
+JSON:

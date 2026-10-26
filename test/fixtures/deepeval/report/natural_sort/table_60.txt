@@ -1,0 +1,50 @@
+                        Test Results                        
+┏━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━┓
+┃           ┃            ┃            ┃        ┃ Overall   ┃
+┃           ┃            ┃            ┃        ┃ Success   ┃
+┃ Test case ┃ Metric     ┃ Score      ┃ Status ┃ Rate      ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━┩
+│ case 1    │            │            │        │ 100.0% |  │
+│           │            │            │        │ passed=1  │
+│           │            │            │        │ |         │
+│           │            │            │        │ failed=0  │
+│           │ Faithfuln… │ 1.0        │ PASSED │           │
+│           │            │ (threshol… │        │           │
+│           │            │ evaluation │        │           │
+│           │            │ model=gpt… │        │           │
+│           │            │ reason=No  │        │           │
+│           │            │ contradic… │        │           │
+│           │            │ error=Non… │        │           │
+│           │            │            │        │           │
+│ Case 10   │            │            │        │ 100.0% |  │
+│           │            │            │        │ passed=1  │
+│           │            │            │        │ |         │
+│           │            │            │        │ failed=0  │
+│           │ Faithfuln… │ 1.0        │ PASSED │           │
+│           │            │ (threshol… │        │           │
+│           │            │ evaluation │        │           │
+│           │            │ model=gpt… │        │           │
+│           │            │ reason=No  │        │           │
+│           │            │ contradic… │        │           │
+│           │            │ error=Non… │        │           │
+│           │            │            │        │           │
+│ case 2    │            │            │        │ 0.0% |    │
+│           │            │            │        │ passed=0  │
+│           │            │            │        │ |         │
+│           │            │            │        │ failed=1  │
+│           │ Faithfuln… │ 0.25       │ FAILED │           │
+│           │            │ (threshol… │        │           │
+│           │            │ evaluation │        │           │
+│           │            │ model=gpt… │        │           │
+│           │            │ reason=The │        │           │
+│           │            │ answer     │        │           │
+│           │            │ contradic… │        │           │
+│           │            │ the        │        │           │
+│           │            │ retrieval  │        │           │
+│           │            │ context on │        │           │
+│           │            │ the refund │        │           │
+│           │            │ window,    │        │           │
+│           │            │ which is   │        │           │
+│           │            │ 30 days.,  │        │           │
+│           │            │ error=Non… │        │           │
+└───────────┴────────────┴────────────┴────────┴───────────┘

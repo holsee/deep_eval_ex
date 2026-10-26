@@ -1,0 +1,48 @@
+{
+  "description": "ContextualRelevancy in hybrid mode: Jev judges each sentence of each node, one request per node",
+  "metrics": [
+    {
+      "kind": "contextual_relevancy",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What is the capital of France?",
+    "actual_output": "Paris.",
+    "retrieval_context": [
+      "Rome is the capital of Italy. Paris is the capital of France.",
+      "The Louvre is in Paris."
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "statement_0": {
+          "probability": 0.04
+        },
+        "statement_1": {
+          "probability": 0.97
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "contextual_relevancy": {
+      "reason": [
+        {
+          "reason": "The score is 0.33 because only 'Paris is the capital of France.' addresses the input; Rome and the Louvre do not."
+        }
+      ]
+    }
+  }
+}

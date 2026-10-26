@@ -1,0 +1,83 @@
+{
+  "nodes": {
+    "node_0": {
+      "type": "TaskNode",
+      "instructions": "Extract all headings in `actual_output`.",
+      "output_label": "Summary headings",
+      "label": "Extract headings",
+      "evaluation_params": [
+        "actual_output"
+      ],
+      "children": [
+        "node_1"
+      ]
+    },
+    "node_1": {
+      "type": "BinaryJudgementNode",
+      "criteria": "Does the summary headings contain all three: 'intro', 'body', and 'conclusion'?",
+      "label": null,
+      "evaluation_params": null,
+      "children": [
+        "node_2",
+        "node_3"
+      ]
+    },
+    "node_2": {
+      "type": "VerdictNode",
+      "verdict": false,
+      "score": 0
+    },
+    "node_3": {
+      "type": "VerdictNode",
+      "verdict": true,
+      "child": {
+        "type": "node",
+        "ref": "node_4"
+      }
+    },
+    "node_4": {
+      "type": "NonBinaryJudgementNode",
+      "criteria": "Are the summary headings in the correct order: 'intro' => 'body' => 'conclusion'?",
+      "label": "Heading order",
+      "evaluation_params": [
+        "actual_output"
+      ],
+      "children": [
+        "node_5",
+        "node_6",
+        "node_7"
+      ]
+    },
+    "node_5": {
+      "type": "VerdictNode",
+      "verdict": "Out of order",
+      "score": 2
+    },
+    "node_6": {
+      "type": "VerdictNode",
+      "verdict": "Partly out of order",
+      "score": 4
+    },
+    "node_7": {
+      "type": "VerdictNode",
+      "verdict": "In order",
+      "child": {
+        "type": "geval",
+        "name": "Concision",
+        "evaluation_params": [
+          "actual_output"
+        ],
+        "criteria": "Is every section of `actual_output` a single sentence?",
+        "evaluation_steps": null,
+        "rubric": null,
+        "threshold": 0.5,
+        "top_logprobs": 20,
+        "async_mode": true,
+        "strict_mode": false,
+        "verbose_mode": false,
+        "_include_g_eval_suffix": true,
+        "flaky": false
+      }
+    }
+  }
+}

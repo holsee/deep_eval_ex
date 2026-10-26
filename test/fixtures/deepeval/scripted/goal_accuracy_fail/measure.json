@@ -1,0 +1,12 @@
+{
+  "score": 0.1875,
+  "success": false,
+  "reason": "The agent failed with 0.1875, below 0.7: it planned nothing and suggested no hotel.",
+  "threshold": 0.7,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Goals and steps taken: \nUser messages: \n \nc[\n    \"Assistant messages: \nSure. \n\"\n] \n\nUser messages: \nAnd the hotel?\nSomewhere cheap.\n \nc[\n    \"Assistant messages: \nHave you tried our café? \n\"\n] \n\n \n \n \nGoal evaluations: [\n    {\n        \"score\": 0.25,\n        \"reason\": \"No trip was planned.\"\n    },\n    {\n        \"score\": 0.0,\n        \"reason\": \"No hotel was suggested.\"\n    }\n] \n\nPlan evaluations: [\n    {\n        \"score\": 0.5,\n        \"reason\": \"A vague plan.\"\n    },\n    {\n        \"score\": 0.0,\n        \"reason\": \"No plan at all.\"\n    }\n] \n\nFinal Score: 0.1875"
+}

@@ -1,0 +1,84 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "input": "Say hello to the new team member.",
+          "actual_output": "Hello and welcome to the team!",
+          "instructions": [
+            "Reply in English.",
+            "Respond in all upper case.",
+            "Use the word 'welcome'."
+          ]
+        },
+        "questions": {
+          "instruction_0": {
+            "type": "noul",
+            "instructions": {
+              "instruction": "Reply in English.",
+              "question": "Does `actual_output` COMPLETELY follow the prompt `instruction` when responding to `input`?"
+            }
+          },
+          "instruction_1": {
+            "type": "noul",
+            "instructions": {
+              "instruction": "Respond in all upper case.",
+              "question": "Does `actual_output` COMPLETELY follow the prompt `instruction` when responding to `input`?"
+            }
+          },
+          "instruction_2": {
+            "type": "noul",
+            "instructions": {
+              "instruction": "Use the word 'welcome'.",
+              "question": "Does `actual_output` COMPLETELY follow the prompt `instruction` when responding to `input`?"
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "input": "Say hello to the new team member.",
+        "actual_output": "Hello and welcome to the team!",
+        "instructions": [
+          "Reply in English.",
+          "Respond in all upper case.",
+          "Use the word 'welcome'."
+        ]
+      },
+      "questions": {
+        "instruction_0": {
+          "type": "noul",
+          "instructions": {
+            "instruction": "Reply in English.",
+            "question": "Does `actual_output` COMPLETELY follow the prompt `instruction` when responding to `input`?"
+          }
+        },
+        "instruction_1": {
+          "type": "noul",
+          "instructions": {
+            "instruction": "Respond in all upper case.",
+            "question": "Does `actual_output` COMPLETELY follow the prompt `instruction` when responding to `input`?"
+          }
+        },
+        "instruction_2": {
+          "type": "noul",
+          "instructions": {
+            "instruction": "Use the word 'welcome'.",
+            "question": "Does `actual_output` COMPLETELY follow the prompt `instruction` when responding to `input`?"
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "template": "RoleAdherenceMetric.generate_reason",
+  "inputs": {
+    "score": 0.5,
+    "role": "A humble wizard who's never sure his spells work.",
+    "out_of_character_responses": [
+      "Behold, the greatest wizard alive! (turn #4)",
+      null
+    ]
+  }
+}

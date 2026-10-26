@@ -1,0 +1,10 @@
+{
+  "template": "GEval.generate_evaluation_steps",
+  "inputs": {
+    "criteria": "Determine whether the actual output answers the input's question correctly.",
+    "evaluation_params": [
+      "input",
+      "actual_output"
+    ]
+  }
+}

@@ -1,0 +1,153 @@
+{
+  "description": "Metrics that read the trace (requires_trace): AgentLoopDetection on the trace, on a span and on a zero-argument span (whose test case is the input=\"None\" placeholder in async), and TaskCompletion judged by a ScriptedJudge from the nested trace dict",
+  "goldens": [
+    {
+      "input": "How do I reset my password?",
+      "expected_output": "Use the 'Forgot password' link.",
+      "name": "password-reset"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "agent_loop_detection",
+      "params": {
+        "threshold": 0.5
+      }
+    },
+    {
+      "kind": "task_completion",
+      "judge_model": "mock-model",
+      "params": {
+        "threshold": 0.5
+      },
+      "responses": {
+        "outcome,task": [
+          {
+            "task": "Tell the user how to reset their password",
+            "outcome": "The agent searched twice, then answered."
+          }
+        ],
+        "reason,verdict": [
+          {
+            "verdict": 0.8,
+            "reason": "The agent answered, after repeating a search."
+          }
+        ]
+      }
+    }
+  ],
+  "modes": [
+    "sync",
+    "async"
+  ],
+  "functions": {
+    "agent": {
+      "type": "agent",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "observe": {
+        "available_tools": [
+          "search"
+        ]
+      },
+      "metrics": [
+        {
+          "kind": "agent_loop_detection",
+          "params": {
+            "threshold": 0.5
+          }
+        }
+      ],
+      "body": [
+        {
+          "call": "search",
+          "args": [
+            "$query"
+          ]
+        },
+        {
+          "call": "search",
+          "args": [
+            "$query"
+          ]
+        },
+        {
+          "call": "think"
+        },
+        {
+          "call": "generate",
+          "args": [
+            "$query",
+            []
+          ],
+          "as": "answer"
+        },
+        {
+          "update_current_trace": {
+            "output": "$answer"
+          }
+        }
+      ],
+      "returns": "$answer"
+    },
+    "search": {
+      "type": "tool",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "returns": [
+        "result for {query}"
+      ]
+    },
+    "think": {
+      "type": "llm",
+      "metrics": [
+        {
+          "kind": "agent_loop_detection",
+          "params": {
+            "threshold": 0.5
+          }
+        }
+      ],
+      "returns": "I will search."
+    },
+    "generate": {
+      "type": "llm",
+      "params": [
+        [
+          "query"
+        ],
+        [
+          "documents"
+        ]
+      ],
+      "observe": {
+        "model": "gpt-4o-mini",
+        "cost_per_input_token": 1.5e-07
+      },
+      "body": [
+        {
+          "update_llm_span": {
+            "input_token_count": 42,
+            "output_token_count": 7,
+            "cost_per_output_token": 6e-07
+          }
+        }
+      ],
+      "returns": "Answer to {query}"
+    }
+  },
+  "app": [
+    {
+      "call": "agent",
+      "args": [
+        "{input}"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "template": "TurnContextualPrecisionMetric.generate_final_reason",
+  "inputs": {
+    "final_score": 0.75,
+    "success": true,
+    "reasons": [
+      "The relevant node is ranked second.",
+      "There were no retrieval contexts in the given turns to evaluate the contextual precision."
+    ]
+  }
+}

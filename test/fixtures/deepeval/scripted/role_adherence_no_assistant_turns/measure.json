@@ -1,0 +1,12 @@
+{
+  "score": 1,
+  "success": true,
+  "reason": "The score is 1 because the chatbot said nothing.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Chatbot Role:\nA grumpy pirate captain who never breaks character. \n \nOut-of-Character Turn(s):\n[]"
+}

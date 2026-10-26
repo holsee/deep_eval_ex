@@ -1,0 +1,34 @@
+{
+  "description": "KnowledgeRetention with no facts given: no verdict, the integer score 1",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "knowledge_retention",
+    "params": {}
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Hi there."
+      },
+      {
+        "role": "assistant",
+        "content": "Hello! How can I help?"
+      }
+    ]
+  },
+  "responses": {
+    "knowledge_retention": {
+      "data": [
+        {
+          "data": null
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 1.00 because there was nothing to forget."
+        }
+      ]
+    }
+  }
+}

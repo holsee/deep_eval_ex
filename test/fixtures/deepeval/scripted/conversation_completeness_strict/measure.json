@@ -1,0 +1,12 @@
+{
+  "score": 0,
+  "success": false,
+  "reason": "The score is 0 because the dress code is never given.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Turns:\n[\n    {\n        \"role\": \"user\",\n        \"content\": \"Book a table for two in Z\\u00fcrich on Friday, and tell me the dress code.\",\n        \"user_id\": null,\n        \"audio\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"provider_transcript\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": null\n    },\n    {\n        \"role\": \"assistant\",\n        \"content\": \"Your table for two at Caf\\u00e9 Od\\u00e9on is booked for Friday at 8pm.\",\n        \"user_id\": null,\n        \"audio\": null,\n        \"latency_ms\": null,\n        \"interrupted\": null,\n        \"provider_transcript\": null,\n        \"retrieval_context\": null,\n        \"tools_called\": null,\n        \"mcp_tools_called\": null,\n        \"mcp_resources_called\": null,\n        \"mcp_prompts_called\": null,\n        \"metadata\": null\n    }\n] \n \nUser Intentions:\n[\n    \"User wants to book a table\",\n    \"User wants to know the dress code\"\n] \n \nVerdicts:\n[\n    {\n        \"verdict\": \"yes\",\n        \"reason\": null\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": null\n    }\n]"
+}

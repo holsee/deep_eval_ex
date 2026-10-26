@@ -1,0 +1,8 @@
+{
+  "template": "GoalAccuracyMetric.get_plan_evaluation_score",
+  "inputs": {
+    "multimodal": true,
+    "task": "User messages: \n",
+    "steps_taken": []
+  }
+}

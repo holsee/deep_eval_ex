@@ -31,11 +31,32 @@ Emitted when a metric evaluation completes successfully.
 |-------------|------|-------------|
 | `duration` | integer | Duration in milliseconds |
 | `score` | float | Evaluation score (0.0-1.0) |
+| `input_tokens` | integer | Prompt tokens used by the metric's LLM calls (only when known) |
+| `output_tokens` | integer | Completion tokens used by the metric's LLM calls (only when known) |
+| `cost` | float | USD cost of the metric's LLM calls (only when every call's model is priced) |
 
 | Metadata | Type | Description |
 |----------|------|-------------|
 | `metric` | string | Metric name |
 | `test_case_id` | string | Test case name (if set) |
+
+The usage measurements are absent for metrics that make no LLM call (such as
+`ExactMatch`) and when the adapter does not report token counts. `cost` comes
+from `DeepEvalEx.LLM.Pricing` and is left out for models without a price; see
+the `:model_pricing` option in the [Configuration](Configuration.md) guide.
+
+```elixir
+:telemetry.attach(
+  "eval-cost",
+  [:deep_eval_ex, :metric, :stop],
+  fn _event, measurements, metadata, _config ->
+    if cost = measurements[:cost] do
+      IO.puts("#{metadata.metric}: $#{cost} (#{measurements.input_tokens} in / #{measurements.output_tokens} out)")
+    end
+  end,
+  nil
+)
+```
 
 #### `[:deep_eval_ex, :metric, :exception]`
 
@@ -44,11 +65,29 @@ Emitted when a metric evaluation fails.
 | Measurement | Type | Description |
 |-------------|------|-------------|
 | `duration` | integer | Duration in milliseconds |
+| `input_tokens` | integer | Prompt tokens spent before the error (when reported) |
+| `output_tokens` | integer | Completion tokens spent before the error (when reported) |
+| `cost` | float | USD cost of the calls made before the error (when priced) |
 
 | Metadata | Type | Description |
 |----------|------|-------------|
 | `metric` | string | Metric name |
 | `error` | term | Error reason |
+
+#### `[:deep_eval_ex, :metric, :cache_hit]`
+
+Emitted when a metric reuses its cached result from the test-run cache
+instead of measuring (see the [Test-Run Cache](Test-Run-Cache.md) guide).
+No `:start` or `:stop` event is emitted for it.
+
+| Measurement | Type | Description |
+|-------------|------|-------------|
+| `system_time` | integer | System time when the cached result was reused |
+
+| Metadata | Type | Description |
+|----------|------|-------------|
+| `metric` | string | Metric name |
+| `test_case` | string \| nil | Test case name |
 
 ### Evaluation Events
 
@@ -70,6 +109,31 @@ Emitted when batch evaluation completes.
 | `duration` | integer | Total duration in ms |
 | `test_case_count` | integer | Number of test cases |
 
+### Test Run Events
+
+#### `[:deep_eval_ex, :test_run, :stop]`
+
+Emitted when `DeepEvalEx.evaluate_run/3` (or `DeepEvalEx.evaluate/3`) has
+wrapped up its test run, saved and printed it (see the
+[Console Report](Console-Report.md) guide), and when `mix deep_eval.test` has
+wrapped up its run (see the [ExUnit Integration](ExUnit-Integration.md)
+guide); deepeval's `on_test_run_end` hook. A classifier-only run has no test
+run and emits none, and an `evaluate_run/3` inside a `mix deep_eval.test` run
+emits none either: the task wraps the whole run up once.
+
+| Measurement | Type | Description |
+|-------------|------|-------------|
+| `duration` | integer | Duration of the evaluation (of `mix test` for the task), in native time units |
+| `test_passed` | integer | Test cases that passed |
+| `test_failed` | integer | Test cases that failed |
+
+| Metadata | Type | Description |
+|----------|------|-------------|
+| `test_run` | `DeepEvalEx.TestRun` | The wrapped-up run |
+| `path` | string \| nil | The `test_run_<timestamp>.json` written to the results folder |
+| `identifier` | string \| nil | The run's identifier |
+| `source` | atom | `:evaluate_run`, or `:cli` for `mix deep_eval.test` |
+
 ### LLM Events
 
 #### `[:deep_eval_ex, :llm, :request]`
@@ -84,6 +148,59 @@ Emitted for each LLM API request.
 |----------|------|-------------|
 | `adapter` | atom | Adapter used |
 | `model` | string | Model name |
+
+### Tracing Events
+
+Emitted by `DeepEvalEx.Tracing` (see the [Tracing](Tracing.md) guide).
+They notify; spans are recorded whether or not a handler is attached.
+
+#### `[:deep_eval_ex, :span, :start | :stop | :exception]`
+
+Emitted when a span opens, closes, or its code raises, throws or exits,
+shaped like `:telemetry.span/3`'s events.
+
+| Measurement | Type | Description |
+|-------------|------|-------------|
+| `system_time` | integer | System time at start (`:start` only) |
+| `monotonic_time` | integer | Monotonic time of the event |
+| `duration` | integer | Native time since the start (`:stop` and `:exception`) |
+
+| Metadata | Type | Description |
+|----------|------|-------------|
+| `span` | `DeepEvalEx.Tracing.Span` | The span |
+| `trace_uuid` | string | Its trace |
+| `parent_uuid` | string \| nil | Its parent span |
+| `type` | atom | `:base`, `:agent`, `:llm`, `:retriever` or `:tool` |
+| `telemetry_span_context` | reference | Pairs a span's events |
+| `kind`, `reason`, `stacktrace` | | What was raised (`:exception` only) |
+
+#### `[:deep_eval_ex, :trace, :stop]`
+
+Emitted when a trace closes. An `:off` trace has been handed to the
+configured `DeepEvalEx.Tracing.Sink` first (see the [Tracing](Tracing.md)
+guide).
+
+| Measurement | Type | Description |
+|-------------|------|-------------|
+| `duration` | integer | Native time from the trace's start to its end |
+
+| Metadata | Type | Description |
+|----------|------|-------------|
+| `trace` | `DeepEvalEx.Tracing.Trace` | The closed trace |
+| `route` | atom | `:capture` when a `DeepEvalEx.Tracing.capture/2` collects it, else `:off` |
+
+#### `[:deep_eval_ex, :trace, :timeout]`
+
+Emitted when `DeepEvalEx.Tracing.capture/2` stops waiting for a trace still
+open after its `:await_open` and returns it `:in_progress`.
+
+| Measurement | Type | Description |
+|-------------|------|-------------|
+| `system_time` | integer | System time |
+
+| Metadata | Type | Description |
+|----------|------|-------------|
+| `trace` | `DeepEvalEx.Tracing.Trace` | The trace as it stood |
 
 ## Attaching Handlers
 
@@ -342,5 +459,4 @@ end
 ## See Also
 
 - [Evaluator API](../api/Evaluator.md) - Batch evaluation
-- [Phoenix Integration](Phoenix-Integration.md) - LiveView integration
 - [:telemetry documentation](https://hexdocs.pm/telemetry/) - Telemetry library

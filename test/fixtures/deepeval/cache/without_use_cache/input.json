@@ -1,0 +1,71 @@
+{
+  "description": "A second run without use_cache measures everything and rewrites the cache",
+  "runs": [
+    {
+      "test_cases": [
+        {
+          "input": "What is the capital of France?",
+          "actual_output": "Paris.",
+          "expected_output": "Paris."
+        }
+      ],
+      "metrics": [
+        {
+          "kind": "cache_stub",
+          "name": "Relevance",
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "threshold": 0.5,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        },
+        {
+          "kind": "cache_stub",
+          "name": "Tone",
+          "score": 0.4,
+          "reason": "Tone reason.",
+          "threshold": 0.6,
+          "evaluation_model": "gpt-4o",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        }
+      ]
+    },
+    {
+      "test_cases": [
+        {
+          "input": "What is the capital of France?",
+          "actual_output": "Paris.",
+          "expected_output": "Paris."
+        }
+      ],
+      "metrics": [
+        {
+          "kind": "cache_stub",
+          "name": "Relevance",
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "threshold": 0.5,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        },
+        {
+          "kind": "cache_stub",
+          "name": "Tone",
+          "score": 0.4,
+          "reason": "Tone reason.",
+          "threshold": 0.6,
+          "evaluation_model": "gpt-4o",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        }
+      ]
+    }
+  ]
+}

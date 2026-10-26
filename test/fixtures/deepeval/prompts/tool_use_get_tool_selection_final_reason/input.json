@@ -1,0 +1,17 @@
+{
+  "template": "ToolUseMetric.get_tool_selection_final_reason",
+  "inputs": {
+    "final_score": 0.75,
+    "threshold": 0.5,
+    "scores": [
+      {
+        "score": 1.0,
+        "reason": "get_weather was the right tool."
+      },
+      {
+        "score": 0.5,
+        "reason": "search_web was used where get_weather fits."
+      }
+    ]
+  }
+}

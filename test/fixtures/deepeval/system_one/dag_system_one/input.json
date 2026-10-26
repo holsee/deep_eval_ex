@@ -1,0 +1,129 @@
+{
+  "description": "DAGMetric under system_one: it has no whole-metric form, so it runs as hybrid",
+  "metrics": [
+    {
+      "kind": "dag",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5,
+        "name": "Format Correctness",
+        "dag": {
+          "nodes": {
+            "extract": {
+              "type": "TaskNode",
+              "instructions": "Extract all headings in `actual_output`.",
+              "output_label": "Summary headings",
+              "label": "Extract headings",
+              "evaluation_params": [
+                "actual_output"
+              ],
+              "children": [
+                "has_headings"
+              ]
+            },
+            "has_headings": {
+              "type": "BinaryJudgementNode",
+              "criteria": "Does the summary headings contain all three: 'intro', 'body', and 'conclusion'?",
+              "label": null,
+              "evaluation_params": null,
+              "children": [
+                "missing",
+                "complete"
+              ]
+            },
+            "missing": {
+              "type": "VerdictNode",
+              "verdict": false,
+              "score": 0
+            },
+            "complete": {
+              "type": "VerdictNode",
+              "verdict": true,
+              "child": {
+                "type": "node",
+                "ref": "order"
+              }
+            },
+            "order": {
+              "type": "NonBinaryJudgementNode",
+              "criteria": "Are the summary headings in the correct order: 'intro' => 'body' => 'conclusion'?",
+              "label": "Heading order",
+              "evaluation_params": [
+                "actual_output"
+              ],
+              "children": [
+                "out",
+                "partly_out",
+                "in_order"
+              ]
+            },
+            "out": {
+              "type": "VerdictNode",
+              "verdict": "Out of order",
+              "score": 2
+            },
+            "partly_out": {
+              "type": "VerdictNode",
+              "verdict": "Partly out of order",
+              "score": 4
+            },
+            "in_order": {
+              "type": "VerdictNode",
+              "verdict": "In order",
+              "score": 10
+            }
+          }
+        }
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Summarise the meeting transcript under intro, body and conclusion headings.",
+    "actual_output": "Intro: The team met to plan the launch.\nConclusion: The launch moves to May.\nBody: QA needs two more weeks."
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "verdict": {
+          "probability": 0.92
+        }
+      },
+      "choices": {
+        "verdict": {
+          "choice": "Partly out of order",
+          "probabilities": {
+            "Out of order": 0.1,
+            "Partly out of order": 0.75,
+            "In order": 0.15
+          },
+          "confidence": 0.62
+        }
+      }
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "dag": {
+      "output": [
+        {
+          "output": [
+            "Intro",
+            "Conclusion",
+            "Body"
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.4 because the body and conclusion are swapped."
+        }
+      ]
+    }
+  }
+}

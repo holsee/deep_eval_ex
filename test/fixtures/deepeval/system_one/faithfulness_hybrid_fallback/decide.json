@@ -1,0 +1,72 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "retrieval_context": [
+            "Full-time employees receive 20 days of paid time off per year.",
+            "Up to 5 unused days can be carried over to the next year."
+          ],
+          "claims": [
+            "Employees get 20 days of PTO per year.",
+            "Employees can carry over 10 days."
+          ]
+        },
+        "questions": {
+          "claim_0": {
+            "type": "noul",
+            "instructions": {
+              "claim": "Employees get 20 days of PTO per year.",
+              "question": "Is `claim` supported by the facts in `retrieval_context`? Answer no if it contradicts them."
+            }
+          },
+          "claim_1": {
+            "type": "noul",
+            "instructions": {
+              "claim": "Employees can carry over 10 days.",
+              "question": "Is `claim` supported by the facts in `retrieval_context`? Answer no if it contradicts them."
+            }
+          }
+        },
+        "error": {
+          "type": "ConnectionError",
+          "message": "Jev is down"
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "retrieval_context": [
+          "Full-time employees receive 20 days of paid time off per year.",
+          "Up to 5 unused days can be carried over to the next year."
+        ],
+        "claims": [
+          "Employees get 20 days of PTO per year.",
+          "Employees can carry over 10 days."
+        ]
+      },
+      "questions": {
+        "claim_0": {
+          "type": "noul",
+          "instructions": {
+            "claim": "Employees get 20 days of PTO per year.",
+            "question": "Is `claim` supported by the facts in `retrieval_context`? Answer no if it contradicts them."
+          }
+        },
+        "claim_1": {
+          "type": "noul",
+          "instructions": {
+            "claim": "Employees can carry over 10 days.",
+            "question": "Is `claim` supported by the facts in `retrieval_context`? Answer no if it contradicts them."
+          }
+        }
+      },
+      "error": {
+        "type": "ConnectionError",
+        "message": "Jev is down"
+      }
+    }
+  ]
+}

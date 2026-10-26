@@ -1,0 +1,61 @@
+[
+  {
+    "score": 0.75,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.40.\n1. Every step of the agent run in `trace` (each tool call, LLM call and retrieval) was strictly necessary for the task the user gave in the root span's input of `trace`; none was redundant, repeated, speculative or done only to enrich the answer. -> likely holds (P(yes)=0.70, confidence=0.40, weight=2)\n2. the agent run in `trace` takes the most direct path to the task the user gave in the root span's input of `trace`, with no detours, re-queries or loops that a shorter sequence of actions would have avoided. -> clearly holds (P(yes)=0.85, confidence=0.70)\n3. Judging only the number and directness of its steps, not the quality of the result, how efficiently does the agent run in `trace` carry out the task the user gave in the root span's input of `trace`? -> \"Moderate efficiency\", leaning \"Strong efficiency\" (expected level=0.75 of 1.00, confidence=0.40)\nScore: 0.75 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every step of the agent run in `trace` (each tool call, LLM call and retrieval) was strictly necessary for the task the user gave in the root span's input of `trace`; none was redundant, repeated, speculative or done only to enrich the answer.\n   value=0.700 applicable=True probabilities={'true': 0.7, 'false': 0.3} confidence=0.400\n2. [noul, weight=1] the agent run in `trace` takes the most direct path to the task the user gave in the root span's input of `trace`, with no detours, re-queries or loops that a shorter sequence of actions would have avoided.\n   value=0.850 applicable=True probabilities={'true': 0.85, 'false': 0.15} confidence=0.700\n3. [score, weight=1] Judging only the number and directness of its steps, not the quality of the result, how efficiently does the agent run in `trace` carry out the task the user gave in the root span's input of `trace`?\n   value=0.750 applicable=True probabilities={'Highly inefficient': 0.05, 'Low efficiency': 0.15, 'Moderate efficiency': 0.4, 'Strong efficiency': 0.3, 'Perfectly efficient': 0.1} confidence=0.400",
+    "confidence": 0.3999999999999999,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every step of the agent run in `trace` (each tool call, LLM call and retrieval) was strictly necessary for the task the user gave in the root span's input of `trace`; none was redundant, repeated, speculative or done only to enrich the answer.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.7,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.7,
+          "false": 0.30000000000000004
+        },
+        "confidence": 0.3999999999999999,
+        "passed": null
+      },
+      {
+        "question": "the agent run in `trace` takes the most direct path to the task the user gave in the root span's input of `trace`, with no detours, re-queries or loops that a shorter sequence of actions would have avoided.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.85,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.85,
+          "false": 0.15000000000000002
+        },
+        "confidence": 0.7,
+        "passed": null
+      },
+      {
+        "question": "Judging only the number and directness of its steps, not the quality of the result, how efficiently does the agent run in `trace` carry out the task the user gave in the root span's input of `trace`?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 0.75,
+        "applicable": true,
+        "probabilities": {
+          "Highly inefficient": 0.05,
+          "Low efficiency": 0.15,
+          "Moderate efficiency": 0.4,
+          "Strong efficiency": 0.3,
+          "Perfectly efficient": 0.1
+        },
+        "confidence": 0.4,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

@@ -1,0 +1,82 @@
+{
+  "description": "ToolUse with threshold 0.6: two user turns and two assistant turns calling tools in one unit, their calls joined",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "tool_use",
+    "params": {
+      "available_tools": [
+        {
+          "name": "get_weather",
+          "description": "Fetch current weather for a city"
+        },
+        {
+          "name": "search_web",
+          "description": "Search the web"
+        }
+      ],
+      "threshold": 0.6
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Weather in Zürich?"
+      },
+      {
+        "role": "user",
+        "content": "And in Paris?"
+      },
+      {
+        "role": "assistant",
+        "content": "Searching…",
+        "tools_called": [
+          {
+            "name": "search_web",
+            "input_parameters": {
+              "query": "Zürich weather"
+            }
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": "It is 12°C in Zürich and 18°C in Paris.",
+        "tools_called": [
+          {
+            "name": "get_weather",
+            "input_parameters": {
+              "city": "Zurich"
+            }
+          },
+          {
+            "name": "get_weather",
+            "input_parameters": {}
+          }
+        ]
+      }
+    ]
+  },
+  "responses": {
+    "tool_use": {
+      "reason,score": [
+        {
+          "score": 0.5,
+          "reason": "search_web was used where get_weather fits."
+        },
+        {
+          "score": 0.25,
+          "reason": "The Paris call has no city."
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.25 because search_web was a poor choice."
+        },
+        {
+          "reason": "The score is 0.25 because a call has no arguments."
+        }
+      ]
+    }
+  }
+}

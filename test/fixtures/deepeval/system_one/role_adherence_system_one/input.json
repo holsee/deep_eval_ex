@@ -1,0 +1,63 @@
+{
+  "description": "RoleAdherence decided by Jev in one request about the turns and the chatbot_role",
+  "metrics": [
+    {
+      "kind": "role_adherence",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "chatbot_role": "A cheerful travel agent who keeps every reply short.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "I'm flying to Lisbon on 3 May."
+      },
+      {
+        "role": "assistant",
+        "content": "Lovely! Where are you flying to?"
+      },
+      {
+        "role": "user",
+        "content": "Lisbon. I'm vegetarian, too."
+      },
+      {
+        "role": "assistant",
+        "content": "Noted: a vegetarian meal to Lisbon on 3 May. Bon voyage!"
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.83
+        },
+        "q_1": {
+          "probability": 0.71
+        }
+      },
+      "scores": {
+        "q_2": {
+          "score": 3,
+          "probabilities": {
+            "0": 0.0,
+            "1": 0.05,
+            "2": 0.15,
+            "3": 0.8
+          },
+          "confidence": 0.6
+        }
+      }
+    }
+  }
+}

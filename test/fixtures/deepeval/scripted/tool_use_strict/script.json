@@ -1,0 +1,62 @@
+{
+  "description": "ToolUse in strict mode: 0.5 is below the threshold of 1, so the score is the integer 0",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "tool_use",
+    "params": {
+      "available_tools": [
+        {
+          "name": "get_weather",
+          "description": "Fetch current weather for a city"
+        },
+        {
+          "name": "search_web",
+          "description": "Search the web"
+        }
+      ],
+      "strict_mode": true
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "What's the weather in Paris?"
+      },
+      {
+        "role": "assistant",
+        "content": "It is 18°C.",
+        "tools_called": [
+          {
+            "name": "get_weather",
+            "input_parameters": {
+              "city": "Paris"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "responses": {
+    "tool_use": {
+      "reason,score": [
+        {
+          "score": 0.75,
+          "reason": "A good choice."
+        },
+        {
+          "score": 0.5,
+          "reason": "The city is right, the units missing."
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0 because strict mode requires 1."
+        },
+        {
+          "reason": "The score is 0 because the units are missing."
+        }
+      ]
+    }
+  }
+}

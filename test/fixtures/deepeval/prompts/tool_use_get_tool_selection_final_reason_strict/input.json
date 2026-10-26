@@ -1,0 +1,8 @@
+{
+  "template": "ToolUseMetric.get_tool_selection_final_reason",
+  "inputs": {
+    "final_score": 0,
+    "threshold": 1,
+    "scores": []
+  }
+}

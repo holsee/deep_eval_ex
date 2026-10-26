@@ -1,0 +1,30 @@
+{
+  "method": "generate_goldens_from_scratch",
+  "synthesizer": {
+    "styling_config": {
+      "scenario": "Tourists",
+      "task": "Travel assistant",
+      "input_format": null,
+      "expected_output_format": null
+    },
+    "evolution_config": {
+      "num_evolutions": 1,
+      "evolutions": {
+        "Reasoning": 1
+      }
+    },
+    "filtration_config": {
+      "synthetic_input_quality_threshold": 0.5,
+      "max_quality_retries": 3
+    }
+  },
+  "args": {
+    "num_goldens": 1
+  },
+  "script": {},
+  "prompts": [],
+  "raised": {
+    "type": "TypeError",
+    "message": "`scenario`, `task`, and `input_format` in `styling_config` must not be None when generation goldens from scratch."
+  }
+}

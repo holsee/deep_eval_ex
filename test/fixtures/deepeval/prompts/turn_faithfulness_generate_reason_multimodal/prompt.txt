@@ -1,0 +1,36 @@
+
+Below is a list of contradictions extracted from verdicts. Write a concise justification of the score.
+
+RULES:
+- If contradictions exist, summarize them in 1-3 sentences.
+- If no contradictions exist, respond:
+{
+  "reason": "No contradictions were found."
+}
+- The summary must reference only the contradictions listed.
+- Tone must be neutral and concise.
+- No external knowledge may be used.
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+- When evaluating claims, compare them to BOTH textual and visual evidence.
+- If the claim references something not clearly visible, respond with 'borderline'.
+
+
+Output MUST be ONLY valid JSON:
+
+{
+  "reason": "<summary>"
+}
+
+FAITHFULNESS SCORE:
+1.00
+
+CONTRADICTIONS:
+[]
+
+JSON:

@@ -1,0 +1,132 @@
+[
+  {
+    "uuid": "4ba01073-2bcc-403b-a2e1-cf96e889425a",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "e8a9a7d1-f087-4415-8d24-35407eac7878",
+        "name": "agent",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T05:48:02.233Z",
+        "endTime": "2026-10-23T05:48:02.233Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "Answer to How do I reset my password?",
+        "toolsCalled": [
+          {
+            "name": "search",
+            "type": "FUNCTION",
+            "output": [
+              "result for How do I reset my password?"
+            ],
+            "inputParameters": {
+              "query": "How do I reset my password?"
+            }
+          },
+          {
+            "name": "search",
+            "type": "FUNCTION",
+            "output": [
+              "result for How do I reset my password?"
+            ],
+            "inputParameters": {
+              "query": "How do I reset my password?"
+            }
+          }
+        ],
+        "availableTools": [
+          "search"
+        ],
+        "agentHandoffs": [],
+        "metricsData": [
+          {
+            "name": "Plan Adherence",
+            "threshold": 0.5,
+            "success": false,
+            "strictMode": false,
+            "flaky": false,
+            "evaluationModel": "mock-model"
+          }
+        ]
+      }
+    ],
+    "llmSpans": [
+      {
+        "uuid": "bb0d0231-a6e4-487f-9789-515833f272b8",
+        "name": "generate",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "e8a9a7d1-f087-4415-8d24-35407eac7878",
+        "startTime": "2026-10-23T05:48:02.233Z",
+        "endTime": "2026-10-23T05:48:02.233Z",
+        "input": {
+          "query": "How do I reset my password?",
+          "documents": []
+        },
+        "output": "Answer to How do I reset my password?",
+        "model": "gpt-4o-mini",
+        "inputTokenCount": 42.0,
+        "outputTokenCount": 7.0,
+        "costPerInputToken": 1.5e-07,
+        "costPerOutputToken": 6e-07
+      },
+      {
+        "uuid": "268b049d-3e6b-4de2-8a31-c9dd38381c41",
+        "name": "plan",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "e8a9a7d1-f087-4415-8d24-35407eac7878",
+        "startTime": "2026-10-23T05:48:02.233Z",
+        "endTime": "2026-10-23T05:48:02.233Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "My plan: 1. Search the help centre for password resets. 2. Answer with the steps found.",
+        "model": "gpt-4o-mini"
+      }
+    ],
+    "retrieverSpans": [],
+    "toolSpans": [
+      {
+        "uuid": "61fdd725-baf9-40f1-a57e-c577c71aca35",
+        "name": "search",
+        "status": "SUCCESS",
+        "type": "tool",
+        "parentUuid": "e8a9a7d1-f087-4415-8d24-35407eac7878",
+        "startTime": "2026-10-23T05:48:02.233Z",
+        "endTime": "2026-10-23T05:48:02.233Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": [
+          "result for How do I reset my password?"
+        ]
+      },
+      {
+        "uuid": "20ca624b-123c-4884-9a08-02d1f7bb69be",
+        "name": "search",
+        "status": "SUCCESS",
+        "type": "tool",
+        "parentUuid": "e8a9a7d1-f087-4415-8d24-35407eac7878",
+        "startTime": "2026-10-23T05:48:02.233Z",
+        "endTime": "2026-10-23T05:48:02.233Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": [
+          "result for How do I reset my password?"
+        ]
+      }
+    ],
+    "startTime": "2026-10-23T05:48:02.233Z",
+    "endTime": "2026-10-23T05:48:02.233Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "Answer to How do I reset my password?",
+    "status": "SUCCESS"
+  }
+]

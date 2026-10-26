@@ -1,0 +1,43 @@
+{
+  "test_cases": [
+    {
+      "input": "Summarise the report.",
+      "actual_output": "Revenue grew 10%."
+    },
+    {
+      "input": "Summarise the memo.",
+      "actual_output": "Hiring is paused.",
+      "name": "memo"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    },
+    {
+      "kind": "stub",
+      "name": "Strict Judge",
+      "score": 0.5,
+      "reason": "Half of the claims are supported.",
+      "threshold": 0.9,
+      "evaluation_model": "gpt-4o",
+      "evaluation_cost": 0.0025,
+      "input_tokens": 2048,
+      "output_tokens": 128
+    }
+  ],
+  "identifier": null,
+  "hyperparameters": null,
+  "error_config": {
+    "ignore_errors": true,
+    "skip_on_missing_params": false
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "description": "StepEfficiency in hybrid mode with Jev down: the LLM scores the efficiency",
+  "metrics": [
+    {
+      "kind": "step_efficiency",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Where is my invoice?",
+    "actual_output": "Your latest invoice, INV-42, is under Billing > Invoices."
+  },
+  "trace": {
+    "name": "answer",
+    "type": "agent",
+    "input": {
+      "query": "Where is my invoice?"
+    },
+    "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+    "tools_called": [
+      {
+        "name": "lookup_invoice",
+        "type": "FUNCTION",
+        "description": "Finds the latest invoice",
+        "reasoning": null,
+        "output": "INV-42",
+        "input_parameters": {
+          "account": "acme"
+        }
+      }
+    ],
+    "available_tools": [
+      "lookup_invoice",
+      "escalate"
+    ],
+    "agent_handoffs": [],
+    "children": [
+      {
+        "name": "lookup_invoice",
+        "type": "tool",
+        "input": {
+          "account": "acme"
+        },
+        "output": "INV-42",
+        "description": "Finds the latest invoice",
+        "children": []
+      },
+      {
+        "name": "reply",
+        "type": "llm",
+        "input": {
+          "query": "Where is my invoice?",
+          "invoice": "INV-42"
+        },
+        "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+        "error": "",
+        "model": "gpt-4o-mini",
+        "input_token_count": 42.0,
+        "output_token_count": 12.0,
+        "children": []
+      }
+    ]
+  },
+  "system_one": {
+    "model": "exploding-jev",
+    "raises": {
+      "type": "ConnectionError",
+      "message": "Jev is down"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "step_efficiency": {
+      "task": [
+        {
+          "task": "Find my latest invoice."
+        }
+      ],
+      "reason,score": [
+        {
+          "score": 0.75,
+          "reason": "The lookup was needed; the reply was direct."
+        }
+      ]
+    }
+  }
+}

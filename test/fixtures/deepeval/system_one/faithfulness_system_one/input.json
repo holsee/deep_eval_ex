@@ -1,0 +1,51 @@
+{
+  "description": "Faithfulness decided by Jev in one request: two Nouls and a Score",
+  "metrics": [
+    {
+      "kind": "faithfulness",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What is the vacation policy?",
+    "actual_output": "Employees get 20 days of PTO per year and can carry over 10 days.",
+    "expected_output": "Employees get 20 days of PTO a year. Up to 5 days carry over.",
+    "retrieval_context": [
+      "Section 3.2: Full-time employees receive 20 days of paid time off per year.",
+      "Section 3.3: Up to 5 unused days can be carried over to the next year."
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "nouls": {
+        "q_0": {
+          "probability": 0.3
+        },
+        "q_1": {
+          "probability": 0.2
+        }
+      },
+      "scores": {
+        "q_2": {
+          "score": 1,
+          "probabilities": {
+            "0": 0.1,
+            "1": 0.6,
+            "2": 0.2,
+            "3": 0.1
+          },
+          "confidence": 0.4
+        }
+      }
+    }
+  }
+}

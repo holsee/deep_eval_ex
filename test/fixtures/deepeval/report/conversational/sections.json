@@ -1,0 +1,207 @@
+[
+  {
+    "panel": {
+      "border_style": "none",
+      "content": "[rgb(106,0,255) bold]🚀 DeepEval Evaluation Results[/rgb(106,0,255) bold]"
+    }
+  },
+  {
+    "panel": {
+      "border_style": "red",
+      "content": {
+        "tree": {
+          "label": "[red bold]❌ conversational_test_case_0[/red bold]",
+          "children": [
+            {
+              "tree": {
+                "label": "[bold cyan]Conversation Turns[/bold cyan]",
+                "children": [
+                  {
+                    "tree": {
+                      "label": "[bold]User:[/bold] I want to change my flight.",
+                      "children": []
+                    }
+                  },
+                  {
+                    "tree": {
+                      "label": "[bold]Assistant:[/bold] Sure, which booking?",
+                      "children": []
+                    }
+                  },
+                  {
+                    "tree": {
+                      "label": "[bold]User:[/bold] ABC123",
+                      "children": []
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Metrics",
+                    "columns": [
+                      "Status",
+                      "Metric",
+                      "Score",
+                      "Threshold",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold red]FAIL[/bold red]",
+                        "Turn Relevancy",
+                        "0.40",
+                        "0.50",
+                        "One turn is off topic."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(25,227,160)",
+      "content": {
+        "tree": {
+          "label": "[rgb(25,227,160) bold]✅ test_case_0[/rgb(25,227,160) bold]",
+          "children": [
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": null,
+                    "columns": [
+                      "Key",
+                      "Value"
+                    ],
+                    "rows": [
+                      [
+                        "Input:",
+                        "Question 0?"
+                      ],
+                      [
+                        "Actual Output:",
+                        "Answer 0."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Metrics",
+                    "columns": [
+                      "Status",
+                      "Metric",
+                      "Score",
+                      "Threshold",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold green]PASS[/bold green]",
+                        "Faithfulness",
+                        "1.00",
+                        "0.50",
+                        "No contradictions."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(25,227,160)",
+      "content": {
+        "tree": {
+          "label": "[rgb(25,227,160) bold]✅ empty conversation[/rgb(25,227,160) bold]",
+          "children": [
+            {
+              "tree": {
+                "label": "[bold cyan]Conversation Turns[/bold cyan]",
+                "children": []
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Metrics",
+                    "columns": [
+                      "Status",
+                      "Metric",
+                      "Score",
+                      "Threshold",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold green]PASS[/bold green]",
+                        "Turn Relevancy",
+                        "1.00",
+                        "0.50",
+                        "All relevant."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(106,0,255)",
+      "content": {
+        "table": {
+          "title": "[bold]Aggregate Metrics[/bold]\n",
+          "columns": [
+            "Metric",
+            "Average Score",
+            "Pass Rate",
+            "Total"
+          ],
+          "rows": [
+            [
+              "Turn Relevancy",
+              "0.70",
+              "50.00% | passed=1 | failed=1",
+              "2"
+            ],
+            [
+              "Faithfulness",
+              "1.00",
+              "100.00% | passed=1 | failed=0",
+              "1"
+            ]
+          ]
+        }
+      }
+    }
+  }
+]

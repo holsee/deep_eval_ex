@@ -1,0 +1,7 @@
+{
+  "template": "FaithfulnessMetric.generate_reason",
+  "inputs": {
+    "score": 1.0,
+    "contradictions": []
+  }
+}

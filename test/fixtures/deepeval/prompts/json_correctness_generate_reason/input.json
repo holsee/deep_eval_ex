@@ -1,0 +1,70 @@
+{
+  "template": "JsonCorrectnessMetric.generate_reason",
+  "inputs": {
+    "actual_output": "{\"name\": \"José\", \"age\": \"forty-one\", \"tags\": [\"a\", 2]}",
+    "expected_schema": {
+      "$defs": {
+        "Address": {
+          "properties": {
+            "city": {
+              "title": "City",
+              "type": "string"
+            },
+            "postcode": {
+              "title": "Postcode",
+              "type": "string"
+            }
+          },
+          "required": [
+            "city",
+            "postcode"
+          ],
+          "title": "Address",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "name": {
+          "description": "Full name, e.g. José Saramago",
+          "title": "Name",
+          "type": "string"
+        },
+        "age": {
+          "title": "Age",
+          "type": "integer"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "address": {
+          "$ref": "#/$defs/Address"
+        },
+        "nickname": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nickname"
+        }
+      },
+      "required": [
+        "name",
+        "age",
+        "tags",
+        "address"
+      ],
+      "title": "Person",
+      "type": "object"
+    },
+    "is_valid_json": false
+  }
+}

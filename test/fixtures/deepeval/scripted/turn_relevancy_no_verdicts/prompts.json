@@ -1,0 +1,6 @@
+[
+  {
+    "step": "reason",
+    "prompt": "Below is a list of irrelevancies drawn from some messages in a conversation, which you have minimal knowledge of. It is a list of strings explaining why the 'assistant' messages are irrelevant to the 'user' messages.\n\n\n--- MULTIMODAL INPUT RULES ---\n- Treat image content as factual evidence.\n- Only reference visual details that are explicitly and clearly visible.\n- Do not infer or guess objects, text, or details not visibly present.\n- If an image is unclear or ambiguous, mark uncertainty explicitly.\n\n\nGiven the relevancy score, which is a 0-1 score indicating how irrelevant the OVERALL AI messages are in a conversation (higher the better), CONCISELY summarize the irrelevancies to justify the score. \n\n** \nIMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason.\nExample JSON:\n{\n  \"reason\": \"The score is <relevancy_score> because <your_reason>.\"\n}\n\nAlways quote WHICH MESSAGE and the INFORMATION in the reason in your final reason.\nBe sure in your reason, as if you know what the `assistant` messages from messages in a conversation is from the irrelevancies.\n**\n\nRelevancy Score:\n1\n\nIrrelevancies:\n[]\n\nJSON:"
+  }
+]

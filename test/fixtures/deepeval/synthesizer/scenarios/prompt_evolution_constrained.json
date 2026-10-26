@@ -1,0 +1,69 @@
+{
+  "method": "generate_goldens_from_scratch",
+  "synthesizer": {
+    "styling_config": {
+      "scenario": "Tourists planning a trip to Paris",
+      "task": "Travel assistant answering landmark questions",
+      "input_format": "A short question in English",
+      "expected_output_format": null
+    },
+    "evolution_config": {
+      "num_evolutions": 1,
+      "evolutions": {
+        "Constrained": 1
+      }
+    },
+    "filtration_config": {
+      "synthetic_input_quality_threshold": 0.5,
+      "max_quality_retries": 3
+    }
+  },
+  "args": {
+    "num_goldens": 1
+  },
+  "script": {
+    "data": [
+      {
+        "data": [
+          {
+            "input": "Is the Louvre open on Mondays?"
+          }
+        ]
+      }
+    ],
+    "response": [
+      {
+        "response": "Constrained evolved prompt?"
+      }
+    ]
+  },
+  "prompts": [
+    {
+      "step": "data",
+      "prompt": "Generate a series of input prompts from scratch based on the provided scenario, task, and output format.\n        The inputs must align with the given scenario and task description, and conform to specified output format.\n\n        **\n        IMPORTANT: Please make sure to only return in JSON format, with the 'data' key as a list of JSON objects.\n        You MUST TRY to generate 1 data points.\n\n        Example scenario: technical SWE typing SQL queries to query from a database called FAST_FOOD_RESTAURANTS\n        Example task: Text2SQL LLM Assistant\n        Example input format: SQL String\n        Example num prompts: 2\n        Example JSON:\n        {\n            \"data\": [\n                {\n                    \"input\": \"SELECT * FROM menu\"\n                },\n                {\n                    \"input\": \"SELECT AVG(price) FROM menu;\"\n                }\n            ]  \n        }\n\n        You MUST include at least one statement as the input. `input` MUST be of `A short question in English` format.\n        You MUST TRY to generate 1 data points, unless the generated `input` is getting repetitive.\n        **\n\n        scenario: Tourists planning a trip to Paris\n        task: Travel assistant answering landmark questions\n        input format: A short question in English\n        num prompts: 1\n        JSON:\n        "
+    },
+    {
+      "step": "response",
+      "prompt": "I want you to act as an input rewriter.\n    Your object is the rewrite a given `input`. You MUST complicate the given `Input` using the following method:\n            1. Rewrite `Input` by adding at least one more constraints/requirements.\n            2. `Rewritten Input` should not contain more than 15 words. Use abbreviation wherever possible.\n\n            **\n            EXAMPLES\n\n            Example input: \n            Why is the biodiversity of rainforests important?\n            Example rewritten input:\n            How does the biodiversity of rainforests contribute to ecosystem resilience and recovery from disturbances, and in what ways does it impact human well-being through services such as air and water purification, disease control, and crop pollination?\n\n            --------------------------\n\n            Example input: \n            What is the role of bees in ecosystems?\n            Example rewritten input:\n            Considering the pivotal role bees play in pollinating both agricultural crops and wild plants, thereby contributing to the diversity of plant life and supporting the foundation of food chains, analyze how bees influence the growth and sustainability of various ecosystems.\n\n            --------------------------\n\n            Example input: \n            What are the principles behind solar power generation?\n            Example rewritten input:\n            Examine the significance of rainforest biodiversity in sustaining ecosystem resilience and providing essential services such as disease control and crop pollination, alongside its critical role in medical research and the development of new medicines. Consider the broader implications of biodiversity loss on global ecological balance and human health.\n            **\n\n            Input:\n            Is the Louvre open on Mondays?\n            Rewritten Input:\n            "
+    }
+  ],
+  "goldens": [
+    {
+      "input": "Constrained evolved prompt?",
+      "expected_output": null,
+      "context": null,
+      "source_file": null,
+      "additional_metadata": {
+        "evolutions": [
+          "Constrained"
+        ]
+      }
+    }
+  ],
+  "styling_config": {
+    "scenario": "Tourists planning a trip to Paris",
+    "task": "Travel assistant answering landmark questions",
+    "input_format": "A short question in English",
+    "expected_output_format": null
+  }
+}

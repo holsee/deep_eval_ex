@@ -1,0 +1,39 @@
+{
+  "description": "GoalAccuracy in strict mode: 0.625 is below the threshold of 1, so the score is the integer 0",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "goal_accuracy",
+    "params": {
+      "strict_mode": true
+    }
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "Translate 'good night' into French."
+      },
+      {
+        "role": "assistant",
+        "content": "Bonne nuit."
+      }
+    ]
+  },
+  "responses": {
+    "goal_accuracy": {
+      "reason,score": [
+        {
+          "score": 0.75,
+          "reason": "Correct, but terse."
+        },
+        {
+          "score": 0.5,
+          "reason": "No visible plan."
+        }
+      ],
+      "text": [
+        "The agent failed: 0 is below the threshold of 1."
+      ]
+    }
+  }
+}

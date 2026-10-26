@@ -36,8 +36,8 @@ metrics = [
 
 results = Evaluator.evaluate(test_cases, metrics)
 # => [
-#   [%Result{metric: "ExactMatch"}, %Result{metric: "Faithfulness"}, %Result{metric: "AnswerRelevancy"}],
-#   [%Result{metric: "ExactMatch"}, %Result{metric: "Faithfulness"}, %Result{metric: "AnswerRelevancy"}],
+#   [%Result{metric: "Exact Match"}, %Result{metric: "Faithfulness"}, %Result{metric: "Answer Relevancy"}],
+#   [%Result{metric: "Exact Match"}, %Result{metric: "Faithfulness"}, %Result{metric: "Answer Relevancy"}],
 #   ...
 # ]
 ```
@@ -47,8 +47,10 @@ results = Evaluator.evaluate(test_cases, metrics)
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `:concurrency` | integer | schedulers * 2 | Maximum concurrent evaluations |
-| `:timeout` | integer | 60_000 | Timeout per test case (ms) |
-| `:threshold` | float | 0.5 | Default threshold for all metrics |
+| `:timeout` | integer | `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE`, else 180_000 | Timeout per test case (ms), deepeval's per-task timeout |
+| `:threshold` | float | 0.5 | Default threshold for all metrics; `nil` makes them score-only |
+| `:strict_mode` | boolean | false | Default strict mode: threshold forced to `1`, lower scores clamped to `0` |
+| `:flaky` | boolean | false | Default flakiness: results never decide a test case's success |
 | `:model` | string | configured | LLM model for LLM-based metrics |
 | `:adapter` | atom | configured | LLM adapter to use |
 
@@ -125,16 +127,19 @@ end)
 
 ## Error Handling
 
-Errors are captured in the result rather than raising:
+Errors are captured in the result rather than raising. A metric that returns
+`{:error, reason}`, or a test case that times out, yields an *errored* result
+(see [Result](Result.md#errored-vs-failed-results)) that is distinct from a
+failed one:
 
 ```elixir
 results = Evaluator.evaluate(test_cases, metrics)
 
 Enum.each(List.flatten(results), fn result ->
-  if result.success do
-    IO.puts("#{result.metric}: PASS")
-  else
-    IO.puts("#{result.metric}: FAIL - #{result.reason}")
+  cond do
+    Result.errored?(result) -> IO.puts("#{result.metric}: ERROR - #{result.error}")
+    result.success -> IO.puts("#{result.metric}: PASS")
+    true -> IO.puts("#{result.metric}: FAIL - #{result.reason}")
   end
 end)
 ```
@@ -142,10 +147,12 @@ end)
 ### Timeout Handling
 
 ```elixir
-# If evaluation times out:
-result.reason  # => "Evaluation timed out"
-result.score   # => 0.0
-result.success # => false
+# A metric still running when its test case times out is errored with
+# deepeval's message (finished metrics keep their results):
+result.error     # => "Timed out/cancelled while evaluating metric. Increase DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE or set DEEPEVAL_LOG_STACK_TRACES=1 for full traceback."
+result.score     # => nil
+result.success   # => false
+result.threshold # => the metric's threshold (e.g. 0.5)
 ```
 
 ## Telemetry Events

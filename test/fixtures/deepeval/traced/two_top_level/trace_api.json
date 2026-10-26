@@ -1,0 +1,82 @@
+[
+  {
+    "uuid": "36e28675-5d65-432c-adec-37fd459b44bb",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "327b2ead-8f6d-4d23-ace3-28479a99927f",
+        "name": "first",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.927Z",
+        "endTime": "2026-10-23T03:23:29.927Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "first answer to How do I reset my password?",
+        "availableTools": [],
+        "agentHandoffs": [],
+        "metricsData": [
+          {
+            "name": "Span Judge",
+            "threshold": 0.7,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "llmSpans": [],
+    "retrieverSpans": [],
+    "toolSpans": [],
+    "startTime": "2026-10-23T03:23:29.927Z",
+    "endTime": "2026-10-23T03:23:29.927Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "first answer to How do I reset my password?",
+    "status": "SUCCESS"
+  },
+  {
+    "uuid": "72a9851b-5e00-4e50-af3b-225dd7228dea",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "0daa5f0e-20fa-4440-9744-7e17dc1278b2",
+        "name": "second",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.928Z",
+        "endTime": "2026-10-23T03:23:29.928Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "second answer to How do I reset my password?",
+        "availableTools": [],
+        "agentHandoffs": [],
+        "metricsData": [
+          {
+            "name": "Strict Judge",
+            "threshold": 0.9,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "llmSpans": [],
+    "retrieverSpans": [],
+    "toolSpans": [],
+    "startTime": "2026-10-23T03:23:29.928Z",
+    "endTime": "2026-10-23T03:23:29.928Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "second answer to How do I reset my password?",
+    "status": "SUCCESS"
+  }
+]

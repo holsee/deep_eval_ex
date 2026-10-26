@@ -14,12 +14,20 @@ defmodule DeepEvalEx.Telemetry do
     - Metadata: `%{metric: String.t(), test_case_id: String.t() | nil}`
 
   - `[:deep_eval_ex, :metric, :stop]` - Metric evaluation completed
-    - Measurements: `%{duration: integer(), score: float()}`
+    - Measurements: `%{duration: integer(), score: float() | nil}` (`nil` for an errored result),
+      plus `input_tokens: integer()`, `output_tokens: integer()` and `cost: float()`
+      (USD) when the metric's LLM calls reported them (see `DeepEvalEx.LLM.Usage`)
     - Metadata: `%{metric: String.t(), test_case_id: String.t() | nil}`
 
   - `[:deep_eval_ex, :metric, :exception]` - Metric evaluation failed
-    - Measurements: `%{duration: integer()}`
+    - Measurements: `%{duration: integer()}`, plus `input_tokens`,
+      `output_tokens` and `cost` when LLM calls made before the error reported them
     - Metadata: `%{metric: String.t(), error: term()}`
+
+  - `[:deep_eval_ex, :metric, :cache_hit]` - A metric reused its cached
+    result instead of measuring (see "Cache" in `DeepEvalEx.Evaluator`)
+    - Measurements: `%{system_time: integer()}`
+    - Metadata: `%{metric: String.t(), test_case: String.t() | nil}`
 
   ### Evaluation Events
 
@@ -31,11 +39,99 @@ defmodule DeepEvalEx.Telemetry do
     - Measurements: `%{duration: integer(), test_case_count: integer()}`
     - Metadata: `%{}`
 
+  ### Test Run Events
+
+  - `[:deep_eval_ex, :test_run, :stop]` - `DeepEvalEx.evaluate_run/3` or
+    `mix deep_eval.test` wrapped up a test run (see
+    `DeepEvalEx.TestRun.Manager.wrap_up/2`); deepeval's `on_test_run_end`
+    hook. Not emitted for a classifier-only run, which has no test run, nor
+    by an `evaluate_run/3` inside a `mix deep_eval.test` run, which the task
+    wraps up once
+    - Measurements: `%{duration: integer(), test_passed: integer(),
+      test_failed: integer()}`, `duration` in native time units (the whole
+      `mix test` under the task)
+    - Metadata: `%{test_run: DeepEvalEx.TestRun.t(), path: Path.t() | nil,
+      identifier: String.t() | nil, source: :evaluate_run | :cli}`, where
+      `path` is the `test_run_<timestamp>.json` written to the results folder
+
   ### LLM Events
 
   - `[:deep_eval_ex, :llm, :request]` - LLM API request made
     - Measurements: `%{duration: integer()}`
     - Metadata: `%{adapter: atom(), model: String.t()}`
+
+  ### System One Events
+
+  `DeepEvalEx.SystemOne.decide/3` wraps every System One request in a
+  `:telemetry.span/3`:
+
+  - `[:deep_eval_ex, :system_one, :request, :start]` - Request sent
+    - Measurements: `%{system_time: integer(), monotonic_time: integer()}`
+    - Metadata: `%{model: String.t(), mode: atom() | nil, metrics: [String.t()],
+      question_count: integer(), batched?: boolean()}`
+
+  - `[:deep_eval_ex, :system_one, :request, :stop]` - Request answered, or
+    failed with a System One error
+    - Measurements: `%{duration: integer(), monotonic_time: integer()}`, plus
+      `input_tokens`, `output_tokens` and `cost` when the request reported them
+    - Metadata: the start metadata, plus `error: Exception.t()` for a
+      System One error
+
+  - `[:deep_eval_ex, :system_one, :request, :exception]` - The request raised
+    an error that is not a System One error
+    - Measurements: `%{duration: integer(), monotonic_time: integer()}`
+    - Metadata: the start metadata, plus `kind`, `reason` and `stacktrace`
+
+  `metrics` names every metric the request decides for: one for an
+  unbatched request, each metric of a packed request (`batched?: true`)
+  from `DeepEvalEx.Evaluator`'s batching. Every request is spanned, whether
+  it comes from a `:hybrid` decision, a whole-chain measure, `JevEval` or a
+  batch.
+
+  - `[:deep_eval_ex, :system_one, :fallback]` - A `:hybrid` decision fell
+    back to the LLM after a System One error
+    (`DeepEvalEx.SystemOne.Decision.handle_failure/2`)
+    - Measurements: `%{system_time: integer()}`
+    - Metadata: `%{metric: String.t() | nil, reason: String.t()}`, where
+      `reason` is the text added to the result's `:system_one_fallback_reason`
+
+  Together these replace deepeval's Jev progress indicator; the default
+  logger logs each request and fallback.
+
+  ### Tracing Events
+
+  `DeepEvalEx.Tracing` notifies these events; spans are recorded in its
+  store whether or not anyone listens. The span events are shaped like
+  `:telemetry.span/3`'s:
+
+  - `[:deep_eval_ex, :span, :start]` - A span opened
+    - Measurements: `%{system_time: integer(), monotonic_time: integer()}`
+    - Metadata: `%{span: DeepEvalEx.Tracing.Span.t(), trace_uuid: String.t(),
+      parent_uuid: String.t() | nil, type: atom(), telemetry_span_context:
+      reference()}`
+
+  - `[:deep_eval_ex, :span, :stop]` - A span closed, successful or with an
+    error set by hand
+    - Measurements: `%{duration: integer(), monotonic_time: integer()}`
+    - Metadata: the start metadata, with the closed span
+
+  - `[:deep_eval_ex, :span, :exception]` - A span's code raised, threw or
+    exited; the span is `:errored`
+    - Measurements: `%{duration: integer(), monotonic_time: integer()}`
+    - Metadata: the stop metadata, plus `kind`, `reason` and `stacktrace`
+
+  - `[:deep_eval_ex, :trace, :stop]` - A trace closed
+    - Measurements: `%{duration: integer()}`, in native time units
+    - Metadata: `%{trace: DeepEvalEx.Tracing.Trace.t(), route: :capture |
+      :off}`, `:capture` when a `DeepEvalEx.Tracing.capture/2` collects it;
+      an `:off` trace has been handed to the `DeepEvalEx.Tracing.Sink`
+      first
+
+  - `[:deep_eval_ex, :trace, :timeout]` - `DeepEvalEx.Tracing.capture/2`
+    stopped waiting for a trace still open after its `:await_open`, and
+    returned it `:in_progress`
+    - Measurements: `%{system_time: integer()}`
+    - Metadata: `%{trace: DeepEvalEx.Tracing.Trace.t()}`
 
   ## Example: Logging Handler
 
@@ -71,6 +167,8 @@ defmodule DeepEvalEx.Telemetry do
       )
   """
 
+  alias DeepEvalEx.SystemOne.Error
+
   require Logger
 
   @doc """
@@ -86,7 +184,7 @@ defmodule DeepEvalEx.Telemetry do
 
   def handle_event([:deep_eval_ex, :metric, :stop], measurements, metadata, _config) do
     Logger.debug(
-      "Completed metric: #{metadata.metric}, score: #{Float.round(measurements.score, 3)}, duration: #{measurements.duration}ms"
+      "Completed metric: #{metadata.metric}, score: #{format_score(measurements.score)}, duration: #{measurements.duration}ms"
     )
   end
 
@@ -108,6 +206,41 @@ defmodule DeepEvalEx.Telemetry do
     )
   end
 
+  def handle_event(
+        [:deep_eval_ex, :system_one, :request, :stop],
+        measurements,
+        %{error: error} = metadata,
+        _config
+      ) do
+    Logger.warning(
+      "System One request failed: #{metadata.model}, #{Enum.join(metadata.metrics, ", ")}, " <>
+        "#{Error.format(error)}, duration: #{milliseconds(measurements.duration)}ms"
+    )
+  end
+
+  def handle_event([:deep_eval_ex, :system_one, :request, :stop], measurements, metadata, _config) do
+    Logger.debug(
+      "System One request: #{metadata.model}, #{metadata.question_count} questions for " <>
+        "#{Enum.join(metadata.metrics, ", ")}, duration: #{milliseconds(measurements.duration)}ms"
+    )
+  end
+
+  def handle_event(
+        [:deep_eval_ex, :system_one, :request, :exception],
+        measurements,
+        metadata,
+        _config
+      ) do
+    Logger.warning(
+      "System One request raised: #{metadata.model}, #{Enum.join(metadata.metrics, ", ")}, " <>
+        "#{inspect(metadata.reason)}, duration: #{milliseconds(measurements.duration)}ms"
+    )
+  end
+
+  def handle_event([:deep_eval_ex, :system_one, :fallback], _measurements, metadata, _config) do
+    Logger.info("#{metadata.metric || "A metric"} fell back to the LLM: #{metadata.reason}")
+  end
+
   def handle_event(_event, _measurements, _metadata, _config), do: :ok
 
   @doc """
@@ -120,7 +253,10 @@ defmodule DeepEvalEx.Telemetry do
       [:deep_eval_ex, :metric, :stop],
       [:deep_eval_ex, :metric, :exception],
       [:deep_eval_ex, :evaluation, :start],
-      [:deep_eval_ex, :evaluation, :stop]
+      [:deep_eval_ex, :evaluation, :stop],
+      [:deep_eval_ex, :system_one, :request, :stop],
+      [:deep_eval_ex, :system_one, :request, :exception],
+      [:deep_eval_ex, :system_one, :fallback]
     ]
 
     :telemetry.attach_many(
@@ -140,4 +276,9 @@ defmodule DeepEvalEx.Telemetry do
   def detach_default_logger do
     :telemetry.detach("deep-eval-ex-default-logger")
   end
+
+  defp milliseconds(duration), do: System.convert_time_unit(duration, :native, :millisecond)
+
+  defp format_score(score) when is_number(score), do: Float.round(score / 1, 3)
+  defp format_score(nil), do: "none (errored)"
 end

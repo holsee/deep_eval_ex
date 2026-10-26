@@ -1,0 +1,15 @@
+                                            Test Results                                            
+┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Test case   ┃ Metric           ┃ Score                      ┃ Status ┃ Overall Success Rate      ┃
+┡━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ test_case_0 │                  │                            │        │ 100.0% | passed=1 |       │
+│             │                  │                            │        │ failed=0                  │
+│             │ Answer Relevancy │ 0.91 (threshold=0.7,       │ PASSED │                           │
+│             │                  │ evaluation                 │        │                           │
+│             │                  │ model=gpt-4o-mini,         │        │                           │
+│             │                  │ reason=The answer states   │        │                           │
+│             │                  │ the policy accurately and  │        │                           │
+│             │                  │ names every condition the  │        │                           │
+│             │                  │ context lists, so it is    │        │                           │
+│             │                  │ relevant., error=None)     │        │                           │
+└─────────────┴──────────────────┴────────────────────────────┴────────┴───────────────────────────┘

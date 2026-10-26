@@ -1,0 +1,12 @@
+{
+  "score": 0.9166666666666666,
+  "success": true,
+  "reason": "The score is 0.9166666666666666 because the relevant nodes are mostly ranked first.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Window 1 \n \n \nVerdicts: [\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"It gives the shipping date.\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"Rome is irrelevant.\"\n    }\n] \n \n \nScore: 1.0 \n \n \nReason: The score is 1.00 because the relevant node is ranked first. \n \n \nWindow 2 \n \n \nVerdicts: [\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"It gives the shipping date.\"\n    },\n    {\n        \"verdict\": \"no\",\n        \"reason\": \"Rome is irrelevant.\"\n    },\n    {\n        \"verdict\": \"yes\",\n        \"reason\": \"It gives the refund time.\"\n    }\n] \n \n \nScore: 0.8333333333333333 \n \n \nReason: The score is 0.83 because Rome is ranked above the refund node. \n \n \nFinal Score: 0.9166666666666666\n"
+}

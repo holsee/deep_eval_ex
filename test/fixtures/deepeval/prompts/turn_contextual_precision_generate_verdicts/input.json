@@ -1,0 +1,11 @@
+{
+  "template": "TurnContextualPrecisionMetric.generate_verdicts",
+  "inputs": {
+    "input": "\nWhere's my café au lait set? ",
+    "expected_outcome": "The assistant says order 42 ships today.",
+    "retrieval_context": [
+      "Rome is the capital of Italy.",
+      "Order 42 ships today from Zürich."
+    ]
+  }
+}

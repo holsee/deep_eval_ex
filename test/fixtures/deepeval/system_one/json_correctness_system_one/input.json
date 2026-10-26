@@ -1,0 +1,88 @@
+{
+  "description": "JsonCorrectness under system_one: decided in code, with neither Jev nor an LLM",
+  "metrics": [
+    {
+      "kind": "json_correctness",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5,
+        "expected_schema": {
+          "$defs": {
+            "Address": {
+              "properties": {
+                "city": {
+                  "title": "City",
+                  "type": "string"
+                },
+                "postcode": {
+                  "title": "Postcode",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city",
+                "postcode"
+              ],
+              "title": "Address",
+              "type": "object"
+            }
+          },
+          "properties": {
+            "name": {
+              "description": "Full name, e.g. José Saramago",
+              "title": "Name",
+              "type": "string"
+            },
+            "age": {
+              "title": "Age",
+              "type": "integer"
+            },
+            "tags": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Tags",
+              "type": "array"
+            },
+            "address": {
+              "$ref": "#/$defs/Address"
+            },
+            "nickname": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Nickname"
+            }
+          },
+          "required": [
+            "name",
+            "age",
+            "tags",
+            "address"
+          ],
+          "title": "Person",
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "test_case": {
+    "input": "Return the customer's profile as JSON.",
+    "actual_output": "{\"name\": \"José Saramago\", \"age\": 87, \"tags\": [\"writer\"], \"address\": {\"city\": \"Lisbon\", \"postcode\": \"1100-148\"}}"
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {}
+  }
+}

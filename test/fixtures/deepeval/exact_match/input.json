@@ -1,0 +1,46 @@
+{
+  "test_cases": [
+    {
+      "input": "What is 2 + 2?",
+      "actual_output": "4",
+      "expected_output": "4"
+    },
+    {
+      "input": "Capital of France?",
+      "actual_output": "  Paris  ",
+      "expected_output": "Paris",
+      "name": "capital-france",
+      "tags": [
+        "geography",
+        "smoke"
+      ],
+      "metadata": {
+        "source": "atlas",
+        "difficulty": 2,
+        "weights": [
+          0.5,
+          1.0
+        ],
+        "reviewed": true,
+        "notes": null
+      },
+      "comments": "Whitespace is trimmed before comparing."
+    },
+    {
+      "input": "Largest planet?",
+      "actual_output": "Saturn",
+      "expected_output": "Jupiter"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "exact_match"
+    }
+  ],
+  "identifier": null,
+  "hyperparameters": null,
+  "error_config": {
+    "ignore_errors": true,
+    "skip_on_missing_params": false
+  }
+}

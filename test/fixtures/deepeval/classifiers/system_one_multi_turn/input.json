@@ -1,0 +1,64 @@
+{
+  "description": "Jev on a conversation: turns and the conversation's fields as state",
+  "classifier": {
+    "kind": "resolution",
+    "eval_mode": "system_one",
+    "params": {}
+  },
+  "test_case": {
+    "scenario": "A customer cannot log in after a password reset.",
+    "expected_outcome": "The assistant walks the customer through recovery.",
+    "context": [
+      "Accounts lock after 5 failed attempts."
+    ],
+    "turns": [
+      {
+        "role": "user",
+        "content": "I reset my password but still can't log in."
+      },
+      {
+        "role": "assistant",
+        "content": "Your account is locked; I've sent an unlock link to your email.",
+        "retrieval_context": [
+          "Unlock links expire after 1 hour."
+        ],
+        "tools_called": [
+          {
+            "name": "unlock_account",
+            "input_parameters": {
+              "user": "c-42"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Got it, I'm in. Thanks!"
+      }
+    ],
+    "expected_labels": {
+      "resolution": "resolved"
+    }
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "choices": {
+        "label": {
+          "choice": "resolved",
+          "probabilities": {
+            "resolved": 0.9,
+            "unresolved": 0.04,
+            "handed_over": 0.06
+          },
+          "confidence": 0.85
+        }
+      }
+    }
+  }
+}

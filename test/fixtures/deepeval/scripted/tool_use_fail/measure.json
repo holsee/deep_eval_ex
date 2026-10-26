@@ -1,0 +1,12 @@
+{
+  "score": 0.25,
+  "success": null,
+  "reason": "The score is 0.25 because search_web was a poor choice.\nThe score is 0.25 because a call has no arguments.",
+  "threshold": 0.6,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Tool Selection Scores: [\n    {\n        \"score\": 0.5,\n        \"reason\": \"search_web was used where get_weather fits.\"\n    }\n] \n \n \nArgument Correctness Scores: [\n    {\n        \"score\": 0.25,\n        \"reason\": \"The Paris call has no city.\"\n    }\n] \n \n \nFinal Score: 0.25"
+}

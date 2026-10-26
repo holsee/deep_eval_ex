@@ -1,0 +1,58 @@
+[
+  {
+    "table": {
+      "title": "Test Results",
+      "columns": [
+        "Test case",
+        "Metric",
+        "Score",
+        "Status",
+        "Overall Success Rate"
+      ],
+      "rows": [
+        [
+          "test exact match passes",
+          "",
+          "",
+          "",
+          "100.0% | passed=1 | failed=0"
+        ],
+        [
+          "",
+          "Exact Match",
+          "1.0 (threshold=1.0, evaluation model=n/a, reason=The actual and expected outputs are exact matches., error=None)",
+          "[green]PASSED[/green]",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "test exact match fails",
+          "",
+          "",
+          "",
+          "0.0% | passed=0 | failed=1"
+        ],
+        [
+          "",
+          "Exact Match",
+          "0.0 (threshold=1.0, evaluation model=n/a, reason=The actual and expected outputs are different., error=None)",
+          "[red]FAILED[/red]",
+          ""
+        ],
+        [
+          "[bold red]Note: Use Confident AI with DeepEval to analyze failed test cases for more details[/bold red]",
+          "",
+          "",
+          "",
+          ""
+        ]
+      ]
+    }
+  }
+]

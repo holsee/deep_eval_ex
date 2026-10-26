@@ -1,0 +1,12 @@
+{
+  "template": "HallucinationMetric.generate_reason",
+  "inputs": {
+    "score": 0.5,
+    "factual_alignments": [
+      "The actual output agrees that Paris is France's capital."
+    ],
+    "contradictions": [
+      "The actual output says 1893; the context says 1793."
+    ]
+  }
+}

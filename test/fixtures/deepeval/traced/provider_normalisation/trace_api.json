@@ -1,0 +1,99 @@
+[
+  {
+    "uuid": "9cd10fdc-2472-46bf-bff2-afff74fab9b3",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "3f767a93-e249-47e1-b9ff-0efb9514b43c",
+        "name": "agent",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.935Z",
+        "endTime": "2026-10-23T03:23:29.935Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "called",
+        "availableTools": [],
+        "agentHandoffs": []
+      }
+    ],
+    "llmSpans": [
+      {
+        "uuid": "86ba0967-d65b-465d-8f78-3d9166350dab",
+        "name": "call_updated",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "3f767a93-e249-47e1-b9ff-0efb9514b43c",
+        "startTime": "2026-10-23T03:23:29.935Z",
+        "endTime": "2026-10-23T03:23:29.935Z",
+        "input": {},
+        "output": "e",
+        "model": "grok-2",
+        "provider": "XAI"
+      },
+      {
+        "uuid": "18f9ed11-204f-4d4f-9129-a0ea2f3ed847",
+        "name": "call_custom",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "3f767a93-e249-47e1-b9ff-0efb9514b43c",
+        "startTime": "2026-10-23T03:23:29.935Z",
+        "endTime": "2026-10-23T03:23:29.935Z",
+        "input": {},
+        "output": "d",
+        "model": "local",
+        "provider": "My Lab"
+      },
+      {
+        "uuid": "a4830a00-92d7-4c55-b585-e831dd0da813",
+        "name": "call_vertex",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "3f767a93-e249-47e1-b9ff-0efb9514b43c",
+        "startTime": "2026-10-23T03:23:29.935Z",
+        "endTime": "2026-10-23T03:23:29.935Z",
+        "input": {},
+        "output": "c",
+        "model": "gemini-1.5",
+        "provider": "VertexAI"
+      },
+      {
+        "uuid": "fb2f3609-bace-4c53-bb11-df0092b0be0a",
+        "name": "call_anthropic",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "3f767a93-e249-47e1-b9ff-0efb9514b43c",
+        "startTime": "2026-10-23T03:23:29.935Z",
+        "endTime": "2026-10-23T03:23:29.935Z",
+        "input": {},
+        "output": "b",
+        "model": "claude-3-haiku",
+        "provider": "Anthropic"
+      },
+      {
+        "uuid": "c8125716-8daa-4ad8-8717-062c7d17ef1b",
+        "name": "call_openai",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "3f767a93-e249-47e1-b9ff-0efb9514b43c",
+        "startTime": "2026-10-23T03:23:29.935Z",
+        "endTime": "2026-10-23T03:23:29.935Z",
+        "input": {},
+        "output": "a",
+        "model": "gpt-4o",
+        "provider": "OpenAI"
+      }
+    ],
+    "retrieverSpans": [],
+    "toolSpans": [],
+    "startTime": "2026-10-23T03:23:29.935Z",
+    "endTime": "2026-10-23T03:23:29.935Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "called",
+    "status": "SUCCESS"
+  }
+]

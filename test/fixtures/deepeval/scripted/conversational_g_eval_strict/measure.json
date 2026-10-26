@@ -1,0 +1,12 @@
+{
+  "score": 0,
+  "success": false,
+  "reason": "The request is resolved but the refund delay is not explained.",
+  "threshold": 1,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Criteria:\nDetermine whether the assistant resolves the user's request politely. \n \nEvaluation Steps:\n[\n    \"Check that the assistant resolves the request.\"\n] \n \nRubric:\nNone"
+}

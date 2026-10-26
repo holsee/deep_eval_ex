@@ -1,0 +1,64 @@
+{
+  "description": "An errored metric is never cached: the warm run measures it again",
+  "runs": [
+    {
+      "test_cases": [
+        {
+          "input": "What is the capital of France?",
+          "actual_output": "Paris.",
+          "expected_output": "Paris."
+        }
+      ],
+      "metrics": [
+        {
+          "kind": "cache_stub",
+          "name": "Relevance",
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "threshold": 0.5,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        },
+        {
+          "kind": "error",
+          "name": "Failing",
+          "threshold": 0.5,
+          "exception": "ValueError",
+          "message": "The judge is down."
+        }
+      ]
+    },
+    {
+      "test_cases": [
+        {
+          "input": "What is the capital of France?",
+          "actual_output": "Paris.",
+          "expected_output": "Paris."
+        }
+      ],
+      "metrics": [
+        {
+          "kind": "cache_stub",
+          "name": "Relevance",
+          "score": 0.8,
+          "reason": "Relevance reason.",
+          "threshold": 0.5,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 120,
+          "output_tokens": 12
+        },
+        {
+          "kind": "error",
+          "name": "Failing",
+          "threshold": 0.5,
+          "exception": "ValueError",
+          "message": "The judge is down."
+        }
+      ],
+      "use_cache": true
+    }
+  ]
+}

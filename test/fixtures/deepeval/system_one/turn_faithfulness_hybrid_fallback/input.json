@@ -1,0 +1,123 @@
+{
+  "description": "TurnFaithfulness in hybrid mode with Jev down: the LLM judges every window's claims",
+  "metrics": [
+    {
+      "kind": "turn_faithfulness",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "expected_outcome": "Order 42 shipped on 1 October. Refunds take 5 business days.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Where is order 42?"
+      },
+      {
+        "role": "assistant",
+        "content": "It shipped on 1 October from Zürich.",
+        "retrieval_context": [
+          "Order 42 shipped on 1 October. Rome is the capital of Italy.",
+          "Our café is open late."
+        ]
+      },
+      {
+        "role": "user",
+        "content": "How long does a refund take?"
+      },
+      {
+        "role": "assistant",
+        "content": "Refunds take 2 business days.",
+        "retrieval_context": [
+          "Refunds take 5 business days."
+        ]
+      }
+    ]
+  },
+  "system_one": {
+    "model": "exploding-jev",
+    "raises": {
+      "type": "ConnectionError",
+      "message": "Jev is down"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "turn_faithfulness": {
+      "truths": [
+        {
+          "truths": [
+            "Order 42 shipped on 1 October.",
+            "Rome is the capital of Italy.",
+            "Our café is open late."
+          ]
+        },
+        {
+          "truths": [
+            "Order 42 shipped on 1 October.",
+            "Rome is the capital of Italy.",
+            "Our café is open late.",
+            "Refunds take 5 business days."
+          ]
+        }
+      ],
+      "claims": [
+        {
+          "claims": [
+            "Order 42 shipped on 1 October.",
+            "Order 42 shipped from Zürich."
+          ]
+        },
+        {
+          "claims": [
+            "Order 42 shipped on 1 October.",
+            "Order 42 shipped from Zürich.",
+            "Refunds take 2 business days."
+          ]
+        }
+      ],
+      "reason": [
+        {
+          "reason": "No contradictions were found."
+        },
+        {
+          "reason": "Refunds take 5 business days, not 2."
+        },
+        {
+          "reason": "The score is 0.83 because the refund time contradicts the context."
+        }
+      ],
+      "verdicts": [
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "borderline",
+              "reason": "Zürich is not mentioned."
+            }
+          ]
+        },
+        {
+          "verdicts": [
+            {
+              "verdict": "yes"
+            },
+            {
+              "verdict": "borderline",
+              "reason": "Zürich is not mentioned."
+            },
+            {
+              "verdict": "no",
+              "reason": "Refunds take 5 business days."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

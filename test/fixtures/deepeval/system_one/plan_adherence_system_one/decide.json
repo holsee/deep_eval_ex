@@ -1,0 +1,252 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "trace": {
+            "name": "answer",
+            "type": "agent",
+            "input": {
+              "query": "Where is my invoice?"
+            },
+            "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+            "tools_called": [
+              {
+                "name": "lookup_invoice",
+                "type": "FUNCTION",
+                "description": "Finds the latest invoice",
+                "reasoning": null,
+                "output": "INV-42",
+                "input_parameters": {
+                  "account": "acme"
+                }
+              }
+            ],
+            "available_tools": [
+              "lookup_invoice",
+              "escalate"
+            ],
+            "children": [
+              {
+                "name": "lookup_invoice",
+                "type": "tool",
+                "description": "Finds the latest invoice",
+                "input": {
+                  "account": "acme"
+                },
+                "output": "INV-42"
+              },
+              {
+                "name": "reply",
+                "type": "llm",
+                "input": {
+                  "query": "Where is my invoice?",
+                  "invoice": "INV-42"
+                },
+                "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+                "model": "gpt-4o-mini"
+              }
+            ]
+          }
+        },
+        "questions": {
+          "q_0": {
+            "type": "choice",
+            "instructions": "Does the agent run in `trace` carry out every step of the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan), explicitly and in the stated order?",
+            "criteria": {
+              "Yes, every planned step is carried out in order": null,
+              "No, a planned step is missing, only implied or out of order": null,
+              "The agent states no plan": null
+            }
+          },
+          "q_1": {
+            "type": "choice",
+            "instructions": "Does the agent run in `trace` take any major action, tool call or reasoning step that is not part of the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan)?",
+            "criteria": {
+              "No, it does only what the plan says": null,
+              "Yes, it takes actions outside the plan": null,
+              "The agent states no plan": null
+            }
+          },
+          "q_2": {
+            "type": "choice",
+            "instructions": "How strictly do the actions of the agent run in `trace` follow the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan)?",
+            "criteria": {
+              "No adherence": null,
+              "Weak adherence": null,
+              "Partial adherence": null,
+              "Strong adherence": null,
+              "Perfect adherence": null,
+              "The agent states no plan": null
+            }
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {
+            "q_0": {
+              "choice": "Yes, every planned step is carried out in order",
+              "probabilities": {
+                "Yes, every planned step is carried out in order": 0.7,
+                "No, a planned step is missing, only implied or out of order": 0.15,
+                "The agent states no plan": 0.15
+              },
+              "confidence": 0.55
+            },
+            "q_1": {
+              "choice": "Yes, it takes actions outside the plan",
+              "probabilities": {
+                "No, it does only what the plan says": 0.15,
+                "Yes, it takes actions outside the plan": 0.7,
+                "The agent states no plan": 0.15
+              },
+              "confidence": 0.55
+            },
+            "q_2": {
+              "choice": "Strong adherence",
+              "probabilities": {
+                "No adherence": 0.06,
+                "Weak adherence": 0.06,
+                "Partial adherence": 0.06,
+                "Strong adherence": 0.7,
+                "Perfect adherence": 0.06,
+                "The agent states no plan": 0.06
+              },
+              "confidence": 0.55
+            }
+          },
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "trace": {
+          "name": "answer",
+          "type": "agent",
+          "input": {
+            "query": "Where is my invoice?"
+          },
+          "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+          "tools_called": [
+            {
+              "name": "lookup_invoice",
+              "type": "FUNCTION",
+              "description": "Finds the latest invoice",
+              "reasoning": null,
+              "output": "INV-42",
+              "input_parameters": {
+                "account": "acme"
+              }
+            }
+          ],
+          "available_tools": [
+            "lookup_invoice",
+            "escalate"
+          ],
+          "children": [
+            {
+              "name": "lookup_invoice",
+              "type": "tool",
+              "description": "Finds the latest invoice",
+              "input": {
+                "account": "acme"
+              },
+              "output": "INV-42"
+            },
+            {
+              "name": "reply",
+              "type": "llm",
+              "input": {
+                "query": "Where is my invoice?",
+                "invoice": "INV-42"
+              },
+              "output": "Your latest invoice, INV-42, is under Billing > Invoices.",
+              "model": "gpt-4o-mini"
+            }
+          ]
+        }
+      },
+      "questions": {
+        "q_0": {
+          "type": "choice",
+          "instructions": "Does the agent run in `trace` carry out every step of the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan), explicitly and in the stated order?",
+          "criteria": {
+            "Yes, every planned step is carried out in order": null,
+            "No, a planned step is missing, only implied or out of order": null,
+            "The agent states no plan": null
+          }
+        },
+        "q_1": {
+          "type": "choice",
+          "instructions": "Does the agent run in `trace` take any major action, tool call or reasoning step that is not part of the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan)?",
+          "criteria": {
+            "No, it does only what the plan says": null,
+            "Yes, it takes actions outside the plan": null,
+            "The agent states no plan": null
+          }
+        },
+        "q_2": {
+          "type": "choice",
+          "instructions": "How strictly do the actions of the agent run in `trace` follow the plan the agent states in `trace` (in its reasoning, thoughts or an explicit plan)?",
+          "criteria": {
+            "No adherence": null,
+            "Weak adherence": null,
+            "Partial adherence": null,
+            "Strong adherence": null,
+            "Perfect adherence": null,
+            "The agent states no plan": null
+          }
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {
+          "q_0": {
+            "choice": "Yes, every planned step is carried out in order",
+            "probabilities": {
+              "Yes, every planned step is carried out in order": 0.7,
+              "No, a planned step is missing, only implied or out of order": 0.15,
+              "The agent states no plan": 0.15
+            },
+            "confidence": 0.55
+          },
+          "q_1": {
+            "choice": "Yes, it takes actions outside the plan",
+            "probabilities": {
+              "No, it does only what the plan says": 0.15,
+              "Yes, it takes actions outside the plan": 0.7,
+              "The agent states no plan": 0.15
+            },
+            "confidence": 0.55
+          },
+          "q_2": {
+            "choice": "Strong adherence",
+            "probabilities": {
+              "No adherence": 0.06,
+              "Weak adherence": 0.06,
+              "Partial adherence": 0.06,
+              "Strong adherence": 0.7,
+              "Perfect adherence": 0.06,
+              "The agent states no plan": 0.06
+            },
+            "confidence": 0.55
+          }
+        },
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+[
+  {
+    "uuid": "e90cbb22-9d91-47af-bf66-060c8d18c4aa",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "44d5f067-8894-421e-8089-2a44d7001a22",
+        "name": "agent",
+        "status": "SUCCESS",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.921Z",
+        "endTime": "2026-10-23T03:23:29.922Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "done",
+        "toolsCalled": [
+          {
+            "name": "lookup",
+            "type": "FUNCTION",
+            "description": "Staged description",
+            "output": "found",
+            "inputParameters": {
+              "query": "How do I reset my password?"
+            }
+          }
+        ],
+        "availableTools": [],
+        "agentHandoffs": []
+      }
+    ],
+    "llmSpans": [
+      {
+        "uuid": "aaf1119e-9a1a-42c9-92fe-0ce93e41563a",
+        "name": "generate",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "44d5f067-8894-421e-8089-2a44d7001a22",
+        "startTime": "2026-10-23T03:23:29.921Z",
+        "endTime": "2026-10-23T03:23:29.922Z",
+        "input": {
+          "query": "again",
+          "documents": []
+        },
+        "output": "Answer to again",
+        "model": "gpt-4o-mini",
+        "inputTokenCount": 42.0,
+        "outputTokenCount": 7.0,
+        "costPerInputToken": 1.5e-07,
+        "costPerOutputToken": 6e-07
+      },
+      {
+        "uuid": "4cfa5ff8-cff6-4ed8-81d0-b7f0c073e2fd",
+        "name": "staged_call",
+        "status": "SUCCESS",
+        "type": "llm",
+        "parentUuid": "44d5f067-8894-421e-8089-2a44d7001a22",
+        "startTime": "2026-10-23T03:23:29.921Z",
+        "endTime": "2026-10-23T03:23:29.921Z",
+        "metadata": {
+          "staged": "llm"
+        },
+        "input": {
+          "query": "How do I reset my password?",
+          "documents": []
+        },
+        "output": "Answer to How do I reset my password?",
+        "model": "gpt-4o",
+        "inputTokenCount": 42.0,
+        "outputTokenCount": 7.0,
+        "costPerInputToken": 1.5e-07,
+        "costPerOutputToken": 6e-07,
+        "metricCollection": "base-collection",
+        "metricsData": [
+          {
+            "name": "Span Judge",
+            "threshold": 0.7,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "retrieverSpans": [],
+    "toolSpans": [
+      {
+        "uuid": "2a6a0484-d9f3-48c5-a152-9638ceeaea97",
+        "name": "lookup",
+        "status": "SUCCESS",
+        "type": "tool",
+        "parentUuid": "44d5f067-8894-421e-8089-2a44d7001a22",
+        "startTime": "2026-10-23T03:23:29.922Z",
+        "endTime": "2026-10-23T03:23:29.922Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": "found",
+        "description": "Staged description"
+      }
+    ],
+    "startTime": "2026-10-23T03:23:29.921Z",
+    "endTime": "2026-10-23T03:23:29.922Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "output": "done",
+    "status": "SUCCESS"
+  }
+]

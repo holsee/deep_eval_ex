@@ -1,8 +1,12 @@
 # Copyright 2025 Steven Holdsworth (@holsee)
 # SPDX-License-Identifier: Apache-2.0
 #
-# Ported from deepeval/metrics/contextual_precision/template.py
-# Original: https://github.com/confident-ai/deepeval
+# Prompt text copied verbatim from deepeval 4.3.1
+# (deepeval/metrics/contextual_precision/templates/*.txt), Copyright
+# Confident AI, Apache-2.0. Original: https://github.com/confident-ai/deepeval
+#
+# Keep the trailing whitespace inside the prompts: it is deepeval's, and
+# test/deep_eval_ex/prompt_golden_test.exs checks every byte.
 
 defmodule DeepEvalEx.Prompts.ContextualPrecision do
   @moduledoc """
@@ -10,48 +14,86 @@ defmodule DeepEvalEx.Prompts.ContextualPrecision do
 
   ContextualPrecision measures how well the retrieval system ranks
   relevant context nodes higher than irrelevant ones.
+
+  Each function renders deepeval 4.3.1's `ContextualPrecisionMetric`
+  template of the same name byte for byte. Both take deepeval's
+  `multimodal` flag as the `:multimodal` option (default `false`), which a
+  multimodal `DeepEvalEx.TestCase` sets: its wording and note change, and
+  the retrieval context is shown as numbered text and image nodes
+  (`DeepEvalEx.Metrics.Utils.RetrievalContextDisplay`). Lists are
+  printed as Python lists and scores as `format(score, ".2f")` (see
+  `DeepEvalEx.Prompts.Python`). `system_one_verdict/0` and
+  `system_one_questions/0` are its System One templates,
+  `_experimental_system_one_verdict` and `_experimental_system_one_questions`,
+  which take no arguments.
   """
+
+  use DeepEvalEx.Prompts.EvaluationTemplate,
+    templates: [
+      generate_verdicts: 1,
+      generate_reason: 1,
+      system_one_verdict: 0,
+      system_one_questions: 0
+    ]
+
+  alias DeepEvalEx.Metrics.Utils.RetrievalContextDisplay
+  alias DeepEvalEx.Prompts.Python
 
   @doc """
   Generates a prompt to produce verdicts for each retrieval context node.
 
   Each verdict indicates whether the context node was useful in
   arriving at the expected output.
+
+  ## Options
+
+  - `:input` - the test case input (required)
+  - `:expected_output` - the test case expected output (required)
+  - `:retrieval_context` - the retrieval context, a list of strings
+    (required)
+  - `:multimodal` - whether the test case holds images (default: `false`)
+  - `:images` - the test case's images, by id, whose placeholders the
+    multimodal retrieval context shows (default: none)
   """
   def generate_verdicts(opts) do
     input = Keyword.fetch!(opts, :input)
     expected_output = Keyword.fetch!(opts, :expected_output)
-    retrieval_context = Keyword.fetch!(opts, :retrieval_context)
+    contexts = Keyword.fetch!(opts, :retrieval_context)
+    multimodal = Keyword.get(opts, :multimodal, false)
+    document_count = document_count(length(contexts))
+    note = if multimodal, do: " (which can be text or an image)", else: ""
 
-    context_count = length(retrieval_context)
-    document_count_str = "(#{context_count} document#{if context_count > 1, do: "s", else: ""})"
-    context_formatted = format_retrieval_context(retrieval_context)
+    retrieval_context =
+      if multimodal,
+        do:
+          contexts |> RetrievalContextDisplay.id_retrieval_context(opts[:images]) |> Python.repr(),
+        else: Python.repr(contexts)
 
     """
     Given the input, expected output, and retrieval context, please generate a list of JSON objects to determine whether each node in the retrieval context was remotely useful in arriving at the expected output.
 
     **
-    IMPORTANT: Please make sure to only return in JSON format, with the 'verdicts' key as a list of JSON. These JSON only contain the `verdict` key that outputs only 'yes' or 'no', and a `reason` key to justify the verdict. In your reason, you should aim to quote parts of the context.
+    IMPORTANT: Please make sure to only return in JSON format, with the 'verdicts' key as a list of JSON. These JSON only contain the `verdict` key that outputs only 'yes' or 'no', and a `reason` key to justify the verdict. In your reason, you should aim to quote parts of the context #{note}.
     Example Retrieval Context: ["Einstein won the Nobel Prize for his discovery of the photoelectric effect", "He won the Nobel Prize in 1968.", "There was a cat."]
     Example Input: "Who won the Nobel Prize in 1968 and for what?"
     Example Expected Output: "Einstein won the Nobel Prize in 1968 for his discovery of the photoelectric effect."
 
     Example:
     {
-        "verdicts": [
-            {
-                "reason": "It clearly addresses the question by stating that 'Einstein won the Nobel Prize for his discovery of the photoelectric effect.'",
-                "verdict": "yes"
-            },
-            {
-                "reason": "The text verifies that the prize was indeed won in 1968.",
-                "verdict": "yes"
-            },
-            {
-                "reason": "'There was a cat' is not at all relevant to the topic of winning a Nobel Prize.",
-                "verdict": "no"
-            }
-        ]
+      "verdicts": [
+        {
+          "reason": "It clearly addresses the question by stating that 'Einstein won the Nobel Prize for his discovery of the photoelectric effect.'",
+          "verdict": "yes"
+        },
+        {
+          "reason": "The text verifies that the prize was indeed won in 1968.",
+          "verdict": "yes"
+        },
+        {
+          "reason": "'There was a cat' is not at all relevant to the topic of winning a Nobel Prize.",
+          "verdict": "no"
+        }
+      ]  
     }
     Since you are going to generate a verdict for each context, the number of 'verdicts' SHOULD BE STRICTLY EQUAL to that of the contexts.
     **
@@ -62,73 +104,120 @@ defmodule DeepEvalEx.Prompts.ContextualPrecision do
     Expected output:
     #{expected_output}
 
-    Retrieval Context #{document_count_str}:
-    #{context_formatted}
+    Retrieval Context #{document_count}:
+    #{retrieval_context}
 
-    JSON:
+    JSON:\
     """
   end
 
   @doc """
   Generates a prompt to summarize the evaluation with a reason.
+
+  ## Options
+
+  - `:score` - the contextual precision score (required)
+  - `:input` - the test case input (required)
+  - `:verdicts` - the node verdicts in ranking order, maps with `:verdict`
+    and `:reason` (required). A verdict atom (`:yes`) prints as deepeval's
+    `Verdict` enum member (`<Verdict.YES: 'yes'>`), as the verdicts of
+    deepeval's metric do; a string prints as a string (`'yes'`)
+  - `:multimodal` - whether the test case holds images (default: `false`)
   """
   def generate_reason(opts) do
+    multimodal = Keyword.get(opts, :multimodal, false)
+    pick = fn multimodal_text, text -> if multimodal, do: multimodal_text, else: text end
+    score = opts |> Keyword.fetch!(:score) |> Python.format_fixed(2)
     input = Keyword.fetch!(opts, :input)
-    score = Keyword.fetch!(opts, :score)
-    verdicts = Keyword.fetch!(opts, :verdicts)
-
-    score_formatted = Float.round(score * 1.0, 2)
-    verdicts_formatted = format_verdicts_for_reason(verdicts)
+    verdicts = opts |> Keyword.fetch!(:verdicts) |> Enum.map(&verdict_dict/1) |> Python.repr()
 
     """
-    Given the input, retrieval contexts, and contextual precision score, provide a CONCISE summary for the score. Explain why it is not higher, but also why it is at its current score.
-    The retrieval contexts is a list of JSON with three keys: `verdict`, `reason` (reason for the verdict) and `node`. `verdict` will be either 'yes' or 'no', which represents whether the corresponding 'node' in the retrieval context is relevant to the input.
+    Given the input, retrieval contexts, and contextual precision score, provide a CONCISE #{pick.("summarize", "summary")} for the score. Explain why it is not higher, but also why it is at its current score.
+    The retrieval contexts is a list of JSON with three keys: `verdict`, `reason` (reason for the verdict) and `node`. `verdict` will be either 'yes' or 'no', which represents whether the corresponding 'node' in the retrieval context is relevant to the input. 
     Contextual precision represents if the relevant nodes are ranked higher than irrelevant nodes. Also note that retrieval contexts is given IN THE ORDER OF THEIR RANKINGS.
 
     **
     IMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason.
     Example JSON:
     {
-        "reason": "The score is <contextual_precision_score> because <your_reason>."
+      "reason": "The score is <contextual_precision_score> because <your_reason>."
     }
 
 
-    DO NOT mention 'verdict' in your reason, but instead phrase it as irrelevant nodes. The term 'verdict' is just here for you to understand the broader scope of things.
+    DO NOT mention 'verdict' in your reason, but instead phrase it as irrelevant nodes. The term 'verdict' #{pick.("are", "is")} just here for you to understand the broader scope of things.
     Also DO NOT mention there are `reason` fields in the retrieval contexts you are presented with, instead just use the information in the `reason` field.
     In your reason, you MUST USE the `reason`, QUOTES in the 'reason', and the node RANK (starting from 1, eg. first node) to explain why the 'no' verdicts should be ranked lower than the 'yes' verdicts.
-    When addressing nodes, make it explicit that they are nodes in retrieval contexts.
-    If the score is 1, keep it short and say something positive with an upbeat tone (but don't overdo it otherwise it gets annoying).
+    When addressing nodes, make it explicit that #{pick.("it is", "they are")} nodes in #{pick.("retrieval context", "retrieval contexts")}.
+    If the score is 1, keep it short and say something positive with an upbeat tone (but don't overdo it#{pick.(",", "")} otherwise it gets annoying).
     **
 
     Contextual Precision Score:
-    #{score_formatted}
+    #{score}
 
     Input:
     #{input}
 
     Retrieval Contexts:
-    #{verdicts_formatted}
+    #{verdicts}
 
-    JSON:
+    JSON:\
     """
   end
 
-  defp format_retrieval_context(contexts) when is_list(contexts) do
-    contexts
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn {context, i} -> "Node #{i}: #{context}" end)
+  @doc """
+  The question a System One model is asked about each retrieval context
+  node under the `:hybrid` eval mode, deepeval's
+  `_experimental_system_one_verdict` template: a Noul whose instructions
+  pair it with the node, about a state holding the `input` and
+  `expected_output` (see `DeepEvalEx.SystemOne.Spec.Verdicts`).
+  """
+  @spec system_one_verdict() :: String.t()
+  def system_one_verdict do
+    "Was the retrieval context `node` remotely useful in arriving at `expected_output` for `input`?"
   end
 
-  defp format_verdicts_for_reason(verdicts) when is_list(verdicts) do
-    verdicts
-    |> Enum.with_index(1)
-    |> Enum.map(fn {verdict, i} ->
-      %{
-        "node" => i,
-        "verdict" => to_string(verdict.verdict),
-        "reason" => verdict.reason
+  @doc """
+  The questions a System One model answers about the whole test case under
+  the `:system_one` eval mode, deepeval's `_experimental_system_one_questions`
+  template: a JSON array of two Nouls and a four-level Score about how
+  `retrieval_context` is ordered for `input` and `expected_output`, which
+  `DeepEvalEx.SystemOne.Scored.parse!/1` reads.
+  """
+  @spec system_one_questions() :: String.t()
+  def system_one_questions do
+    """
+    [
+      {
+        "type": "noul",
+        "statement": "In `retrieval_context`, every document useful for arriving at `expected_output` for `input` is listed before every document that is not useful.",
+        "weight": 2
+      },
+      {
+        "type": "noul",
+        "statement": "The first document in `retrieval_context` is useful for arriving at `expected_output` for `input`."
+      },
+      {
+        "type": "score",
+        "question": "How well are the documents in `retrieval_context` ordered, with the ones useful for arriving at `expected_output` for `input` first?",
+        "levels": ["Useful documents are all at the end", "Useful documents are mixed with irrelevant ones", "Useful documents are mostly first", "Useful documents are all first"]
       }
-    end)
-    |> Jason.encode!()
+    ]\
+    """
   end
+
+  # The document_count_str of deepeval's _contextual_precision_verdict_fields.
+  defp document_count(count) when count > 1, do: " (#{count} documents)"
+  defp document_count(count), do: " (#{count} document)"
+
+  # deepeval passes each verdict as {"verdict": ..., "reason": ...}.
+  defp verdict_dict(%{verdict: verdict, reason: reason}) do
+    %Jason.OrderedObject{values: [{"verdict", verdict_value(verdict)}, {"reason", reason}]}
+  end
+
+  defp verdict_value(verdict) when is_atom(verdict) do
+    value = Atom.to_string(verdict)
+    %Python.EnumMember{class: "Verdict", name: String.upcase(value), value: value}
+  end
+
+  defp verdict_value(verdict), do: verdict
 end

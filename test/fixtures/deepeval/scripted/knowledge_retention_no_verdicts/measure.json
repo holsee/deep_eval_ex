@@ -1,0 +1,12 @@
+{
+  "score": 1,
+  "success": true,
+  "reason": "The score is 1.00 because there was nothing to forget.",
+  "threshold": 0.5,
+  "error": null,
+  "evaluation_model": "scripted-judge",
+  "evaluation_cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "verbose_logs": "Knowledges:\n[\n    {\n        \"data\": null\n    },\n    None\n] \n \nVerdicts:\n[]"
+}

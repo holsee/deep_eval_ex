@@ -1,0 +1,96 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "task": "Find my latest invoice.",
+          "plan": [
+            "Look up the latest invoice",
+            "Tell the user where to find it"
+          ]
+        },
+        "questions": {
+          "verdict": {
+            "type": "score",
+            "instructions": "How good is `plan` for accomplishing `task`? A strong plan covers every requirement and prerequisite of `task`, has only necessary steps in a logical order, and each step is specific enough to execute. Judge the plan itself, not how it was carried out.",
+            "criteria": [
+              "Inadequate plan",
+              "Weak plan",
+              "Adequate but flawed plan",
+              "Good plan",
+              "Excellent plan"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {},
+          "choices": {},
+          "scores": {
+            "verdict": {
+              "score": 3.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.15,
+                "2": 0.4,
+                "3": 0.3,
+                "4": 0.1
+              },
+              "confidence": 0.4
+            }
+          }
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "task": "Find my latest invoice.",
+        "plan": [
+          "Look up the latest invoice",
+          "Tell the user where to find it"
+        ]
+      },
+      "questions": {
+        "verdict": {
+          "type": "score",
+          "instructions": "How good is `plan` for accomplishing `task`? A strong plan covers every requirement and prerequisite of `task`, has only necessary steps in a logical order, and each step is specific enough to execute. Judge the plan itself, not how it was carried out.",
+          "criteria": [
+            "Inadequate plan",
+            "Weak plan",
+            "Adequate but flawed plan",
+            "Good plan",
+            "Excellent plan"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {},
+        "choices": {},
+        "scores": {
+          "verdict": {
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.15,
+              "2": 0.4,
+              "3": 0.3,
+              "4": 0.1
+            },
+            "confidence": 0.4
+          }
+        }
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

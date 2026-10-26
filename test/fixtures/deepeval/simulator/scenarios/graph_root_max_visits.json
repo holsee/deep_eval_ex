@@ -1,0 +1,90 @@
+{
+  "simulator": {
+    "simulation_graph": {
+      "default": true,
+      "max_visits": 1
+    }
+  },
+  "goldens": [
+    {
+      "scenario": "One question only."
+    }
+  ],
+  "max_user_simulations": 3,
+  "script": {
+    "simulated_input": [
+      {
+        "simulated_input": "Just one question."
+      }
+    ]
+  },
+  "replies": [
+    "Sure."
+  ],
+  "prompts": [
+    {
+      "step": "simulated_input",
+      "prompt": "Pretend you are a user of an LLM app. Your goal is to start a conversation in English based on a scenario \n            and persona. The scenario defines your context and motivation for interacting with the LLM, \n            while the persona describes who you are and how you speak.\n\n            Guidelines:\n            1. The opening message should clearly convey the user's intent or need within the scenario.\n            2. Match the persona's tone faithfully. If the user is frustrated, impatient, blunt, or impolite, reflect that naturally instead of making them warm or courteous.\n            3. Avoid providing excessive details upfront; the goal is to initiate the conversation and build rapport, not to solve it in the first message.\n            4. The message should be concise, ideally no more than 1-3 sentences.\n\n\n        --- MULTIMODAL INPUT RULES ---\n        - Treat image content as factual evidence.\n        - Only reference visual details that are explicitly and clearly visible.\n        - Do not infer or guess objects, text, or details not visibly present.\n        - If an image is unclear or ambiguous, mark uncertainty explicitly.\n\n\n            IMPORTANT: The output must be formatted as a JSON object with a single key `simulated_input`, where the value is the generated opening message in English.\n\n            Example Language: english\n            Example Persona:\n            <persona>\n            Jeff Seid, is available Monday and Thursday afternoons, and their phone number is 0010281839. He suffers from chronic migraines.\n            </persona>\n            Example Scenario: \"A sick person trying to get a diagnosis for persistent headaches and fever.\"\n            Example JSON Output:\n            {\n                \"simulated_input\": \"Hi, I haven’t been feeling well lately. I’ve had these headaches and a fever that just won’t go away. Could you help me figure out what’s going on?\"\n            }\n\n            Language: English\n\n            Scenario: \"One question only.\"\n            JSON Output:\n"
+    }
+  ],
+  "callback_calls": [
+    {
+      "input": "Just one question.",
+      "turns": 1
+    }
+  ],
+  "on_turn": [
+    {
+      "index": 0,
+      "turns": 1
+    },
+    {
+      "index": 0,
+      "turns": 2
+    }
+  ],
+  "completed": [
+    0
+  ],
+  "test_cases": [
+    {
+      "turns": [
+        {
+          "role": "user",
+          "content": "Just one question.",
+          "user_id": null,
+          "latency_ms": null,
+          "interrupted": null,
+          "retrieval_context": null,
+          "tools_called": null,
+          "mcp_tools_called": null,
+          "mcp_resources_called": null,
+          "mcp_prompts_called": null,
+          "metadata": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sure.",
+          "user_id": null,
+          "latency_ms": null,
+          "interrupted": null,
+          "retrieval_context": null,
+          "tools_called": null,
+          "mcp_tools_called": null,
+          "mcp_resources_called": null,
+          "mcp_prompts_called": null,
+          "metadata": null
+        }
+      ],
+      "scenario": "One question only.",
+      "expected_outcome": null,
+      "user_description": null,
+      "context": null,
+      "name": null,
+      "comments": null,
+      "additional_metadata": {
+        "Persona": null
+      }
+    }
+  ]
+}

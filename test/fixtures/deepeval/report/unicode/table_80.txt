@@ -1,0 +1,26 @@
+                                  Test Results                                  
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
+┃              ┃                 ┃                  ┃        ┃ Overall Success ┃
+┃ Test case    ┃ Metric          ┃ Score            ┃ Status ┃ Rate            ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
+│ café ☕ 测试 │                 │                  │        │ 50.0% |         │
+│              │                 │                  │        │ passed=1 |      │
+│              │                 │                  │        │ failed=1        │
+│              │ Answer          │ 0.88             │ PASSED │                 │
+│              │ Relevancy       │ (threshold=0.5,  │        │                 │
+│              │                 │ evaluation       │        │                 │
+│              │                 │ model=gpt-4o-mi… │        │                 │
+│              │                 │ reason=回答完全… │        │                 │
+│              │                 │ The answer is    │        │                 │
+│              │                 │ fully relevant   │        │                 │
+│              │                 │ and covers every │        │                 │
+│              │                 │ point.,          │        │                 │
+│              │                 │ error=None)      │        │                 │
+│              │ Faithfulness    │ 0.12             │ FAILED │                 │
+│              │                 │ (threshold=0.5,  │        │                 │
+│              │                 │ evaluation       │        │                 │
+│              │                 │ model=gpt-4o-mi… │        │                 │
+│              │                 │ reason=Line one. │        │                 │
+│              │                 │ Line two.,       │        │                 │
+│              │                 │ error=None)      │        │                 │
+└──────────────┴─────────────────┴──────────────────┴────────┴─────────────────┘

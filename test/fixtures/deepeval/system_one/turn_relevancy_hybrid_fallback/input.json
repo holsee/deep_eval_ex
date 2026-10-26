@@ -1,0 +1,69 @@
+{
+  "description": "TurnRelevancy in hybrid mode with Jev down: the LLM judges every window",
+  "metrics": [
+    {
+      "kind": "turn_relevancy",
+      "eval_mode": "hybrid",
+      "params": {
+        "threshold": 0.5
+      }
+    }
+  ],
+  "test_case": {
+    "turns": [
+      {
+        "role": "user",
+        "content": "My order 42 is late."
+      },
+      {
+        "role": "assistant",
+        "content": "Sorry! It ships today."
+      },
+      {
+        "role": "user",
+        "content": "Can I change the address to Zürich?"
+      },
+      {
+        "role": "assistant",
+        "content": "Have you tried our new café blend?"
+      },
+      {
+        "role": "user",
+        "content": "Please just change the address."
+      },
+      {
+        "role": "assistant",
+        "content": "Done: order 42 now ships to Zürich."
+      }
+    ]
+  },
+  "system_one": {
+    "model": "exploding-jev",
+    "raises": {
+      "type": "ConnectionError",
+      "message": "Jev is down"
+    }
+  },
+  "judge_model": "scripted-judge",
+  "responses": {
+    "turn_relevancy": {
+      "reason,verdict": [
+        {
+          "verdict": "yes"
+        },
+        {
+          "verdict": "no",
+          "reason": "A coffee advert does not change the address."
+        },
+        {
+          "verdict": "yes"
+        }
+      ],
+      "reason": [
+        {
+          "reason": "The score is 0.6666666666666666 because message 2 advertises coffee."
+        }
+      ]
+    }
+  }
+}

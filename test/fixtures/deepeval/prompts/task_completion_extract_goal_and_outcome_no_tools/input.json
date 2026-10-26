@@ -1,0 +1,7 @@
+{
+  "template": "TaskCompletionMetric.extract_goal_and_outcome",
+  "inputs": {
+    "input": "What is 2 + 2?",
+    "actual_output": "4"
+  }
+}

@@ -1,0 +1,245 @@
+[
+  {
+    "panel": {
+      "border_style": "none",
+      "content": "[rgb(106,0,255) bold]🚀 DeepEval Evaluation Results[/rgb(106,0,255) bold]"
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(25,227,160)",
+      "content": {
+        "tree": {
+          "label": "[rgb(25,227,160) bold]✅ test_case_0[/rgb(25,227,160) bold]",
+          "children": [
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": null,
+                    "columns": [
+                      "Key",
+                      "Value"
+                    ],
+                    "rows": [
+                      [
+                        "Input:",
+                        "Question 0?"
+                      ],
+                      [
+                        "Actual Output:",
+                        "Answer 0."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Metrics",
+                    "columns": [
+                      "Status",
+                      "Metric",
+                      "Score",
+                      "Threshold",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold green]PASS[/bold green]",
+                        "Tone",
+                        "0.90",
+                        "0.50",
+                        "N/A"
+                      ],
+                      [
+                        "[bold green]PASS[/bold green]",
+                        "Faithfulness",
+                        "1.00",
+                        "0.50",
+                        "No contradictions."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(25,227,160)",
+      "content": {
+        "tree": {
+          "label": "[rgb(25,227,160) bold]✅ test_case_1[/rgb(25,227,160) bold]",
+          "children": [
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": null,
+                    "columns": [
+                      "Key",
+                      "Value"
+                    ],
+                    "rows": [
+                      [
+                        "Input:",
+                        "Question 1?"
+                      ],
+                      [
+                        "Actual Output:",
+                        "Answer 1."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Metrics",
+                    "columns": [
+                      "Status",
+                      "Metric",
+                      "Score",
+                      "Threshold",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold red]FAIL[/bold red]",
+                        "Tone",
+                        "0.10",
+                        "0.50",
+                        "N/A"
+                      ],
+                      [
+                        "[bold green]PASS[/bold green]",
+                        "Faithfulness",
+                        "1.00",
+                        "0.50",
+                        "No contradictions."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "red",
+      "content": {
+        "tree": {
+          "label": "[red bold]❌ test_case_2[/red bold]",
+          "children": [
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": null,
+                    "columns": [
+                      "Key",
+                      "Value"
+                    ],
+                    "rows": [
+                      [
+                        "Input:",
+                        "Question 2?"
+                      ],
+                      [
+                        "Actual Output:",
+                        "Answer 2."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            },
+            {
+              "tree": {
+                "label": {
+                  "table": {
+                    "title": "Metrics",
+                    "columns": [
+                      "Status",
+                      "Metric",
+                      "Score",
+                      "Threshold",
+                      "Reason"
+                    ],
+                    "rows": [
+                      [
+                        "[bold red]FAIL[/bold red]",
+                        "Tone",
+                        "0.20",
+                        "0.50",
+                        "N/A"
+                      ],
+                      [
+                        "[bold red]FAIL[/bold red]",
+                        "Faithfulness",
+                        "0.25",
+                        "0.50",
+                        "The answer contradicts the retrieval context on the refund window, which is 30 days."
+                      ]
+                    ]
+                  }
+                },
+                "children": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "panel": {
+      "border_style": "rgb(106,0,255)",
+      "content": {
+        "table": {
+          "title": "[bold]Aggregate Metrics[/bold]\n",
+          "columns": [
+            "Metric",
+            "Average Score",
+            "Pass Rate",
+            "Total"
+          ],
+          "rows": [
+            [
+              "Tone",
+              "0.40",
+              "33.33% | passed=1 (flaky=1) | failed=2 (flaky=1)",
+              "3"
+            ],
+            [
+              "Faithfulness",
+              "0.75",
+              "66.67% | passed=2 | failed=1",
+              "3"
+            ]
+          ]
+        }
+      }
+    }
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "score": 0.6233333333333334,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.76.\n1. `actual_output` completely follows this prompt instruction when responding to `input`: Reply in English. -> clearly holds (P(yes)=0.97, confidence=0.94)\n2. `actual_output` completely follows this prompt instruction when responding to `input`: Respond in all upper case. -> clearly fails (P(yes)=0.02, confidence=0.96)\n3. `actual_output` completely follows this prompt instruction when responding to `input`: Use the word 'welcome'. -> clearly holds (P(yes)=0.88, confidence=0.76)\nScore: 0.62 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=1] `actual_output` completely follows this prompt instruction when responding to `input`: Reply in English.\n   value=0.970 applicable=True probabilities={'true': 0.97, 'false': 0.03} confidence=0.940\n2. [noul, weight=1] `actual_output` completely follows this prompt instruction when responding to `input`: Respond in all upper case.\n   value=0.020 applicable=True probabilities={'true': 0.02, 'false': 0.98} confidence=0.960\n3. [noul, weight=1] `actual_output` completely follows this prompt instruction when responding to `input`: Use the word 'welcome'.\n   value=0.880 applicable=True probabilities={'true': 0.88, 'false': 0.12} confidence=0.760",
+    "confidence": 0.76,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "`actual_output` completely follows this prompt instruction when responding to `input`: Reply in English.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.97,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.97,
+          "false": 0.030000000000000027
+        },
+        "confidence": 0.94,
+        "passed": null
+      },
+      {
+        "question": "`actual_output` completely follows this prompt instruction when responding to `input`: Respond in all upper case.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.02,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.02,
+          "false": 0.98
+        },
+        "confidence": 0.96,
+        "passed": null
+      },
+      {
+        "question": "`actual_output` completely follows this prompt instruction when responding to `input`: Use the word 'welcome'.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.88,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.88,
+          "false": 0.12
+        },
+        "confidence": 0.76,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

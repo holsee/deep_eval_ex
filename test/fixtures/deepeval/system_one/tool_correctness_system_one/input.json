@@ -1,0 +1,65 @@
+{
+  "description": "ToolCorrectness under system_one: runs as hybrid, Jev scores tool selection",
+  "metrics": [
+    {
+      "kind": "tool_correctness",
+      "eval_mode": "system_one",
+      "params": {
+        "threshold": 0.5,
+        "available_tools": [
+          {
+            "name": "get_weather",
+            "description": "Fetch current weather for a city"
+          },
+          {
+            "name": "search_web",
+            "description": "Search the web"
+          }
+        ]
+      }
+    }
+  ],
+  "test_case": {
+    "input": "What's the weather in Paris?",
+    "actual_output": "It is 18°C in Paris.",
+    "tools_called": [
+      {
+        "name": "get_weather",
+        "input_parameters": {
+          "city": "Paris"
+        }
+      }
+    ],
+    "expected_tools": [
+      {
+        "name": "get_weather",
+        "input_parameters": {
+          "city": "Paris"
+        }
+      }
+    ]
+  },
+  "system_one": {
+    "model": "fake-jev",
+    "cost": {
+      "value": 4.2e-05,
+      "input_tokens": 1000,
+      "output_tokens": 0
+    },
+    "answers": {
+      "scores": {
+        "verdict": {
+          "score": 4,
+          "probabilities": {
+            "0": 0.0,
+            "1": 0.0,
+            "2": 0.05,
+            "3": 0.15,
+            "4": 0.8
+          },
+          "confidence": 0.75
+        }
+      }
+    }
+  }
+}

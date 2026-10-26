@@ -1,0 +1,37 @@
+For EACH sentence and image in the given assistant output below, determine whether the sentence or image can be attributed to the nodes of retrieval contexts. Please generate a list of JSON with two keys: `verdict` and `reason`.
+The `verdict` key should STRICTLY be either a 'yes' or 'no'. Answer 'yes' if the sentence or image can be attributed to any parts of the retrieval context, else answer 'no'.
+The `reason` key should provide a reason why to the verdict. In the reason, you should aim to include the node(s) count in the retrieval context (eg., 1st node, and 2nd node in the retrieval context) that is attributed to said sentence or image. A node is either a string or image, but not both (so do not group images and texts in the same nodes). You should also aim to quote the specific part of the retrieval context to justify your verdict, but keep it extremely concise and cut short the quote with an ellipsis if possible. 
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+- When evaluating claims, compare them to BOTH textual and visual evidence.
+- If the claim references something not clearly visible, respond with 'borderline'.
+
+
+**
+IMPORTANT: Please make sure to only return in JSON format, with the 'verdicts' key as a list of JSON objects, each with two keys: `verdict` and `reason`.
+
+{
+  "verdicts": [
+    {
+      "reason": "...",
+      "verdict": "yes"
+    },
+    ...
+  ]  
+}
+
+Since you are going to generate a verdict for each sentence, the number of 'verdicts' SHOULD BE STRICTLY EQUAL to the number of sentences and images in the `assistant output`.
+**
+
+Assistant Output:
+A red bicycle.
+
+Retrieval Context:
+['Node 1: The picture shows a red bicycle.']
+
+JSON:

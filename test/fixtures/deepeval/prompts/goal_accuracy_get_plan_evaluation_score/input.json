@@ -1,0 +1,9 @@
+{
+  "template": "GoalAccuracyMetric.get_plan_evaluation_score",
+  "inputs": {
+    "task": "User messages: \nPlan my trip to Lisbon: flight, hotel and an agenda.\n",
+    "steps_taken": [
+      "Assistant messages: \nFirst the flight, then the hotel, then the agenda. \n"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "template": "SummarizationMetric.generate_questions",
+  "inputs": {
+    "text": "The city council approved a new riverside park on Monday. Construction starts in March and the park opens in May. It will have a lake, a playground and 200 new trees.",
+    "n": 3
+  }
+}

@@ -4,6 +4,8 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
   alias DeepEvalEx.LLM.Adapters.Mock
   alias DeepEvalEx.Metrics.ToolCorrectness
   alias DeepEvalEx.Schemas.ToolCall
+  alias DeepEvalEx.SystemOne.Adapters.Mock, as: SystemOneMock
+  alias DeepEvalEx.SystemOne.{Answers, Error, Question}
   alias DeepEvalEx.TestCase
 
   defp tool(name, params \\ nil, output \\ nil) do
@@ -389,8 +391,9 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
       assert {:ok, result} = ToolCorrectness.measure(tc, strict_mode: true)
       # Without strict: score = 0.5, threshold = 0.5 → pass
       # With strict: threshold forced to 1.0, 0.5 < 1.0 → score zeroed
-      assert result.score == 0.0
-      assert result.threshold == 1.0
+      # Integers, as deepeval's `1 if strict_mode` and `0 if ... < threshold`
+      assert result.score === 0
+      assert result.threshold === 1
       assert result.success == false
     end
 
@@ -429,17 +432,53 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
     end
   end
 
-  describe "tool selection score (LLM-based)" do
-    setup do
-      Mock.clear_responses()
-      :ok
+  # deepeval interpolates Python lists, sets and ToolCalls into its reasons,
+  # so tool names print as Python's repr, not as JSON or Elixir terms.
+  describe "tool calling reason formats tools as deepeval does" do
+    defp calling_reason(tc, opts \\ []) do
+      {:ok, result} = ToolCorrectness.measure(tc, opts)
+      [_, reason] = Regex.run(~r/Tool Calling Reason: (.*)\n\t Tool Selection/s, result.reason)
+      reason
     end
 
+    test "default mode prints names and missing tool calls in Python repr" do
+      tc = %{case_with(["search"], ["get_weather"]) | expected_tools: [tool("it's", %{"q" => 1})]}
+
+      assert calling_reason(tc) ==
+               ~s|Incomplete tool usage: missing tools [ToolCall(\n    name="it's",\n    type="FUNCTION",\n    input_parameters={\n        "q": 1\n    }\n)]; expected ["it's"], called ['search']. See more details above.|
+
+      assert calling_reason(case_with(["a"], ["a"])) ==
+               "All expected tools ['a'] were called (order not considered)."
+    end
+
+    test "exact match mode prints names in Python repr" do
+      assert calling_reason(case_with(["a", "b"], ["a", "b"]), should_exact_match: true) ==
+               "Exact match: expected ['a', 'b'], called ['a', 'b']. See details above."
+
+      assert calling_reason(case_with(["b"], ["a"]), should_exact_match: true) ==
+               "Not an exact match: expected ['a'], called ['b']. See details above."
+    end
+
+    # deepeval prints the missing and out-of-order sets in hash order, which
+    # depends on PYTHONHASHSEED; DeepEvalEx sorts them.
+    test "ordering mode prints names in Python repr and name sets sorted" do
+      assert calling_reason(case_with(["a", "b"], ["a", "b"]), should_consider_ordering: true) ==
+               "Correct ordering: all expected tools ['a', 'b'] were called in the correct order."
+
+      assert calling_reason(case_with(["d", "b"], ["c", "b", "a"]),
+               should_consider_ordering: true
+             ) ==
+               "Incorrect tool usage: missing tools ['a', 'c'] and out-of-order tools ['a', 'c']; expected ['c', 'b', 'a'], called ['d', 'b']. See more details above."
+    end
+  end
+
+  describe "tool selection score (LLM-based)" do
     test "calls LLM when available_tools provided" do
-      Mock.set_schema_response(
-        ~r/Tool Selection/,
-        %{"score" => 0.75, "reason" => "Good tool selection with minor issues."}
-      )
+      Mock.script(%{
+        "reason,score" => [
+          %{"score" => 0.75, "reason" => "Good tool selection with minor issues."}
+        ]
+      })
 
       available = [tool("search"), tool("lookup"), tool("delete")]
 
@@ -461,6 +500,8 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
       assert result.score == 0.75
       assert result.metadata.tool_calling_score == 1.0
       assert result.metadata.tool_selection_score == 0.75
+      assert [%{prompt: prompt}] = Mock.scripted_prompts()
+      assert prompt =~ "Find user info"
     end
 
     test "defaults to 1.0 when no available_tools" do
@@ -472,10 +513,7 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
     end
 
     test "final score is min of calling and selection scores" do
-      Mock.set_schema_response(
-        ~r/Tool Selection/,
-        %{"score" => 0.5, "reason" => "Mixed selection."}
-      )
+      Mock.script(%{"reason,score" => [%{"score" => 0.5, "reason" => "Mixed selection."}]})
 
       tc = case_with(["tool_a", "tool_b"], ["tool_a", "tool_b"])
 
@@ -531,8 +569,8 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
       assert ToolCorrectness.metric_name() == "Tool Correctness"
     end
 
-    test "required_params/0 returns required parameters" do
-      assert ToolCorrectness.required_params() == [:tools_called, :expected_tools]
+    test "required_params/0 returns deepeval's required parameters" do
+      assert ToolCorrectness.required_params() == [:input, :tools_called, :expected_tools]
     end
 
     test "default_threshold/0 returns 0.5" do
@@ -564,6 +602,183 @@ defmodule DeepEvalEx.Metrics.ToolCorrectnessTest do
       assert {:ok, result} = ToolCorrectness.measure(tc)
       assert result.reason =~ "Tool Calling Reason:"
       assert result.reason =~ "Tool Selection Reason:"
+    end
+  end
+
+  describe "System One" do
+    setup do
+      test_case = %TestCase{
+        input: "What's the weather in Paris?",
+        actual_output: "It is 18°C in Paris.",
+        tools_called: [tool("get_weather", %{"city" => "Paris"})],
+        expected_tools: [tool("get_weather", %{"city" => "Paris"})]
+      }
+
+      available = [
+        %ToolCall{name: "get_weather", description: "Fetch current weather for a city"},
+        %ToolCall{name: "search_web", description: "Search the web"}
+      ]
+
+      %{test_case: test_case, available: available}
+    end
+
+    defp score_answers(score, confidence) do
+      fn [{"verdict", %Question.Score{}}] ->
+        %Answers{
+          scores: %{
+            "verdict" => %Answers.Score{
+              score: score,
+              probabilities: for(i <- 0..4, do: {i, if(i == score, do: 1.0, else: 0.0)}),
+              confidence: confidence
+            }
+          }
+        }
+      end
+    end
+
+    test "system_one_eval_spec/2 is nil: the score is decided in code" do
+      assert ToolCorrectness.system_one_eval_spec(%TestCase{}, []) == nil
+    end
+
+    test "a multimodal test case skips tool selection, as deepeval does",
+         %{test_case: test_case, available: available} do
+      Mock.script(%{"reason,score" => [%{"score" => 0.25, "reason" => "Poor."}]})
+      system_one = SystemOneMock.new(answer_fn: score_answers(1, 0.9))
+
+      for eval_mode <- [:llm, :hybrid] do
+        assert {:ok, result} =
+                 ToolCorrectness.measure(%{test_case | multimodal: true},
+                   adapter: :mock,
+                   eval_mode: eval_mode,
+                   system_one_model: system_one,
+                   available_tools: available
+                 )
+
+        assert result.score == 1.0
+        assert result.metadata.tool_selection_score == 1.0
+
+        assert result.metadata.tool_selection_reason ==
+                 "No available tools were provided to assess tool selection criteria"
+      end
+
+      assert SystemOneMock.calls(system_one) == []
+      assert Mock.scripted_prompts() == []
+    end
+
+    test "hybrid scores tool selection over deepeval's five levels",
+         %{test_case: test_case, available: available} do
+      system_one = SystemOneMock.new(answer_fn: score_answers(3, 0.25))
+
+      assert {:ok, result} =
+               ToolCorrectness.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one,
+                 available_tools: available
+               )
+
+      assert result.score == 0.75
+      assert result.confidence == 0.25
+
+      assert result.metadata.tool_selection_reason ==
+               "Decided by fake-jev: tool selection 0.75, confidence 0.25."
+
+      assert [%SystemOneMock.Call{state: state, questions: [{"verdict", question}]}] =
+               SystemOneMock.calls(system_one)
+
+      assert %Question.Score{
+               levels: [
+                 "Misaligned",
+                 "Poor selection",
+                 "Mixed selection",
+                 "Mostly appropriate",
+                 "Fully appropriate"
+               ],
+               instructions: "Judging only which tools were chosen" <> _
+             } = question
+
+      assert state |> Jason.encode!() |> Jason.decode!() == %{
+               "input" => "What's the weather in Paris?",
+               "tools_called" => [
+                 %{
+                   "name" => "get_weather",
+                   "type" => "FUNCTION",
+                   "input_parameters" => %{"city" => "Paris"}
+                 }
+               ],
+               "available_tools" => [
+                 %{
+                   "name" => "get_weather",
+                   "type" => "FUNCTION",
+                   "description" => "Fetch current weather for a city"
+                 },
+                 %{
+                   "name" => "search_web",
+                   "type" => "FUNCTION",
+                   "description" => "Search the web"
+                 }
+               ]
+             }
+    end
+
+    test "system_one keeps its deterministic score and asks only about tool selection",
+         %{test_case: test_case, available: available} do
+      system_one = SystemOneMock.new(answer_fn: score_answers(4, 0.75))
+
+      # No LLM response is scripted, so any judge call would fail the metric.
+      assert {:ok, result} =
+               ToolCorrectness.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :system_one,
+                 system_one_model: system_one,
+                 available_tools: available
+               )
+
+      assert result.score == 1.0
+      assert result.evaluation_model == "fake-jev"
+      assert result.metadata.tool_selection_score == 1.0
+      assert [%SystemOneMock.Call{}] = SystemOneMock.calls(system_one)
+    end
+
+    test "system_one without available_tools makes no request", %{test_case: test_case} do
+      system_one = SystemOneMock.new(answer_fn: score_answers(4, 0.75))
+
+      assert {:ok, result} =
+               ToolCorrectness.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :system_one,
+                 system_one_model: system_one
+               )
+
+      assert result.score == 1.0
+      assert SystemOneMock.calls(system_one) == []
+    end
+
+    test "a failed hybrid request falls back to the LLM",
+         %{test_case: test_case, available: available} do
+      Mock.script(%{
+        "reason,score" => [
+          %{"score" => 0.9, "reason" => "get_weather was the best available tool."}
+        ]
+      })
+
+      system_one =
+        SystemOneMock.new(
+          raises: %Error{reason: :connection, type: "ConnectionError", message: "Jev is down"}
+        )
+
+      assert {:ok, result} =
+               ToolCorrectness.measure(test_case,
+                 adapter: :mock,
+                 eval_mode: :hybrid,
+                 system_one_model: system_one,
+                 available_tools: available
+               )
+
+      assert result.score == 0.9
+      assert result.system_one_fallback_reason == "ConnectionError: Jev is down"
+      assert result.metadata.tool_selection_reason == "get_weather was the best available tool."
+      assert [%{step: "reason,score"}] = Mock.scripted_prompts()
     end
   end
 end

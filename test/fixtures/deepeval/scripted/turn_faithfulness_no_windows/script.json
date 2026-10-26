@@ -1,0 +1,26 @@
+{
+  "description": "TurnFaithfulness on a conversation without an answered user turn: no window, the integer score 1",
+  "judge_model": "scripted-judge",
+  "metric": {
+    "kind": "turn_faithfulness",
+    "params": {}
+  },
+  "test_case": {
+    "turns": [
+      {
+        "role": "assistant",
+        "content": "Hi! How can I help?",
+        "retrieval_context": [
+          "Opening hours: 9 to 5."
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Hello?"
+      }
+    ]
+  },
+  "responses": {
+    "turn_faithfulness": {}
+  }
+}

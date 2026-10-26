@@ -1,0 +1,35 @@
+{
+  "template": "GEval.generate_strict_evaluation_results",
+  "inputs": {
+    "multimodal": true,
+    "images": [
+      {
+        "dataBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+        "mimeType": "image/png",
+        "_id": "red-dot"
+      },
+      {
+        "url": "https://example.com/charts/sales.png",
+        "_id": "sales-chart"
+      }
+    ],
+    "evaluation_steps": [
+      "Check that the actual output describes the image."
+    ],
+    "evaluation_params": [
+      "input",
+      "actual_output"
+    ],
+    "test_case": {
+      "input": "Describe [DEEPEVAL:IMAGE:red-dot]",
+      "actual_output": "A red dot.",
+      "images": [
+        {
+          "dataBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+          "mimeType": "image/png",
+          "_id": "red-dot"
+        }
+      ]
+    }
+  }
+}

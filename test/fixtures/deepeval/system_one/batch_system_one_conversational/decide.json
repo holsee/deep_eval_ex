@@ -1,0 +1,278 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "content": "My order 42 is late.",
+              "role": "user"
+            },
+            {
+              "content": "Sorry! It ships today.",
+              "role": "assistant"
+            },
+            {
+              "content": "Can I change the address to Zürich?",
+              "role": "user"
+            },
+            {
+              "content": "Have you tried our new café blend?",
+              "role": "assistant"
+            },
+            {
+              "content": "Please just change the address.",
+              "role": "user"
+            },
+            {
+              "content": "Done: order 42 now ships to Zürich.",
+              "role": "assistant"
+            }
+          ]
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every assistant turn in `turns` is relevant to the conversation so far, given the user turns before it."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "No assistant turn in `turns` ignores the user turn it responds to or changes the subject."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "Across `turns`, how relevant are the assistant turns to the conversation so far?",
+            "criteria": [
+              "Mostly irrelevant",
+              "Several irrelevant turns",
+              "Mostly relevant",
+              "All relevant"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.7
+            },
+            "q_1": {
+              "probability": 0.4
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 2.0,
+              "probabilities": {
+                "0": 0.05,
+                "1": 0.25,
+                "2": 0.6,
+                "3": 0.1
+              },
+              "confidence": 0.45
+            }
+          }
+        },
+        "cost": {
+          "value": 8.4e-05,
+          "input_tokens": 2001,
+          "output_tokens": 0
+        }
+      }
+    ],
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "content": "My order 42 is late.",
+              "role": "user"
+            },
+            {
+              "content": "Sorry! It ships today.",
+              "role": "assistant"
+            },
+            {
+              "content": "Can I change the address to Zürich?",
+              "role": "user"
+            },
+            {
+              "content": "Have you tried our new café blend?",
+              "role": "assistant"
+            },
+            {
+              "content": "Please just change the address.",
+              "role": "user"
+            },
+            {
+              "content": "Done: order 42 now ships to Zürich.",
+              "role": "assistant"
+            }
+          ]
+        },
+        "questions": {
+          "q_0": {
+            "type": "noul",
+            "instructions": "Every intention the user expresses in `turns` is satisfied by the assistant turns by the end of the conversation."
+          },
+          "q_1": {
+            "type": "noul",
+            "instructions": "No user request in `turns` is ignored, refused without cause or left only partly addressed by the assistant."
+          },
+          "q_2": {
+            "type": "score",
+            "instructions": "Across `turns`, how many of the user's intentions does the assistant satisfy?",
+            "criteria": [
+              "None satisfied",
+              "Few satisfied",
+              "Most satisfied",
+              "All satisfied"
+            ]
+          }
+        },
+        "answers": {
+          "nouls": {
+            "q_0": {
+              "probability": 0.9
+            },
+            "q_1": {
+              "probability": 0.85
+            }
+          },
+          "choices": {},
+          "scores": {
+            "q_2": {
+              "score": 3.0,
+              "probabilities": {
+                "0": 0.0,
+                "1": 0.05,
+                "2": 0.15,
+                "3": 0.8
+              },
+              "confidence": 0.8
+            }
+          }
+        },
+        "cost": {
+          "value": 8.4e-05,
+          "input_tokens": 2001,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "turns": [
+          {
+            "content": "My order 42 is late.",
+            "role": "user"
+          },
+          {
+            "content": "Sorry! It ships today.",
+            "role": "assistant"
+          },
+          {
+            "content": "Can I change the address to Zürich?",
+            "role": "user"
+          },
+          {
+            "content": "Have you tried our new café blend?",
+            "role": "assistant"
+          },
+          {
+            "content": "Please just change the address.",
+            "role": "user"
+          },
+          {
+            "content": "Done: order 42 now ships to Zürich.",
+            "role": "assistant"
+          }
+        ]
+      },
+      "questions": {
+        "m0.q_0": {
+          "type": "noul",
+          "instructions": "Every assistant turn in `turns` is relevant to the conversation so far, given the user turns before it."
+        },
+        "m0.q_1": {
+          "type": "noul",
+          "instructions": "No assistant turn in `turns` ignores the user turn it responds to or changes the subject."
+        },
+        "m0.q_2": {
+          "type": "score",
+          "instructions": "Across `turns`, how relevant are the assistant turns to the conversation so far?",
+          "criteria": [
+            "Mostly irrelevant",
+            "Several irrelevant turns",
+            "Mostly relevant",
+            "All relevant"
+          ]
+        },
+        "m1.q_0": {
+          "type": "noul",
+          "instructions": "Every intention the user expresses in `turns` is satisfied by the assistant turns by the end of the conversation."
+        },
+        "m1.q_1": {
+          "type": "noul",
+          "instructions": "No user request in `turns` is ignored, refused without cause or left only partly addressed by the assistant."
+        },
+        "m1.q_2": {
+          "type": "score",
+          "instructions": "Across `turns`, how many of the user's intentions does the assistant satisfy?",
+          "criteria": [
+            "None satisfied",
+            "Few satisfied",
+            "Most satisfied",
+            "All satisfied"
+          ]
+        }
+      },
+      "answers": {
+        "nouls": {
+          "m0.q_0": {
+            "probability": 0.7
+          },
+          "m0.q_1": {
+            "probability": 0.4
+          },
+          "m1.q_0": {
+            "probability": 0.9
+          },
+          "m1.q_1": {
+            "probability": 0.85
+          }
+        },
+        "choices": {},
+        "scores": {
+          "m0.q_2": {
+            "score": 2.0,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.25,
+              "2": 0.6,
+              "3": 0.1
+            },
+            "confidence": 0.45
+          },
+          "m1.q_2": {
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.05,
+              "2": 0.15,
+              "3": 0.8
+            },
+            "confidence": 0.8
+          }
+        }
+      },
+      "cost": {
+        "value": 8.4e-05,
+        "input_tokens": 2001,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

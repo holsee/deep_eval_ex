@@ -1,0 +1,60 @@
+[
+  {
+    "score": 0.81,
+    "success": true,
+    "reason": "Decided by fake-jev, minimum confidence 0.24.\n1. Every intention the user expresses in `turns` is satisfied by the assistant turns by the end of the conversation. -> likely holds (P(yes)=0.81, confidence=0.62, weight=2)\n2. No user request in `turns` is ignored, refused without cause or left only partly addressed by the assistant. -> unclear (P(yes)=0.62, confidence=0.24)\n3. Across `turns`, how many of the user's intentions does the assistant satisfy? -> \"All satisfied\" (expected level=1.00 of 1.00, confidence=0.60)\nScore: 0.81 (weighted mean of 3 applicable questions).",
+    "threshold": 0.5,
+    "error": null,
+    "evaluation_model": "fake-jev",
+    "evaluation_cost": 4.2e-05,
+    "input_tokens": 1000,
+    "output_tokens": 0,
+    "verbose_logs": "Decided by System One (fake-jev); no LLM call was made. \n \nQuestions:\n1. [noul, weight=2] Every intention the user expresses in `turns` is satisfied by the assistant turns by the end of the conversation.\n   value=0.810 applicable=True probabilities={'true': 0.81, 'false': 0.19} confidence=0.620\n2. [noul, weight=1] No user request in `turns` is ignored, refused without cause or left only partly addressed by the assistant.\n   value=0.620 applicable=True probabilities={'true': 0.62, 'false': 0.38} confidence=0.240\n3. [score, weight=1] Across `turns`, how many of the user's intentions does the assistant satisfy?\n   value=1.000 applicable=True probabilities={'None satisfied': 0.0, 'Few satisfied': 0.05, 'Most satisfied': 0.15, 'All satisfied': 0.8} confidence=0.600",
+    "confidence": 0.24,
+    "system_one_fallback_reason": null,
+    "score_breakdown": [
+      {
+        "question": "Every intention the user expresses in `turns` is satisfied by the assistant turns by the end of the conversation.",
+        "type": "noul",
+        "weight": 2.0,
+        "value": 0.81,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.81,
+          "false": 0.18999999999999995
+        },
+        "confidence": 0.6200000000000001,
+        "passed": null
+      },
+      {
+        "question": "No user request in `turns` is ignored, refused without cause or left only partly addressed by the assistant.",
+        "type": "noul",
+        "weight": 1.0,
+        "value": 0.62,
+        "applicable": true,
+        "probabilities": {
+          "true": 0.62,
+          "false": 0.38
+        },
+        "confidence": 0.24,
+        "passed": null
+      },
+      {
+        "question": "Across `turns`, how many of the user's intentions does the assistant satisfy?",
+        "type": "score",
+        "weight": 1.0,
+        "value": 1.0,
+        "applicable": true,
+        "probabilities": {
+          "None satisfied": 0.0,
+          "Few satisfied": 0.05,
+          "Most satisfied": 0.15,
+          "All satisfied": 0.8
+        },
+        "confidence": 0.6,
+        "passed": null
+      }
+    ],
+    "raised": null
+  }
+]

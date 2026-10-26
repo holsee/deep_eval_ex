@@ -1,0 +1,14 @@
+{
+  "template": "TurnFaithfulnessMetric.generate_verdicts",
+  "inputs": {
+    "claims": [
+      "Order 42 shipped on 1 October.",
+      "Refunds take 2 days.",
+      "The café is open late."
+    ],
+    "truths": [
+      "Refunds take 5 business days.",
+      "Order 42 shipped on 1 October."
+    ]
+  }
+}

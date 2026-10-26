@@ -1,0 +1,244 @@
+{
+  "measure": [
+    [
+      {
+        "state": {
+          "turns": [
+            {
+              "content": "My order 42 is late.",
+              "role": "user"
+            },
+            {
+              "content": "Sorry! It ships today.",
+              "role": "assistant"
+            }
+          ]
+        },
+        "questions": {
+          "verdict": {
+            "type": "noul",
+            "instructions": "Is the last `assistant` turn in `turns` relevant to the conversation so far, judged using the earlier turns as context? Answer yes for vague replies to vague user turns such as greetings; answer no only if it is completely irrelevant to what the user said."
+          }
+        },
+        "answers": {
+          "nouls": {
+            "verdict": {
+              "probability": 0.42
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "turns": [
+            {
+              "content": "My order 42 is late.",
+              "role": "user"
+            },
+            {
+              "content": "Sorry! It ships today.",
+              "role": "assistant"
+            },
+            {
+              "content": "Can I change the address to Zürich?",
+              "role": "user"
+            },
+            {
+              "content": "Have you tried our new café blend?",
+              "role": "assistant"
+            }
+          ]
+        },
+        "questions": {
+          "verdict": {
+            "type": "noul",
+            "instructions": "Is the last `assistant` turn in `turns` relevant to the conversation so far, judged using the earlier turns as context? Answer yes for vague replies to vague user turns such as greetings; answer no only if it is completely irrelevant to what the user said."
+          }
+        },
+        "answers": {
+          "nouls": {
+            "verdict": {
+              "probability": 0.42
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      },
+      {
+        "state": {
+          "turns": [
+            {
+              "content": "Can I change the address to Zürich?",
+              "role": "user"
+            },
+            {
+              "content": "Have you tried our new café blend?",
+              "role": "assistant"
+            },
+            {
+              "content": "Please just change the address.",
+              "role": "user"
+            },
+            {
+              "content": "Done: order 42 now ships to Zürich.",
+              "role": "assistant"
+            }
+          ]
+        },
+        "questions": {
+          "verdict": {
+            "type": "noul",
+            "instructions": "Is the last `assistant` turn in `turns` relevant to the conversation so far, judged using the earlier turns as context? Answer yes for vague replies to vague user turns such as greetings; answer no only if it is completely irrelevant to what the user said."
+          }
+        },
+        "answers": {
+          "nouls": {
+            "verdict": {
+              "probability": 0.42
+            }
+          },
+          "choices": {},
+          "scores": {}
+        },
+        "cost": {
+          "value": 4.2e-05,
+          "input_tokens": 1000,
+          "output_tokens": 0
+        }
+      }
+    ]
+  ],
+  "evaluate": [
+    {
+      "state": {
+        "turns": [
+          {
+            "content": "My order 42 is late.",
+            "role": "user"
+          },
+          {
+            "content": "Sorry! It ships today.",
+            "role": "assistant"
+          }
+        ]
+      },
+      "questions": {
+        "verdict": {
+          "type": "noul",
+          "instructions": "Is the last `assistant` turn in `turns` relevant to the conversation so far, judged using the earlier turns as context? Answer yes for vague replies to vague user turns such as greetings; answer no only if it is completely irrelevant to what the user said."
+        }
+      },
+      "answers": {
+        "nouls": {
+          "verdict": {
+            "probability": 0.42
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "turns": [
+          {
+            "content": "My order 42 is late.",
+            "role": "user"
+          },
+          {
+            "content": "Sorry! It ships today.",
+            "role": "assistant"
+          },
+          {
+            "content": "Can I change the address to Zürich?",
+            "role": "user"
+          },
+          {
+            "content": "Have you tried our new café blend?",
+            "role": "assistant"
+          }
+        ]
+      },
+      "questions": {
+        "verdict": {
+          "type": "noul",
+          "instructions": "Is the last `assistant` turn in `turns` relevant to the conversation so far, judged using the earlier turns as context? Answer yes for vague replies to vague user turns such as greetings; answer no only if it is completely irrelevant to what the user said."
+        }
+      },
+      "answers": {
+        "nouls": {
+          "verdict": {
+            "probability": 0.42
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    },
+    {
+      "state": {
+        "turns": [
+          {
+            "content": "Can I change the address to Zürich?",
+            "role": "user"
+          },
+          {
+            "content": "Have you tried our new café blend?",
+            "role": "assistant"
+          },
+          {
+            "content": "Please just change the address.",
+            "role": "user"
+          },
+          {
+            "content": "Done: order 42 now ships to Zürich.",
+            "role": "assistant"
+          }
+        ]
+      },
+      "questions": {
+        "verdict": {
+          "type": "noul",
+          "instructions": "Is the last `assistant` turn in `turns` relevant to the conversation so far, judged using the earlier turns as context? Answer yes for vague replies to vague user turns such as greetings; answer no only if it is completely irrelevant to what the user said."
+        }
+      },
+      "answers": {
+        "nouls": {
+          "verdict": {
+            "probability": 0.42
+          }
+        },
+        "choices": {},
+        "scores": {}
+      },
+      "cost": {
+        "value": 4.2e-05,
+        "input_tokens": 1000,
+        "output_tokens": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "template": "TaskCompletionMetric._experimental_system_one_questions",
+  "inputs": {
+    "has_trace": true,
+    "has_task": false
+  }
+}

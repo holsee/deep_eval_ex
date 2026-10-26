@@ -1,0 +1,69 @@
+[
+  {
+    "uuid": "1daf6a6a-9d1a-4e5e-b39e-bdf833374a13",
+    "baseSpans": [],
+    "agentSpans": [
+      {
+        "uuid": "a97c4235-7d64-4d4b-aa5a-aac2d676b411",
+        "name": "agent",
+        "status": "ERRORED",
+        "type": "agent",
+        "startTime": "2026-10-23T03:23:29.916Z",
+        "endTime": "2026-10-23T03:23:29.916Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "error": "agent gave up",
+        "toolsCalled": [
+          {
+            "name": "search",
+            "type": "FUNCTION",
+            "output": [
+              "result for How do I reset my password?"
+            ],
+            "inputParameters": {
+              "query": "How do I reset my password?"
+            }
+          }
+        ],
+        "availableTools": [],
+        "agentHandoffs": []
+      }
+    ],
+    "llmSpans": [],
+    "retrieverSpans": [],
+    "toolSpans": [
+      {
+        "uuid": "2007458f-e393-41de-8afe-3bec368474a7",
+        "name": "search",
+        "status": "SUCCESS",
+        "type": "tool",
+        "parentUuid": "a97c4235-7d64-4d4b-aa5a-aac2d676b411",
+        "startTime": "2026-10-23T03:23:29.916Z",
+        "endTime": "2026-10-23T03:23:29.916Z",
+        "input": {
+          "query": "How do I reset my password?"
+        },
+        "output": [
+          "result for How do I reset my password?"
+        ],
+        "metricsData": [
+          {
+            "name": "Span Judge",
+            "threshold": 0.7,
+            "success": false,
+            "strictMode": false,
+            "flaky": false
+          }
+        ]
+      }
+    ],
+    "startTime": "2026-10-23T03:23:29.916Z",
+    "endTime": "2026-10-23T03:23:29.916Z",
+    "environment": "development",
+    "input": {
+      "query": "How do I reset my password?"
+    },
+    "status": "ERRORED"
+  }
+]

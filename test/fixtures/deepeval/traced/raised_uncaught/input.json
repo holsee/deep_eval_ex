@@ -1,0 +1,83 @@
+{
+  "description": "The app's coroutine raises out of the root span: the async iterator marks the trace and its root ERRORED with format_error_text. Async only: in sync the exception leaves the user's loop and no run is saved",
+  "goldens": [
+    {
+      "input": "How do I reset my password?",
+      "expected_output": "Use the 'Forgot password' link.",
+      "name": "password-reset"
+    }
+  ],
+  "metrics": [
+    {
+      "kind": "stub",
+      "name": "Stub Judge",
+      "score": 0.75,
+      "reason": "Three of the four statements are supported. café ✓",
+      "threshold": 0.7,
+      "evaluation_model": "gpt-4o-mini",
+      "evaluation_cost": 0.000321,
+      "input_tokens": 1234,
+      "output_tokens": 56
+    }
+  ],
+  "modes": [
+    "async"
+  ],
+  "uncaught": true,
+  "functions": {
+    "agent": {
+      "type": "agent",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "body": [
+        {
+          "call": "search",
+          "args": [
+            "$query"
+          ]
+        },
+        {
+          "raise": {
+            "type": "RuntimeError",
+            "message": "agent gave up"
+          }
+        }
+      ]
+    },
+    "search": {
+      "type": "tool",
+      "params": [
+        [
+          "query"
+        ]
+      ],
+      "metrics": [
+        {
+          "kind": "stub",
+          "name": "Span Judge",
+          "score": 0.75,
+          "reason": "Three of the four statements are supported. café ✓",
+          "threshold": 0.7,
+          "evaluation_model": "gpt-4o-mini",
+          "evaluation_cost": 0.000321,
+          "input_tokens": 1234,
+          "output_tokens": 56
+        }
+      ],
+      "returns": [
+        "result for {query}"
+      ]
+    }
+  },
+  "app": [
+    {
+      "call": "agent",
+      "args": [
+        "{input}"
+      ]
+    }
+  ]
+}

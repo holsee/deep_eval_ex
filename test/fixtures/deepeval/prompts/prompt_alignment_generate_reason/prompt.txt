@@ -1,0 +1,34 @@
+Given the prompt alignment score, the reasons for unalignment found in the LLM actual output, the actual output, and input, provide a CONCISE reason for the score. Explain why it is not higher, but also why it is at its current score.
+The unalignments represent prompt instructions that are not followed by the LLM in the actual output.
+If there no unaligments, just say something positive with an upbeat encouraging tone (but don't overdo it otherwise it gets annoying).
+Don't have to talk about whether the actual output is a good fit for the input, access ENTIRELY based on the unalignment reasons.
+
+
+--- MULTIMODAL INPUT RULES ---
+- Treat image content as factual evidence.
+- Only reference visual details that are explicitly and clearly visible.
+- Do not infer or guess objects, text, or details not visibly present.
+- If an image is unclear or ambiguous, mark uncertainty explicitly.
+
+
+**
+IMPORTANT: Please make sure to only return in JSON format, with the 'reason' key providing the reason.
+Example JSON:
+{
+  "reason": "The score is <prompt_alignment_score> because <your_reason>."
+}
+**
+
+Input:
+Où est ma commande ?
+
+LLM Actual Output:
+Your order ships tomorrow.
+
+Prompt Alignment Score:
+0.50
+
+Reasons for unalignment:
+[None]
+
+JSON:
