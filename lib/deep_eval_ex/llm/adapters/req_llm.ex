@@ -110,7 +110,7 @@ if Code.ensure_loaded?(ReqLLM) do
     502, 503, 504 and 529 responses, waiting for a response's `Retry-After`
     when it has one and backing off exponentially (about 1s, 2s, 4s)
     otherwise. That includes a `429` for an exhausted quota, which
-    DeepEvalEx's own adapters do not retry. Set
+    DeepEvalEx's OpenAI adapter does not retry (`insufficient_quota`). Set
     `req_llm_options: [max_retries: 0]` to turn this off. Errors are
     returned as ReqLLM's exceptions, e.g.
     `{:error, %ReqLLM.Error.API.Request{status: 401}}`.

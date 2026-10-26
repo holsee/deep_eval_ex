@@ -278,8 +278,13 @@ in deepeval:
 devcontainer exec --workspace-folder . mix test --only live_system_one
 ```
 
-For now it is a scaffold that only checks the credentials reach the test;
-it will call Jev once DeepEvalEx has a TypeSafe client.
+It asks Jev a Noul, a Choice and a Score directly, then evaluates every System
+One fixture scenario Jev decides alone with the real TypeSafe adapter,
+checking each test run's shape, score range, model name and cost, and prints
+each scenario's token count and cost. Costs are checked at the price the
+adapter resolves (`TYPESAFE_COST_PER_INPUT_TOKEN`, else Jev's for a
+registered model); a model with no price, such as a pinned `jev-1.14.0`, is
+checked as unpriced.
 
 ### Gate
 

@@ -62,25 +62,21 @@ config :deep_eval_ex,
 | `:skip_on_missing_params` | `SKIP_DEEPEVAL_MISSING_PARAMS` | boolean | `false` | `DeepEvalEx.ExUnit` assertions; `mix deep_eval.test -s` sets it |
 | `:use_cache` | `ENABLE_DEEPEVAL_CACHE` | boolean | `false` | `DeepEvalEx.ExUnit` assertions in a `mix deep_eval.test` run; `-c` sets it |
 | `:per_task_timeout_seconds_override` | `DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE` | number >= 0 | unset | `DeepEvalEx.Evaluator`: the default per-test-case `:timeout` (`DeepEvalEx.Config.per_task_timeout_seconds/0`; 180 seconds when unset or `0`) |
-| `:retry_max_attempts` | `DEEPEVAL_RETRY_MAX_ATTEMPTS` | integer >= 1 | `2` | not yet read |
-| `:retry_initial_seconds` | `DEEPEVAL_RETRY_INITIAL_SECONDS` | number >= 0 | `1.0` | not yet read |
-| `:retry_exp_base` | `DEEPEVAL_RETRY_EXP_BASE` | number >= 1 | `2.0` | not yet read |
-| `:retry_jitter` | `DEEPEVAL_RETRY_JITTER` | number >= 0 | `2.0` | not yet read |
-| `:retry_cap_seconds` | `DEEPEVAL_RETRY_CAP_SECONDS` | number >= 0 | `5.0` | not yet read |
-| `:eval_mode` | `DEEPEVAL_EVAL_MODE` | `:llm`, `:hybrid` or `:system_one` | unset | not yet read |
-| `:typesafe_api_key` | `TYPESAFE_API_KEY` | string | unset | not yet read |
-| `:typesafe_model_name` | `TYPESAFE_MODEL_NAME` | string | unset | not yet read |
-| `:typesafe_cost_per_input_token` | `TYPESAFE_COST_PER_INPUT_TOKEN` | number > 0 | unset | not yet read |
+| `:retry_max_attempts` | `DEEPEVAL_RETRY_MAX_ATTEMPTS` | integer >= 1 | `2` | `DeepEvalEx.LLM.Retry`: attempts per judge or System One call, the first included |
+| `:retry_initial_seconds` | `DEEPEVAL_RETRY_INITIAL_SECONDS` | number >= 0 | `1.0` | `DeepEvalEx.LLM.Retry`: backoff |
+| `:retry_exp_base` | `DEEPEVAL_RETRY_EXP_BASE` | number >= 1 | `2.0` | `DeepEvalEx.LLM.Retry`: backoff |
+| `:retry_jitter` | `DEEPEVAL_RETRY_JITTER` | number >= 0 | `2.0` | `DeepEvalEx.LLM.Retry`: backoff |
+| `:retry_cap_seconds` | `DEEPEVAL_RETRY_CAP_SECONDS` | number >= 0 | `5.0` | `DeepEvalEx.LLM.Retry`: backoff cap (`0` means no sleeps) |
+| `:eval_mode` | `DEEPEVAL_EVAL_MODE` | `:llm`, `:hybrid` or `:system_one` | unset | `DeepEvalEx.SystemOne.Mode`: the System One eval mode of metrics that support it |
+| `:typesafe_api_key` | `TYPESAFE_API_KEY` | string | unset | `DeepEvalEx.SystemOne.Adapters.TypeSafe`: the API key |
+| `:typesafe_model_name` | `TYPESAFE_MODEL_NAME` | string | unset | `DeepEvalEx.SystemOne.Adapters.TypeSafe`: the model (default `jev-latest`) |
+| `:typesafe_cost_per_input_token` | `TYPESAFE_COST_PER_INPUT_TOKEN` | number >= 0 | unset | `DeepEvalEx.SystemOne.Adapters.TypeSafe`: the price per input token (default Jev's for a registered model) |
 | `:running` | `DEEPEVAL` | boolean | `false` | whether a `mix deep_eval.test` run is on (deepeval's `get_is_running_deepeval()`) |
 | `:repeat` | none | integer >= 1 | unset | `DeepEvalEx.ExUnit.Repeat`: `mix deep_eval.test --repeat` |
 | `:display` | none | `:all`, `:failing` or `:passing` | `:all` | `mix deep_eval.test --display`: the test cases its table shows |
 | `:test_file` | none | string | unset | `mix deep_eval.test`: the run's `testFile` |
 | `:show_warnings` | none | boolean | `false` | `mix deep_eval.test --show-warnings` |
 
-Settings marked "not yet read" are resolved with deepeval's names, types and
-defaults so the features that use them (error handling, timeouts, retries,
-System One eval modes; see the roadmap) pick them up without new
-configuration.
 
 ### Run overrides
 

@@ -794,8 +794,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   a Choice and a Score directly, then evaluates every System One fixture
   scenario Jev decides alone with the real adapter, checking each test run
   has deepeval's shape, scores in range, the TypeSafe model name and a cost
-  priced from Jev's reported input tokens, and prints each scenario's token
-  count and cost.
+  priced from Jev's reported input tokens at the price the adapter resolves
+  (a model with no price, such as a pinned `jev-1.14.0`, is checked as
+  unpriced), and prints each scenario's token count and cost.
 - **ToolCorrectness metric** with full deepeval parity: exact, non-exact and
   ordered (weighted LCS) matching, parameter and output comparison, and
   LLM-scored tool selection when `available_tools` are given. Includes wiki
@@ -3354,10 +3355,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   WebSocket sessions, but an application that adds `req_llm` resolves a
   patched version. `mix hex.audit` is clean again. ReqLLM 1.29 also changes
   behaviour the `:req_llm` adapter passes through: it retries HTTP 408,
-  429, 5xx and 529 responses (honouring `Retry-After`; turn off with
-  `req_llm_options: [max_retries: 0]`), no longer follows redirects, sends
-  Gemini keys in a header rather than `?key=`, and skips `.env` loading in
-  releases.
+  429, 500, 502, 503, 504 and 529 responses (honouring `Retry-After`; turn
+  off with `req_llm_options: [max_retries: 0]`), no longer follows
+  redirects, sends Gemini keys in a header rather than `?key=`, and skips
+  `.env` loading in releases.
 - The dev container's resolved credentials file is written with mode 600 and
   gitignored, along with its temp files, and is cleaned up if resolution is
   interrupted.
