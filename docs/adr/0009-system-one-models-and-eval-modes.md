@@ -485,6 +485,15 @@ The provider gets the following for free:
 - the response field names at the HTTP level (`noul` vs `probability`, the `usage` location);
 - the SDK's own retry and timeout defaults (`PS.TYPESAFE`).
 
+**Settled by P4-9 (2026-10-26).** Checked against `jev-latest` (then `jev-1.14.0`) and TypeSafe's HTTP API reference (<https://docs.typesafe.ai/api>):
+
+- the endpoint, the `{state, questions, model}` body and the `Authorization: Bearer` header were right;
+- the response was wrong. The HTTP API returns `{model, answers, usage}`, with each answer under its question's key and tagged with its `type` (`noul`, `choice`, `score`, or `box` for images). `nouls`, `choices` and `scores` are only the SDK's response object. The adapter now reads `answers`;
+- errors carry `{detail: {error_type, message}}`: `authentication_error` on 401 (bad key) and 403 (no key), `api_usage_error` on 400 (such as an unknown model), and `max_tokens_exceeded` on 400. A 422 carries a list of `{loc, msg, type}` validation errors;
+- `usage.input_tokens` and `usage.output_tokens` are top level, as assumed.
+
+The SDK's retry and timeout defaults remain unchecked; the adapter keeps deepeval's `:typesafe` retry policy.
+
 ## Testing strategy
 
 1. **Mock provider.** `SystemOne.Adapters.Mock` ships in `lib`, like `LLM.Adapters.Mock`. It ports `FakeSystemOneModel` and `ExplodingSystemOneModel`:
@@ -514,7 +523,7 @@ The provider gets the following for free:
    - Python `:g` / `round(v, 3)` / `:.2f` against a CPython-generated table.
 4. **TypeSafe adapter.** It is tested against a `Req.Test` stub: body shape, Bearer header, integer score keys, the cost formula, `max_tokens_exceeded` becoming `:context_limit` with nil limit, a bare 422 *not* becoming a context limit, retries on 429, 5xx and transport errors, and no retry on 401 or 403. It also runs `AdapterCase`.
 5. **Contract.** `AdapterCase` runs against the Mock, TypeSafe (stubbed) and a toy third-party provider. A test runs Faithfulness's `system_one` and `hybrid` paths on the toy provider to show nothing is Jev-specific.
-6. **Live check (P4-9).** `test/deep_eval_ex/live_system_one_test.exs`, tagged and excluded by default, runs against `jev-latest` when `TYPESAFE_API_KEY` is set. It runs Faithfulness in `system_one` and `hybrid`, checking answer shapes, usage and cost, and the overflow mapping. It is also where the unverified wire details listed above get settled.
+6. **Live check (P4-9).** `test/deep_eval_ex/live_system_one_test.exs`, tagged and excluded by default, runs against `jev-latest` when `TYPESAFE_API_KEY` is set. As built, it asks Jev a Noul, a Choice and a Score directly, then evaluates every System One fixture scenario Jev decides alone with the real adapter, checking each test run's shape, score range, model name and cost. `hybrid` mode and Jev's own overflow rejection are not exercised live (an oversized request is stopped by `Limits.check/3` before it is sent); the overflow reply was confirmed with a raw request. It settled the wire details listed above.
 
 ## Mapping of P3/P4 units
 
