@@ -144,6 +144,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     after deepeval's "requires at least one question" check and Jev's
     context-budget pre-check. The reply's Noul, Choice and Score answers
     keep their order, and Score level keys are cast to integers.
+  - Replies are read as TypeSafe's HTTP API sends them
+    (<https://docs.typesafe.ai/api>): every answer under `answers` by its
+    question's key, tagged with its `type`, beside `model` and `usage`.
   - The API key, model and price come from `:api_key`, `:model` and
     `:cost_per_input_token`, else `TYPESAFE_API_KEY`, `TYPESAFE_MODEL_NAME`
     (default `"jev-latest"`) and `TYPESAFE_COST_PER_INPUT_TOKEN`.
@@ -160,9 +163,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     (`limit_tokens: nil`); a bare `422` is an HTTP error. `401` and `403`
     are permanent authentication errors, `429` a rate limit, timeouts a
     `TimeoutError` and other transport errors a `ConnectionError`.
-  - The request envelope, endpoint, auth header, error body and response
-    field names follow the SDK's call shape and are unverified until the
-    live check runs against Jev.
+  - The endpoint, request body, auth header, reply and error bodies are
+    checked against Jev itself by the live suite
+    (`mix test --only live_system_one`).
 - **`DeepEvalEx.LLM.Retry` policy `:typesafe`**, deepeval's TypeSafe retry
   policy: transport errors, `429` and `5xx` are retried; `401`, `403`, other
   client errors (`422` included) and a `max_tokens_exceeded` reply are not.
@@ -780,12 +783,15 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   through each configured provider and checks the exported JSON. Judge models
   are selected with `DEEP_EVAL_LIVE_OPENAI_MODEL` and
   `DEEP_EVAL_LIVE_ANTHROPIC_MODEL`.
-- An opt-in TypeSafe Jev live check scaffold
-  (`mix test --only live_system_one`), excluded by default and skipped unless
-  `TYPESAFE_API_KEY` is set; `TYPESAFE_MODEL_NAME` defaults to `jev-latest`.
-  Both settings, named as in deepeval, are listed in
-  `.devcontainer/.env.example`. It only checks the credentials until a
-  TypeSafe client lands.
+- An opt-in TypeSafe Jev live suite (`mix test --only live_system_one`),
+  excluded by default and skipped unless `TYPESAFE_API_KEY` is set;
+  `TYPESAFE_MODEL_NAME` defaults to `jev-latest`. Both settings, named as in
+  deepeval, are listed in `.devcontainer/.env.example`. It asks Jev a Noul,
+  a Choice and a Score directly, then evaluates every System One fixture
+  scenario Jev decides alone with the real adapter, checking each test run
+  has deepeval's shape, scores in range, the TypeSafe model name and a cost
+  priced from Jev's reported input tokens, and prints each scenario's token
+  count and cost.
 - **ToolCorrectness metric** with full deepeval parity: exact, non-exact and
   ordered (weighted LCS) matching, parameter and output comparison, and
   LLM-scored tool selection when `available_tools` are given. Includes wiki
@@ -3216,6 +3222,14 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Fixed
 
+- The TypeSafe System One adapter rejected every reply from Jev as
+  invalid: it read the answers from `nouls`, `choices` and `scores`, the
+  shape of the Python SDK's response object, where TypeSafe's HTTP API
+  returns them under `answers`, each tagged with its `type`. It now reads the
+  HTTP API's reply, rejects an answer of a type it cannot use (such as
+  `box`), and reports a `422`'s validation errors as `loc: msg`. The live
+  System One suite now evaluates every fixture scenario Jev decides alone
+  against the real Jev (unit P4-9) instead of only checking the credentials.
 - `mix deep_eval.test` printed an unreadable `Test Results` table on a
   narrow console, such as 80 columns when no terminal is attached and
   `COLUMNS` is unset: the widest column took the whole overflow and

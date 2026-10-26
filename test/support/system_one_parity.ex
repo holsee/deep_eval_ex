@@ -188,11 +188,15 @@ defmodule DeepEvalEx.Test.SystemOneParity do
   `evaluate()` did with `ignore_errors=True`, writing the test run to
   `results_folder`. Returns `{test_run, calls}`: the file's contents and the
   System One calls of the run.
+
+  Given a `system_one_model`, e.g. `{DeepEvalEx.SystemOne.Adapters.TypeSafe, []}`,
+  the metrics decide with it instead of the scenario's fake, and `calls` is
+  empty: the live check of unit P4-9.
   """
-  @spec test_run(String.t(), Path.t()) :: {binary(), [map()]}
-  def test_run(scenario, results_folder) do
+  @spec test_run(String.t(), Path.t(), term()) :: {binary(), [map()]}
+  def test_run(scenario, results_folder, system_one_model \\ nil) do
     input = load(scenario, "input.json")
-    mock = Mock.from_fixture(input["system_one"])
+    mock = system_one_model || Mock.from_fixture(input["system_one"])
     {metrics, opts} = input |> metrics(mock) |> Enum.unzip()
     # The run's options: a batched scenario's metrics share theirs.
     [opts] = Enum.uniq(opts)
@@ -205,7 +209,8 @@ defmodule DeepEvalEx.Test.SystemOneParity do
       )
 
     assert is_binary(path), "DeepEvalEx wrote no test run file"
-    {File.read!(path), Mock.dump_calls(mock)}
+    calls = if system_one_model, do: [], else: Mock.dump_calls(mock)
+    {File.read!(path), calls}
   end
 
   @doc """

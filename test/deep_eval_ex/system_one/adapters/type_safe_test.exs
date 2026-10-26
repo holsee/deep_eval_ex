@@ -33,20 +33,26 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafeTest do
     {"q_s", %Question.Score{instructions: "Grounded?", levels: ["No", "Partly", "Fully"]}}
   ]
 
+  # The HTTP API's reply (https://docs.typesafe.ai/api), as Jev sent it in
+  # the live check: every answer under `answers` by its question's key,
+  # tagged with its type.
   @reply %{
-    "nouls" => %{"claim_0" => %{"noul" => 0.9}, "claim_1" => %{"noul" => 0.2}},
-    "choices" => %{
+    "model" => "jev-1.14.0",
+    "answers" => %{
+      "claim_0" => %{"type" => "noul", "noul" => 0.9},
+      "claim_1" => %{"type" => "noul", "noul" => 0.2},
       "tone" => %{
+        "type" => "choice",
         "choice" => "cold",
-        "probabilities" => %{"warm" => 0.3, "cold" => 0.7},
-        "confidence" => 0.4
-      }
-    },
-    "scores" => %{
+        "confidence" => 0.4,
+        "probabilities" => %{"warm" => 0.3, "cold" => 0.7}
+      },
       "q_s" => %{
+        "type" => "score",
         "score" => 2,
-        "probabilities" => %{"0" => 0.1, "1" => 0.2, "2" => 0.7},
-        "confidence" => 0.5
+        "confidence" => 0.5,
+        "legend" => %{"0" => "No", "1" => "Partly", "2" => "Fully"},
+        "probabilities" => %{"0" => 0.1, "1" => 0.2, "2" => 0.7}
       }
     },
     "usage" => %{"input_tokens" => 1000, "output_tokens" => 12}
@@ -265,10 +271,10 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafeTest do
       Req.Test.stub(@stub, fn conn ->
         conn
         |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.send_resp(200, ~s({"nouls": {}, "choices": {"tone": {"choice": "warm",
-          "probabilities": {"warm": 0.6, "cold": 0.4}, "confidence": 0.2}},
-          "scores": {"q_s": {"score": 0, "probabilities": {"2": 0.1, "0": 0.8, "1": 0.1},
-          "confidence": 0.7}}}))
+        |> Plug.Conn.send_resp(200, ~s({"answers": {"tone": {"type": "choice",
+          "choice": "warm", "confidence": 0.2, "probabilities": {"warm": 0.6, "cold": 0.4}},
+          "q_s": {"type": "score", "score": 0, "confidence": 0.7,
+          "probabilities": {"2": 0.1, "0": 0.8, "1": 0.1}}}}))
       end)
 
       questions = Enum.drop(@questions, 2)
@@ -283,15 +289,26 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafeTest do
       assert {:error, %Error{reason: :invalid_response, type: "TypeSafeError"}} =
                TypeSafe.decide(@state, @questions, @opts)
 
-      stub_reply(%{"nouls" => %{"claim_0" => %{"p" => 0.9}}})
+      for reply <- [
+            # No answers at all.
+            %{"usage" => %{"input_tokens" => 1}},
+            # The SDK's response object, which the HTTP API never sends.
+            %{"nouls" => %{"claim_0" => %{"noul" => 0.9}}},
+            %{"answers" => %{"claim_0" => %{"type" => "noul", "p" => 0.9}}},
+            %{"answers" => %{"claim_0" => %{"noul" => 0.9}}},
+            %{"answers" => %{"q_s" => %{"type" => "box", "box" => %{"top" => 0.1}}}},
+            %{
+              "answers" => %{
+                "q_s" => %{"type" => "score", "score" => 1, "probabilities" => %{"high" => 1.0}}
+              }
+            }
+          ] do
+        stub_reply(reply)
 
-      assert {:error, %Error{reason: :invalid_response}} =
-               TypeSafe.decide(@state, @questions, @opts)
-
-      stub_reply(%{"scores" => %{"q_s" => %{"score" => 1, "probabilities" => %{"high" => 1.0}}}})
-
-      assert {:error, %Error{reason: :invalid_response}} =
-               TypeSafe.decide(@state, @questions, @opts)
+        assert {:error, %Error{reason: :invalid_response}} =
+                 TypeSafe.decide(@state, @questions, @opts),
+               "accepted #{inspect(reply)}"
+      end
     end
   end
 
@@ -381,6 +398,40 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafeTest do
 
       assert error.message =~ "422"
       assert error.message =~ "Unprocessable"
+    end
+
+    test "reports a 422's validation errors by location" do
+      # As Jev answers a request with no questions.
+      stub_reply(
+        {422,
+         %{
+           "detail" => [
+             %{
+               "type" => "too_short",
+               "loc" => ["body", "questions"],
+               "msg" => "Dictionary should have at least 1 item after validation, not 0"
+             }
+           ]
+         }}
+      )
+
+      assert {:error, %Error{reason: :http, type: "TypeSafeError"} = error} =
+               TypeSafe.decide(@state, @questions, @opts)
+
+      assert error.message ==
+               "TypeSafe API returned HTTP 422: body.questions: " <>
+                 "Dictionary should have at least 1 item after validation, not 0"
+    end
+
+    test "reports the message of an error_type detail" do
+      stub_reply(
+        {400, %{"detail" => %{"error_type" => "api_usage_error", "message" => "Unknown model"}}}
+      )
+
+      assert {:error, %Error{reason: :http} = error} =
+               TypeSafe.decide(@state, @questions, @opts)
+
+      assert error.message == "TypeSafe API returned HTTP 400: Unknown model"
     end
 
     test "maps 401 and 403 to permanent authentication errors" do
@@ -480,29 +531,32 @@ defmodule DeepEvalEx.SystemOne.AdapterCase.TypeSafeTest do
   end
 
   defp answer_all(questions) do
-    Enum.reduce(questions, %{"nouls" => %{}, "choices" => %{}, "scores" => %{}}, fn
-      {key, %{"type" => "noul"}}, acc ->
-        put_in(acc, ["nouls", key], %{"noul" => 0.8})
+    %{"answers" => Map.new(questions, fn {key, question} -> {key, answer(question)} end)}
+  end
 
-      {key, %{"type" => "choice", "criteria" => options}}, acc ->
-        [first | _] = names = Map.keys(options)
-        p = 1.0 / length(names)
+  defp answer(%{"type" => "noul"}), do: %{"type" => "noul", "noul" => 0.8}
 
-        put_in(acc, ["choices", key], %{
-          "choice" => first,
-          "probabilities" => Map.new(names, &{&1, p}),
-          "confidence" => 0.0
-        })
+  defp answer(%{"type" => "choice", "criteria" => options}) do
+    [first | _] = names = Map.keys(options)
+    p = 1.0 / length(names)
 
-      {key, %{"type" => "score", "criteria" => levels}}, acc ->
-        top = length(levels) - 1
+    %{
+      "type" => "choice",
+      "choice" => first,
+      "confidence" => 0.0,
+      "probabilities" => Map.new(names, &{&1, p})
+    }
+  end
 
-        put_in(acc, ["scores", key], %{
-          "score" => top,
-          "probabilities" =>
-            Map.new(0..top, &{Integer.to_string(&1), if(&1 == top, do: 1.0, else: 0.0)}),
-          "confidence" => 1.0
-        })
-    end)
+  defp answer(%{"type" => "score", "criteria" => levels}) do
+    top = length(levels) - 1
+
+    %{
+      "type" => "score",
+      "score" => top,
+      "confidence" => 1.0,
+      "probabilities" =>
+        Map.new(0..top, &{Integer.to_string(&1), if(&1 == top, do: 1.0, else: 0.0)})
+    }
   end
 end

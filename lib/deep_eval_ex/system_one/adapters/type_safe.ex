@@ -52,16 +52,19 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
   no questions, then checks the request fits in Jev's context
   (`DeepEvalEx.SystemOne.Limits.check/3`).
 
-  The reply's `nouls[key].noul`, `choices[key]` and `scores[key]` become
+  The reply's `answers` hold each answer under its question's key, tagged
+  with a `type` of `noul`, `choice` or `score`; they become
   `DeepEvalEx.SystemOne.Answers`, keeping the reply's order of
-  probabilities, with a Score's level keys cast to integers.
+  probabilities, with a Score's level keys cast to integers. A reply
+  without `answers`, or with an answer of another type, is invalid.
 
-  deepeval calls the `typesafe-sdk` client rather than the HTTP API, and the
-  SDK is not available to check against, so these wire details follow the
-  SDK's call shape and are unverified: the endpoint, the request envelope
-  (`{state, questions, model}`), the Bearer header, the error body
-  (`{"detail": {"error_type": ...}}`) and the response field names
-  (`noul`, a top-level `usage`).
+  deepeval calls the `typesafe-sdk` client rather than the HTTP API. These
+  wire details follow TypeSafe's HTTP API reference
+  (<https://docs.typesafe.ai/api>) and were checked against Jev itself: the
+  endpoint, the request body (`{state, questions, model}`), the Bearer
+  header, the reply (`{model, answers, usage}`) and the error bodies
+  (`{"detail": {"error_type": ..., "message": ...}}`, or a 422's list of
+  `{loc, msg, type}` validation errors).
 
   ## Usage and cost
 
@@ -289,16 +292,27 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
 
   defp detail_text(detail, _body) when is_binary(detail), do: detail
   defp detail_text(%{"message" => message}, _body) when is_binary(message), do: message
+
+  # A 422's validation errors, each as `loc: msg`.
+  defp detail_text([_ | _] = errors, body) do
+    if Enum.all?(errors, &match?(%{"loc" => [_ | _], "msg" => msg} when is_binary(msg), &1)) do
+      Enum.map_join(errors, "; ", fn %{"loc" => loc, "msg" => msg} ->
+        Enum.join(loc, ".") <> ": " <> msg
+      end)
+    else
+      detail_text(nil, body)
+    end
+  end
+
   defp detail_text(_detail, body) when is_binary(body), do: String.trim(body)
   defp detail_text(_detail, body), do: inspect(body)
 
-  # deepeval's _from_sdk_response and calculate_cost.
+  # deepeval's _from_sdk_response and calculate_cost, reading the HTTP
+  # API's reply: each answer under `answers` by its question's key, tagged
+  # with its type.
   defp from_reply(body, opts) do
     with {:ok, %OrderedObject{} = reply} <- Jason.decode(body, objects: :ordered_objects),
-         {:ok, nouls} <- read(reply["nouls"], &noul/1),
-         {:ok, choices} <- read(reply["choices"], &choice/1),
-         {:ok, scores} <- read(reply["scores"], &score/1) do
-      answers = %Answers{nouls: nouls, choices: choices, scores: scores}
+         {:ok, answers} <- read(reply["answers"]) do
       {:ok, answers, usage(reply["usage"], opts)}
     else
       _invalid ->
@@ -311,18 +325,30 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
     end
   end
 
-  defp read(nil, _build), do: {:ok, %{}}
-
-  defp read(%OrderedObject{} = answers, build) do
-    Enum.reduce_while(answers, {:ok, %{}}, fn {key, answer}, {:ok, acc} ->
-      case build.(answer) do
-        {:ok, built} -> {:cont, {:ok, Map.put(acc, key, built)}}
+  defp read(%OrderedObject{} = answers) do
+    Enum.reduce_while(answers, {:ok, %Answers{}}, fn {key, answer}, {:ok, acc} ->
+      case answer(answer) do
+        {:ok, field, built} -> {:cont, {:ok, Map.update!(acc, field, &Map.put(&1, key, built))}}
         :error -> {:halt, :error}
       end
     end)
   end
 
-  defp read(_answers, _build), do: :error
+  defp read(_answers), do: :error
+
+  defp answer(%OrderedObject{} = answer) do
+    case answer["type"] do
+      "noul" -> tag(:nouls, noul(answer))
+      "choice" -> tag(:choices, choice(answer))
+      "score" -> tag(:scores, score(answer))
+      _ -> :error
+    end
+  end
+
+  defp answer(_answer), do: :error
+
+  defp tag(field, {:ok, built}), do: {:ok, field, built}
+  defp tag(_field, :error), do: :error
 
   defp noul(%OrderedObject{} = answer) do
     case answer["noul"] do
@@ -330,8 +356,6 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
       _ -> :error
     end
   end
-
-  defp noul(_answer), do: :error
 
   defp choice(%OrderedObject{} = answer) do
     case answer["probabilities"] do
@@ -348,8 +372,6 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
     end
   end
 
-  defp choice(_answer), do: :error
-
   defp score(%OrderedObject{} = answer) do
     with %OrderedObject{values: probabilities} <- answer["probabilities"],
          {:ok, probabilities} <- levels(probabilities) do
@@ -363,8 +385,6 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
       _ -> :error
     end
   end
-
-  defp score(_answer), do: :error
 
   # The SDK's level keys are strings; deepeval casts them with int().
   defp levels(probabilities) do
