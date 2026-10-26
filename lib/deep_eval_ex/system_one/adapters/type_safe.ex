@@ -36,6 +36,12 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
 
   - `:base_url` - the API's base URL (default `"https://api.typesafe.ai"`)
   - `:timeout` - receive timeout in milliseconds (default `60_000`)
+  - `:context_budget` - the `{state_tokens, request_tokens}` budget
+    requests are checked against before sending, or `:unbounded` to send
+    them unchecked (default Jev's
+    `#{inspect(DeepEvalEx.SystemOne.Adapter.jev_budget())}`, see
+    `context_budget/1`). For a model with another context window, or to
+    let Jev itself reject an oversized request; deepeval has no such option
   - `:req_options` - extra `Req` options merged into the request, e.g.
     `[plug: {Req.Test, DeepEvalEx.SystemOne.Adapters.TypeSafe}]` in tests
 
@@ -49,8 +55,8 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
   (`DeepEvalEx.SystemOne.Question.to_wire/1` under each key) and the model
   name to `POST {base_url}/v1/systemone` with the key as a Bearer token.
   Before sending, it fails with deepeval's `DeepEvalError` when there are
-  no questions, then checks the request fits in Jev's context
-  (`DeepEvalEx.SystemOne.Limits.check/3`).
+  no questions, then checks the request fits in Jev's context, or the
+  `:context_budget` option's (`DeepEvalEx.SystemOne.Limits.check/3`).
 
   The reply's `answers` hold each answer under its question's key, tagged
   with a `type` of `noul`, `choice` or `score`; they become
@@ -106,7 +112,7 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
 
   alias DeepEvalEx.{Config, DeepEvalError}
   alias DeepEvalEx.LLM.{Retry, Usage}
-  alias DeepEvalEx.SystemOne.{Answers, Error, Limits, Question}
+  alias DeepEvalEx.SystemOne.{Adapter, Answers, Error, Limits, Question}
   alias Jason.OrderedObject
 
   @default_base_url "https://api.typesafe.ai"
@@ -148,6 +154,15 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
       end
     end
   end
+
+  @doc """
+  The token budget requests are checked against
+  (`DeepEvalEx.SystemOne.Limits.check/3`): the `:context_budget` option,
+  else Jev's `#{inspect(DeepEvalEx.SystemOne.Adapter.jev_budget())}`.
+  """
+  @impl true
+  def context_budget(opts),
+    do: Keyword.get(opts, :context_budget, Adapter.jev_budget())
 
   @impl true
   def decide(_state, [], _opts) do

@@ -144,6 +144,11 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     after deepeval's "requires at least one question" check and Jev's
     context-budget pre-check. The reply's Noul, Choice and Score answers
     keep their order, and Score level keys are cast to integers.
+  - A `:context_budget` option (`{state_tokens, request_tokens}` or
+    `:unbounded`, default Jev's `{32_000, 64_000}`) sets the budget that
+    pre-check, the whole-metric runner and the batch use
+    (`context_budget/1`), for a model with another context window or to let
+    Jev itself reject an oversized request. deepeval has no such option.
   - Replies are read as TypeSafe's HTTP API sends them
     (<https://docs.typesafe.ai/api>): every answer under `answers` by its
     question's key, tagged with its `type`, beside `model` and `usage`.

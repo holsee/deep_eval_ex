@@ -244,6 +244,32 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafeTest do
 
       refute_received {:request, _, _}
     end
+
+    test "checks the budget the :context_budget option sets instead of Jev's" do
+      stub_reply(@reply)
+      state = String.duplicate("x", 3 * 32_000)
+
+      assert {:ok, %Answers{}, _usage} =
+               TypeSafe.decide(state, @questions, [context_budget: :unbounded] ++ @opts)
+
+      assert_received {:request, _conn, _raw}
+
+      assert {:error, %Error{reason: :context_limit, limit_tokens: 20}} =
+               TypeSafe.decide(@state, @questions, [context_budget: {20, 100}] ++ @opts)
+
+      refute_received {:request, _, _}
+    end
+  end
+
+  describe "context_budget/1" do
+    test "is Jev's budget unless the :context_budget option sets one" do
+      assert TypeSafe.context_budget([]) == {32_000, 64_000}
+      assert TypeSafe.context_budget(context_budget: {100, 200}) == {100, 200}
+      assert TypeSafe.context_budget(context_budget: :unbounded) == :unbounded
+
+      assert Model.context_budget(Model.resolve({:typesafe, context_budget: :unbounded})) ==
+               :unbounded
+    end
   end
 
   describe "decide/3 answers" do
