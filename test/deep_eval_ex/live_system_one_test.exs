@@ -252,11 +252,13 @@ defmodule DeepEvalEx.LiveSystemOneTest do
   end
 
   describe "hybrid Faithfulness with Jev and an LLM judge (#{@llm_model})" do
+    # A case on both flags reads both: a cond would stop at the first
+    # missing key, leaving @llm_configured unused (a compile warning).
     @describetag skip:
-                   (cond do
-                      not @configured -> "TYPESAFE_API_KEY not set"
-                      not @llm_configured -> "OPENAI_API_KEY not set"
-                      true -> false
+                   (case {@configured, @llm_configured} do
+                      {false, _} -> "TYPESAFE_API_KEY not set"
+                      {_, false} -> "OPENAI_API_KEY not set"
+                      _ -> false
                     end)
 
     test "Jev judges the claims and the LLM writes the reason" do
