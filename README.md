@@ -291,14 +291,20 @@ checked as unpriced.
 Every change must pass the same checks as CI, inside the container:
 
 ```sh
+devcontainer exec --workspace-folder . mix hex.audit
 devcontainer exec --workspace-folder . mix format --check-formatted
+devcontainer exec --workspace-folder . \
+  env MIX_BUILD_ROOT=/tmp/noopt mix compile --no-optional-deps --warnings-as-errors
 devcontainer exec --workspace-folder . mix compile --warnings-as-errors
 devcontainer exec --workspace-folder . mix credo --strict
 devcontainer exec --workspace-folder . mix test --warnings-as-errors
+devcontainer exec --workspace-folder . mix dialyzer
+devcontainer exec --workspace-folder . env MIX_ENV=dev mix docs --warnings-as-errors
 ```
 
-CI additionally runs `mix dialyzer`. Build the docs with
-`devcontainer exec --workspace-folder . env MIX_ENV=dev mix docs`.
+`mix hex.audit` fails on retired packages and security advisories. The
+separate build root keeps the build without optional dependencies (here
+`req_llm`) from replacing the full one; CI uses `--force` instead.
 
 ### deepeval parity fixtures
 

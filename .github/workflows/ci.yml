@@ -46,6 +46,10 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
+      # Fails on retired packages and security advisories in mix.lock.
+      - name: Audit dependencies
+        run: mix hex.audit
+
       - name: Check formatting
         run: mix format --check-formatted
 
@@ -76,3 +80,9 @@ jobs:
 
       - name: Run Dialyzer
         run: mix dialyzer
+
+      # ex_doc is a dev-only dependency.
+      - name: Build docs with warnings as errors
+        run: mix docs --warnings-as-errors
+        env:
+          MIX_ENV: dev

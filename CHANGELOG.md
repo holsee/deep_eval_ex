@@ -3148,6 +3148,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   Each schema module exports `json_schema/0`.
 - `req` now requires `~> 0.7`.
 - CI runs Elixir 1.19.5 and OTP 28.4, matching `.tool-versions`.
+- CI also runs `mix hex.audit`, failing on retired packages and security
+  advisories, and builds the docs with `--warnings-as-errors`. The README's
+  gate lists every CI check.
 - **Judge prompts are deepeval 4.3.1's templates, verbatim.** The prompt
   modules of GEval, Faithfulness, Hallucination, AnswerRelevancy,
   ContextualPrecision, ContextualRecall and ToolCorrectness now render the
