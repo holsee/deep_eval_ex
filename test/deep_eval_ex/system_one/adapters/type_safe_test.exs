@@ -314,7 +314,10 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafeTest do
             put.("q_s", drop.("q_s", "score")),
             put.("q_s", Map.put(answers["q_s"], "score", nil)),
             put.("q_s", drop.("q_s", "confidence")),
-            put.("tone", put_in(answers["tone"], ["probabilities", "warm"], nil))
+            put.("tone", put_in(answers["tone"], ["probabilities", "warm"], nil)),
+            put.("tone", Map.put(answers["tone"], "choice", 1)),
+            put.("q_s", put_in(answers["q_s"], ["probabilities", "1"], nil)),
+            put.("q_s", put_in(answers["q_s"], ["probabilities", "1"], "0.2"))
           ] do
         stub_reply(reply)
 

@@ -170,10 +170,13 @@ defmodule DeepEvalEx.LiveSystemOneTest do
           # with their token counts rounded, so within half a token per
           # metric of a metric's own.
           cond do
-            # Unpriced, unless the metric asked Jev nothing and kept its
-            # seeded cost, as JsonCorrectness does.
+            # A metric no model decided (no evaluationModel) asked Jev
+            # nothing and keeps its seeded cost; one Jev decided is voided.
+            price == nil and want["evaluationModel"] == nil ->
+              assert got["evaluationCost"] == want["evaluationCost"], label
+
             price == nil ->
-              assert got["evaluationCost"] in [nil, want["evaluationCost"]], label
+              assert got["evaluationCost"] == nil, label
 
             want["evaluationCost"] == nil and fake_priced?(scenario) ->
               assert got["evaluationCost"] == nil, label
