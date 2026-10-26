@@ -74,6 +74,9 @@ defmodule DeepEvalEx.Test.ParityMetrics do
     @impl true
     def required_params, do: [:input]
 
+    # Raising is the point, so do_measure/2 never returns the result
+    # BaseMetric's @spec promises.
+    @dialyzer {:nowarn_function, do_measure: 2}
     def do_measure(_test_case, opts) do
       exception = Map.fetch!(@exceptions, Keyword.fetch!(opts, :exception))
       raise exception, Keyword.fetch!(opts, :message)
