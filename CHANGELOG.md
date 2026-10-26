@@ -16,7 +16,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   (ADR-0009), ports of deepeval 4.3.1's `DeepEvalBaseSystemOneModel` and
   `models/system_one/schema.py`. A System One model answers typed questions
   about a JSON state with probabilities instead of text, as TypeSafe AI's
-  Jev does. No metric asks one yet; the eval modes come in later units.
+  Jev does.
   - `DeepEvalEx.SystemOne.Adapter`, the behaviour a provider implements:
     `decide/3` returns `{:ok, answers, usage | nil}` or
     `{:error, exception}`, and `model_name/1` names it. The optional
@@ -65,8 +65,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - `DeepEvalEx.LLM.Usage` has a new `:source` field, `:llm` (the default)
     or `:system_one`.
 - **`DeepEvalEx.SystemOne.Mode`, eval-mode resolution** (ADR-0009), a port
-  of deepeval 4.3.1's `config/eval_mode.py` and `effective_eval_mode`. No
-  metric reads the mode yet.
+  of deepeval 4.3.1's `config/eval_mode.py` and `effective_eval_mode`.
   - `resolve/1` takes a metric's `:eval_mode` option (`:llm`, `:hybrid` or
     `:system_one`, as an atom or a string, case-insensitive), then the
     `:eval_mode` setting (application config, then `DEEPEVAL_EVAL_MODE`),
@@ -82,9 +81,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     which `DeepEvalEx.Config` now uses for `:eval_mode`) and `modes/0`.
 - **`DeepEvalEx.SystemOne.Limits`, the System One context-budget
   pre-check** (ADR-0009), a port of deepeval 4.3.1's
-  `models/system_one/limits.py` and the Jev limits in `constants.py`. Nothing
-  calls it yet; the whole-metric runner, the batch and the TypeSafe adapter
-  will.
+  `models/system_one/limits.py` and the Jev limits in `constants.py`, which
+  the whole-metric runner, the batch and the TypeSafe adapter check before
+  a request.
   - `check/3` returns `{:error, %DeepEvalEx.SystemOne.Error{reason:
     :context_limit, type: "SystemOneContextLimitError"}}`, with the estimate,
     the limit and deepeval's message, when the state plus the longest
@@ -194,8 +193,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - **Metrics take `:eval_mode` and `:system_one_model`, and carry System One
   state** (ADR-0009), ports of deepeval 4.3.1's `BaseMetric` System One
   fields, `initialize_model`/`initialize_system_one_model` and
-  `reset_system_one_state`. No built-in metric asks System One yet; the
-  decision points and the whole-metric runner come in later units.
+  `reset_system_one_state`.
   - `DeepEvalEx.SystemOne.Context.resolve!/2` resolves a metric's effective
     eval mode, its initialised System One model (none under `:llm`, so a
     missing TypeSafe key is not an error) and whether it has an LLM (not
@@ -227,7 +225,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     that `Context.resolve!/2` raises the failure as a `DeepEvalError`.
 - **`DeepEvalEx.SystemOne.Decision`, the `:hybrid` decision points**
   (ADR-0009), a port of the System One helpers of deepeval 4.3.1's
-  `metrics/utils/decision.py`. No built-in metric calls them yet.
+  `metrics/utils/decision.py`.
   - `DeepEvalEx.SystemOne.Spec.Binary`, `Spec.Choice` and `Spec.Score`
     (deepeval's `SystemOneBinarySpec`, `SystemOneChoiceSpec` and
     `SystemOneScoreSpec`) describe one decision: its instructions, its
@@ -256,8 +254,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - `Decision.format_reason/3`, deepeval's `format_decision_reason`:
     `"Decided by fake-jev: tool selection 0.75, confidence 0.25."`.
 - **QAG verdicts via System One** (ADR-0009), a port of the System One
-  section of deepeval 4.3.1's `metrics/utils/qag.py`. No built-in metric
-  calls it yet.
+  section of deepeval 4.3.1's `metrics/utils/qag.py`.
   - `DeepEvalEx.SystemOne.Spec.Verdicts` (deepeval's `SystemOneVerdictSpec`)
     describes one verdict per item: the question, the items and their
     `item_key`, the rest of the state, optional `{true, false}` criteria and
@@ -276,8 +273,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     `.`, `!` or `?` and whitespace, trimming and dropping empty sentences.
 - **`DeepEvalEx.SystemOne.Scored`, the Noul, Score and Choice question
   primitives** (ADR-0009), ports of deepeval 4.3.1's
-  `metrics/jev_eval/questions.py` and `parse_questions`. Nothing builds a
-  whole-metric System One request from them yet.
+  `metrics/jev_eval/questions.py` and `parse_questions`.
   - `Scored.Noul` (a statement, optional `true` / `false` criteria),
     `Scored.Score` (a question over 2 to 10 unique levels, worst first) and
     `Scored.Choice` (a question over ordered `{name, credit}` options,
@@ -302,8 +298,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     sent them.
 - **`DeepEvalEx.SystemOne.Runner`, the whole-chain `:system_one` path**
   (ADR-0009), a port of deepeval 4.3.1's `run_system_one_eval`
-  (`metrics/utils/system_one.py`) and `metrics/jev_eval/utils.py`. No
-  built-in metric calls it yet; they gain their specs in later units.
+  (`metrics/utils/system_one.py`) and `metrics/jev_eval/utils.py`.
   - `DeepEvalEx.SystemOne.EvalSpec`, deepeval's `SystemOneEvalSpec`: the
     test case fields to send (`evaluation_params`), the `Scored` questions
     and any `extra_state`. `c:BaseMetric.system_one_eval_spec/2` now returns
@@ -365,9 +360,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
   The `<metric>_system_one`, `faithfulness_system_one_strict`, `jev_eval`
   and `jev_eval_strict_not_applicable` fixtures, and every `<metric>_hybrid`
-  and `<metric>_hybrid_fallback` fixture (System One requests replayed by a
-  stand-in metric until the built-in metrics gain their hybrid paths),
-  export deepeval's `test_run.json` byte for byte. Confidence, the
+  and `<metric>_hybrid_fallback` fixture, export deepeval's `test_run.json` byte for byte. Confidence, the
   fallback reason and the score breakdown are not exported.
 - **Faithfulness and AnswerRelevancy run on System One** (ADR-0009), as
   deepeval 4.3.1's `FaithfulnessMetric` and `AnswerRelevancyMetric` do with
@@ -585,8 +578,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   `:results_folder` (or the `DEEPEVAL_RESULTS_FOLDER` environment variable) it
   writes `test_run_<YYYYMMDD_HHMMSS>.json` the way deepeval does: same file
   naming and collision suffixes, same camelCase keys and key order, nulls
-  omitted, and JSON encoded byte for byte like Python's `json.dump`. Also
-  accepts `:results_subfolder`, `:identifier` and `:hyperparameters`.
+  omitted, and JSON encoded byte for byte like Python's `json.dump`. A test
+  case that finishes in under a second exports `runDuration` as `0`, as
+  deepeval does. Also accepts `:results_subfolder`, `:identifier` and
+  `:hyperparameters`.
 - **Loading deepeval test runs.** `DeepEvalEx.TestRun.load/1` and `from_map/1`
   read a deepeval-produced test run; `to_results/1` turns it back into
   `DeepEvalEx.TestCase` data and `%DeepEvalEx.Result{}` entries. Every fixture
@@ -627,8 +622,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   questions, `evaluate()` batching several metrics into one request, and
   RefusalClassifier. Each records the `decide()` payloads in the SDK's wire
   shape, the answers, the measured state (including `confidence` and
-  `system_one_fallback_reason`) and the exported test run. A new test checks
-  their structure; DeepEvalEx does not implement eval modes yet.
+  `system_one_fallback_reason`) and the exported test run.
 - **Traced fixtures** (ADR-0011). `scripts/parity/generate_fixtures.py
   traced` runs 13 declarative agent scripts through real deepeval 4.3.1's
   `@observe` tracing, with nothing patched: nested agent, retriever, LLM and
@@ -642,8 +636,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   records deepeval's truncated ISO timestamps for fixed epoch times. The
   fixtures' README gains the normalisation the tracing units compare with:
   uuids numbered by first appearance, checked timestamps and test-case
-  `runDuration`. A new test checks the fixtures' structure; DeepEvalEx does
-  not trace yet.
+  `runDuration`.
 - **Shared QAG verdict handling.** `DeepEvalEx.Metrics.QAG` ports deepeval
   4.3.1's `normalize_qag_verdict` and `score_qag_verdicts`:
   `normalize_qag_verdict/2` coerces a judge's reply into `:yes`, `:no` or
@@ -754,7 +747,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   process and the processes it starts, so async tests each replay their own.
 - **Anthropic adapter** (`DeepEvalEx.LLM.Adapters.Anthropic`), using the
   Messages API with a forced tool call for structured output. Defaults follow
-  deepeval's `AnthropicModel`, including its price table.
+  deepeval's `AnthropicModel`, including its price table. A base URL that
+  already ends in `/v1` is not doubled, and a nested array or object that
+  Claude returns in tool input as a JSON-encoded string is decoded, even
+  when the debris after it repeats its closing bracket (`{...}}`).
 - **Ollama adapter** (`DeepEvalEx.LLM.Adapters.Ollama`), using the native
   `/api/chat` endpoint with JSON-schema `format` for structured output.
   Like deepeval, a model is required and evaluation cost is reported as 0.
@@ -768,7 +764,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   Usage is tracked across all LLM calls a metric makes (`DeepEvalEx.LLM.Usage`)
   and priced with deepeval's OpenAI and Anthropic tables
   (`DeepEvalEx.LLM.Pricing`). Unknown models get a `nil` cost rather than a
-  guess; set prices with `config :deep_eval_ex, model_pricing: %{...}`.
+  guess; set prices with `config :deep_eval_ex, model_pricing: %{...}`,
+  where a malformed entry raises a clear `ArgumentError`.
   Telemetry `:stop` and `:exception` events carry `input_tokens`,
   `output_tokens` and `cost`.
 - **Errored results.** `DeepEvalEx.Result` gains `:error`, `Result.error/3` and
@@ -830,7 +827,11 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   templates and f-strings print them: `repr/1` (Python lists, dicts,
   strings with Python's quoting and escapes, `None`, `True`, deepeval
   `ToolCall` reprs and enum members such as `<Verdict.YES: 'yes'>`) and
-  `format_fixed/2` (`format(x, ".2f")`, rounding exact ties to even).
+  `format_fixed/2` (`format(x, ".2f")`, rounding exact ties to even and
+  keeping the sign of `-0.0`). A `ToolCall` repr leaves out empty
+  `input_parameters` and prints a map `output` as indented JSON, a
+  `Jason.OrderedObject` (as loaded from JSON with ordered objects)
+  included, as deepeval's `ToolCall.__repr__` does.
 - `DeepEvalEx.TestRun.JSON.encode!/2` takes `:indent` and `:ensure_ascii`,
   formatting like Python's `json.dumps(indent=n, ensure_ascii=...)`.
 - `DeepEvalEx.Prompts.GEval.format_rubric/1`, formatting a rubric as
@@ -1348,7 +1349,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     deepeval's `Expectations` model and returns them as a plain map of
     `:model`, `:eval_mode` (`:llm` or `:system_one`), `:must` and
     `:must_not`, conditions stripped (`mustNot` is accepted; blank
-    conditions and unknown keys are errors). No metric judges them yet.
+    conditions and unknown keys are errors).
   - `DeepEvalEx.TestCase` gains `:expectations`, as deepeval's
     `LLMTestCase`, so they survive the conversions. Like deepeval, the test
     run export leaves them out.
@@ -1360,8 +1361,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     `put_test_cases/2` return a new dataset. Anything but a
     `DeepEvalEx.Dataset.Golden` raises `ArgumentError`, as deepeval raises
     `TypeError`; like deepeval's `test_cases` setter, `put_test_cases/2`
-    skips items that are not `DeepEvalEx.TestCase`s. Datasets are
-    single-turn until conversational goldens and test cases are ported.
+    skips items that are not `DeepEvalEx.TestCase`s. A dataset holds
+    single-turn goldens and test cases only.
   - A dataset implements `Enumerable` over its goldens.
   - `DeepEvalEx.TestCase` gains `:dataset_rank`, deepeval's private
     `_dataset_rank`: a dataset sets it to each test case's position, and so
@@ -1392,7 +1393,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - Errors raise: `File.Error` for a missing file, `ArgumentError` where
     deepeval raises `ValueError`, `TypeError` or a validation error, with
     deepeval's message for its own `ValueError`s. A golden with a scenario
-    raises, as conversational goldens are not supported yet.
+    raises, as a dataset holds single-turn goldens only.
   - Differences: a text cell of digits stays a string (pandas makes it a
     number, which deepeval's `Golden` then rejects); metadata cells must be
     JSON, where deepeval also reads Python literals (and, for test cases,
@@ -1450,7 +1451,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   cases); like the other export options, they are not passed to metrics.
 - **Multi-turn test cases: `DeepEvalEx.ConversationalTestCase` and
   `DeepEvalEx.Turn`**, ports of deepeval 4.3.1's `ConversationalTestCase`
-  and `Turn`. No metric evaluates them yet.
+  and `Turn`.
   - `DeepEvalEx.Turn.new/1` builds a turn: a `:user` or `:assistant` role
     (atom or string), its content, and the optional `:user_id`,
     `:retrieval_context` (strings or `RetrievedContextData`),
@@ -1495,7 +1496,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   Both dict helpers raise `ArgumentError` for a param of the wrong kind.
 - **`DeepEvalEx.Metrics.BaseConversationalMetric`**, deepeval 4.3.1's
   `BaseConversationalMetric`, the behaviour conversational metrics
-  implement. No built-in metric uses it yet.
+  implement.
   - `use` gives a conversational metric `BaseMetric`'s `measure/2`
     wrapper (strict mode, score-only thresholds, flakiness, telemetry,
     usage tracking and cost seeding) and the same System One hooks: the
@@ -1549,7 +1550,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     in `metricsScores`, and its success counts towards `testPassed` and
     `testFailed`.
   - `evaluate_run/3` writes a run that has only conversational test cases,
-    as deepeval does.
+    as deepeval does, and `DeepEvalEx.evaluate/3` returns a conversational
+    `DeepEvalEx.TestResult` for each (`conversational: true`, named
+    `"conversational_test_case_<index>"` by default), as deepeval's
+    `create_test_result`.
   - `TestRun.load/1` and `from_map/1` read `conversationalTestCases` into
     these structs, keeping `expectationsData`, `imagesMapping` and unknown
     keys as raw JSON. A missing `order` defaults to the test case's
@@ -1994,9 +1998,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     flaky sub-counts) and `Aggregate Classifiers` (label distribution, pass
     rate, errors) tables. `display: :all | :failing | :passing` and
     `truncate_passing_cases:` are deepeval's `DisplayConfig` options.
-  - `DeepEvalEx.Report.ResultsTable.build/2` (`display_results_table`),
+  - `DeepEvalEx.Report.ResultsTable.build/3` (`display_results_table`),
     the `Test Results` table with success rates, scores and statuses, and
-    conversations' turn tables (`format_turn`, `shorten`).
+    conversations' turn tables (`format_turn`, `shorten`), whose Details
+    and Tools limits follow the console width (`:width`).
   - `DeepEvalEx.Report.Summary`: the all-errored, hyperparameters and
     prompts warnings and `✓ Evaluation completed 🎉! (time taken: ... |
     token cost: ...)` with the pass rate.
@@ -2004,12 +2009,27 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     `evaluate_run/3` with `file_output_dir:` while printing, as
     `<identifier>_<YYYYMMDD_HHMMSS>.md`. The HTML export is not ported.
   - `DeepEvalEx.Report.Terminal` draws all of them with box-drawing
-    characters and ANSI colours, deciding colour and width as Rich's
-    `Console` does (`COLUMNS`, the terminal, `NO_COLOR`, `FORCE_COLOR`,
-    `TTY_COMPATIBLE`, `TERM`), and counting emoji and East Asian wide
-    characters as two columns. Tables take Rich's column widths and
-    wrapping; panels and trees resemble Rich's without being
-    byte-identical. Rows and lines advertising Confident AI are kept
+    characters and ANSI colours, counting emoji and East Asian wide
+    characters as two columns.
+    - Colour is decided as Rich's `Console` does: only when standard output
+      is a terminal (so not in CI, a pipe or `devcontainer exec` without
+      `-t`), with `TTY_COMPATIBLE=0|1` and `FORCE_COLOR` (empty: off, else
+      on) overriding that, no colour on a `TERM=dumb` or `unknown`
+      terminal, and `NO_COLOR` dropping colours while keeping bold, dim and
+      italic. The `:color` option wins.
+    - Width is decided as Rich's `Console.size`: `COLUMNS` when it is all
+      digits, else the terminal, else 80; a dumb terminal draws 80 columns
+      wide even with `COLUMNS` set (unless `LINES` is set too), and
+      `COLUMNS=0` gives 80 where Rich draws nothing.
+    - Tables take Rich's column widths and wrapping
+      (`Table._calculate_column_widths`): the widest columns narrow
+      together towards the next widest, cells wrap at word boundaries, a
+      word wider than its column is cut with `…` (or folded, with the
+      column option `overflow: :fold`), and headers align to the bottom of
+      their row. Without colour the `Test Results` table and the turn
+      tables match deepeval's output byte for byte at 60, 80, 100, 120 and
+      160 columns, checked against Rich's own renders. Panels and trees
+      resemble Rich's without being byte-identical. Rows and lines advertising Confident AI are kept
     in the data but not drawn, and warnings print without their links.
   - `DeepEvalEx.TestRun.Manager`, deepeval's `TestRunManager`: `new/1` and
     `add/2` collect evaluated test cases (leaving classifier-only ones
@@ -2047,7 +2067,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     `-n/--num-processes` (`--max-cases`), `-x/-X` (`--max-failures 1`),
     `-w/-W` (flaky test cases' warnings), `-m/--mark` (`tag`, `not tag` and
     `a or b`, as `--only`/`--exclude`), `--durations` (`--slowest`),
-    `--color` and `-o/--official` (prints deepeval's warning), plus
+    `--color` (ExUnit's colour, as it sets pytest's; the report's colour
+    only when `yes` or `no` is given, the `TestArgs` field `:report_color`)
+    and `-o/--official` (prints deepeval's warning), plus
     `--eval-mode`; anything else, and everything after `--`, goes to
     `mix test`. `--pdb` raises with an `iex -S ... -- --breakpoints` hint.
     Bad arguments raise deepeval's messages ("The repeat argument must be
@@ -2091,9 +2113,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     run matches but for times and the unnamed test's name, and the cache
     file byte for byte. The [ExUnit Integration](wiki/guides/ExUnit-Integration.md)
     guide covers it, and ADR-0010 is now part of the documentation.
-- **Span and trace data model** (ADR-0011), the first tracing unit and a
-  port of deepeval 4.3.1's `tracing/types.py`. Nothing records spans yet;
-  capture comes in a later unit.
+- **Span and trace data model** (ADR-0011), a port of deepeval 4.3.1's
+  `tracing/types.py`.
   - `DeepEvalEx.Tracing.Span` is one struct for deepeval's `BaseSpan`,
     `AgentSpan`, `LlmSpan`, `RetrieverSpan` and `ToolSpan`, told apart by
     `:type` (`:base`, `:agent`, `:llm`, `:retriever` or `:tool`; `type/1`).
@@ -2121,8 +2142,7 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     The modules are grouped under "Tracing" in the documentation.
 - **Recording traces: `deftraced`, `span/3` and `capture/2`** (ADR-0011),
   ports of deepeval 4.3.1's `@observe`, `Observer`, `trace_manager` and
-  `trace()` context manager. Exporting traces and evaluating them come in
-  later units. The new [Tracing](wiki/guides/Tracing.md) guide covers it.
+  `trace()` context manager. The new [Tracing](wiki/guides/Tracing.md) guide covers it.
   - `use DeepEvalEx.Tracing` imports `deftraced` and `defptraced`
     (`DeepEvalEx.Tracing.Observe`), which define a function whose every
     call is a span named after it. The span's default input is the call's
@@ -3252,57 +3272,6 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Fixed
 
-- `mix deep_eval.test` printed an unreadable `Test Results` table on a
-  narrow console, such as 80 columns when no terminal is attached and
-  `COLUMNS` is unset: the widest column took the whole overflow and
-  collapsed to one character, printing `Score` and its cells a character
-  per line. `DeepEvalEx.Report.Terminal` now lays tables out as Rich does
-  (`Table._calculate_column_widths`): the widest columns narrow together
-  towards the next widest, cells wrap at word boundaries, a word wider than
-  its column is cut with `…` (or folded, with the new column option
-  `overflow: :fold`), and headers align to the bottom of their row. Without
-  colour the `Test Results` table and the turn tables now match deepeval's
-  output byte for byte at 60, 80, 100, 120 and 160 columns, the widths
-  checked against Rich's own renders. `ResultsTable.build/3` takes the
-  console width (`:width`, as `Terminal.width/1` reads it) for the turn
-  tables' Details and Tools limits, which were fixed at 80 columns, and
-  `Terminal.width/1` reads `COLUMNS` only when it is all digits, as Rich
-  does.
-- `mix deep_eval.test` printed the report in ANSI colour when no terminal
-  was attached (CI, a pipe, `devcontainer exec` without `-t`): the default
-  `--color yes` forced it, and `IO.ANSI.enabled?/0` is true under Mix.
-  deepeval passes `--color` only to pytest; its report is Rich's, which
-  colours only on a terminal. `DeepEvalEx.Report.Terminal` now decides
-  colour as Rich's `Console` does: only when standard output is a terminal
-  (the `:stdout` option of `:io.getopts/1`), with `TTY_COMPATIBLE=0|1` and
-  `FORCE_COLOR` (empty: off, else on) overriding that, no colour on a
-  `TERM=dumb` or `unknown` terminal, and `NO_COLOR` dropping colours while
-  keeping bold, dim and italic. The `:color` option still wins.
-  `mix deep_eval.test` turns the report's colour on or off only when
-  `--color yes` or `no` is given (the new `TestArgs` field
-  `:report_color`); `--color` still sets ExUnit's colour, as it sets
-  pytest's.
-- `DeepEvalEx.Report.Terminal.width/1` now matches Rich's `Console.size`
-  on its edge cases: a dumb terminal draws 80 columns wide even with
-  `COLUMNS` set (unless `LINES` is set too), and `COLUMNS=0` gives 80
-  rather than the terminal's width (Rich takes it as 0 and draws nothing).
-- `DeepEvalEx.evaluate/3` raised `FunctionClauseError` for
-  `DeepEvalEx.ConversationalTestCase`s: `DeepEvalEx.TestResult.new/4` now
-  builds a conversational test result (`conversational: true`, named
-  `"conversational_test_case_<index>"` by default), as deepeval's
-  `create_test_result`.
-- `DeepEvalEx.Prompts.Python.repr/1` printed a tool call's empty
-  `input_parameters` as `input_parameters={}` when they were an empty
-  `Jason.OrderedObject` (as loaded from JSON with ordered objects); it now
-  leaves them out, as deepeval's `ToolCall.__repr__` leaves out an empty
-  dict.
-- `DeepEvalEx.Prompts.Python.format_fixed/2` printed `-0.0` without its
-  sign (`"0.00"`); it now prints `"-0.00"`, as Python's `format(-0.0, ".2f")`
-  does.
-- A tool call whose `output` is a `Jason.OrderedObject` (as loaded from JSON
-  with ordered objects) printed it as a Python dict in reasons and verbose
-  logs; it now prints as indented JSON, like any other map, as deepeval's
-  `ToolCall.__repr__` does.
 - Every LLM metric now works against the real OpenAI API. Five of the seven
   (Answer Relevancy, Contextual Precision, Contextual Recall, Faithfulness,
   Hallucination) sent schemas that OpenAI's strict mode rejects with a 400.
@@ -3314,20 +3283,11 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   back to.
 - A metric that raises an exception becomes an errored result with the
   exception's message, as in deepeval, instead of crashing the evaluation.
-- Anthropic: a base URL that already ends in `/v1` no longer produces
-  `/v1/v1/messages`.
-- Anthropic: a nested array or object that Claude returns in tool input as a
-  JSON-encoded string is decoded, instead of failing the metric, including
-  when the debris after it repeats its closing bracket (`{...}}`).
 - Blank environment variables and blank config values (common when tooling
   forwards unset variables as empty strings) are treated as unset, instead of
-  producing an empty base URL or API key.
-- A malformed `:model_pricing` entry raises a clear `ArgumentError` instead of
-  a match error mid-evaluation.
+  producing an empty API key.
 - The OpenAI adapter's retry backoff was 1s, 1s, 2s under Req's zero-based
   retry count; it is now 1s, 2s, 4s.
-- Test cases that finish in under a second export `runDuration` as `0`, as
-  deepeval does.
 - `DeepEvalEx.TestCase.new/1` no longer stops normalising a test case when a
   string key is not an existing atom: it used to skip normalisation
   altogether, so tool calls' `inputParameters` and `"FUNCTION"` / `"MCP"`
@@ -3348,21 +3308,6 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   order it was sent. Configured responses and recorded prompts are shared
   node-wide, so they are for `async: false` test modules; async tests use
   the per-process `Mock.script/2` (see the Mock's moduledoc).
-- The test suite failed at some seeds (for example `mix test --seed 3`) now
-  that test modules run in parallel: the GEval and ToolCorrectness tests,
-  both `async: true`, configured and cleared the Mock adapter's node-wide
-  responses, each clobbering the other's. They now script their judge with
-  `Mock.script/2`, and a new guard test
-  (`test/deep_eval_ex/llm/adapters/mock_async_guard_test.exs`) fails the
-  suite when an `async: true` test module or a test support module calls
-  `Mock.set_response/2`, `set_schema_response/2`, `clear_responses/0`,
-  `get_recorded_prompts/0` or `clear_recorded_prompts/0`. The Mock's
-  moduledoc, the README and the ExUnit guide now say the configured
-  responses are for `async: false` modules only, replacing the advice that
-  async tests could share them with distinct patterns. The dataset loader
-  parity tests also failed at some seeds (for example `--seed 777777`) when
-  they ran before anything had loaded `EvaluationDataset`, whose loader names
-  they resolve with `String.to_existing_atom/1`; they now load it first.
 
 ### Security
 
