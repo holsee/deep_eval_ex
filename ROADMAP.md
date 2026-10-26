@@ -87,9 +87,9 @@ in.
 None known: the parity suites run with no `known_divergence` tag. A few
 differences are deliberate and documented where they apply: a cached
 expectation evaluator is reused and interrupted runs file nothing (the
-"Known divergences" of `test/fixtures/deepeval/README.md`), the DAG metric's
-option order, sequential nodes and child models ([DAG](wiki/metrics/DAG.md)),
-traces that stay open while a task's span is
+cache fixtures' "Known divergences" in `test/fixtures/deepeval/README.md`),
+the DAG metric's option order, sequential nodes and child models
+([DAG](wiki/metrics/DAG.md)), traces that stay open while a task's span is
 ([Tracing](wiki/guides/Tracing.md)), and the differences listed in the
 [Console Report](wiki/guides/Console-Report.md) and
 [Test-Run Cache](wiki/guides/Test-Run-Cache.md) guides.
