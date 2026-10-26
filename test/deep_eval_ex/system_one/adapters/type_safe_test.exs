@@ -49,7 +49,7 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafeTest do
       },
       "q_s" => %{
         "type" => "score",
-        "score" => 2,
+        "score" => 2.0,
         "confidence" => 0.5,
         "legend" => %{"0" => "No", "1" => "Partly", "2" => "Fully"},
         "probabilities" => %{"0" => 0.1, "1" => 0.2, "2" => 0.7}
@@ -261,7 +261,7 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafeTest do
       assert Enum.sort(answers.choices["tone"].probabilities) == [{"cold", 0.7}, {"warm", 0.3}]
 
       assert answers.scores["q_s"] == %Answers.Score{
-               score: 2,
+               score: 2.0,
                probabilities: [{0, 0.1}, {1, 0.2}, {2, 0.7}],
                confidence: 0.5
              }
@@ -289,19 +289,32 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafeTest do
       assert {:error, %Error{reason: :invalid_response, type: "TypeSafeError"}} =
                TypeSafe.decide(@state, @questions, @opts)
 
+      answers = @reply["answers"]
+      put = fn key, answer -> %{@reply | "answers" => Map.put(answers, key, answer)} end
+      drop = fn answer, field -> Map.delete(answers[answer], field) end
+
       for reply <- [
-            # No answers at all.
+            # No answers at all, or none of the questions answered.
             %{"usage" => %{"input_tokens" => 1}},
+            %{@reply | "answers" => %{}},
             # The SDK's response object, which the HTTP API never sends.
             %{"nouls" => %{"claim_0" => %{"noul" => 0.9}}},
-            %{"answers" => %{"claim_0" => %{"type" => "noul", "p" => 0.9}}},
-            %{"answers" => %{"claim_0" => %{"noul" => 0.9}}},
-            %{"answers" => %{"q_s" => %{"type" => "box", "box" => %{"top" => 0.1}}}},
-            %{
-              "answers" => %{
-                "q_s" => %{"type" => "score", "score" => 1, "probabilities" => %{"high" => 1.0}}
-              }
-            }
+            put.("claim_0", %{"type" => "noul", "p" => 0.9}),
+            put.("claim_0", %{"noul" => 0.9}),
+            put.("q_s", %{"type" => "box", "box" => %{"top" => 0.1}}),
+            put.("q_s", Map.put(answers["q_s"], "probabilities", %{"high" => 1.0})),
+            # A question left unanswered, answered under another type, or
+            # an answer to a question not asked.
+            %{@reply | "answers" => Map.delete(answers, "claim_1")},
+            put.("claim_1", answers["tone"]),
+            put.("extra", %{"type" => "noul", "noul" => 0.5}),
+            # An answer missing a field deepeval's answer models require.
+            put.("tone", drop.("tone", "choice")),
+            put.("tone", drop.("tone", "confidence")),
+            put.("q_s", drop.("q_s", "score")),
+            put.("q_s", Map.put(answers["q_s"], "score", nil)),
+            put.("q_s", drop.("q_s", "confidence")),
+            put.("tone", put_in(answers["tone"], ["probabilities", "warm"], nil))
           ] do
         stub_reply(reply)
 
@@ -409,8 +422,11 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafeTest do
              %{
                "type" => "too_short",
                "loc" => ["body", "questions"],
-               "msg" => "Dictionary should have at least 1 item after validation, not 0"
-             }
+               "msg" => "Dictionary should have at least 1 item after validation, not 0",
+               "input" => "{}",
+               "ctx" => %{"field_type" => "Dictionary", "min_length" => 1, "actual_length" => 0}
+             },
+             %{"type" => "missing", "loc" => ["body", "items", 0], "msg" => "Field required"}
            ]
          }}
       )
@@ -420,7 +436,18 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafeTest do
 
       assert error.message ==
                "TypeSafe API returned HTTP 422: body.questions: " <>
-                 "Dictionary should have at least 1 item after validation, not 0"
+                 "Dictionary should have at least 1 item after validation, not 0; " <>
+                 "body.items.0: Field required"
+    end
+
+    test "reports the raw body of a 422 whose detail is not a list of validation errors" do
+      stub_reply({422, %{"detail" => [%{"msg" => "no location"}]}})
+
+      assert {:error, %Error{reason: :http} = error} =
+               TypeSafe.decide(@state, @questions, @opts)
+
+      assert error.message ==
+               ~s(TypeSafe API returned HTTP 422: {"detail":[{"msg":"no location"}]})
     end
 
     test "reports the message of an error_type detail" do
@@ -435,13 +462,30 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafeTest do
     end
 
     test "maps 401 and 403 to permanent authentication errors" do
-      stub_reply({401, %{"detail" => "Invalid API key"}})
+      # As Jev answers a wrong key (401) and a missing one (403).
+      stub_reply(
+        {401,
+         %{
+           "detail" => %{
+             "error_type" => "authentication_error",
+             "message" => "Cannot authenticate with the server."
+           }
+         }}
+      )
 
       assert {:error,
               %Error{reason: :auth, type: "TypeSafeAuthenticationError", permanent?: true}} =
                TypeSafe.decide(@state, @questions, @opts)
 
-      stub_reply({403, %{"detail" => "Forbidden"}})
+      stub_reply(
+        {403,
+         %{
+           "detail" => %{
+             "error_type" => "authentication_error",
+             "message" => "Must supply an API key!"
+           }
+         }}
+      )
 
       assert {:error,
               %Error{reason: :auth, type: "TypeSafePermissionDeniedError", permanent?: true}} =

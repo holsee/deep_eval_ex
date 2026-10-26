@@ -55,8 +55,11 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
   The reply's `answers` hold each answer under its question's key, tagged
   with a `type` of `noul`, `choice` or `score`; they become
   `DeepEvalEx.SystemOne.Answers`, keeping the reply's order of
-  probabilities, with a Score's level keys cast to integers. A reply
-  without `answers`, or with an answer of another type, is invalid.
+  probabilities, with a Score's level keys cast to integers. A reply is
+  invalid (`reason: :invalid_response`) without `answers`, with an answer
+  of another type or missing one of its fields (deepeval's answer models
+  require them all), or unless it answers exactly the questions asked,
+  each under its own type.
 
   deepeval calls the `typesafe-sdk` client rather than the HTTP API. These
   wire details follow TypeSafe's HTTP API reference
@@ -157,7 +160,7 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
     with :ok <- Limits.check(state, wire, context_budget(opts)),
          {:ok, api_key} <- api_key(opts),
          {:ok, body} <- post(state, wire, api_key, opts) do
-      from_reply(body, opts)
+      from_reply(body, questions, opts)
     end
   end
 
@@ -309,10 +312,13 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
 
   # deepeval's _from_sdk_response and calculate_cost, reading the HTTP
   # API's reply: each answer under `answers` by its question's key, tagged
-  # with its type.
-  defp from_reply(body, opts) do
+  # with its type. As deepeval's pydantic answer models do, every field must
+  # be present and typed, and, as the Adapter contract requires, every
+  # question answered under its own type and nothing else answered.
+  defp from_reply(body, questions, opts) do
     with {:ok, %OrderedObject{} = reply} <- Jason.decode(body, objects: :ordered_objects),
-         {:ok, answers} <- read(reply["answers"]) do
+         {:ok, answers} <- read(reply["answers"]),
+         true <- answers_questions?(answers, questions) do
       {:ok, answers, usage(reply["usage"], opts)}
     else
       _invalid ->
@@ -336,6 +342,20 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
 
   defp read(_answers), do: :error
 
+  defp answers_questions?(%Answers{} = answers, questions) do
+    answered =
+      for kind <- [:nouls, :choices, :scores],
+          {key, _} <- Map.fetch!(answers, kind),
+          do: {key, kind}
+
+    asked = for {key, question} <- questions, do: {key, kind(question)}
+    Enum.sort(answered) == Enum.sort(asked)
+  end
+
+  defp kind(%Question.Noul{}), do: :nouls
+  defp kind(%Question.Choice{}), do: :choices
+  defp kind(%Question.Score{}), do: :scores
+
   defp answer(%OrderedObject{} = answer) do
     case answer["type"] do
       "noul" -> tag(:nouls, noul(answer))
@@ -358,33 +378,29 @@ defmodule DeepEvalEx.SystemOne.Adapters.TypeSafe do
   end
 
   defp choice(%OrderedObject{} = answer) do
-    case answer["probabilities"] do
-      %OrderedObject{values: probabilities} ->
-        {:ok,
-         %Answers.Choice{
-           choice: answer["choice"],
-           probabilities: probabilities,
-           confidence: answer["confidence"]
-         }}
-
-      _ ->
-        :error
+    with %OrderedObject{values: probabilities} <- answer["probabilities"],
+         true <- probabilities?(probabilities),
+         choice when is_binary(choice) <- answer["choice"],
+         confidence when is_number(confidence) <- answer["confidence"] do
+      {:ok, %Answers.Choice{choice: choice, probabilities: probabilities, confidence: confidence}}
+    else
+      _ -> :error
     end
   end
 
   defp score(%OrderedObject{} = answer) do
     with %OrderedObject{values: probabilities} <- answer["probabilities"],
-         {:ok, probabilities} <- levels(probabilities) do
-      {:ok,
-       %Answers.Score{
-         score: answer["score"],
-         probabilities: probabilities,
-         confidence: answer["confidence"]
-       }}
+         true <- probabilities?(probabilities),
+         {:ok, probabilities} <- levels(probabilities),
+         score when is_number(score) <- answer["score"],
+         confidence when is_number(confidence) <- answer["confidence"] do
+      {:ok, %Answers.Score{score: score, probabilities: probabilities, confidence: confidence}}
     else
       _ -> :error
     end
   end
+
+  defp probabilities?(probabilities), do: Enum.all?(probabilities, fn {_, p} -> is_number(p) end)
 
   # The SDK's level keys are strings; deepeval casts them with int().
   defp levels(probabilities) do

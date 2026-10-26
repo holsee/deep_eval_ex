@@ -147,6 +147,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - Replies are read as TypeSafe's HTTP API sends them
     (<https://docs.typesafe.ai/api>): every answer under `answers` by its
     question's key, tagged with its `type`, beside `model` and `usage`.
+    A reply is invalid (`:invalid_response`) unless it answers exactly the
+    questions asked, each under its own type, with every field deepeval's
+    answer models require; a `422`'s validation errors are reported as
+    `loc: msg`.
   - The API key, model and price come from `:api_key`, `:model` and
     `:cost_per_input_token`, else `TYPESAFE_API_KEY`, `TYPESAFE_MODEL_NAME`
     (default `"jev-latest"`) and `TYPESAFE_COST_PER_INPUT_TOKEN`.
@@ -3222,14 +3226,6 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
 ### Fixed
 
-- The TypeSafe System One adapter rejected every reply from Jev as
-  invalid: it read the answers from `nouls`, `choices` and `scores`, the
-  shape of the Python SDK's response object, where TypeSafe's HTTP API
-  returns them under `answers`, each tagged with its `type`. It now reads the
-  HTTP API's reply, rejects an answer of a type it cannot use (such as
-  `box`), and reports a `422`'s validation errors as `loc: msg`. The live
-  System One suite now evaluates every fixture scenario Jev decides alone
-  against the real Jev (unit P4-9) instead of only checking the credentials.
 - `mix deep_eval.test` printed an unreadable `Test Results` table on a
   narrow console, such as 80 columns when no terminal is attached and
   `COLUMNS` is unset: the widest column took the whole overflow and

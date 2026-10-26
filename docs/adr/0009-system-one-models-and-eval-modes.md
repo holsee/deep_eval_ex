@@ -488,9 +488,11 @@ The provider gets the following for free:
 **Settled by P4-9 (2026-10-26).** Checked against `jev-latest` (then `jev-1.14.0`) and TypeSafe's HTTP API reference (<https://docs.typesafe.ai/api>):
 
 - the endpoint, the `{state, questions, model}` body and the `Authorization: Bearer` header were right;
-- the response was wrong. The HTTP API returns `{model, answers, usage}`, with each answer under its question's key and tagged with its `type` (`noul`, `choice`, `score`, or `box` for images). `nouls`, `choices` and `scores` are only the SDK's response object. The adapter now reads `answers`;
-- errors carry `{detail: {error_type, message}}`: `authentication_error` on 401 (bad key) and 403 (no key), `api_usage_error` on 400 (such as an unknown model), and `max_tokens_exceeded` on 400. A 422 carries a list of `{loc, msg, type}` validation errors;
+- the response was wrong. The HTTP API returns `{model, answers, usage}`, with each answer under its question's key and tagged with its `type` (`noul`, `choice`, `score`, or `box` for images). `nouls`, `choices` and `scores` are only the SDK's response object. The adapter now reads `answers`, and rejects a reply that does not answer exactly the questions asked, each under its own type, with every field deepeval's answer models require. A Score's `score` arrives as a float (`2.0`);
+- errors carry `{detail: {error_type, message}}`: `authentication_error` on 401 (bad key) and 403 (no key; the adapter names it `TypeSafePermissionDeniedError` after the SDK, and never sends without a key), `api_usage_error` on 400 (such as an unknown model), and `max_tokens_exceeded` on 400. A 422 carries a list of `{loc, msg, type}` validation errors;
 - `usage.input_tokens` and `usage.output_tokens` are top level, as assumed.
+
+`jev-latest` is an alias: the reply's `model` was `jev-1.14.0`, which is not in deepeval 4.3.1's price registry (`jev-1.13.0`, `jev-latest`, `jev-preview`). Costs are priced by the model name sent, so `jev-latest` is priced, while pinning `jev-1.14.0` gives unpriced runs unless `TYPESAFE_COST_PER_INPUT_TOKEN` is set, as in deepeval.
 
 The SDK's retry and timeout defaults remain unchecked; the adapter keeps deepeval's `:typesafe` retry policy.
 
@@ -523,7 +525,7 @@ The SDK's retry and timeout defaults remain unchecked; the adapter keeps deepeva
    - Python `:g` / `round(v, 3)` / `:.2f` against a CPython-generated table.
 4. **TypeSafe adapter.** It is tested against a `Req.Test` stub: body shape, Bearer header, integer score keys, the cost formula, `max_tokens_exceeded` becoming `:context_limit` with nil limit, a bare 422 *not* becoming a context limit, retries on 429, 5xx and transport errors, and no retry on 401 or 403. It also runs `AdapterCase`.
 5. **Contract.** `AdapterCase` runs against the Mock, TypeSafe (stubbed) and a toy third-party provider. A test runs Faithfulness's `system_one` and `hybrid` paths on the toy provider to show nothing is Jev-specific.
-6. **Live check (P4-9).** `test/deep_eval_ex/live_system_one_test.exs`, tagged and excluded by default, runs against `jev-latest` when `TYPESAFE_API_KEY` is set. As built, it asks Jev a Noul, a Choice and a Score directly, then evaluates every System One fixture scenario Jev decides alone with the real adapter, checking each test run's shape, score range, model name and cost. `hybrid` mode and Jev's own overflow rejection are not exercised live (an oversized request is stopped by `Limits.check/3` before it is sent); the overflow reply was confirmed with a raw request. It settled the wire details listed above.
+6. **Live check (P4-9).** `test/deep_eval_ex/live_system_one_test.exs`, tagged and excluded by default, runs against `jev-latest` when `TYPESAFE_API_KEY` is set. As built, it asks Jev a Noul, a Choice and a Score directly, then evaluates every System One fixture scenario Jev decides alone with the real adapter, checking each test run's shape, score range, model name and cost. `hybrid` mode is exercised only where Jev decides alone (`tool_correctness_hybrid`); falling back to an LLM judge, and Jev's own overflow rejection, are not exercised live (an oversized request is stopped by `Limits.check/3` before it is sent); the overflow reply was confirmed with a raw request. It settled the wire details listed above.
 
 ## Mapping of P3/P4 units
 
@@ -694,7 +696,7 @@ The maintainer accepted every recommended option below (2026-10-22).
     - (b) Include function heads now.
 
     **Recommended: (a).**
-14. **TypeSafe 422 handling while the SDK is unverified.**
+14. **TypeSafe 422 handling while the SDK is unverified.** (Settled by P4-9: Jev sends `max_tokens_exceeded` with a 400, and a 422 only for validation errors, so (a) holds.)
     - (a) Map only `detail.error_type == "max_tokens_exceeded"`, as deepeval does, and confirm with the live check.
     - (b) Also treat a bare 422 as a context limit.
 
