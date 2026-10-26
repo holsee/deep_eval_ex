@@ -10,8 +10,8 @@ defmodule DeepEvalEx.Tracing.NestedDictParityTest do
   as their `str()` in the compact trace), dropped spans kept and raw
   providers.
 
-  The nested dict leaves out metric data, so `requires_trace`, whose
-  metrics are ported by later units, is compared too.
+  Every scenario is compared, `requires_trace` included; the nested dict
+  leaves out metric data.
   """
 
   use ExUnit.Case, async: true

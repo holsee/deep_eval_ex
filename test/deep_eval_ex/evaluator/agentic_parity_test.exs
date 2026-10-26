@@ -78,7 +78,7 @@ defmodule DeepEvalEx.Evaluator.AgenticParityTest do
     end
   end
 
-  test "covers every traced scenario but the ones left to later units" do
+  test "covers every traced scenario but the one left to the iterator" do
     for scenario <- TracedFixtures.scenarios() -- @skipped do
       input = TracedFixtures.load!(scenario, "input.json")
       assert TracingScenarios.supported_metrics?(input), scenario
