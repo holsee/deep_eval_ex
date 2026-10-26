@@ -360,8 +360,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 
   The `<metric>_system_one`, `faithfulness_system_one_strict`, `jev_eval`
   and `jev_eval_strict_not_applicable` fixtures, and every `<metric>_hybrid`
-  and `<metric>_hybrid_fallback` fixture, export deepeval's `test_run.json` byte for byte. Confidence, the
-  fallback reason and the score breakdown are not exported.
+  and `<metric>_hybrid_fallback` fixture, export deepeval's
+  `test_run.json` byte for byte. Confidence, the fallback reason and the
+  score breakdown are not exported.
 - **Faithfulness and AnswerRelevancy run on System One** (ADR-0009), as
   deepeval 4.3.1's `FaithfulnessMetric` and `AnswerRelevancyMetric` do with
   `eval_mode`:
@@ -732,8 +733,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   folder from `config :deep_eval_ex, results_folder:` and treats a
   whitespace-only `DEEPEVAL_RESULTS_FOLDER` as unset; ExUnit assertions take
   verbose mode from `config :deep_eval_ex, verbose_mode:` before
-  `DEEPEVAL_VERBOSE_MODE`. The other settings are read by later parity work
-  (error handling, timeouts, retries, eval modes). `Adapter.env/1` and
+  `DEEPEVAL_VERBOSE_MODE`. The other settings are read by the error
+  handling, timeout, retry and eval-mode features. `Adapter.env/1` and
   `config/1` now delegate to `DeepEvalEx.Config.env/1` and `config/1`.
   Documented in the Configuration guide.
 - `DeepEvalEx.Config.per_task_timeout_seconds/0`, deepeval's computed
@@ -1429,7 +1430,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     insertion order; the files decode and load the same.
 - **`EvaluationDataset.evaluate/4` and `evaluate_run/4`: evaluate a task
   over a dataset's goldens**, the Elixir equivalent of deepeval 4.3.1's
-  `evals_iterator`, without its tracing (which comes later). The task is
+  `evals_iterator`, without its tracing (for that, use
+  `DeepEvalEx.evaluate_traced/3`). The task is
   called with each golden through `Task.async_stream`, up to
   `:max_concurrent` at once (one at a time with `run_async: false`), and
   returns the actual output, a map or keyword list of test case fields, or a
@@ -2029,8 +2031,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
       their row. Without colour the `Test Results` table and the turn
       tables match deepeval's output byte for byte at 60, 80, 100, 120 and
       160 columns, checked against Rich's own renders. Panels and trees
-      resemble Rich's without being byte-identical. Rows and lines advertising Confident AI are kept
-    in the data but not drawn, and warnings print without their links.
+      resemble Rich's without being byte-identical. Rows and lines
+      advertising Confident AI are kept in the data but not drawn, and
+      warnings print without their links.
   - `DeepEvalEx.TestRun.Manager`, deepeval's `TestRunManager`: `new/1` and
     `add/2` collect evaluated test cases (leaving classifier-only ones
     out), `to_test_run/1` finalizes them, `valid_scores/1` counts what
@@ -2142,7 +2145,8 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     The modules are grouped under "Tracing" in the documentation.
 - **Recording traces: `deftraced`, `span/3` and `capture/2`** (ADR-0011),
   ports of deepeval 4.3.1's `@observe`, `Observer`, `trace_manager` and
-  `trace()` context manager. The new [Tracing](wiki/guides/Tracing.md) guide covers it.
+  `trace()` context manager. The new [Tracing](wiki/guides/Tracing.md)
+  guide covers it.
   - `use DeepEvalEx.Tracing` imports `deftraced` and `defptraced`
     (`DeepEvalEx.Tracing.Observe`), which define a function whose every
     call is a span named after it. The span's default input is the call's
@@ -2291,10 +2295,10 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     five, in deepeval's order), span name and metric, every score and the
     pass, fail and error counts; `nil` when no span has metric data.
   - The traces the thirteen traced scenarios capture are exported byte for
-    byte as deepeval's `trace_api.json` (bar `requires_trace`, whose
-    metrics come later) and start as the async iterator's test-run traces,
-    and every traced fixture run's `metricsScores` and
-    `traceMetricsScores` are recomputed exactly.
+    byte as deepeval's `trace_api.json`, `requires_trace` included, and
+    start as the async iterator's test-run traces, and every traced
+    fixture run's `metricsScores` and `traceMetricsScores` are recomputed
+    exactly.
 - **Nested and compact traces** (ADR-0011), ports of deepeval 4.3.1's
   `create_nested_spans_dict` and `compact_trace`, the forms of a trace the
   trace metrics read. The [Tracing](wiki/guides/Tracing.md) guide covers
@@ -2357,11 +2361,11 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     compared as deepeval's `MetricData` rows, so a differing latency,
     confidence or metadata does not keep it); and the walked LLM spans'
     prompts.
-  - Every traced scenario but `raised_uncaught` (the iterator marks it)
-    and `requires_trace` (its metrics come later) evaluates, in both
-    modes, to the test cases, `metricsScores`, `traceMetricsScores`,
-    counts and cost of deepeval's `test_run_sync.json` and
-    `test_run_async.json`, byte for byte.
+  - Every traced scenario but `raised_uncaught` (the iterator marks it),
+    `requires_trace` included, evaluates, in both modes, to the test
+    cases, `metricsScores`, `traceMetricsScores`, counts and cost of
+    deepeval's `test_run_sync.json` and `test_run_async.json`, byte for
+    byte.
 - `DeepEvalEx.Metrics.BaseMetric` has the optional `requires_trace?/0` and
   `requires_trace?/1` callbacks, deepeval's `requires_trace`, and
   `BaseMetric.requires_trace?/1` to ask a module, `{module, opts}` or
@@ -2393,9 +2397,9 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
     `DeepEvalEx.DeepEvalError` with deepeval's `NoMetricsError` message, and
     no goldens raises `ArgumentError` ("Unable to evaluate dataset with no
     goldens.").
-  - Every traced scenario but `requires_trace` (its metrics come later)
-    saves deepeval's `test_run_sync.json` and `test_run_async.json` byte
-    for byte, `raised_uncaught`, `prompts` and `hyperparameters` included.
+  - Every traced scenario saves deepeval's `test_run_sync.json` and
+    `test_run_async.json` byte for byte, `raised_uncaught`,
+    `requires_trace`, `prompts` and `hyperparameters` included.
 - **`DeepEvalEx.ExUnit.assert_trace/3,4`**, deepeval 4.3.1's trace-scoped
   `assert_test(golden=..., metrics=...)` (`evaluate/execute/trace_scope.py`).
   It runs a function inside deepeval's pytest wrapper span and evaluates
@@ -2641,7 +2645,16 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
   - `req_llm` is an optional dependency (`~> 1.29`): add
     `{:req_llm, "~> 1.29"}` to your own deps to use the adapter. Without
     it, its calls raise an error naming the dependency, and DeepEvalEx
-    compiles as before.
+    compiles as before. 1.29.0 is the first release past
+    EEF-CVE-2026-107685 (CVE-2026-107685, critical: ReqLLM's WebSocket
+    sessions did not verify TLS certificates); the adapter opens no
+    WebSocket sessions, but an application that adds `req_llm` resolves a
+    patched version.
+  - ReqLLM 1.29's own behaviour passes through the adapter: it retries
+    HTTP 408, 429, 500, 502, 503, 504 and 529 responses (honouring
+    `Retry-After`; turn off with `req_llm_options: [max_retries: 0]`), does
+    not follow redirects, sends Gemini keys in a header rather than
+    `?key=`, and skips `.env` loading in releases.
   - Select it with `adapter: :req_llm` (or `{:req_llm, spec}`, also in
     `default_model`) and a ReqLLM model spec such as
     `"google:gemini-2.5-flash"`, or an inline spec map for a model
@@ -3314,21 +3327,6 @@ swapped in for deepeval and produce the same `test_run_<timestamp>.json`.
 - Updated `hpax` (EEF-CVE-2026-58226), `mint`, `finch` and `req` to versions
   without known advisories, and dropped stale `ecto` and `decimal` lock
   entries. `mix hex.audit` is clean.
-- Updated `plug_crypto` to 2.2.1, past EEF-CVE-2026-105963 (a secret key base
-  exposed in stack trace arguments when a `Plug.Crypto` function is given
-  wrong-typed arguments). It is only a test dependency, through `plug` for
-  `Req.Test`. `mix hex.audit` is clean again.
-- Raised the optional `req_llm` dependency to `~> 1.29` (locked at 1.29.0),
-  past EEF-CVE-2026-107685 (CVE-2026-107685, critical: ReqLLM's WebSocket
-  sessions did not verify TLS certificates, exposing API keys and OAuth
-  tokens to on-path attackers; fixed in 1.29.0). The adapter does not open
-  WebSocket sessions, but an application that adds `req_llm` resolves a
-  patched version. `mix hex.audit` is clean again. ReqLLM 1.29 also changes
-  behaviour the `:req_llm` adapter passes through: it retries HTTP 408,
-  429, 500, 502, 503, 504 and 529 responses (honouring `Retry-After`; turn
-  off with `req_llm_options: [max_retries: 0]`), no longer follows
-  redirects, sends Gemini keys in a header rather than `?key=`, and skips
-  `.env` loading in releases.
 - The dev container's resolved credentials file is written with mode 600 and
   gitignored, along with its temp files, and is cleaned up if resolution is
   interrupted.
